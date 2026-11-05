@@ -277,8 +277,10 @@ a {
   transition: background-color 0.15s ease;
 }
 
-.strength-meter-segment.is-active {
-  background: var(--color-accent);
+.strength-label {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .checkbox-row {
