@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Проверьте почту — RentFlow{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  {% include "account/_intro.html" %}
+  <div class="auth-form-side">
+  <div class="card">
+    <h1>Проверьте почту</h1>
+    <p class="subtitle">Мы отправили письмо со ссылкой для подтверждения регистрации. Перейдите по ней, чтобы завершить регистрацию. Если не видите письмо — проверьте папку «Спам».</p>
+
+    <p class="footer-note">
+      <a href="{% url 'account_login' %}">Вернуться ко входу</a>
+    </p>
+  </div>
+  </div>
+</div>
+{% endblock %}

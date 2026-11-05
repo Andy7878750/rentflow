@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Подтверждение почты — RentFlow{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  {% include "account/_intro.html" %}
+  <div class="auth-form-side">
+  <div class="card">
+    <h1>Подтверждение почты</h1>
+
+    {% if confirmation %}
+      {% if can_confirm %}
+        <p class="subtitle">Подтвердите, что <strong>{{ confirmation.email_address.email }}</strong> — ваша почта.</p>
+        <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+          {% csrf_token %}
+          {{ redirect_field }}
+          <button type="submit" class="btn btn-primary">Подтвердить</button>
+        </form>
+      {% else %}
+        <p class="subtitle">Эта почта уже подтверждена другим аккаунтом.</p>
+      {% endif %}
+    {% else %}
+      <p class="subtitle">Ссылка подтверждения устарела или недействительна.</p>
+      <p class="footer-note">
+        <a href="{% url 'account_login' %}">Вернуться ко входу</a>
+      </p>
+    {% endif %}
+  </div>
+  </div>
+</div>
+{% endblock %}
