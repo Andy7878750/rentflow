@@ -1,7 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Вход — RentFlow{% endblock %}
 {% block content %}
-<div class="page-center">
+<div class="auth-layout">
+  <div class="auth-intro">
+    <div class="auth-intro-inner">
+      <div class="brand">
+        <span class="brand-mark">R</span>
+        <span class="brand-name">RentFlow</span>
+      </div>
+      <h2>Коммуналка арендаторов — без Excel</h2>
+      <p>Вносите показания и счета поставщиков — сервис сам разделит суммы, соберёт отчёт для каждого арендатора и покажет, кто что оплатил.</p>
+      <ul class="feature-list">
+        <li>
+          <span class="feature-title">Сам делит общие счета</span>
+          <span class="feature-desc">По долям, по показаниям счётчиков или смешанно</span>
+        </li>
+        <li>
+          <span class="feature-title">Отчёт для каждого арендатора</span>
+          <span class="feature-desc">Понятная разбивка: услуга, как посчитано, сумма</span>
+        </li>
+        <li>
+          <span class="feature-title">Кто что оплатил</span>
+          <span class="feature-desc">Счета арендаторам и статус оплаты — в одном месте</span>
+        </li>
+      </ul>
+      <p class="footer-note-left">Данные хранятся на серверах в России.</p>
+    </div>
+  </div>
+  <div class="auth-form-side">
   <div class="card">
     <h1>Вход</h1>
     <p class="subtitle">Рады видеть снова.</p>
@@ -50,6 +76,7 @@
     <p class="footer-note">
       Нет аккаунта? <a href="{% url 'account_signup' %}">Зарегистрироваться</a>
     </p>
+  </div>
   </div>
 </div>
 {% endblock %}
