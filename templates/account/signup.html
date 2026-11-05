@@ -29,11 +29,11 @@
         {% if form.email.errors %}<ul class="errorlist">{% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
       </div>
 
-      {% include "account/_password_field.html" with field=form.password1 label="Пароль" strength=True hint="Не короче 8 символов" %}
+      {% include "account/_password_field.html" with field=form.password1 label="Пароль" strength=True hint="Не короче 6 символов" %}
 
       <label class="checkbox-row">
         <input type="checkbox" name="privacy_consent" id="id_privacy_consent" required>
-        Согласен с политикой конфиденциальности и даю согласие на обработку персональных данных
+        <span>Согласен с <a href="{% url 'privacy' %}#policy" target="_blank" rel="noopener">политикой конфиденциальности</a> и даю <a href="{% url 'privacy' %}#consent" target="_blank" rel="noopener">согласие на обработку персональных данных</a></span>
       </label>
       {% if form.privacy_consent.errors %}<ul class="errorlist">{% for error in form.privacy_consent.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 

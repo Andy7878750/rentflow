@@ -129,6 +129,7 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*']
 ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_PASSWORD_MIN_LENGTH = 6  # keep in sync with the hint in signup.html and password_reset_from_key.html
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_FORMS = {'signup': 'apps.accounts.forms.CustomSignupForm'}
 

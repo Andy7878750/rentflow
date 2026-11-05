@@ -10,3 +10,7 @@ def home(request):
     full_name = (profile.full_name if profile else '') or request.user.email
     has_properties = Property.objects.filter(owner=request.user).exists()
     return render(request, 'dashboard.html', {'full_name': full_name, 'has_properties': has_properties})
+
+
+def privacy(request):
+    return render(request, 'legal/privacy.html')

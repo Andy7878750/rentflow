@@ -309,21 +309,20 @@ a {
   cursor: pointer;
   text-align: center;
   text-decoration: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
 .btn-primary {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--color-surface);
+  color: var(--color-accent);
   border: 2px solid var(--color-accent);
-  box-shadow: 0 2px 6px rgba(20, 143, 119, 0.35);
 }
 
 .btn-primary:hover {
-  background: var(--color-surface);
-  color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
   border-color: var(--color-accent);
-  box-shadow: none;
+  box-shadow: 0 2px 6px rgba(20, 143, 119, 0.35);
 }
 
 .btn-primary:active {
@@ -474,4 +473,89 @@ a {
 .card-inline {
   max-width: 480px;
   margin: 0;
+}
+
+.legal-header {
+  padding: 16px 32px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.legal-header .brand {
+  margin-bottom: 0;
+  text-decoration: none;
+}
+
+.legal-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 32px 64px;
+  line-height: 1.6;
+}
+
+.legal-page h1 {
+  color: var(--color-primary);
+  margin: 0 0 8px;
+}
+
+.legal-meta {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+.legal-draft {
+  padding: 12px 16px;
+  margin-bottom: 32px;
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.legal-toc {
+  padding: 16px 20px 16px 40px;
+  margin: 0 0 40px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 15px;
+}
+
+.legal-toc li + li {
+  margin-top: 4px;
+}
+
+.legal-page section {
+  margin-bottom: 40px;
+  scroll-margin-top: 24px;
+}
+
+.legal-page h2 {
+  color: var(--color-primary);
+  font-size: 22px;
+  margin: 0 0 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.legal-page h3 {
+  font-size: 16px;
+  margin: 24px 0 8px;
+}
+
+.legal-page p,
+.legal-page ul {
+  margin: 0 0 12px;
+}
+
+@media (max-width: 600px) {
+  .legal-header {
+    padding: 16px;
+  }
+
+  .legal-page {
+    padding: 32px 16px 48px;
+  }
 }
