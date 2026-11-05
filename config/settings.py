@@ -32,6 +32,9 @@ DEBUG = env.bool('DEBUG', default=True)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
+# 'ru' (pilot) or 'eu': one codebase, two installations.
+REGION = env('REGION', default='ru')
+
 
 # Application definition
 
@@ -50,6 +53,8 @@ INSTALLED_APPS = [
 ]
 
 SITE_ID = 1
+# Shown as the service name/domain in emails (stored in the Site row by a migration).
+SITE_DOMAIN = env('SITE_DOMAIN', default='localhost:8000')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -102,9 +107,16 @@ AUTH_PASSWORD_VALIDATORS = []
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru' if REGION == 'ru' else 'en'
 
-TIME_ZONE = 'UTC'
+LANGUAGES = [
+    ('ru', 'Русский'),
+    ('en', 'English'),
+]
+
+LOCALE_PATHS = [BASE_DIR / 'locale']
+
+TIME_ZONE = 'Europe/Moscow' if REGION == 'ru' else 'UTC'
 
 USE_I18N = True
 
@@ -132,6 +144,9 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_PASSWORD_MIN_LENGTH = 6  # keep in sync with the hint in signup.html and password_reset_from_key.html
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_FORMS = {'signup': 'apps.accounts.forms.CustomSignupForm'}
+ACCOUNT_CHANGE_EMAIL = True
+ACCOUNT_USER_DISPLAY = 'apps.accounts.utils.user_display'
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '[RentFlow] '
 
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = 'account_login'

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="app-shell">
+  {% include "_app_header.html" %}
+  <main class="app-main">
+    <h1>Настройки аккаунта</h1>
+    <nav class="settings-tabs">
+      <a href="{% url 'account_change_password' %}"{% if request.resolver_match.url_name == 'account_change_password' or request.resolver_match.url_name == 'account_set_password' %} class="is-active" aria-current="page"{% endif %}>Пароль</a>
+      <a href="{% url 'account_email' %}"{% if request.resolver_match.url_name == 'account_email' %} class="is-active" aria-current="page"{% endif %}>Почта</a>
+    </nav>
+
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}<li class="message{% if message.tags %} message-{{ message.tags }}{% endif %}">{{ message }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+
+    <div class="card card-inline">
+      {% block settings_content %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% endblock %}

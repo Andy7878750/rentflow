@@ -1,0 +1,44 @@
+{% extends "account/_settings_base.html" %}
+{% block title %}Почта — RentFlow{% endblock %}
+{% block settings_content %}
+<h2>Почта для входа</h2>
+
+{% if current_emailaddress %}
+  <div class="field">
+    <label for="current_email">Текущая почта</label>
+    <input type="email" id="current_email" value="{{ current_emailaddress.email }}" disabled>
+  </div>
+{% endif %}
+
+{% if new_emailaddress %}
+  <div class="field">
+    <label for="new_email">{% if current_emailaddress %}Меняется на{% else %}Текущая почта{% endif %}</label>
+    <input type="email" id="new_email" value="{{ new_emailaddress.email }}" disabled>
+    <p class="field-hint">Адрес ещё не подтверждён — откройте письмо со ссылкой.</p>
+    <div class="inline-actions">
+      <button type="submit" form="pending-email" name="action_send" class="btn-link">Отправить письмо ещё раз</button>
+      {% if current_emailaddress %}
+        <button type="submit" form="pending-email" name="action_remove" class="btn-link">Отменить смену</button>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<form method="post" action="{% url 'account_email' %}">
+  {% csrf_token %}
+  <div class="field">
+    <label for="{{ form.email.auto_id }}">Новая почта</label>
+    <input type="email" name="email" id="{{ form.email.auto_id }}" value="{{ form.email.value|default:'' }}" placeholder="name@mail.ru" required>
+    <p class="field-hint">Пришлём письмо на новый адрес. Почта сменится после подтверждения.</p>
+    {% if form.email.errors %}<ul class="errorlist">{% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  <button type="submit" name="action_add" class="btn btn-primary">Сменить почту</button>
+</form>
+
+{% if new_emailaddress %}
+  <form id="pending-email" method="post" action="{% url 'account_email' %}" hidden>
+    {% csrf_token %}
+    <input type="hidden" name="email" value="{{ new_emailaddress.email }}">
+  </form>
+{% endif %}
+{% endblock %}

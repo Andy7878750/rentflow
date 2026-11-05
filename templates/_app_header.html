@@ -7,6 +7,7 @@
     <nav class="app-nav">
       <a href="{% url 'home' %}">Кабинет</a>
       <a href="{% url 'property_list' %}">Объекты</a>
+      <a href="{% url 'account_change_password' %}">Настройки</a>
     </nav>
   </div>
   <form method="post" action="{% url 'account_logout' %}">

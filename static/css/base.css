@@ -559,3 +559,72 @@ a {
     padding: 32px 16px 48px;
   }
 }
+
+.settings-tabs {
+  display: flex;
+  gap: 24px;
+  margin: 16px 0 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-tabs a {
+  padding: 8px 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.settings-tabs a:hover {
+  color: var(--color-primary);
+}
+
+.settings-tabs a.is-active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-accent);
+}
+
+.card-inline .subtitle {
+  margin: -12px 0 20px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.card-inline h2 {
+  color: var(--color-primary);
+  font-size: 18px;
+  margin: 0 0 20px;
+}
+
+.field input:disabled {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.inline-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.messages {
+  list-style: none;
+  max-width: 480px;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.message {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: 14px;
+}
+
+.message-error {
+  border-left-color: #c0392b;
+}
