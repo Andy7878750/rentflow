@@ -1,0 +1,9 @@
+{% extends "account/email/base_message.txt" %}{% load account %}
+{% block greeting %}{% user_display user as name %}Здравствуйте, {{ name }}!{% endblock greeting %}
+{% block content %}Спасибо за регистрацию в RentFlow. Осталось подтвердить почту — перейдите по ссылке:
+
+{{ activate_url }}
+
+После этого можно войти и добавить первый объект.
+
+Если вы не регистрировались в RentFlow, просто удалите это письмо.{% endblock content %}

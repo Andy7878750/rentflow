@@ -1,0 +1,7 @@
+{% autoescape off %}{% block greeting %}Здравствуйте!{% endblock greeting %}
+
+{% block content %}{% endblock content %}
+
+—
+Команда RentFlow
+{% endautoescape %}

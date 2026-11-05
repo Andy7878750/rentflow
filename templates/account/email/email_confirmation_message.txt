@@ -1,0 +1,9 @@
+{% extends "account/email/base_message.txt" %}{% load account %}
+{% block greeting %}{% user_display user as name %}Здравствуйте, {{ name }}!{% endblock greeting %}
+{% block content %}Этот адрес указали как новую почту для входа в RentFlow. Чтобы подтвердить его, перейдите по ссылке:
+
+{{ activate_url }}
+
+Пока адрес не подтверждён, входить нужно по прежней почте.
+
+Если вы ничего не меняли, просто удалите это письмо.{% endblock content %}

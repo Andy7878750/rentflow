@@ -1,0 +1,8 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}Кто-то попытался зарегистрироваться в RentFlow с адресом {{ email }}, но аккаунт с этой почтой уже есть.
+
+Если вы забыли пароль, восстановите его по ссылке:
+
+{{ password_reset_url }}
+
+Если вы ничего не делали, просто удалите это письмо.{% endblock content %}

@@ -43,7 +43,9 @@ class SignupTests(TestCase):
         message = mail.outbox[0]
         self.assertTrue(message.subject.startswith('[RentFlow]'))
         self.assertIn('подтвер', message.subject.lower())
-        self.assertIn('Андрей', message.body)
+        self.assertIn('Здравствуйте, Андрей!', message.body)
+        self.assertIn('/accounts/confirm-email/', message.body)
+        self.assertIn('Команда RentFlow', message.body)
         self.assertNotIn('example.com', message.body)
 
     def test_consent_is_required(self):
@@ -99,6 +101,21 @@ class LoginTests(TestCase):
             {'login': 'landlord@example.ru', 'password': 'secret1'},
         )
         self.assertNotIn('_auth_user_id', self.client.session)
+
+
+class PasswordResetEmailTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_reset_email_has_link_and_own_text(self):
+        make_verified_user()
+        self.client.post(reverse('account_reset_password'), {'email': 'landlord@example.ru'})
+
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.subject, '[RentFlow] Восстановление пароля')
+        self.assertIn('/accounts/password/reset/key/', message.body)
+        self.assertIn('Команда RentFlow', message.body)
 
 
 class AccountPagesTests(TestCase):
