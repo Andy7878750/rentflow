@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Объекты — RentFlow{% endblock %}
+{% block content %}
+<div class="app-shell">
+  {% include "_app_header.html" %}
+  <main class="app-main">
+    <h1>Мои объекты</h1>
+
+    {% if properties %}
+      <ul class="property-list">
+        {% for property in properties %}
+          <li class="property-item">
+            <span class="property-name">{{ property.name }}</span>
+            <span class="property-address">{{ property.address }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="subtitle">Пока нет ни одного объекта — добавьте первый ниже.</p>
+    {% endif %}
+
+    <div class="card card-inline">
+      <h2>Добавить объект</h2>
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="field">
+          <label for="{{ form.name.id_for_label }}">Название</label>
+          <input type="text" name="name" id="{{ form.name.id_for_label }}" value="{{ form.name.value|default:'' }}" placeholder="Квартира на Ленина, 10" required>
+          {% if form.name.errors %}<ul class="errorlist">{% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+
+        <div class="field">
+          <label for="{{ form.address.id_for_label }}">Адрес</label>
+          <input type="text" name="address" id="{{ form.address.id_for_label }}" value="{{ form.address.value|default:'' }}" placeholder="г. Москва, ул. Ленина, д. 10, кв. 5" required>
+          {% if form.address.errors %}<ul class="errorlist">{% for error in form.address.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Добавить</button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

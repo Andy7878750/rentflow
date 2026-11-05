@@ -2,19 +2,16 @@
 {% block title %}RentFlow{% endblock %}
 {% block content %}
 <div class="app-shell">
-  <header class="app-header">
-    <div class="brand">
-      <span class="brand-mark">R</span>
-      <span class="brand-name">RentFlow</span>
-    </div>
-    <form method="post" action="{% url 'account_logout' %}">
-      {% csrf_token %}
-      <button type="submit" class="btn-link">Выйти</button>
-    </form>
-  </header>
+  {% include "_app_header.html" %}
   <main class="app-main">
     <h1>Добро пожаловать, {{ full_name }}!</h1>
-    <p class="subtitle">Здесь скоро появятся ваши объекты недвижимости.</p>
+    <p class="subtitle">
+      {% if has_properties %}
+        Переходите в «Объекты», чтобы управлять своей недвижимостью.
+      {% else %}
+        У вас пока нет ни одного объекта. <a href="{% url 'property_list' %}">Добавить первый объект</a>.
+      {% endif %}
+    </p>
   </main>
 </div>
 {% endblock %}
