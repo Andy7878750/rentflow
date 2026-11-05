@@ -1,0 +1,20 @@
+{% extends "app/base.html" %}
+{% block title %}{{ property.name }} — RentFlow{% endblock %}
+{% block app_content %}
+<div class="page-head">
+  <div class="page-title">
+    <h1>{{ property.name }}</h1>
+    <span class="page-subtitle">{{ property.get_kind_display }}</span>
+  </div>
+  {% include "properties/_actions.html" %}
+</div>
+
+<article class="property-card property-card-wide">
+  {% include "properties/_contacts.html" %}
+  <p class="property-tenants-empty">
+    Здесь появится страница объекта: квитанции и показания за месяц слева, расчёт по арендаторам справа.
+  </p>
+</article>
+
+<p class="footer-note footer-note-start"><a href="{% url 'property_list' %}">← Все объекты</a></p>
+{% endblock %}

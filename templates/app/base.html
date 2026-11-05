@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load account %}
+{% block content %}
+{% include "app/_icons.html" %}
+{% with url_name=request.resolver_match.url_name %}
+<div class="app-layout" data-app-layout>
+  <aside class="app-rail">
+    <a class="rail-logo" href="{% url 'home' %}" title="RentFlow">R</a>
+    <nav class="rail-nav">
+      <a href="{% url 'property_list' %}" class="rail-link{% if url_name|slice:':9' == 'property_' %} is-active{% endif %}" title="Объекты">
+        <svg class="icon"><use href="#i-building"/></svg>
+      </a>
+      <span class="rail-link is-soon" title="Счета — скоро"><svg class="icon"><use href="#i-file"/></svg></span>
+      <span class="rail-link is-soon" title="Справочники — скоро"><svg class="icon"><use href="#i-library"/></svg></span>
+      <span class="rail-link is-soon" title="Отчёты — скоро"><svg class="icon"><use href="#i-chart"/></svg></span>
+    </nav>
+    <a href="{% url 'account_change_password' %}" class="rail-link rail-settings{% if url_name == 'account_change_password' or url_name == 'account_email' or url_name == 'account_set_password' %} is-active{% endif %}" title="Настройки аккаунта">
+      <svg class="icon"><use href="#i-settings"/></svg>
+    </a>
+  </aside>
+
+  <aside class="app-sidebar" id="app-sidebar">
+    <div class="sidebar-brand">RentFlow</div>
+
+    <nav class="sidebar-nav">
+      <details class="nav-group" open>
+        <summary>
+          <svg class="icon"><use href="#i-building"/></svg>
+          <span>Объекты</span>
+          <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
+        </summary>
+        <ul class="nav-items">
+          <li>
+            <a href="{% url 'property_list' %}" class="nav-item{% if url_name == 'property_list' %} is-active{% endif %}">
+              <span>Все объекты</span><span class="nav-count">{{ sidebar_properties|length }}</span>
+            </a>
+          </li>
+          {% for item in sidebar_properties %}
+            <li><a href="{% url 'property_detail' item.id %}" class="nav-item{% if url_name == 'property_detail' and request.resolver_match.kwargs.pk == item.id %} is-active{% endif %}">{{ item.name }}</a></li>
+          {% endfor %}
+          <li>
+            <a href="{% url 'property_create' %}" class="nav-item nav-item-add{% if url_name == 'property_create' %} is-active{% endif %}">
+              <svg class="icon"><use href="#i-plus"/></svg><span>Добавить объект</span>
+            </a>
+          </li>
+        </ul>
+      </details>
+
+      <details class="nav-group">
+        <summary>
+          <svg class="icon"><use href="#i-file"/></svg>
+          <span>Счета</span>
+          <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
+        </summary>
+        <ul class="nav-items">
+          <li><span class="nav-item is-soon" title="Скоро">К выставлению</span></li>
+          <li><span class="nav-item is-soon" title="Скоро">Выставленные</span></li>
+        </ul>
+      </details>
+
+      <details class="nav-group">
+        <summary>
+          <svg class="icon"><use href="#i-library"/></svg>
+          <span>Справочники</span>
+          <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
+        </summary>
+        <ul class="nav-items">
+          <li><span class="nav-item is-soon" title="Скоро">Реквизиты</span></li>
+        </ul>
+      </details>
+
+      <div class="nav-group">
+        <span class="nav-group-link is-soon" title="Скоро">
+          <svg class="icon"><use href="#i-chart"/></svg>
+          <span>Отчёты</span>
+        </span>
+      </div>
+    </nav>
+
+    <button type="button" class="sidebar-collapse" data-sidebar-toggle>
+      <svg class="icon"><use href="#i-chevrons-left"/></svg>
+      <span>Свернуть меню</span>
+    </button>
+  </aside>
+
+  <div class="app-body">
+    <header class="app-topbar">
+      <button type="button" class="topbar-menu" data-sidebar-toggle aria-label="Меню" aria-controls="app-sidebar">
+        <svg class="icon"><use href="#i-menu"/></svg>
+      </button>
+      <div class="topbar-user">
+        {% user_display user as display_name %}
+        <span class="avatar">{{ display_name|first|upper }}</span>
+        <span class="user-meta">
+          <span class="user-name">{{ display_name }}</span>
+          <span class="user-role">арендодатель</span>
+        </span>
+        <form method="post" action="{% url 'account_logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="icon-button" title="Выйти" aria-label="Выйти">
+            <svg class="icon"><use href="#i-logout"/></svg>
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <main class="app-content">
+      {% block app_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endwith %}
+<script>
+  (function () {
+    var layout = document.querySelector('[data-app-layout]');
+    var KEY = 'rentflow.sidebarCollapsed';
+    try { if (localStorage.getItem(KEY) === '1') layout.classList.add('is-collapsed'); } catch (e) {}
+    document.querySelectorAll('[data-sidebar-toggle]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        if (window.matchMedia('(max-width: 900px)').matches) {
+          layout.classList.toggle('is-menu-open');
+          return;
+        }
+        var collapsed = layout.classList.toggle('is-collapsed');
+        try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+      });
+    });
+
+    // Dropdowns: only one open at a time; close on outside click or Escape.
+    function closeDropdowns(except) {
+      document.querySelectorAll('[data-dropdown][open]').forEach(function (d) {
+        if (d !== except) d.removeAttribute('open');
+      });
+    }
+    document.addEventListener('click', function (event) {
+      closeDropdowns(event.target.closest('[data-dropdown]'));
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeDropdowns(null);
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "app/base.html" %}
+{% block title %}Удалить: {{ property.name }} — RentFlow{% endblock %}
+{% block app_content %}
+<div class="card card-inline">
+  <h2>Удалить объект «{{ property.name }}»?</h2>
+  <p class="subtitle">Вместе с объектом удалятся все его данные. Отменить это действие нельзя.</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Удалить объект</button>
+  </form>
+  <p class="footer-note"><a href="{% url 'property_detail' property.pk %}">Отмена</a></p>
+</div>
+{% endblock %}

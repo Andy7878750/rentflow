@@ -1,0 +1,47 @@
+{% extends "app/base.html" %}
+{% block title %}{% if property %}Изменить: {{ property.name }}{% else %}Новый объект{% endif %} — RentFlow{% endblock %}
+{% block app_content %}
+<div class="page-head">
+  <div class="page-title"><h1>{% if property %}Изменить объект{% else %}Новый объект{% endif %}</h1></div>
+</div>
+
+<div class="card card-inline">
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="field">
+      <label for="{{ form.name.id_for_label }}">Название</label>
+      <input type="text" name="name" id="{{ form.name.id_for_label }}" value="{{ form.name.value|default:'' }}" placeholder="Королева 61" required autofocus>
+      {% if form.name.errors %}<ul class="errorlist">{% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="{{ form.kind.id_for_label }}">Тип</label>
+      <select name="kind" id="{{ form.kind.id_for_label }}">
+        {% for value, label in form.fields.kind.choices %}
+          <option value="{{ value }}"{% if form.kind.value|stringformat:'s' == value %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="{{ form.address.id_for_label }}">Адрес</label>
+      <input type="text" name="address" id="{{ form.address.id_for_label }}" value="{{ form.address.value|default:'' }}" placeholder="СПб, пр. Королёва, 61, пом. 24-Н" required>
+      {% if form.address.errors %}<ul class="errorlist">{% for error in form.address.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="{{ form.management_company.id_for_label }}">Управляющая компания <span class="optional">необязательно</span></label>
+      <input type="text" name="management_company" id="{{ form.management_company.id_for_label }}" value="{{ form.management_company.value|default:'' }}" placeholder="ТСЖ «Глинки 16»">
+    </div>
+
+    <div class="field">
+      <label for="{{ form.management_phone.id_for_label }}">Телефон УК <span class="optional">необязательно</span></label>
+      <input type="tel" name="management_phone" id="{{ form.management_phone.id_for_label }}" value="{{ form.management_phone.value|default:'' }}" placeholder="+7 (812) 000-00-00">
+    </div>
+
+    <button type="submit" class="btn btn-primary">{% if property %}Сохранить{% else %}Добавить объект{% endif %}</button>
+    <p class="footer-note"><a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}">Отмена</a></p>
+  </form>
+</div>
+{% endblock %}

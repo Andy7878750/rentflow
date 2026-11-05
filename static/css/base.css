@@ -3,6 +3,9 @@
   --color-primary-light: #4a6278;
   --color-accent: #148f77;
   --color-accent-hover: #117965;
+  --color-accent-soft: #e6f4f1;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fbecea;
   --color-bg: #f5f6f7;
   --color-surface: #ffffff;
   --color-border: #e1e4e8;
@@ -383,30 +386,6 @@ a {
   font-size: 13px;
 }
 
-.app-shell {
-  min-height: 100vh;
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 32px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.app-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 48px 32px;
-}
-
-.app-main h1 {
-  color: var(--color-primary);
-  margin: 0 0 8px;
-}
-
 .btn-link {
   background: none;
   border: none;
@@ -420,54 +399,6 @@ a {
 
 .btn-link:hover {
   color: var(--color-text);
-}
-
-.header-start {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-}
-
-.app-nav {
-  display: flex;
-  gap: 20px;
-}
-
-.app-nav a {
-  color: var(--color-text-muted);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.app-nav a:hover {
-  color: var(--color-primary);
-}
-
-.property-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 32px;
-}
-
-.property-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: 10px;
-}
-
-.property-name {
-  font-weight: 700;
-}
-
-.property-address {
-  color: var(--color-text-muted);
-  font-size: 14px;
 }
 
 .card-inline {

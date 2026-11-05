@@ -1,44 +1,73 @@
-{% extends "base.html" %}
+{% extends "app/base.html" %}
 {% block title %}Объекты — RentFlow{% endblock %}
-{% block content %}
-<div class="app-shell">
-  {% include "_app_header.html" %}
-  <main class="app-main">
-    <h1>Мои объекты</h1>
-
-    {% if properties %}
-      <ul class="property-list">
-        {% for property in properties %}
-          <li class="property-item">
-            <span class="property-name">{{ property.name }}</span>
-            <span class="property-address">{{ property.address }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="subtitle">Пока нет ни одного объекта — добавьте первый ниже.</p>
-    {% endif %}
-
-    <div class="card card-inline">
-      <h2>Добавить объект</h2>
-      <form method="post">
-        {% csrf_token %}
-
-        <div class="field">
-          <label for="{{ form.name.id_for_label }}">Название</label>
-          <input type="text" name="name" id="{{ form.name.id_for_label }}" value="{{ form.name.value|default:'' }}" placeholder="Квартира на Ленина, 10" required>
-          {% if form.name.errors %}<ul class="errorlist">{% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-        </div>
-
-        <div class="field">
-          <label for="{{ form.address.id_for_label }}">Адрес</label>
-          <input type="text" name="address" id="{{ form.address.id_for_label }}" value="{{ form.address.value|default:'' }}" placeholder="г. Москва, ул. Ленина, д. 10, кв. 5" required>
-          {% if form.address.errors %}<ul class="errorlist">{% for error in form.address.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-        </div>
-
-        <button type="submit" class="btn btn-primary">Добавить</button>
-      </form>
+{% block app_content %}
+<div class="page-head">
+  <div class="page-title">
+    <h1>Объекты</h1>
+    <div class="month-switch">
+      <a href="?month={{ prev_month }}" class="icon-button" aria-label="Предыдущий месяц"><svg class="icon"><use href="#i-chevron-left"/></svg></a>
+      <span class="month-label">{{ month_label }}</span>
+      <a href="?month={{ next_month }}" class="icon-button" aria-label="Следующий месяц"><svg class="icon"><use href="#i-chevron-right"/></svg></a>
     </div>
-  </main>
+  </div>
+  <a href="{% url 'property_create' %}" class="btn btn-primary btn-auto">
+    <svg class="icon"><use href="#i-plus"/></svg>Добавить объект
+  </a>
 </div>
+
+<section class="kpi-row">
+  <div class="kpi">
+    <span class="kpi-label">К выставлению</span>
+    <span class="kpi-value">{{ summary.to_invoice|floatformat:"2g" }} ₽</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-label">Арендаторы</span>
+    <span class="kpi-value">{{ summary.tenants }} <small>· готовы {{ summary.tenants_ready }}</small></span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-label">Показания внесены</span>
+    <span class="kpi-value">{{ summary.readings_done }} из {{ summary.readings_total }}</span>
+  </div>
+  <div class="kpi" title="Свои объекты, капремонт, незанятые доли">
+    <span class="kpi-label">Остаётся на вас</span>
+    <span class="kpi-value">{{ summary.owner_share|floatformat:"2g" }} ₽</span>
+  </div>
+</section>
+
+{% if properties %}
+  <section class="property-grid">
+    {% for property in properties %}
+      <article class="property-card" id="property-{{ property.id }}">
+        <header class="property-card-head">
+          <span class="property-icon">
+            <svg class="icon"><use href="{% if property.kind == 'commercial' %}#i-building{% else %}#i-home{% endif %}"/></svg>
+          </span>
+          <div class="property-title">
+            <h2><a href="{% url 'property_detail' property.pk %}">{{ property.name }}</a></h2>
+            <span class="property-kind">{{ property.get_kind_display }}</span>
+          </div>
+          {% include "properties/_actions.html" %}
+        </header>
+
+        {% include "properties/_contacts.html" %}
+
+        <div class="property-stats">
+          <div><span class="stat-label">Арендаторы</span><span class="stat-value">—</span></div>
+          <div><span class="stat-label">Показания</span><span class="stat-value">не внесены</span></div>
+          <div><span class="stat-label">К выставлению</span><span class="stat-value">0,00 ₽</span></div>
+        </div>
+
+        <p class="property-tenants-empty">Арендаторов пока нет</p>
+      </article>
+    {% endfor %}
+  </section>
+{% else %}
+  <section class="empty-state">
+    <h2>Начните с первого объекта</h2>
+    <p>Объект. Арендаторы. Квитанции. Честный расчёт.</p>
+    <a href="{% url 'property_create' %}" class="btn btn-primary btn-auto">
+      <svg class="icon"><use href="#i-plus"/></svg>Добавить объект
+    </a>
+  </section>
+{% endif %}
 {% endblock %}

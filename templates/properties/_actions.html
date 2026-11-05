@@ -1,0 +1,16 @@
+<details class="dropdown" data-dropdown>
+  <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с объектом">
+    <svg class="icon"><use href="#i-more"/></svg>
+  </summary>
+  <div class="dropdown-menu" role="menu">
+    <a href="{% url 'property_detail' property.pk %}" class="dropdown-item" role="menuitem">
+      <svg class="icon"><use href="#i-eye"/></svg>Посмотреть
+    </a>
+    <a href="{% url 'property_edit' property.pk %}" class="dropdown-item" role="menuitem">
+      <svg class="icon"><use href="#i-edit"/></svg>Изменить
+    </a>
+    <a href="{% url 'property_delete' property.pk %}" class="dropdown-item dropdown-item-danger" role="menuitem">
+      <svg class="icon"><use href="#i-trash"/></svg>Удалить
+    </a>
+  </div>
+</details>

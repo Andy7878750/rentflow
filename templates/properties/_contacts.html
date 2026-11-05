@@ -1,0 +1,9 @@
+<dl class="property-contacts">
+  <div><svg class="icon"><use href="#i-pin"/></svg><dt>Адрес:</dt><dd>{{ property.address }}</dd></div>
+  {% if property.management_company %}
+    <div><svg class="icon"><use href="#i-building"/></svg><dt>УК:</dt><dd>{{ property.management_company }}</dd></div>
+  {% endif %}
+  {% if property.management_phone %}
+    <div><svg class="icon"><use href="#i-phone"/></svg><dt>Тел.:</dt><dd><a href="tel:{{ property.phone_href }}">{{ property.management_phone }}</a></dd></div>
+  {% endif %}
+</dl>
