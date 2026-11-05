@@ -210,6 +210,10 @@ a {
   border-color: var(--color-primary-light);
 }
 
+.field input::placeholder {
+  color: var(--color-text-muted);
+}
+
 .field-row {
   display: flex;
   justify-content: space-between;
@@ -221,16 +225,74 @@ a {
   text-decoration: none;
 }
 
-.checkbox-row {
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 40px !important;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 40px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.password-toggle:hover {
+  color: var(--color-text);
+}
+
+.password-toggle.is-visible {
+  color: var(--color-accent);
+}
+
+.strength-meter {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.strength-meter-segment {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background-color 0.15s ease;
+}
+
+.strength-meter-segment.is-active {
+  background: var(--color-accent);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 20px;
   font-size: 14px;
+  line-height: 1.4;
 }
 
 .checkbox-row input {
-  margin: 0;
+  margin: 3px 0 0;
+  flex-shrink: 0;
 }
 
 .btn {

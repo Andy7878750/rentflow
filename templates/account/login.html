@@ -2,31 +2,7 @@
 {% block title %}Вход — RentFlow{% endblock %}
 {% block content %}
 <div class="auth-layout">
-  <div class="auth-intro">
-    <div class="auth-intro-inner">
-      <div class="brand">
-        <span class="brand-mark">R</span>
-        <span class="brand-name">RentFlow</span>
-      </div>
-      <h2>Коммуналка арендаторов — без Excel</h2>
-      <p>Вносите показания и счета поставщиков — сервис сам разделит суммы, соберёт отчёт для каждого арендатора и покажет, кто что оплатил.</p>
-      <ul class="feature-list">
-        <li>
-          <span class="feature-title">Сам делит общие счета</span>
-          <span class="feature-desc">По долям, по показаниям счётчиков или смешанно</span>
-        </li>
-        <li>
-          <span class="feature-title">Отчёт для каждого арендатора</span>
-          <span class="feature-desc">Понятная разбивка: услуга, как посчитано, сумма</span>
-        </li>
-        <li>
-          <span class="feature-title">Кто что оплатил</span>
-          <span class="feature-desc">Счета арендаторам и статус оплаты — в одном месте</span>
-        </li>
-      </ul>
-      <p class="footer-note-left">Данные хранятся на серверах в России.</p>
-    </div>
-  </div>
+  {% include "account/_intro.html" %}
   <div class="auth-form-side">
   <div class="card">
     <h1>Вход</h1>
@@ -43,18 +19,11 @@
 
       <div class="field">
         <label for="id_login">Почта</label>
-        <input type="email" name="login" id="id_login" value="{{ form.login.value|default:'' }}" required autofocus>
+        <input type="email" name="login" id="id_login" value="{{ form.login.value|default:'' }}" placeholder="name@mail.ru" required autofocus>
         {% if form.login.errors %}<ul class="errorlist">{% for error in form.login.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
       </div>
 
-      <div class="field">
-        <div class="field-row">
-          <label for="id_password">Пароль</label>
-          <a class="field-row-link" href="{% url 'account_reset_password' %}">Забыли пароль?</a>
-        </div>
-        <input type="password" name="password" id="id_password" required>
-        {% if form.password.errors %}<ul class="errorlist">{% for error in form.password.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-      </div>
+      {% include "account/_password_field.html" with field=form.password label="Пароль" forgot_link=True %}
 
       <label class="checkbox-row">
         <input type="checkbox" name="remember" id="id_remember">
