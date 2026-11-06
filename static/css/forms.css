@@ -915,7 +915,7 @@ input.masked {
 }
 
 .fl-unit .unit-input {
-  width: 124px;
+  width: 156px; /* room for «Доля * ?» next to the % / м² picker */
 }
 
 .field.fl-unit > label {
@@ -926,7 +926,7 @@ input.masked {
 .share-hint {
   position: absolute;
   top: 8px;
-  left: 132px;
+  left: 164px;
   color: var(--color-text-muted);
   font-size: 11px;
   line-height: 13px;
@@ -1048,7 +1048,7 @@ input.masked {
 
 /* The share column holds a compact box (value + % / м²) and «сост. ~49,5 м²» to its right. */
 .tenant-line-main {
-  grid-template-columns: minmax(0, 1.3fr) 216px minmax(0, 1.2fr) 36px;
+  grid-template-columns: minmax(0, 1.3fr) 236px minmax(0, 1.2fr) 36px;
 }
 
 .tenant-line-extra {
