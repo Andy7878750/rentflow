@@ -4,14 +4,14 @@
 <h2>Почта для входа</h2>
 
 {% if current_emailaddress %}
-  <div class="field">
+  <div class="field fl">
     <label for="current_email">Текущая почта</label>
     <input type="email" id="current_email" value="{{ current_emailaddress.email }}" disabled>
   </div>
 {% endif %}
 
 {% if new_emailaddress %}
-  <div class="field">
+  <div class="field fl">
     <label for="new_email">{% if current_emailaddress %}Меняется на{% else %}Текущая почта{% endif %}</label>
     <input type="email" id="new_email" value="{{ new_emailaddress.email }}" disabled>
     <p class="field-hint">Адрес ещё не подтверждён — откройте письмо со ссылкой.</p>
@@ -26,9 +26,9 @@
 
 <form method="post" action="{% url 'account_email' %}">
   {% csrf_token %}
-  <div class="field">
+  <div class="field fl">
     <label for="{{ form.email.auto_id }}">Новая почта</label>
-    <input type="email" name="email" id="{{ form.email.auto_id }}" value="{{ form.email.value|default:'' }}" placeholder="name@mail.ru" required>
+    <input type="email" name="email" id="{{ form.email.auto_id }}" value="{{ form.email.value|default:'' }}" placeholder="name@mail.ru" autocomplete="email" required>
     <p class="field-hint">Пришлём письмо на новый адрес. Почта сменится после подтверждения.</p>
     {% if form.email.errors %}<ul class="errorlist">{% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
   </div>

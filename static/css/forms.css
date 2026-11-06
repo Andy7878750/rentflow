@@ -116,9 +116,9 @@ input.masked {
 }
 
 /* If a browser still autofills something, no blue/yellow background. */
-.pform input:-webkit-autofill,
-.pform input:-webkit-autofill:hover,
-.pform input:-webkit-autofill:focus {
+.fl input:-webkit-autofill,
+.fl input:-webkit-autofill:hover,
+.fl input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--color-text);
   transition: background-color 600000s 0s;
 }
@@ -127,15 +127,15 @@ input.masked {
    The label sits inside the box like a placeholder; once the field is focused or filled it
    shrinks into the top corner, so it never disappears and needs no line of its own. */
 
-.pform .fl {
+.fl {
   position: relative;
   --fl-right: 13px; /* room on the right for an eye / calendar / unit picker */
 }
 
-.pform .fl-button { --fl-right: 46px; }
-.pform .fl-unit { --fl-right: 72px; }
+.fl-button { --fl-right: 46px; }
+.fl-unit { --fl-right: 72px; }
 
-.pform .fl > label {
+.field.fl > label {
   position: absolute;
   top: 26px; /* middle of the 52px field */
   left: 13px;
@@ -157,43 +157,62 @@ input.masked {
   transition: top 0.15s ease, font-size 0.15s ease, color 0.15s ease;
 }
 
-.pform .fl > label .help {
+.fl > label .help {
   pointer-events: auto;
   flex: 0 0 auto;
 }
 
-.pform .fl.is-filled > label,
-.pform .fl:focus-within > label,
-.pform .fl:has(input:not(:placeholder-shown)) > label {
+.fl.is-filled > label,
+.fl:focus-within > label,
+.fl:has(input:not(:placeholder-shown)) > label {
   top: 7px;
   font-size: 10px;
   transform: none;
 }
 
-.pform .fl.is-filled > label .help,
-.pform .fl:focus-within > label .help,
-.pform .fl:has(input:not(:placeholder-shown)) > label .help {
+.fl.is-filled > label .help,
+.fl:focus-within > label .help,
+.fl:has(input:not(:placeholder-shown)) > label .help {
   width: 14px;
   height: 14px;
   font-size: 9px;
 }
 
-.pform .fl:focus-within > label {
+.fl:focus-within > label {
   color: var(--color-accent);
 }
 
-.pform .fl input:not([type=radio]):not([type=checkbox]),
-.pform .fl .select-trigger {
+/* One look for every form in the app (object window, sign-in, settings). */
+.fl input:not([type=radio]):not([type=checkbox]),
+.fl .select-trigger {
+  width: 100%;
   height: 52px;
   padding: 22px 12px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: inherit;
 }
 
-.pform .fl-button input:not([type=radio]):not([type=checkbox]) {
+.fl input:not([type=radio]):not([type=checkbox]):focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.fl input:disabled {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.fl-button input:not([type=radio]):not([type=checkbox]) {
   padding-right: 44px;
 }
 
 /* The share box: the outer frame draws the border, the input inside has none. */
-.pform .fl .unit-input input:not([type=radio]):not([type=checkbox]) {
+.fl .unit-input input:not([type=radio]):not([type=checkbox]) {
   height: 50px; /* + 1px frame on each side = 52px, like the other fields */
   padding: 21px 10px 5px 12px;
   border: none;
@@ -201,26 +220,35 @@ input.masked {
   background: transparent;
 }
 
-.pform .fl .unit-select {
+.fl .unit-input .unit-select {
   height: 50px;
 }
 
+/* «Забыли пароль?» and similar links under a field. */
+.field-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  text-align: right;
+  text-decoration: none;
+}
+
 /* Real hints (phone format, «дд.мм.гггг») show only while typing, under the raised label. */
-.pform .fl input::placeholder {
+.fl input::placeholder {
   color: transparent;
   transition: color 0.15s ease;
 }
 
-.pform .fl input:focus::placeholder {
+.fl input:focus::placeholder {
   color: #b1b8bf;
 }
 
-.pform .fl:has(.errorlist) input,
-.pform .fl:has(.errorlist) .unit-input {
+.fl:has(.errorlist) input:not([type=radio]):not([type=checkbox]),
+.fl:has(.errorlist) .unit-input {
   border-color: var(--color-danger);
 }
 
-.pform .fl:has(.errorlist) > label {
+.fl:has(.errorlist) > label {
   color: var(--color-danger);
 }
 
