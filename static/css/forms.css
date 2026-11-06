@@ -1037,8 +1037,9 @@ input.masked {
   margin-top: 16px; /* room for the converted share under the box */
 }
 
+/* The share is the widest: it holds the value, «составляет ~55%» and the % / м² picker. */
 .tenant-line-main {
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.4fr) 36px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr) 36px;
 }
 
 .tenant-line-extra {
