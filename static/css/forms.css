@@ -627,11 +627,16 @@ input.masked {
   cursor: pointer;
 }
 
+/* Same focus look as every other field: accent border and a soft ring. */
 .select-trigger:focus-visible,
 .select.is-open .select-trigger {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.fl:has(.select.is-open) > label {
+  color: var(--color-accent);
 }
 
 .select-value {
@@ -717,7 +722,7 @@ input.masked {
 }
 
 .select-row.is-selected .select-option {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .select-row.is-selected .select-check {
@@ -772,6 +777,24 @@ input.masked {
 .pform .select-add-input:focus {
   border: none;
   box-shadow: none;
+}
+
+/* The «+ свой вариант…» line lives inside a floating-label field: undo the field look
+   (border, 52px height, hidden placeholder) so it stays a quiet line with a visible hint. */
+.fl .select-add input.select-add-input:not([type=radio]),
+.fl .select-add input.select-add-input:not([type=radio]):focus {
+  height: 36px;
+  padding: 6px 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 15px;
+}
+
+.fl .select-add .select-add-input::placeholder,
+.fl .select-add .select-add-input:focus::placeholder {
+  color: #9aa3ab;
 }
 
 .select-add-btn {
@@ -1038,7 +1061,7 @@ input.masked {
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  top: 20px;
   z-index: 2000;
   display: flex;
   flex-direction: column;
@@ -1067,7 +1090,7 @@ input.masked {
 
 .toast.is-leaving {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(-8px);
 }
 
 .toast-icon {
@@ -1106,7 +1129,7 @@ input.masked {
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(-12px); }
   to { opacity: 1; transform: none; }
 }
 
