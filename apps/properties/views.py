@@ -17,7 +17,9 @@ from .models import Property, PropertyKind
 @login_required
 def property_list(request):
     month = services.parse_month(request.GET.get('month'))
-    properties = Property.objects.filter(owner=request.user).prefetch_related('tenants')
+    properties = list(Property.objects.filter(owner=request.user).prefetch_related('tenants'))
+    for property_obj in properties:
+        property_obj.setup = services.setup_steps(property_obj)
 
     # Readings and invoices don't exist yet: zero placeholders until billing lands.
     summary = {

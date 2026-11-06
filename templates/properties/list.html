@@ -51,15 +51,33 @@
 
         {% include "properties/_contacts.html" %}
 
-        <div class="property-stats">
-          {% if property.is_owner_used %}
-            <div><span class="stat-label">Пользуется</span><span class="stat-value">собственник</span></div>
-          {% else %}
-            <div><span class="stat-label">Арендаторы</span><span class="stat-value">{{ property.tenants.all|length|default:"—" }}</span></div>
-          {% endif %}
-          <div><span class="stat-label">Показания</span><span class="stat-value">не внесены</span></div>
-          <div><span class="stat-label">К выставлению</span><span class="stat-value">0,00 ₽</span></div>
-        </div>
+        {% if property.setup.complete %}
+          <div class="property-stats">
+            {% if property.is_owner_used %}
+              <div><span class="stat-label">Пользуется</span><span class="stat-value">собственник</span></div>
+            {% else %}
+              <div><span class="stat-label">Арендаторы</span><span class="stat-value">{{ property.tenants.all|length|default:"—" }}</span></div>
+            {% endif %}
+            <div><span class="stat-label">Показания</span><span class="stat-value">не внесены</span></div>
+            <div><span class="stat-label">К выставлению</span><span class="stat-value">0,00 ₽</span></div>
+          </div>
+        {% else %}
+          {# Until the one-time setup is done, numbers would be zeros: show what is left instead. #}
+          <div class="property-setup">
+            <span class="setup-badge">Настройка {{ property.setup.done }} из {{ property.setup.total }}</span>
+            <ul class="setup-steps">
+              {% for step in property.setup.steps %}
+                <li class="{% if step.done %}is-done{% endif %}">
+                  <span class="setup-mark" aria-hidden="true">{% if step.done %}<svg class="icon"><use href="#i-check"/></svg>{% endif %}</span>
+                  {{ step.label }}
+                </li>
+              {% endfor %}
+            </ul>
+            <a href="{% url 'property_detail' property.pk %}" class="btn btn-primary btn-auto">
+              <svg class="icon"><use href="#i-plus"/></svg>Добавить квитанции
+            </a>
+          </div>
+        {% endif %}
 
         {% include "properties/_tenants.html" %}
       </article>

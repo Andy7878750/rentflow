@@ -51,6 +51,36 @@ class MonthServiceTests(SimpleTestCase):
         self.assertEqual(services.month_label(month), 'Октябрь 2026')
 
 
+class SetupStepsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')
+
+    def test_new_object_without_tenants_is_1_of_3(self):
+        prop = Property.objects.create(owner=self.user, name='Глинки 148')
+        setup = services.setup_steps(prop)
+        self.assertEqual((setup['done'], setup['total'], setup['complete']), (1, 3, False))
+
+    def test_tenants_step_done_when_tenants_exist(self):
+        prop = Property.objects.create(owner=self.user, name='Глинки 148')
+        Tenant.objects.create(property=prop, name='Иванов')
+        setup = services.setup_steps(prop)
+        self.assertEqual(setup['done'], 2)
+        self.assertEqual(setup['steps'][1], {'label': 'Арендаторы', 'done': True})
+
+    def test_owner_used_object_counts_people_step_done(self):
+        prop = Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)
+        setup = services.setup_steps(prop)
+        self.assertEqual(setup['steps'][1], {'label': 'Собственник', 'done': True})
+        self.assertEqual(setup['done'], 2)
+
+    def test_list_card_shows_setup_checklist(self):
+        Property.objects.create(owner=self.user, name='Глинки 148')
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('property_list'))
+        self.assertContains(response, 'Настройка 1 из 3')
+        self.assertContains(response, 'Добавить квитанции')
+
+
 class PropertyPagesTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')

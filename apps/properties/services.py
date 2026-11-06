@@ -61,6 +61,28 @@ def month_label(month):
     return f'{MONTH_NAMES[month.month - 1]} {month.year}'
 
 
+def setup_steps(property_obj):
+    """The one-time setup checklist shown on the object card until everything is done.
+
+    Receipts don't exist yet, so that step stays open for every object for now.
+    """
+    if property_obj.is_owner_used:
+        people = ('Собственник', True)
+    else:
+        people = ('Арендаторы', bool(property_obj.tenants.all()))
+    steps = [
+        {'label': 'Объект', 'done': True},
+        {'label': people[0], 'done': people[1]},
+        {'label': 'Квитанции и счётчики', 'done': False},
+    ]
+    return {
+        'steps': steps,
+        'done': sum(step['done'] for step in steps),
+        'total': len(steps),
+        'complete': all(step['done'] for step in steps),
+    }
+
+
 @transaction.atomic
 def save_property(form, tenant_formset, owner):
     """Save the object and its tenants, deriving each tenant's share in the other unit."""
