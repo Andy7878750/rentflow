@@ -998,7 +998,7 @@ input.masked {
 .tenant-row:not([hidden]) ~ .tenant-row:not([hidden]) {
   margin-top: 18px;
   padding-top: 18px;
-  border-top: 1px dashed var(--color-border);
+  border-top: 1px dashed #b8c0c7; /* darker than field borders so tenants read as separate blocks */
 }
 
 .tenant-line {
