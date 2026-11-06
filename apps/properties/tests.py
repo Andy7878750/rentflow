@@ -163,6 +163,13 @@ class PropertyFormWithTenantsTests(TestCase):
         self.client.force_login(self.user)
         self.url = reverse('property_create')
 
+    def test_form_does_not_invite_browser_autofill(self):
+        # A password field would make the browser fill in the landlord's own login.
+        html = self.client.get(self.url).content.decode()
+        self.assertNotIn('type="password"', html)
+        self.assertIn('class="masked"', html)
+        self.assertIn('autocomplete="off"', html)
+
     def test_form_page_has_both_blocks(self):
         response = self.client.get(self.url)
         self.assertContains(response, 'Объект и УК / ТСЖ')

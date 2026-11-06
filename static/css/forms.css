@@ -109,6 +109,20 @@
   color: #9aa3ab;
 }
 
+/* Password hint drawn as dots without being a password field (see PropertyForm). */
+input.masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+/* If a browser still autofills something, no blue/yellow background. */
+.pform input:-webkit-autofill,
+.pform input:-webkit-autofill:hover,
+.pform input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text);
+  transition: background-color 600000s 0s;
+}
+
 /* ---------- Floating labels ----------
    The label sits inside the box like a placeholder; once the field is focused or filled it
    shrinks into the top corner, so it never disappears and needs no line of its own. */

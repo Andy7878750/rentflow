@@ -22,7 +22,7 @@
       <div><dt>Подсказка к паролю</dt><dd>
         {% if property.password_hint %}
           <span class="summary-secret">
-            <input type="password" value="{{ property.password_hint }}" readonly aria-label="Подсказка к паролю">
+            <input type="text" class="masked" value="{{ property.password_hint }}" readonly tabindex="-1" autocomplete="off" aria-label="Подсказка к паролю">
             <button type="button" class="reveal-toggle" data-reveal aria-label="Показать подсказку">
               <svg class="icon icon-shown"><use href="#i-eye"/></svg>
               <svg class="icon icon-hidden"><use href="#i-eye-off"/></svg>

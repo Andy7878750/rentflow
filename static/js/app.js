@@ -188,8 +188,9 @@
     var toggle = event.target.closest('[data-reveal]');
     if (!toggle) return;
     var input = toggle.parentNode.querySelector('input');
-    var showing = input.type === 'text';
-    input.type = showing ? 'password' : 'text';
+    // Dots come from the .masked class: a real password field would invite the browser's autofill.
+    var showing = !input.classList.contains('masked');
+    input.classList.toggle('masked', showing);
     toggle.classList.toggle('is-visible', !showing);
     toggle.setAttribute('aria-label', showing ? 'Показать подсказку' : 'Скрыть подсказку');
   });

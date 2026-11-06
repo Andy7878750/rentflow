@@ -12,10 +12,18 @@ PHONE_PLACEHOLDER = '+7 (___) ___-__-__ или +код страны'
 
 
 def add_blank_placeholders(form):
-    """Floating labels need a placeholder on every input: CSS sees an empty field by it."""
+    """Prepare every visible input of our forms.
+
+    - Floating labels need a placeholder: CSS sees an empty field by it.
+    - The browser must not fill in the landlord's own login, address or phone:
+      these fields are about the object, the management company and tenants.
+    """
     for field in form.fields.values():
         if getattr(field.widget, 'input_type', None) not in (None, 'hidden', 'radio', 'checkbox'):
             field.widget.attrs.setdefault('placeholder', ' ')
+            field.widget.attrs.setdefault('autocomplete', 'off')
+            field.widget.attrs.setdefault('data-1p-ignore', '')       # 1Password
+            field.widget.attrs.setdefault('data-lpignore', 'true')    # LastPass
 
 
 class PropertyForm(forms.ModelForm):
@@ -34,11 +42,11 @@ class PropertyForm(forms.ModelForm):
             'management_phone': forms.TextInput(attrs={'type': 'tel', 'placeholder': PHONE_PLACEHOLDER, 'data-phone': ''}),
             'management_email': forms.EmailInput(attrs={'placeholder': 'name@mail.ru'}),
             'cabinet_url': forms.URLInput(attrs={'placeholder': 'https://'}),
-            'cabinet_login': forms.TextInput(attrs={'autocomplete': 'off'}),
-            'password_hint': forms.PasswordInput(
-                render_value=True,
-                attrs={'placeholder': 'сам пароль не храним', 'autocomplete': 'off'},
-            ),
+            'cabinet_login': forms.TextInput,
+            # A plain text field drawn as dots (CSS .masked), not type=password:
+            # a password field makes the browser treat the whole form as a login form
+            # and fill in the landlord's own saved e-mail and password.
+            'password_hint': forms.TextInput(attrs={'placeholder': 'сам пароль не храним', 'class': 'masked'}),
             # Set by the custom «Тип» dropdown and the unit picker inside the share fields.
             'kind': forms.HiddenInput,
             'custom_kind': forms.HiddenInput,
