@@ -12,7 +12,7 @@
   <div class="tenant-line tenant-line-extra">
     {% include "properties/_field.html" with field=tenant_form.email label="Почта (для счёта)" tip="На этот адрес будем отправлять арендатору счета." %}
     {% include "properties/_field.html" with field=tenant_form.contract label="Договор" %}
-    {% include "properties/_field.html" with field=tenant_form.contract_until label="Договор до" %}
+    {% include "properties/_field.html" with field=tenant_form.contract_until label="Договор до" date=1 %}
     <span class="tenant-remove-spacer"></span>
   </div>
 </div>

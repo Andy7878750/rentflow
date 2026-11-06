@@ -9,6 +9,9 @@ from apps.properties.models import Property
 from . import services
 from .models import Tenant
 
+DATE_FORMAT = '%d.%m.%Y'
+DATE_INPUT_FORMATS = [DATE_FORMAT, '%Y-%m-%d']
+
 
 class TenantForm(forms.ModelForm):
     # One input for the share; its unit (% or m²) is chosen once for the whole object.
@@ -27,11 +30,17 @@ class TenantForm(forms.ModelForm):
         widgets = {
             'phone': forms.TextInput(attrs={'type': 'tel', 'placeholder': PHONE_PLACEHOLDER, 'data-phone': ''}),
             'contract': forms.TextInput(attrs={'placeholder': '№ и дата'}),
-            'contract_until': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            # Our own calendar (static/js/app.js) fills it; typing by hand works too.
+            'contract_until': forms.DateInput(
+                format=DATE_FORMAT,
+                attrs={'placeholder': 'дд.мм.гггг', 'inputmode': 'numeric', 'autocomplete': 'off', 'data-date': ''},
+            ),
         }
 
     def __init__(self, *args, share_unit=Property.ShareUnit.PERCENT, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['contract_until'].input_formats = DATE_INPUT_FORMATS
+        self.fields['contract_until'].error_messages['invalid'] = 'Введите дату в виде дд.мм.гггг.'
         self.share_unit = share_unit
         if self.instance.pk:
             value = self.instance.area if share_unit == Property.ShareUnit.AREA else self.instance.share_percent

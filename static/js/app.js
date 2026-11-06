@@ -29,6 +29,7 @@
 
   function showInModal(html) {
     hideTip();
+    closeDate();
     dialog.innerHTML = html;
     initForms(dialog);
     if (!dialog.open) dialog.showModal();
@@ -75,11 +76,13 @@
     dialog.addEventListener('cancel', function (event) {
       event.preventDefault();
       hideTip();
+      closeDate();
       closeSelects(null);
     });
 
     dialog.addEventListener('close', function () {
       hideTip();
+      closeDate();
       dialog.innerHTML = '';
     });
 
@@ -230,6 +233,263 @@
       input.value = formatPhone(input.value);
     }
   });
+
+  // ---------- Date picker ----------
+  // A card under the field: month with arrows, a click on the title switches to months
+  // (and years with the arrows), «Сегодня» / «Очистить» at the bottom. Always 6 rows,
+  // so the card never changes height. Typing дд.мм.гггг by hand also works.
+
+  var MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  var MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  var WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  var picker = null; // { card, input, toggle, view: 'days' | 'months', year, month, focus }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function formatDate(d) { return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear(); }
+  function isoDate(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  function parseDate(value) {
+    var m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(String(value || '').trim());
+    if (!m) return null;
+    var d = new Date(+m[3], +m[2] - 1, +m[1]);
+    return d.getMonth() === +m[2] - 1 && d.getDate() === +m[1] ? d : null;
+  }
+
+  function sameDay(a, b) {
+    return !!(a && b) && a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function closeDate() {
+    if (!picker) return;
+    picker.card.remove();
+    if (picker.toggle) picker.toggle.classList.remove('is-active');
+    picker = null;
+  }
+
+  function placeDate() {
+    if (!picker) return;
+    var box = picker.input.getBoundingClientRect();
+    var card = picker.card;
+    var margin = 8;
+    var left = Math.min(box.left, window.innerWidth - card.offsetWidth - margin);
+    var top = box.bottom + 6;
+    if (top + card.offsetHeight > window.innerHeight - margin) top = box.top - card.offsetHeight - 6;
+    card.style.left = Math.max(margin, left) + 'px';
+    card.style.top = Math.max(margin, top) + 'px';
+  }
+
+  function renderDate(moveFocus) {
+    var p = picker;
+    var selected = parseDate(p.input.value);
+    var today = new Date();
+    var html = '<div class="date-head">' +
+      '<button type="button" class="date-nav" data-date-step="-1" aria-label="' +
+        (p.view === 'days' ? 'Предыдущий месяц' : 'Предыдущий год') + '">' +
+        '<svg class="icon"><use href="#i-chevron-left"/></svg></button>' +
+      '<button type="button" class="date-title" data-date-view aria-label="' +
+        (p.view === 'days' ? 'Выбрать месяц и год' : 'Вернуться к дням') + '">' +
+        (p.view === 'days' ? MONTHS[p.month] + ' ' + p.year : p.year) +
+        '<svg class="icon"><use href="#i-chevron-down"/></svg></button>' +
+      '<button type="button" class="date-nav" data-date-step="1" aria-label="' +
+        (p.view === 'days' ? 'Следующий месяц' : 'Следующий год') + '">' +
+        '<svg class="icon"><use href="#i-chevron-right"/></svg></button>' +
+      '</div>';
+
+    if (p.view === 'days') {
+      var first = new Date(p.year, p.month, 1);
+      var offset = (first.getDay() + 6) % 7; // weeks start on Monday
+      var focus = p.focus && p.focus.getMonth() === p.month && p.focus.getFullYear() === p.year ? p.focus
+        : selected && selected.getMonth() === p.month && selected.getFullYear() === p.year ? selected
+        : today.getMonth() === p.month && today.getFullYear() === p.year ? today : first;
+      p.focus = focus;
+      html += '<div class="date-grid" role="grid">';
+      WEEKDAYS.forEach(function (name) { html += '<span class="date-weekday">' + name + '</span>'; });
+      for (var i = 0; i < 42; i++) {
+        var d = new Date(p.year, p.month, 1 - offset + i);
+        var classes = 'date-day';
+        if (d.getMonth() !== p.month) classes += ' is-outside';
+        if (i % 7 >= 5) classes += ' is-weekend';
+        if (sameDay(d, today)) classes += ' is-today';
+        if (sameDay(d, selected)) classes += ' is-selected';
+        html += '<button type="button" class="' + classes + '" data-date-pick="' + isoDate(d) + '"' +
+          ' tabindex="' + (sameDay(d, focus) ? 0 : -1) + '"' +
+          ' aria-label="' + d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear() + '"' +
+          (sameDay(d, selected) ? ' aria-selected="true"' : '') + '>' + d.getDate() + '</button>';
+      }
+      html += '</div>';
+    } else {
+      html += '<div class="date-months">';
+      MONTHS_SHORT.forEach(function (name, index) {
+        var classes = 'date-month';
+        if (selected && selected.getFullYear() === p.year && selected.getMonth() === index) classes += ' is-selected';
+        if (today.getFullYear() === p.year && today.getMonth() === index) classes += ' is-today';
+        html += '<button type="button" class="' + classes + '" data-date-month="' + index + '">' + name + '</button>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="date-foot">' +
+      '<button type="button" class="date-link is-muted" data-date-clear>Очистить</button>' +
+      '<button type="button" class="date-link" data-date-today>Сегодня</button></div>';
+
+    p.card.innerHTML = html;
+    p.card.classList.toggle('is-months', p.view === 'months');
+    if (moveFocus) {
+      var target = p.card.querySelector(p.view === 'days' ? '.date-day[tabindex="0"]' : '.date-month.is-selected, .date-month.is-today, .date-month');
+      if (target) target.focus();
+    }
+  }
+
+  function setDate(d) {
+    var input = picker.input;
+    input.value = d ? formatDate(d) : '';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    closeDate();
+    input.focus();
+  }
+
+  function openDate(input, moveFocus) {
+    if (picker && picker.input === input) {
+      if (moveFocus) renderDate(true);
+      return;
+    }
+    closeDate();
+    hideTip();
+    closeSelects(null);
+    var selected = parseDate(input.value);
+    var base = selected || new Date();
+    var card = document.createElement('div');
+    card.className = 'date-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-label', 'Выбор даты');
+    (input.closest('dialog') || document.body).appendChild(card);
+    var toggle = input.parentNode.querySelector('[data-date-toggle]');
+    if (toggle) toggle.classList.add('is-active');
+    picker = { card: card, input: input, toggle: toggle, view: 'days',
+               year: base.getFullYear(), month: base.getMonth(), focus: selected };
+
+    card.addEventListener('click', function (event) {
+      event.stopPropagation(); // the card re-renders itself; outside-click logic must not see it
+      var p = picker;
+      var button = event.target.closest('button');
+      if (!button || !p) return;
+      if (button.hasAttribute('data-date-step')) {
+        var step = +button.dataset.dateStep;
+        if (p.view === 'days') {
+          var shifted = new Date(p.year, p.month + step, 1);
+          p.year = shifted.getFullYear();
+          p.month = shifted.getMonth();
+        } else {
+          p.year += step;
+        }
+        p.focus = null;
+        renderDate(false);
+      } else if (button.hasAttribute('data-date-view')) {
+        p.view = p.view === 'days' ? 'months' : 'days';
+        renderDate(false);
+      } else if (button.hasAttribute('data-date-month')) {
+        p.month = +button.dataset.dateMonth;
+        p.view = 'days';
+        p.focus = null;
+        renderDate(true);
+      } else if (button.hasAttribute('data-date-pick')) {
+        var parts = button.dataset.datePick.split('-');
+        setDate(new Date(+parts[0], +parts[1] - 1, +parts[2]));
+      } else if (button.hasAttribute('data-date-today')) {
+        setDate(new Date());
+      } else if (button.hasAttribute('data-date-clear')) {
+        setDate(null);
+      }
+    });
+
+    card.addEventListener('keydown', function (event) {
+      var p = picker;
+      if (!p || p.view !== 'days' || !event.target.matches('.date-day')) return;
+      var moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+      var d = new Date(p.focus);
+      if (event.key in moves) d.setDate(d.getDate() + moves[event.key]);
+      else if (event.key === 'PageUp') d.setMonth(d.getMonth() - 1);
+      else if (event.key === 'PageDown') d.setMonth(d.getMonth() + 1);
+      else return;
+      event.preventDefault();
+      p.focus = d;
+      p.year = d.getFullYear();
+      p.month = d.getMonth();
+      renderDate(true);
+    });
+
+    renderDate(moveFocus);
+    placeDate();
+  }
+
+  document.addEventListener('click', function (event) {
+    var toggle = event.target.closest('[data-date-toggle]');
+    if (toggle) {
+      var input = toggle.parentNode.querySelector('[data-date]');
+      if (picker && picker.input === input) closeDate();
+      else openDate(input, true);
+      return;
+    }
+    var field = event.target.closest('[data-date]');
+    if (field) openDate(field, false);
+    else closeDate();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (!picker) {
+      if (event.key === 'ArrowDown' && event.target.matches && event.target.matches('[data-date]')) {
+        event.preventDefault();
+        openDate(event.target, true);
+      }
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      var input = picker.input;
+      closeDate();
+      input.focus();
+    } else if (event.key === 'ArrowDown' && event.target === picker.input) {
+      event.preventDefault();
+      renderDate(true);
+    }
+  });
+
+  // Tabbing away from both the field and the card closes it.
+  document.addEventListener('focusout', function (event) {
+    if (!picker || !event.relatedTarget) return;
+    var next = event.relatedTarget;
+    if (next !== picker.input && next !== picker.toggle && !picker.card.contains(next)) closeDate();
+  });
+
+  // Typing: digits get their dots automatically (31122026 → 31.12.2026); the calendar follows.
+  document.addEventListener('input', function (event) {
+    var input = event.target;
+    if (!input.matches || !input.matches('[data-date]')) return;
+    var deleting = event.inputType && event.inputType.indexOf('delete') === 0;
+    if (!deleting && input.selectionStart === input.value.length && /^[\d.]*$/.test(input.value)) {
+      // «1.5.» → «01.05.»: a single digit closed by a dot gets its leading zero.
+      var digits = input.value.replace(/(?<!\d)(\d)\./g, '0$1.').replace(/\D/g, '').slice(0, 8);
+      var out = digits.slice(0, 2);
+      if (digits.length >= 2) out += '.' + digits.slice(2, 4);
+      if (digits.length >= 4) out += '.' + digits.slice(4);
+      input.value = out;
+    }
+    var d = parseDate(input.value);
+    if (picker && picker.input === input && d) {
+      picker.year = d.getFullYear();
+      picker.month = d.getMonth();
+      picker.view = 'days';
+      picker.focus = d;
+      renderDate(false);
+    }
+  });
+
+  document.addEventListener('scroll', function (event) {
+    if (picker && !picker.card.contains(event.target)) placeDate();
+  }, true);
+  window.addEventListener('resize', placeDate);
 
   // ---------- Custom «Тип» dropdown ----------
 

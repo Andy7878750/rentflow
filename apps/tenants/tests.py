@@ -1,9 +1,35 @@
 from decimal import Decimal
 
+import datetime
+
 from django.test import SimpleTestCase
 
 from . import services
+from .forms import TenantForm
 from .models import Tenant
+
+
+class ContractDateTests(SimpleTestCase):
+    def form(self, value):
+        return TenantForm(data={'name': 'Иван', 'share': '50', 'contract_until': value})
+
+    def test_accepts_russian_format(self):
+        form = self.form('31.12.2026')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['contract_until'], datetime.date(2026, 12, 31))
+
+    def test_accepts_iso_format(self):
+        form = self.form('2026-12-31')
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_rejects_impossible_date(self):
+        form = self.form('31.02.2026')
+        self.assertFalse(form.is_valid())
+        self.assertEqual(form.errors['contract_until'], ['Введите дату в виде дд.мм.гггг.'])
+
+    def test_shows_saved_date_as_dd_mm_yyyy(self):
+        form = TenantForm(instance=Tenant(name='Иван', contract_until=datetime.date(2027, 3, 5)))
+        self.assertIn('value="05.03.2027"', str(form['contract_until']))
 
 
 class ShareConversionTests(SimpleTestCase):

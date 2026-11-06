@@ -9,6 +9,13 @@
         <svg class="icon icon-hidden"><use href="#i-eye-off"/></svg>
       </button>
     </div>
+  {% elif date %}
+    <div class="date-field">
+      {{ field }}
+      <button type="button" class="date-toggle" data-date-toggle aria-label="Открыть календарь">
+        <svg class="icon"><use href="#i-calendar"/></svg>
+      </button>
+    </div>
   {% elif unit_select %}
     <div class="unit-input">
       {{ field }}
