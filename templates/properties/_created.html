@@ -1,0 +1,14 @@
+{# Shown in the modal right after a new object is created. Both buttons are plain links: #}
+{# the object list underneath must reload to show the new card. #}
+<div class="modal-panel modal-panel-confirm">
+  <div class="confirm-icon confirm-icon-success" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></div>
+  <h1 class="confirm-title">Объект «{{ property.name }}» создан</h1>
+  <p class="confirm-text">
+    Остался один шаг: отметьте, какие квитанции приходят по объекту, и где есть счётчики.
+    Это делается один раз.
+  </p>
+  <div class="confirm-actions">
+    <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto">Позже</a>
+    <a href="{% url 'property_detail' property.pk %}" class="btn btn-primary btn-auto" autofocus>Добавить квитанции</a>
+  </div>
+</div>

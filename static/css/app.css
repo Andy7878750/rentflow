@@ -13,7 +13,7 @@
 
 .app-layout {
   display: grid;
-  grid-template-columns: 64px 264px minmax(0, 1fr);
+  grid-template-columns: 64px 284px minmax(0, 1fr); /* fits «Квитанции и счётчики» on one line */
   min-height: 100vh;
 }
 
@@ -118,6 +118,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  white-space: nowrap;
   padding: 10px 12px;
   border-radius: var(--radius);
   color: var(--color-text);

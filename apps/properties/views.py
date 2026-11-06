@@ -64,6 +64,9 @@ def _property_form(request, property_obj=None):
         tenants_ok = owner_used or formset.is_valid()
         if form_ok and tenants_ok:
             saved = services.save_property(form, formset, request.user)
+            if not property_obj and is_modal:
+                # A new object: say what is left to do (receipts and meters) right away.
+                return render(request, 'properties/_created.html', {'property': saved})
             # Back to the object cards with a short notice (shown as a toast in app/base.html).
             if property_obj:
                 messages.success(request, f'Изменения в «{saved.name}» сохранены.')

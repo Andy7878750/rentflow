@@ -1205,6 +1205,11 @@ input.masked {
   color: var(--color-danger);
 }
 
+.confirm-icon-success {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
 .confirm-title {
   margin: 0 0 8px;
   color: var(--color-primary);

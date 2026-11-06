@@ -248,11 +248,27 @@ class PropertyFormWithTenantsTests(TestCase):
         self.assertTrue(prop.is_owner_used)
         self.assertFalse(prop.tenants.exists())
 
-    def test_modal_success_returns_redirect_header(self):
+    def test_create_in_modal_shows_next_step(self):
         response = self.client.post(self.url, form_data(), headers={'X-Modal': '1'})
-        self.assertTrue(Property.objects.exists())
+        prop = Property.objects.get()
+        self.assertTemplateUsed(response, 'properties/_created.html')
+        self.assertContains(response, 'Остался один шаг')
+        self.assertContains(response, f'href="{reverse("property_detail", args=[prop.pk])}"')
+        self.assertContains(response, f'href="{reverse("property_list")}"')
+
+    def test_edit_in_modal_returns_redirect_header(self):
+        prop = Property.objects.create(owner=self.user, name='Королёва 61')
+        url = reverse('property_edit', args=[prop.pk])
+        response = self.client.post(url, form_data(name='Королёва 61'), headers={'X-Modal': '1'})
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response['X-Modal-Redirect'], reverse('property_list'))
+
+    def test_sidebar_has_receipts_and_meters_under_objects(self):
+        html = self.client.get(reverse('property_list')).content.decode()
+        item = '<span>Квитанции и счётчики</span>'
+        self.assertIn(item, html)
+        self.assertLess(html.index('Все объекты'), html.index(item))
+        self.assertLess(html.index(item), html.index('<span>Счета</span>'))
 
     def test_edit_updates_and_removes_tenants(self):
         prop = Property.objects.create(owner=self.user, name='Королёва 61', area=Decimal('100'))

@@ -10,6 +10,7 @@
       <a href="{% url 'property_list' %}" class="rail-link{% if url_name|slice:':9' == 'property_' %} is-active{% endif %}" title="Объекты">
         <svg class="icon"><use href="#i-building"/></svg>
       </a>
+      <span class="rail-link is-soon" title="Квитанции и счётчики — скоро"><svg class="icon"><use href="#i-gauge"/></svg></span>
       <span class="rail-link is-soon" title="Счета — скоро"><svg class="icon"><use href="#i-file"/></svg></span>
       <span class="rail-link is-soon" title="Справочники — скоро"><svg class="icon"><use href="#i-library"/></svg></span>
       <span class="rail-link is-soon" title="Отчёты — скоро"><svg class="icon"><use href="#i-chart"/></svg></span>
@@ -43,6 +44,18 @@
               <svg class="icon"><use href="#i-plus"/></svg><span>Добавить объект</span>
             </a>
           </li>
+        </ul>
+      </details>
+
+      <details class="nav-group">
+        <summary>
+          <svg class="icon"><use href="#i-gauge"/></svg>
+          <span>Квитанции и счётчики</span>
+          <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
+        </summary>
+        <ul class="nav-items">
+          <li><span class="nav-item is-soon" title="Скоро">Квитанции</span></li>
+          <li><span class="nav-item is-soon" title="Скоро">Счётчики</span></li>
         </ul>
       </details>
 
