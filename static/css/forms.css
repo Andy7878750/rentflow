@@ -654,6 +654,22 @@ input.masked {
   transform: rotate(180deg);
 }
 
+/* In a floating-label field the arrow sits in the vertical middle of the box,
+   like the one in the «Доля» picker, not on the line of the text. */
+.fl .select-trigger {
+  position: relative;
+  padding-right: 40px;
+}
+
+.fl .select-trigger .select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+}
+
 .select-menu {
   position: absolute;
   top: calc(100% + 6px);
