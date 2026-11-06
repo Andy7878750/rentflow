@@ -8,7 +8,7 @@ from django.urls import reverse
 from apps.tenants.models import Tenant
 
 from . import services
-from .models import Property
+from .models import Property, PropertyKind
 
 User = get_user_model()
 
@@ -115,7 +115,9 @@ class PropertyActionsTests(TestCase):
 
     def test_edit(self):
         url = reverse('property_edit', args=[self.prop.pk])
-        self.assertContains(self.client.get(url), 'value="commercial" selected')
+        page = self.client.get(url)
+        self.assertContains(page, 'name="kind" value="commercial"')
+        self.assertContains(page, 'Нежилое помещение')
 
         response = self.client.post(url, form_data(name='Королёва 61', kind='commercial', address='СПб'))
 
@@ -247,3 +249,60 @@ class PropertyFormWithTenantsTests(TestCase):
         response = self.client.get(reverse('property_list'))
         self.assertContains(response, 'Виктор «Эгоист»')
         self.assertContains(response, 'доля 45%')
+
+
+class CustomKindTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')
+        self.other = User.objects.create_user(username='b@example.ru', email='b@example.ru', password='secret1')
+        self.client.force_login(self.user)
+
+    def test_add_kind_is_saved_to_account(self):
+        response = self.client.post(reverse('property_kind_add'), {'name': '  гараж '})
+        self.assertEqual(response.json()['name'], 'Гараж')
+        self.assertTrue(PropertyKind.objects.filter(owner=self.user, name='Гараж').exists())
+
+    def test_add_existing_kind_is_reused(self):
+        self.client.post(reverse('property_kind_add'), {'name': 'Гараж'})
+        self.client.post(reverse('property_kind_add'), {'name': 'ГАРАЖ'})
+        self.assertEqual(PropertyKind.objects.filter(owner=self.user).count(), 1)
+
+    def test_built_in_names_are_rejected(self):
+        response = self.client.post(reverse('property_kind_add'), {'name': 'дом'})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('уже есть', response.json()['error'])
+
+    def test_kinds_are_offered_only_to_their_owner(self):
+        PropertyKind.objects.create(owner=self.user, name='Паркинг')
+        PropertyKind.objects.create(owner=self.other, name='Чужой склад')
+        page = self.client.get(reverse('property_create'))
+        self.assertContains(page, 'Паркинг')
+        self.assertNotContains(page, 'Чужой склад')
+
+    def test_delete_kind_only_own_and_keeps_saved_objects(self):
+        mine = PropertyKind.objects.create(owner=self.user, name='Гараж')
+        foreign = PropertyKind.objects.create(owner=self.other, name='Склад')
+        prop = Property.objects.create(owner=self.user, name='Г-1', kind='custom', custom_kind='Гараж')
+
+        self.assertEqual(self.client.post(reverse('property_kind_delete', args=[foreign.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse('property_kind_delete', args=[mine.pk])).status_code, 204)
+
+        self.assertTrue(PropertyKind.objects.filter(pk=foreign.pk).exists())
+        prop.refresh_from_db()
+        self.assertEqual(prop.kind_label, 'Гараж')
+
+    def test_create_object_with_custom_kind(self):
+        self.client.post(reverse('property_create'), form_data(kind='custom', custom_kind='Паркинг'))
+        prop = Property.objects.get()
+        self.assertEqual(prop.kind_label, 'Паркинг')
+        self.assertTrue(PropertyKind.objects.filter(owner=self.user, name='Паркинг').exists())
+
+    def test_custom_kind_needs_a_name(self):
+        response = self.client.post(reverse('property_create'), form_data(kind='custom', custom_kind=' '))
+        self.assertContains(response, 'добавьте свой вариант')
+        self.assertFalse(Property.objects.exists())
+
+    def test_built_in_kind_clears_custom_text(self):
+        self.client.post(reverse('property_create'), form_data(kind='house', custom_kind='Гараж'))
+        prop = Property.objects.get()
+        self.assertEqual((prop.kind_label, prop.custom_kind), ('Дом', ''))

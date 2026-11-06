@@ -6,6 +6,31 @@ from django.db import transaction
 
 from apps.tenants.services import apply_share
 
+from .models import Property, PropertyKind
+
+KIND_NAME_MAX = 50
+
+
+def clean_kind_name(name):
+    """'  гараж   у  дома ' → 'Гараж у дома'."""
+    name = ' '.join((name or '').split())[:KIND_NAME_MAX]
+    return name[:1].upper() + name[1:]
+
+
+def add_custom_kind(owner, name):
+    """Add the landlord's own object type. Returns (kind, error); an existing one is reused."""
+    name = clean_kind_name(name)
+    if not name:
+        return None, 'Введите название.'
+    built_in = {label.casefold() for value, label in Property.Kind.choices if value != Property.Kind.CUSTOM}
+    if name.casefold() in built_in:
+        return None, 'Такой вариант уже есть в списке.'
+    # Compared in Python: SQLite's case-insensitive match only knows Latin letters.
+    for existing in PropertyKind.objects.filter(owner=owner):
+        if existing.name.casefold() == name.casefold():
+            return existing, None
+    return PropertyKind.objects.create(owner=owner, name=name), None
+
 MONTH_NAMES = [
     'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
@@ -43,6 +68,9 @@ def save_property(form, tenant_formset, owner):
     if property_obj.owner_id is None:
         property_obj.owner = owner
     property_obj.save()
+
+    if property_obj.kind == Property.Kind.CUSTOM:
+        add_custom_kind(owner, property_obj.custom_kind)  # keep it in the landlord's list
 
     if property_obj.is_owner_used:
         # The landlord uses the object themselves: nobody else shares the bills.

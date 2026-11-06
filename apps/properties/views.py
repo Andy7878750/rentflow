@@ -1,15 +1,16 @@
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from apps.tenants.forms import TenantFormSet
 
 from . import services
 from .forms import PropertyForm
-from .models import Property
+from .models import Property, PropertyKind
 
 
 @login_required
@@ -73,8 +74,33 @@ def _property_form(request, property_obj=None):
         'formset': formset,
         'property': property_obj,
         'share_unit': unit,
-        'share_label': 'Площадь, м²' if unit == Property.ShareUnit.AREA else 'Доля, %',
+        'kind_choices': [
+            (value, label) for value, label in Property.Kind.choices
+            if value not in (Property.Kind.OTHER, Property.Kind.CUSTOM)
+        ],
+        'other_kind_label': Property.Kind.OTHER.label,
+        'custom_kinds': PropertyKind.objects.filter(owner=request.user),
     })
+
+
+@login_required
+@require_POST
+def kind_add(request):
+    kind, error = services.add_custom_kind(request.user, request.POST.get('name'))
+    if error:
+        return JsonResponse({'error': error}, status=400)
+    return JsonResponse({
+        'id': kind.pk,
+        'name': kind.name,
+        'delete_url': reverse('property_kind_delete', args=[kind.pk]),
+    })
+
+
+@login_required
+@require_POST
+def kind_delete(request, pk):
+    get_object_or_404(PropertyKind, pk=pk, owner=request.user).delete()
+    return HttpResponse(status=204)
 
 
 @login_required

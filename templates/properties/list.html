@@ -44,7 +44,7 @@
           </span>
           <div class="property-title">
             <h2><a href="{% url 'property_detail' property.pk %}">{{ property.name }}</a></h2>
-            <span class="property-kind">{{ property.get_kind_display }}</span>
+            <span class="property-kind">{{ property.kind_label }}</span>
           </div>
           {% include "properties/_actions.html" %}
         </header>

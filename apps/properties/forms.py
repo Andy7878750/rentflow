@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator
 from apps.tenants.services import plain
 
 from .models import Property
+from .services import clean_kind_name
 
 PHONE_PLACEHOLDER = '+7 (___) ___-__-__ или +код страны'
 
@@ -14,7 +15,7 @@ class PropertyForm(forms.ModelForm):
     class Meta:
         model = Property
         fields = [
-            'kind', 'name', 'address', 'floor', 'area',
+            'kind', 'custom_kind', 'name', 'address', 'floor', 'area',
             'management_company', 'management_phone', 'management_email',
             'cabinet_url', 'cabinet_login', 'password_hint',
             'occupancy', 'share_unit',
@@ -31,8 +32,11 @@ class PropertyForm(forms.ModelForm):
                 render_value=True,
                 attrs={'placeholder': 'сам пароль не храним', 'autocomplete': 'off'},
             ),
+            # Set by the custom «Тип» dropdown and the unit picker inside the share fields.
+            'kind': forms.HiddenInput,
+            'custom_kind': forms.HiddenInput,
             'occupancy': forms.RadioSelect,
-            'share_unit': forms.RadioSelect,
+            'share_unit': forms.HiddenInput,
         }
 
     def __init__(self, *args, **kwargs):
@@ -43,3 +47,13 @@ class PropertyForm(forms.ModelForm):
         self.fields['area'].validators.append(MinValueValidator(Decimal('0.01')))
         if self.instance.area is not None:
             self.initial['area'] = plain(self.instance.area)
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('kind') == Property.Kind.CUSTOM:
+            cleaned['custom_kind'] = clean_kind_name(cleaned.get('custom_kind'))
+            if not cleaned['custom_kind']:
+                self.add_error('kind', 'Выберите тип или добавьте свой вариант.')
+        else:
+            cleaned['custom_kind'] = ''
+        return cleaned

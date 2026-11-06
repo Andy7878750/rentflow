@@ -7,7 +7,8 @@ class Property(models.Model):
         APARTMENT = 'apartment', 'Квартира'
         COMMERCIAL = 'commercial', 'Нежилое помещение'
         HOUSE = 'house', 'Дом'
-        ROOM = 'room', 'Комната'
+        OTHER = 'other', 'Другое'
+        CUSTOM = 'custom', 'Свой вариант'  # the text lives in Property.custom_kind
 
     class Occupancy(models.TextChoices):
         TENANTS = 'tenants', 'Арендаторы'
@@ -20,6 +21,8 @@ class Property(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='properties')
     name = models.CharField('Короткое название', max_length=150)
     kind = models.CharField('Тип', max_length=20, choices=Kind.choices, default=Kind.APARTMENT)
+    # Kept as text, so deleting the variant from the landlord's list never changes saved objects.
+    custom_kind = models.CharField('Свой тип', max_length=50, blank=True)
     address = models.CharField('Адрес', max_length=255, blank=True)
     floor = models.CharField('Этаж', max_length=20, blank=True)
     area = models.DecimalField('Площадь, м²', max_digits=8, decimal_places=2, null=True, blank=True)
@@ -52,3 +55,24 @@ class Property(models.Model):
     @property
     def is_owner_used(self):
         return self.occupancy == self.Occupancy.OWNER
+
+    @property
+    def kind_label(self):
+        if self.kind == self.Kind.CUSTOM and self.custom_kind:
+            return self.custom_kind
+        return self.get_kind_display()
+
+
+class PropertyKind(models.Model):
+    """A landlord's own object type («Гараж», «Паркинг»), offered in every object form."""
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='property_kinds')
+    name = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        constraints = [models.UniqueConstraint(fields=['owner', 'name'], name='unique_property_kind_per_owner')]
+
+    def __str__(self):
+        return self.name

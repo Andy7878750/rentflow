@@ -1,15 +1,18 @@
 <div class="tenant-row" data-tenant-row{% if tenant_form.DELETE.value %} hidden{% endif %}>
   {{ tenant_form.id }}
   <span class="visually-hidden">{{ tenant_form.DELETE }}</span>
-  <div class="tenant-grid">
-    {% include "properties/_field.html" with field=tenant_form.name label="Имя или название" required=1 class="f-name" %}
-    {% include "properties/_field.html" with field=tenant_form.share label=share_label required=1 unit_label=1 hint=1 class="f-share" tip="Часть объекта, за которую платит арендатор. Единица (% или м²) выбирается справа в шапке блока." %}
-    {% include "properties/_field.html" with field=tenant_form.phone label="Телефон" class="f-phone" tip="Чтобы быстро связаться с арендатором. В счёт не попадает." %}
+  <div class="tenant-line tenant-line-main">
+    {% include "properties/_field.html" with field=tenant_form.name label="Имя или название" required=1 %}
+    {% include "properties/_field.html" with field=tenant_form.share label="Доля" required=1 unit_select=1 tip="Часть объекта, за которую платит арендатор: в процентах или в м². Единица общая для всех арендаторов объекта." %}
+    {% include "properties/_field.html" with field=tenant_form.phone label="Телефон" tip="Чтобы быстро связаться с арендатором. В счёт не попадает." %}
     <button type="button" class="icon-button tenant-remove" data-tenant-remove title="Убрать арендатора" aria-label="Убрать арендатора">
       <svg class="icon"><use href="#i-x"/></svg>
     </button>
-    {% include "properties/_field.html" with field=tenant_form.email label="Почта (для счёта)" class="f-email" tip="На этот адрес будем отправлять арендатору счета." %}
-    {% include "properties/_field.html" with field=tenant_form.contract label="Договор" class="f-contract" %}
-    {% include "properties/_field.html" with field=tenant_form.contract_until label="Договор до" class="f-until" %}
+  </div>
+  <div class="tenant-line tenant-line-extra">
+    {% include "properties/_field.html" with field=tenant_form.email label="Почта (для счёта)" tip="На этот адрес будем отправлять арендатору счета." %}
+    {% include "properties/_field.html" with field=tenant_form.contract label="Договор" %}
+    {% include "properties/_field.html" with field=tenant_form.contract_until label="Договор до" %}
+    <span class="tenant-remove-spacer"></span>
   </div>
 </div>

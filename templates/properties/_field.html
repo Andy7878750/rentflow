@@ -1,5 +1,6 @@
+{% with title=label|default:field.label %}
 <div class="field{% if class %} {{ class }}{% endif %}">
-  <label for="{{ field.id_for_label }}"{% if unit_label %} data-share-label{% endif %}>{{ label|default:field.label }}{% if required %} <span class="req">*</span>{% endif %}{% if tip %} <span class="help" tabindex="0" data-tip="{{ tip }}">?</span>{% endif %}</label>
+  <label for="{{ field.id_for_label }}">{{ title }}{% if required %} <span class="req">*</span>{% endif %}{% if tip %} <span class="help" tabindex="0" role="button" aria-label="Подсказка: {{ title }}" data-tip="{{ tip }}" data-tip-title="{{ title }}">?</span>{% endif %}</label>
   {% if reveal %}
     <div class="reveal-field">
       {{ field }}
@@ -8,9 +9,18 @@
         <svg class="icon icon-hidden"><use href="#i-eye-off"/></svg>
       </button>
     </div>
+  {% elif unit_select %}
+    <div class="unit-input">
+      {{ field }}
+      <select class="unit-select" data-unit-select aria-label="Единица доли">
+        <option value="percent"{% if share_unit != 'area' %} selected{% endif %}>%</option>
+        <option value="area"{% if share_unit == 'area' %} selected{% endif %}>м²</option>
+      </select>
+      <span class="share-hint" data-share-hint></span>
+    </div>
   {% else %}
     {{ field }}
   {% endif %}
-  {% if hint %}<span class="share-hint" data-share-hint></span>{% endif %}
   {% if field.errors %}<ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 </div>
+{% endwith %}
