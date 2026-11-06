@@ -1,13 +1,35 @@
 import datetime
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
+from apps.tenants.models import Tenant
+
 from . import services
 from .models import Property
 
 User = get_user_model()
+
+
+def form_data(tenants=(), initial_forms=0, **fields):
+    """POST body for the object form: object fields plus the tenants formset."""
+    data = {
+        'name': 'Глинки 148',
+        'kind': 'apartment',
+        'occupancy': 'tenants',
+        'share_unit': 'percent',
+        'tenants-TOTAL_FORMS': str(len(tenants)),
+        'tenants-INITIAL_FORMS': str(initial_forms),
+        'tenants-MIN_NUM_FORMS': '0',
+        'tenants-MAX_NUM_FORMS': '1000',
+    }
+    data.update(fields)
+    for index, tenant in enumerate(tenants):
+        for key, value in tenant.items():
+            data[f'tenants-{index}-{key}'] = value
+    return data
 
 
 class MonthServiceTests(SimpleTestCase):
@@ -62,16 +84,14 @@ class PropertyPagesTests(TestCase):
 
     def test_create_assigns_owner(self):
         self.client.force_login(self.user)
-        response = self.client.post(reverse('property_create'), {
-            'name': 'Глинки 148',
-            'kind': 'apartment',
-            'address': 'г. Пушкин',
-            'management_company': 'ТСЖ «Глинки 16»',
-            'management_phone': '+7 (931) 244-68-38',
-        })
+        response = self.client.post(reverse('property_create'), form_data(
+            address='г. Пушкин',
+            management_company='ТСЖ «Глинки 16»',
+            management_phone='+7 (931) 244-68-38',
+        ))
 
-        self.assertRedirects(response, reverse('property_list'))
         prop = Property.objects.get(name='Глинки 148')
+        self.assertRedirects(response, reverse('property_detail', args=[prop.pk]))
         self.assertEqual(prop.owner, self.user)
         self.assertEqual(prop.phone_href, '+79312446838')
 
@@ -97,7 +117,7 @@ class PropertyActionsTests(TestCase):
         url = reverse('property_edit', args=[self.prop.pk])
         self.assertContains(self.client.get(url), 'value="commercial" selected')
 
-        response = self.client.post(url, {'name': 'Королёва 61', 'kind': 'commercial', 'address': 'СПб'})
+        response = self.client.post(url, form_data(name='Королёва 61', kind='commercial', address='СПб'))
 
         self.assertRedirects(response, reverse('property_detail', args=[self.prop.pk]))
         self.prop.refresh_from_db()
@@ -117,3 +137,113 @@ class PropertyActionsTests(TestCase):
             self.assertEqual(self.client.get(reverse(name, args=[foreign.pk])).status_code, 404, name)
         self.client.post(reverse('property_delete', args=[foreign.pk]))
         self.assertTrue(Property.objects.filter(pk=foreign.pk).exists())
+
+
+class PropertyFormWithTenantsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')
+        self.client.force_login(self.user)
+        self.url = reverse('property_create')
+
+    def test_form_page_has_both_blocks(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, 'Объект и УК / ТСЖ')
+        self.assertContains(response, 'Кто пользуется объектом')
+        self.assertContains(response, 'Создать объект')
+
+    def test_modal_request_gets_bare_form(self):
+        response = self.client.get(self.url, headers={'X-Modal': '1'})
+        self.assertContains(response, 'Новый объект')
+        self.assertNotContains(response, 'app-sidebar')
+
+    def test_create_with_percent_shares(self):
+        self.client.post(self.url, form_data(area='60', tenants=[
+            {'name': 'Виктор «Эгоист»', 'share': '45'},
+            {'name': 'Владислав «Кофе»', 'share': '55', 'email': 'v@example.ru'},
+        ]))
+
+        prop = Property.objects.get()
+        viktor, vlad = prop.tenants.all()
+        self.assertEqual(viktor.share_percent, Decimal('45'))
+        self.assertEqual(viktor.area, Decimal('27.00'))
+        self.assertEqual(vlad.email, 'v@example.ru')
+
+    def test_create_with_area_shares_derives_percent(self):
+        self.client.post(self.url, form_data(area='60', share_unit='area', tenants=[
+            {'name': 'Виктор', 'share': '27,5'},
+        ]))
+
+        tenant = Tenant.objects.get()
+        self.assertEqual(tenant.area, Decimal('27.5'))
+        self.assertEqual(tenant.share_percent, Decimal('45.83'))
+        self.assertEqual(Property.objects.get().share_unit, 'area')
+
+    def test_area_shares_need_object_area(self):
+        response = self.client.post(self.url, form_data(share_unit='area', tenants=[
+            {'name': 'Виктор', 'share': '27'},
+        ]))
+        self.assertContains(response, 'заполните площадь объекта')
+        self.assertFalse(Property.objects.exists())
+
+    def test_shares_over_100_percent_rejected(self):
+        response = self.client.post(self.url, form_data(tenants=[
+            {'name': 'А', 'share': '60'},
+            {'name': 'Б', 'share': '50'},
+        ]))
+        self.assertContains(response, 'больше 100%')
+        self.assertFalse(Property.objects.exists())
+
+    def test_tenant_needs_name_and_share(self):
+        response = self.client.post(self.url, form_data(tenants=[{'phone': '+7 900 000-00-00'}]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Property.objects.exists())
+
+    def test_empty_tenant_row_is_ignored(self):
+        self.client.post(self.url, form_data(tenants=[{'name': '', 'share': ''}]))
+        self.assertEqual(Property.objects.count(), 1)
+        self.assertFalse(Tenant.objects.exists())
+
+    def test_owner_mode_ignores_tenant_rows(self):
+        self.client.post(self.url, form_data(occupancy='owner', tenants=[{'phone': 'junk'}]))
+        prop = Property.objects.get()
+        self.assertTrue(prop.is_owner_used)
+        self.assertFalse(prop.tenants.exists())
+
+    def test_modal_success_returns_redirect_header(self):
+        response = self.client.post(self.url, form_data(), headers={'X-Modal': '1'})
+        prop = Property.objects.get()
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response['X-Modal-Redirect'], reverse('property_detail', args=[prop.pk]))
+
+    def test_edit_updates_and_removes_tenants(self):
+        prop = Property.objects.create(owner=self.user, name='Королёва 61', area=Decimal('100'))
+        keep = Tenant.objects.create(property=prop, name='Виктор', share_percent=Decimal('45'))
+        drop = Tenant.objects.create(property=prop, name='Владислав', share_percent=Decimal('55'))
+        url = reverse('property_edit', args=[prop.pk])
+
+        page = self.client.get(url)
+        self.assertContains(page, 'value="45"')
+        self.assertContains(page, 'value="100"')  # not "100,00" or "1E+2"
+
+        self.client.post(url, form_data(name='Королёва 61', area='100', initial_forms=2, tenants=[
+            {'id': str(keep.pk), 'name': 'Виктор', 'share': '50'},
+            {'id': str(drop.pk), 'name': 'Владислав', 'share': '55', 'DELETE': 'on'},
+        ]))
+
+        self.assertEqual(list(prop.tenants.values_list('name', flat=True)), ['Виктор'])
+        keep.refresh_from_db()
+        self.assertEqual(keep.share_percent, Decimal('50'))
+        self.assertEqual(keep.area, Decimal('50.00'))
+
+    def test_switching_to_owner_removes_tenants(self):
+        prop = Property.objects.create(owner=self.user, name='Глинки 148')
+        Tenant.objects.create(property=prop, name='Виктор', share_percent=Decimal('45'))
+        self.client.post(reverse('property_edit', args=[prop.pk]), form_data(occupancy='owner'))
+        self.assertFalse(prop.tenants.exists())
+
+    def test_card_lists_tenants_with_shares(self):
+        prop = Property.objects.create(owner=self.user, name='Королёва 61')
+        Tenant.objects.create(property=prop, name='Виктор «Эгоист»', share_percent=Decimal('45'))
+        response = self.client.get(reverse('property_list'))
+        self.assertContains(response, 'Виктор «Эгоист»')
+        self.assertContains(response, 'доля 45%')

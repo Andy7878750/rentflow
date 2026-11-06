@@ -2,6 +2,10 @@
 
 import datetime
 
+from django.db import transaction
+
+from apps.tenants.services import apply_share
+
 MONTH_NAMES = [
     'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
@@ -30,3 +34,31 @@ def month_param(month):
 
 def month_label(month):
     return f'{MONTH_NAMES[month.month - 1]} {month.year}'
+
+
+@transaction.atomic
+def save_property(form, tenant_formset, owner):
+    """Save the object and its tenants, deriving each tenant's share in the other unit."""
+    property_obj = form.save(commit=False)
+    if property_obj.owner_id is None:
+        property_obj.owner = owner
+    property_obj.save()
+
+    if property_obj.is_owner_used:
+        # The landlord uses the object themselves: nobody else shares the bills.
+        property_obj.tenants.all().delete()
+        return property_obj
+
+    for tenant_form in tenant_formset.forms:
+        tenant = tenant_form.instance
+        if tenant_form in tenant_formset.deleted_forms:
+            if tenant.pk:
+                tenant.delete()
+            continue
+        if not (tenant.pk or tenant_form.has_changed()):
+            continue  # untouched empty row
+        tenant = tenant_form.save(commit=False)
+        tenant.property = property_obj
+        apply_share(tenant, tenant_form.cleaned_data['share'], property_obj.share_unit, property_obj.area)
+        tenant.save()
+    return property_obj

@@ -1,7 +1,11 @@
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+
+from apps.tenants.forms import TenantFormSet
 
 from . import services
 from .forms import PropertyForm
@@ -11,12 +15,12 @@ from .models import Property
 @login_required
 def property_list(request):
     month = services.parse_month(request.GET.get('month'))
-    properties = Property.objects.filter(owner=request.user)
+    properties = Property.objects.filter(owner=request.user).prefetch_related('tenants')
 
-    # Tenants, readings and invoices don't exist yet: zero placeholders until billing lands.
+    # Readings and invoices don't exist yet: zero placeholders until billing lands.
     summary = {
         'to_invoice': Decimal('0.00'),
-        'tenants': 0,
+        'tenants': sum(len(p.tenants.all()) for p in properties),
         'tenants_ready': 0,
         'readings_done': 0,
         'readings_total': len(properties),
@@ -32,18 +36,50 @@ def property_list(request):
     })
 
 
+def _property_form(request, property_obj=None):
+    """Create or edit an object with its tenants. Renders bare content when opened in the modal."""
+    is_modal = request.headers.get('X-Modal') == '1'
+    data = request.POST if request.method == 'POST' else None
+
+    form = PropertyForm(data, instance=property_obj)
+    unit = (data or {}).get('share_unit') or (property_obj.share_unit if property_obj else Property.ShareUnit.PERCENT)
+    if unit not in Property.ShareUnit.values:
+        unit = Property.ShareUnit.PERCENT
+    formset = TenantFormSet(
+        data,
+        instance=property_obj or Property(),
+        prefix='tenants',
+        form_kwargs={'share_unit': unit},
+    )
+    if property_obj and property_obj.tenants.exists():
+        formset.extra = 0
+
+    if data is not None:
+        form_ok = form.is_valid()
+        formset.share_unit = unit
+        formset.total_area = form.cleaned_data.get('area')
+        owner_used = data.get('occupancy') == Property.Occupancy.OWNER
+        tenants_ok = owner_used or formset.is_valid()
+        if form_ok and tenants_ok:
+            saved = services.save_property(form, formset, request.user)
+            url = reverse('property_detail', args=[saved.pk])
+            if is_modal:
+                return HttpResponse(status=204, headers={'X-Modal-Redirect': url})
+            return redirect(url)
+
+    template = 'properties/_form.html' if is_modal else 'properties/form.html'
+    return render(request, template, {
+        'form': form,
+        'formset': formset,
+        'property': property_obj,
+        'share_unit': unit,
+        'share_label': 'Площадь, м²' if unit == Property.ShareUnit.AREA else 'Доля, %',
+    })
+
+
 @login_required
 def property_create(request):
-    if request.method == 'POST':
-        form = PropertyForm(request.POST)
-        if form.is_valid():
-            property_obj = form.save(commit=False)
-            property_obj.owner = request.user
-            property_obj.save()
-            return redirect('property_list')
-    else:
-        form = PropertyForm()
-    return render(request, 'properties/form.html', {'form': form})
+    return _property_form(request)
 
 
 def _own_property(request, pk):
@@ -57,12 +93,7 @@ def property_detail(request, pk):
 
 @login_required
 def property_edit(request, pk):
-    property_obj = _own_property(request, pk)
-    form = PropertyForm(request.POST or None, instance=property_obj)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('property_detail', pk=property_obj.pk)
-    return render(request, 'properties/form.html', {'form': form, 'property': property_obj})
+    return _property_form(request, _own_property(request, pk))
 
 
 @login_required

@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'apps.accounts',
     'apps.properties',
+    'apps.tenants',
 ]
 
 SITE_ID = 1

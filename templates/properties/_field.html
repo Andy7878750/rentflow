@@ -1,0 +1,16 @@
+<div class="field{% if class %} {{ class }}{% endif %}">
+  <label for="{{ field.id_for_label }}"{% if unit_label %} data-share-label{% endif %}>{{ label|default:field.label }}{% if required %} <span class="req">*</span>{% endif %}{% if tip %} <span class="help" tabindex="0" data-tip="{{ tip }}">?</span>{% endif %}</label>
+  {% if reveal %}
+    <div class="reveal-field">
+      {{ field }}
+      <button type="button" class="reveal-toggle" data-reveal aria-label="Показать подсказку">
+        <svg class="icon icon-shown"><use href="#i-eye"/></svg>
+        <svg class="icon icon-hidden"><use href="#i-eye-off"/></svg>
+      </button>
+    </div>
+  {% else %}
+    {{ field }}
+  {% endif %}
+  {% if hint %}<span class="share-hint" data-share-hint></span>{% endif %}
+  {% if field.errors %}<ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+</div>

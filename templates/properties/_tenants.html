@@ -1,0 +1,22 @@
+{% if not property.is_owner_used %}
+  {% with tenants=property.tenants.all %}
+    {% if tenants %}
+      <ul class="property-tenants">
+        {% for tenant in tenants %}
+          <li>
+            <span>{{ tenant.name }}</span>
+            <span class="tenant-share">
+              {% if property.share_unit == 'area' %}
+                {{ tenant.area|floatformat:"-2" }} м²{% if tenant.share_percent is not None %} · {{ tenant.share_percent|floatformat:"-2" }}%{% endif %}
+              {% else %}
+                доля {{ tenant.share_percent|floatformat:"-2" }}%
+              {% endif %}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="property-tenants-empty">Арендаторов пока нет</p>
+    {% endif %}
+  {% endwith %}
+{% endif %}

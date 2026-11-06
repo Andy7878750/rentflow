@@ -1,0 +1,87 @@
+<div class="modal-panel">
+  <header class="modal-head">
+    <h1>{% if property %}Изменить объект{% else %}Новый объект{% endif %}</h1>
+    <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </a>
+  </header>
+
+  <form method="post" action="{% if property %}{% url 'property_edit' property.pk %}{% else %}{% url 'property_create' %}{% endif %}"
+        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+
+    <section class="form-section">
+      <h2 class="form-section-head">Объект и УК / ТСЖ</h2>
+      <div class="form-section-body">
+        <div class="form-grid grid-2">
+          {% include "properties/_field.html" with field=form.kind required=1 tip="Влияет только на иконку и подписи. Поменять можно в любой момент." %}
+          {% include "properties/_field.html" with field=form.name required=1 tip="Так объект называется в меню и в счетах арендаторам." %}
+        </div>
+        <div class="form-grid grid-address">
+          {% include "properties/_field.html" with field=form.address %}
+          {% include "properties/_field.html" with field=form.floor %}
+          {% include "properties/_field.html" with field=form.area tip="Нужна, чтобы задавать доли арендаторов в м² и делить расходы по площади." %}
+        </div>
+        <div class="form-grid grid-3">
+          {% include "properties/_field.html" with field=form.management_company tip="Кому вы платите по квитанциям. Контакты будут под рукой на карточке объекта." %}
+          {% include "properties/_field.html" with field=form.management_phone %}
+          {% include "properties/_field.html" with field=form.management_email %}
+        </div>
+        <div class="form-grid grid-3">
+          {% include "properties/_field.html" with field=form.cabinet_url label="Личный кабинет (ссылка)" tip="Сайт УК или ГИС ЖКХ, где вы смотрите квитанции и передаёте показания." %}
+          {% include "properties/_field.html" with field=form.cabinet_login %}
+          {% include "properties/_field.html" with field=form.password_hint reveal=1 tip="Сам пароль мы не храним — только подсказку, чтобы его вспомнить." %}
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section-head">
+        <h2>Кто пользуется объектом <span class="help" tabindex="0" data-tip="Доли нужны, чтобы делить квитанции между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
+        <div class="section-tools tenants-only">
+          <div class="segmented segmented-sm" role="radiogroup" aria-label="Единица доли">
+            {% for value, label in form.fields.share_unit.choices %}
+              <label><input type="radio" name="share_unit" value="{{ value }}"{% if share_unit == value %} checked{% endif %}><span>{{ label }}</span></label>
+            {% endfor %}
+          </div>
+          <span class="occupied" data-occupied></span>
+        </div>
+      </div>
+      <div class="form-section-body">
+        <div class="segmented" role="radiogroup" aria-label="Кто пользуется объектом">
+          {% for value, label in form.fields.occupancy.choices %}
+            <label><input type="radio" name="occupancy" value="{{ value }}"{% if form.occupancy.value == value %} checked{% endif %}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+
+        <p class="owner-note owner-only">Объектом пользуетесь вы сами — все расходы по квитанциям остаются на вас.</p>
+
+        <div class="tenants-only">
+          {{ formset.management_form }}
+          {% if formset.non_form_errors %}<ul class="errorlist">{% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          <div class="tenant-list" data-tenant-list>
+            {% for tenant_form in formset %}
+              {% include "properties/_tenant_row.html" %}
+            {% endfor %}
+          </div>
+          <template data-tenant-template>
+            {% include "properties/_tenant_row.html" with tenant_form=formset.empty_form %}
+          </template>
+          <div class="tenant-add-row">
+            <button type="button" class="btn-dashed" data-tenant-add>
+              <svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="form-note">После сохранения добавьте на странице объекта квитанции и счётчики — для каждой квитанции один раз выбираете, как делить её между арендаторами.</p>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-auto">{% if property %}Сохранить{% else %}Создать объект{% endif %}</button>
+      <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+    </div>
+  </form>
+</div>

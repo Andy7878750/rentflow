@@ -6,7 +6,7 @@
     <a href="{% url 'property_detail' property.pk %}" class="dropdown-item" role="menuitem">
       <svg class="icon"><use href="#i-eye"/></svg>Посмотреть
     </a>
-    <a href="{% url 'property_edit' property.pk %}" class="dropdown-item" role="menuitem">
+    <a href="{% url 'property_edit' property.pk %}" data-modal class="dropdown-item" role="menuitem">
       <svg class="icon"><use href="#i-edit"/></svg>Изменить
     </a>
     <a href="{% url 'property_delete' property.pk %}" class="dropdown-item dropdown-item-danger" role="menuitem">

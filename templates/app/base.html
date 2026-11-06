@@ -39,7 +39,7 @@
             <li><a href="{% url 'property_detail' item.id %}" class="nav-item{% if url_name == 'property_detail' and request.resolver_match.kwargs.pk == item.id %} is-active{% endif %}">{{ item.name }}</a></li>
           {% endfor %}
           <li>
-            <a href="{% url 'property_create' %}" class="nav-item nav-item-add{% if url_name == 'property_create' %} is-active{% endif %}">
+            <a href="{% url 'property_create' %}" data-modal class="nav-item nav-item-add{% if url_name == 'property_create' %} is-active{% endif %}">
               <svg class="icon"><use href="#i-plus"/></svg><span>Добавить объект</span>
             </a>
           </li>
@@ -110,6 +110,9 @@
   </div>
 </div>
 {% endwith %}
+<dialog class="modal" data-modal-dialog aria-label="Окно"></dialog>
+{% load static %}
+<script src="{% static 'js/app.js' %}"></script>
 <script>
   (function () {
     var layout = document.querySelector('[data-app-layout]');
