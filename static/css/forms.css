@@ -914,10 +914,20 @@ input.masked {
   min-width: 0;
 }
 
+.fl-unit .unit-input {
+  width: 124px;
+}
+
+.field.fl-unit > label {
+  right: auto;
+}
+
+/* The converted value sits right after the box, on the same line, small and grey. */
 .share-hint {
   position: absolute;
-  right: 10px;
-  bottom: 6px;
+  top: 26px;
+  left: 132px;
+  transform: translateY(-50%);
   color: var(--color-text-muted);
   font-size: 11px;
   line-height: 13px;
@@ -1037,9 +1047,9 @@ input.masked {
   margin-top: 16px; /* room for the converted share under the box */
 }
 
-/* The share is the widest: it holds the value, «составляет ~55%» and the % / м² picker. */
+/* The share column holds a compact box (value + % / м²) and «сост. ~49,5 м²» to its right. */
 .tenant-line-main {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr) 36px;
+  grid-template-columns: minmax(0, 1.3fr) 216px minmax(0, 1.2fr) 36px;
 }
 
 .tenant-line-extra {

@@ -740,8 +740,8 @@
         if (value !== null) sum += value;
         var text = '';
         if (value !== null && totalArea) {
-          text = isArea ? 'составляет ~' + formatNumber(value / totalArea * 100) + '%'
-                        : 'составляет ~' + formatNumber(value * totalArea / 100) + ' м²';
+          text = isArea ? 'сост. ~' + formatNumber(value / totalArea * 100) + '%'
+                        : 'сост. ~' + formatNumber(value * totalArea / 100) + ' м²';
         }
         hint.textContent = text;
       });

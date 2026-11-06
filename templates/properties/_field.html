@@ -18,10 +18,7 @@
     </div>
   {% elif unit_select %}
     <div class="unit-input">
-      <span class="unit-value">
-        {{ field }}
-        <span class="share-hint" data-share-hint></span>
-      </span>
+      <span class="unit-value">{{ field }}</span>
       <div class="unit-picker" data-unit-picker>
         <button type="button" class="unit-trigger" data-unit-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Единица доли">
           <span data-unit-label>{% if share_unit == 'area' %}м²{% else %}%{% endif %}</span>
@@ -33,6 +30,7 @@
         </ul>
       </div>
     </div>
+    <span class="share-hint" data-share-hint></span>
   {% else %}
     {{ field }}
   {% endif %}
