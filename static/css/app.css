@@ -196,8 +196,20 @@
   color: inherit;
 }
 
-.nav-item-add {
+/* «+ Добавить …» in the menu: always the accent colour, so the next action stands out. */
+.nav-item.nav-item-add,
+.nav-item.nav-item-add.is-soon {
+  color: var(--color-accent);
   font-weight: 600;
+}
+
+.nav-item.nav-item-add:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-hover);
+}
+
+.nav-item.nav-item-add.is-soon:hover {
+  background: none;
 }
 
 .sidebar-collapse {
