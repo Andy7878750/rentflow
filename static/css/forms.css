@@ -109,6 +109,107 @@
   color: #9aa3ab;
 }
 
+/* ---------- Floating labels ----------
+   The label sits inside the box like a placeholder; once the field is focused or filled it
+   shrinks into the top corner, so it never disappears and needs no line of its own. */
+
+.pform .fl {
+  position: relative;
+  --fl-right: 13px; /* room on the right for an eye / calendar / unit picker */
+}
+
+.pform .fl-button { --fl-right: 46px; }
+.pform .fl-unit { --fl-right: 72px; }
+
+.pform .fl > label {
+  position: absolute;
+  top: 25px;
+  left: 13px;
+  right: var(--fl-right);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transform-origin: left top;
+  transition: top 0.15s ease, font-size 0.15s ease, color 0.15s ease;
+}
+
+.pform .fl > label .help {
+  pointer-events: auto;
+  flex: 0 0 auto;
+}
+
+.pform .fl.is-filled > label,
+.pform .fl:focus-within > label,
+.pform .fl:has(input:not(:placeholder-shown)) > label {
+  top: 7px;
+  font-size: 11.5px;
+  transform: none;
+}
+
+.pform .fl.is-filled > label .help,
+.pform .fl:focus-within > label .help,
+.pform .fl:has(input:not(:placeholder-shown)) > label .help {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+}
+
+.pform .fl:focus-within > label {
+  color: var(--color-accent);
+}
+
+.pform .fl input:not([type=radio]):not([type=checkbox]),
+.pform .fl .select-trigger {
+  height: 50px;
+  padding: 21px 12px 6px;
+}
+
+.pform .fl-button input:not([type=radio]):not([type=checkbox]) {
+  padding-right: 44px;
+}
+
+/* The share box: the outer frame draws the border, the input inside has none. */
+.pform .fl .unit-input input:not([type=radio]):not([type=checkbox]) {
+  height: 48px;
+  padding: 20px 10px 6px 12px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.pform .fl .unit-select {
+  height: 48px;
+}
+
+/* Real hints (phone format, «дд.мм.гггг») show only while typing, under the raised label. */
+.pform .fl input::placeholder {
+  color: transparent;
+  transition: color 0.15s ease;
+}
+
+.pform .fl input:focus::placeholder {
+  color: #b1b8bf;
+}
+
+.pform .fl:has(.errorlist) input,
+.pform .fl:has(.errorlist) .unit-input {
+  border-color: var(--color-danger);
+}
+
+.pform .fl:has(.errorlist) > label {
+  color: var(--color-danger);
+}
+
 .pform .errorlist {
   margin: 4px 0 0;
 }
@@ -806,8 +907,8 @@
 }
 
 .tenant-remove {
-  align-self: end;
-  margin-bottom: 3px;
+  align-self: start;
+  margin-top: 7px;
 }
 
 .tenant-add-row {
@@ -857,6 +958,130 @@
 
 .btn-ghost:hover {
   background: var(--color-bg);
+}
+
+/* ---------- «Посмотреть»: summary card in the modal ---------- */
+
+.summary-list {
+  margin: 0;
+}
+
+.summary-list > div {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 42px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary-list > div:last-child {
+  border-bottom: none;
+}
+
+.summary-list dt {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.summary-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.summary a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.summary a:hover {
+  text-decoration: underline;
+}
+
+.summary .btn-primary,
+.summary .btn-primary:hover {
+  text-decoration: none;
+}
+
+.summary .btn-primary:hover {
+  color: #fff;
+}
+
+.summary-secret {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.summary-secret input {
+  width: 180px;
+  padding: 0 34px 0 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+}
+
+.summary-secret input:focus {
+  outline: none;
+}
+
+.summary-secret .reveal-toggle {
+  right: 0;
+}
+
+.summary-table-wrap {
+  overflow-x: auto;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.summary-table th {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+}
+
+.summary-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.summary-table tr:last-child td {
+  border-bottom: none;
+}
+
+.summary-name {
+  font-weight: 600;
+}
+
+.summary-nowrap {
+  white-space: nowrap;
+}
+
+.summary-empty {
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .summary-list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
 }
 
 /* ---------- Tenants on property cards ---------- */

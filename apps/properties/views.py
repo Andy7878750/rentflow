@@ -114,7 +114,14 @@ def _own_property(request, pk):
 
 @login_required
 def property_detail(request, pk):
-    return render(request, 'properties/detail.html', {'property': _own_property(request, pk)})
+    property_obj = _own_property(request, pk)
+    if request.headers.get('X-Modal'):
+        # «Посмотреть» from the card menu: a summary card in the modal window.
+        return render(request, 'properties/_summary.html', {
+            'property': property_obj,
+            'tenants': property_obj.tenants.all(),
+        })
+    return render(request, 'properties/detail.html', {'property': property_obj})
 
 
 @login_required

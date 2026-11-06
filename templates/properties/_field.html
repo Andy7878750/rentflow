@@ -1,5 +1,5 @@
 {% with title=label|default:field.label %}
-<div class="field{% if class %} {{ class }}{% endif %}">
+<div class="field fl{% if reveal or date %} fl-button{% elif unit_select %} fl-unit{% endif %}{% if class %} {{ class }}{% endif %}">
   <label for="{{ field.id_for_label }}">{{ title }}{% if required %} <span class="req">*</span>{% endif %}{% if tip %} <span class="help" tabindex="0" role="button" aria-label="Подсказка: {{ title }}" data-tip="{{ tip }}" data-tip-title="{{ title }}">?</span>{% endif %}</label>
   {% if reveal %}
     <div class="reveal-field">

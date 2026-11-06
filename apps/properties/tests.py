@@ -113,6 +113,22 @@ class PropertyActionsTests(TestCase):
         self.assertContains(response, 'Королева 61')
         self.assertContains(response, 'Нежилое помещение')
 
+    def test_detail_in_modal_is_summary_card(self):
+        self.prop.tenants.create(name='Виктор', share_percent=45, phone='+7 (904) 648-30-57')
+        url = reverse('property_detail', args=[self.prop.pk])
+        response = self.client.get(url, headers={'X-Modal': '1'})
+        self.assertTemplateUsed(response, 'properties/_summary.html')
+        self.assertContains(response, 'Виктор')
+        self.assertContains(response, '45%')
+        self.assertContains(response, 'href="tel:+79046483057"')
+        self.assertContains(response, reverse('property_edit', args=[self.prop.pk]))
+        self.assertNotContains(response, '<html')
+
+    def test_other_users_summary_is_hidden(self):
+        prop = Property.objects.create(owner=self.other, name='Чужой')
+        response = self.client.get(reverse('property_detail', args=[prop.pk]), headers={'X-Modal': '1'})
+        self.assertEqual(response.status_code, 404)
+
     def test_edit(self):
         url = reverse('property_edit', args=[self.prop.pk])
         page = self.client.get(url)

@@ -15,7 +15,7 @@
       <h2 class="form-section-head">Объект и УК / ТСЖ</h2>
       <div class="form-section-body">
         <div class="form-grid grid-2">
-          <div class="field">
+          <div class="field fl is-filled">
             <label id="kind-label">Тип <span class="req">*</span> <span class="help" tabindex="0" role="button" aria-label="Подсказка: Тип" data-tip-title="Тип" data-tip="Влияет только на иконку и подписи. Можно добавить свой вариант — он сохранится в вашем аккаунте.">?</span></label>
             <div class="select" data-kind-select data-add-url="{% url 'property_kind_add' %}">
               {{ form.kind }}{{ form.custom_kind }}

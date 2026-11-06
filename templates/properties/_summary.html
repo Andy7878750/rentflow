@@ -1,0 +1,71 @@
+<div class="modal-panel summary">
+  <header class="modal-head">
+    <h1>{{ property.name }}</h1>
+    <a href="{% url 'property_list' %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </a>
+  </header>
+
+  <section class="form-section">
+    <h2 class="form-section-head">Объект и УК / ТСЖ</h2>
+    <dl class="summary-list">
+      <div><dt>Тип</dt><dd>{{ property.kind_label }}</dd></div>
+      <div><dt>Короткое название</dt><dd>{{ property.name }}</dd></div>
+      <div><dt>Адрес</dt><dd>{{ property.address|default:"—" }}</dd></div>
+      <div><dt>Этаж</dt><dd>{{ property.floor|default:"—" }}</dd></div>
+      <div><dt>Площадь</dt><dd>{% if property.area %}{{ property.area|floatformat:"-2" }} м²{% else %}—{% endif %}</dd></div>
+      <div><dt>УК / ТСЖ</dt><dd>{{ property.management_company|default:"—" }}</dd></div>
+      <div><dt>Телефон УК / ТСЖ</dt><dd>{% if property.management_phone %}<a href="tel:{{ property.phone_href }}">{{ property.management_phone }}</a>{% else %}—{% endif %}</dd></div>
+      <div><dt>Почта УК / ТСЖ</dt><dd>{% if property.management_email %}<a href="mailto:{{ property.management_email }}">{{ property.management_email }}</a>{% else %}—{% endif %}</dd></div>
+      <div><dt>Личный кабинет</dt><dd>{% if property.cabinet_url %}<a href="{{ property.cabinet_url }}" target="_blank" rel="noopener" class="summary-link">{{ property.cabinet_url }}</a>{% else %}—{% endif %}</dd></div>
+      <div><dt>Логин</dt><dd>{{ property.cabinet_login|default:"—" }}</dd></div>
+      <div><dt>Подсказка к паролю</dt><dd>
+        {% if property.password_hint %}
+          <span class="summary-secret">
+            <input type="password" value="{{ property.password_hint }}" readonly aria-label="Подсказка к паролю">
+            <button type="button" class="reveal-toggle" data-reveal aria-label="Показать подсказку">
+              <svg class="icon icon-shown"><use href="#i-eye"/></svg>
+              <svg class="icon icon-hidden"><use href="#i-eye-off"/></svg>
+            </button>
+          </span>
+        {% else %}—{% endif %}
+      </dd></div>
+    </dl>
+  </section>
+
+  <section class="form-section">
+    <h2 class="form-section-head">Кто пользуется объектом</h2>
+    {% if property.is_owner_used %}
+      <p class="summary-empty">Собственник — все расходы по квитанциям остаются на вас.</p>
+    {% elif tenants %}
+      <div class="summary-table-wrap">
+        <table class="summary-table">
+          <thead>
+            <tr><th>Имя или название</th><th>Доля</th><th>Телефон</th><th>Почта</th><th>Договор</th><th>Договор до</th></tr>
+          </thead>
+          <tbody>
+            {% for tenant in tenants %}
+              <tr>
+                <td class="summary-name">{{ tenant.name }}</td>
+                <td class="summary-nowrap">{% if property.share_unit == 'area' %}{{ tenant.area|floatformat:"-2" }} м²{% else %}{{ tenant.share_percent|floatformat:"-2" }}%{% endif %}</td>
+                <td class="summary-nowrap">{% if tenant.phone %}<a href="tel:{{ tenant.phone|cut:' '|cut:'('|cut:')'|cut:'-' }}">{{ tenant.phone }}</a>{% else %}—{% endif %}</td>
+                <td>{% if tenant.email %}<a href="mailto:{{ tenant.email }}">{{ tenant.email }}</a>{% else %}—{% endif %}</td>
+                <td>{{ tenant.contract|default:"—" }}</td>
+                <td class="summary-nowrap">{{ tenant.contract_until|date:"d.m.Y"|default:"—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="summary-empty">Арендаторов пока нет.</p>
+    {% endif %}
+  </section>
+
+  <div class="form-actions">
+    <a href="{% url 'property_edit' property.pk %}" data-modal class="btn btn-primary btn-auto">
+      <svg class="icon"><use href="#i-edit"/></svg>Изменить
+    </a>
+    <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Закрыть</a>
+  </div>
+</div>

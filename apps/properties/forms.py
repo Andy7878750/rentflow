@@ -11,6 +11,13 @@ from .services import clean_kind_name
 PHONE_PLACEHOLDER = '+7 (___) ___-__-__ или +код страны'
 
 
+def add_blank_placeholders(form):
+    """Floating labels need a placeholder on every input: CSS sees an empty field by it."""
+    for field in form.fields.values():
+        if getattr(field.widget, 'input_type', None) not in (None, 'hidden', 'radio', 'checkbox'):
+            field.widget.attrs.setdefault('placeholder', ' ')
+
+
 class PropertyForm(forms.ModelForm):
     class Meta:
         model = Property
@@ -41,6 +48,7 @@ class PropertyForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        add_blank_placeholders(self)
         # Accept "45,5" as well as "45.5".
         self.fields['area'].localize = True
         self.fields['area'].widget.is_localized = True
