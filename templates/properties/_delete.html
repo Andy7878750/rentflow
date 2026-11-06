@@ -1,0 +1,13 @@
+<div class="modal-panel modal-panel-confirm">
+  <div class="confirm-icon" aria-hidden="true"><svg class="icon"><use href="#i-trash"/></svg></div>
+  <h1 class="confirm-title">Удалить объект «{{ property.name }}»?</h1>
+  <p class="confirm-text">
+    {% if tenant_count %}Вместе с ним удалятся арендаторы ({{ tenant_count }}) и все данные объекта.{% else %}Вместе с ним удалятся все данные объекта.{% endif %}
+    Отменить это действие нельзя.
+  </p>
+  <form method="post" action="{% url 'property_delete' property.pk %}" data-modal-form class="confirm-actions">
+    {% csrf_token %}
+    <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+    <button type="submit" class="btn btn-danger btn-auto">Удалить</button>
+  </form>
+</div>

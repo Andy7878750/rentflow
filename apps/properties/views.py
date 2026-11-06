@@ -132,7 +132,16 @@ def property_edit(request, pk):
 @login_required
 def property_delete(request, pk):
     property_obj = _own_property(request, pk)
+    is_modal = bool(request.headers.get('X-Modal'))
     if request.method == 'POST':
         property_obj.delete()
-        return redirect('property_list')
-    return render(request, 'properties/delete.html', {'property': property_obj})
+        url = reverse('property_list')
+        if is_modal:
+            return HttpResponse(status=204, headers={'X-Modal-Redirect': url})
+        return redirect(url)
+    # In the modal: a small confirmation window; otherwise the full page.
+    template = 'properties/_delete.html' if is_modal else 'properties/delete.html'
+    return render(request, template, {
+        'property': property_obj,
+        'tenant_count': property_obj.tenants.count(),
+    })

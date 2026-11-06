@@ -974,6 +974,48 @@ input.masked {
   background: var(--color-bg);
 }
 
+/* ---------- Delete confirmation in the modal ---------- */
+
+.modal-panel-confirm {
+  max-width: 420px;
+  margin-top: 12vh;
+  text-align: center;
+}
+
+.confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.confirm-title {
+  margin: 0 0 8px;
+  color: var(--color-primary);
+  font-size: 19px;
+  overflow-wrap: anywhere;
+}
+
+.confirm-text {
+  margin: 0 0 22px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-actions .btn {
+  flex: 1;
+}
+
 /* ---------- «Посмотреть»: summary card in the modal ---------- */
 
 .summary-list {

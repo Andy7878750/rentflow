@@ -149,6 +149,19 @@ class PropertyActionsTests(TestCase):
         self.assertRedirects(self.client.post(url), reverse('property_list'))
         self.assertFalse(Property.objects.filter(pk=self.prop.pk).exists())
 
+    def test_delete_in_modal(self):
+        self.prop.tenants.create(name='Виктор', share_percent=45)
+        url = reverse('property_delete', args=[self.prop.pk])
+        page = self.client.get(url, headers={'X-Modal': '1'})
+        self.assertTemplateUsed(page, 'properties/_delete.html')
+        self.assertContains(page, 'арендаторы (1)')
+        self.assertTrue(Property.objects.filter(pk=self.prop.pk).exists())
+
+        response = self.client.post(url, headers={'X-Modal': '1'})
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.headers['X-Modal-Redirect'], reverse('property_list'))
+        self.assertFalse(Property.objects.filter(pk=self.prop.pk).exists())
+
     def test_other_landlords_object_is_not_reachable(self):
         foreign = Property.objects.create(owner=self.other, name='Чужой', address='Москва')
         for name in ('property_detail', 'property_edit', 'property_delete'):
