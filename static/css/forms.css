@@ -993,9 +993,36 @@ input.masked {
 .tenant-list {
   display: flex;
   flex-direction: column;
+  counter-reset: tenant;
+}
+
+/* Each tenant gets a small number in the left margin: 1, 2, 3…
+   Removed (hidden) rows are skipped, so the numbers stay in order. */
+.tenant-row {
+  --row-top: 0px;
+  position: relative;
+  padding-left: 38px;
+  counter-increment: tenant;
+}
+
+.tenant-row::before {
+  content: counter(tenant);
+  position: absolute;
+  top: calc(var(--row-top) + 14px); /* middle of the first 52px field */
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .tenant-row:not([hidden]) ~ .tenant-row:not([hidden]) {
+  --row-top: 18px;
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px dashed #b8c0c7; /* darker than field borders so tenants read as separate blocks */
