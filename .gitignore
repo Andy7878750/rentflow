@@ -6,4 +6,3 @@ db.sqlite3
 staticfiles/
 media/
 .ruff_cache/
-mockups/
