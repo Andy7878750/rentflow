@@ -78,6 +78,7 @@
       hideTip();
       closeDate();
       closeSelects(null);
+      closeUnitPickers(null);
     });
 
     dialog.addEventListener('close', function () {
@@ -508,6 +509,34 @@
 
   document.addEventListener('click', function (event) {
     closeSelects(event.target.closest('[data-kind-select]'));
+    closeUnitPickers(event.target.closest('[data-unit-picker]'));
+  });
+
+  // ---------- % / м² picker inside the share field ----------
+
+  function setUnitPickerOpen(picker, open) {
+    picker.classList.toggle('is-open', open);
+    picker.querySelector('[data-unit-menu]').hidden = !open;
+    picker.querySelector('[data-unit-trigger]').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function closeUnitPickers(except) {
+    document.querySelectorAll('[data-unit-picker].is-open').forEach(function (picker) {
+      if (picker !== except) setUnitPickerOpen(picker, false);
+    });
+  }
+
+  document.addEventListener('keydown', function (event) {
+    var picker = event.target.closest && event.target.closest('[data-unit-picker].is-open');
+    if (!picker) return;
+    if (event.key === 'Escape') {
+      setUnitPickerOpen(picker, false);
+      picker.querySelector('[data-unit-trigger]').focus();
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      var options = Array.prototype.slice.call(picker.querySelectorAll('.select-option'));
+      var next = options[options.indexOf(document.activeElement) + (event.key === 'ArrowDown' ? 1 : -1)];
+      if (next) { event.preventDefault(); next.focus(); }
+    }
   });
 
   function initKindSelect(select, form) {
@@ -696,8 +725,13 @@
       var totalArea = parseNumber(areaInput && areaInput.value);
       var sum = 0;
 
-      list.querySelectorAll('[data-unit-select]').forEach(function (picker) {
-        picker.value = unitInput.value;
+      list.querySelectorAll('[data-unit-picker]').forEach(function (picker) {
+        picker.querySelector('[data-unit-label]').textContent = isArea ? 'м²' : '%';
+        picker.querySelectorAll('[data-unit-value]').forEach(function (row) {
+          var selected = row.dataset.unitValue === unitInput.value;
+          row.classList.toggle('is-selected', selected);
+          row.querySelector('.select-option').setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
       });
 
       visibleRows().forEach(function (row) {
@@ -760,14 +794,47 @@
       if (event.target.name === 'occupancy') {
         form.classList.toggle('is-owner', event.target.value === 'owner');
       }
-      if (event.target.matches('[data-unit-select]')) setUnit(event.target.value);
     });
 
     form.addEventListener('input', function (event) {
       if (event.target.matches('[data-share], [data-total-area]')) update();
     });
 
+    // Enter moves to the next field instead of saving half-filled data; Ctrl+Enter saves.
+    form.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' || event.defaultPrevented) return;
+      var target = event.target;
+      if (!target.matches('input:not([type=hidden]):not([type=radio]):not([type=checkbox])')) return;
+      event.preventDefault();
+      if (event.ctrlKey || event.metaKey) {
+        form.requestSubmit();
+        return;
+      }
+      var fields = Array.prototype.filter.call(
+        form.querySelectorAll('input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([data-kind-new]), [data-select-trigger], [type=submit]'),
+        function (el) { return !el.disabled && el.offsetParent !== null; }
+      );
+      var next = fields[fields.indexOf(target) + 1];
+      if (next) next.focus();
+    });
+
     form.addEventListener('click', function (event) {
+      var unitTrigger = event.target.closest('[data-unit-trigger]');
+      if (unitTrigger) {
+        var picker = unitTrigger.closest('[data-unit-picker]');
+        var open = !picker.classList.contains('is-open');
+        setUnitPickerOpen(picker, open);
+        if (open) (picker.querySelector('.is-selected .select-option') || picker.querySelector('.select-option')).focus();
+        return;
+      }
+      var unitRow = event.target.closest('[data-unit-value]');
+      if (unitRow) {
+        var owner = unitRow.closest('[data-unit-picker]');
+        setUnit(unitRow.dataset.unitValue);
+        setUnitPickerOpen(owner, false);
+        owner.querySelector('[data-unit-trigger]').focus();
+        return;
+      }
       var remove = event.target.closest('[data-tenant-remove]');
       if (remove) {
         removeRow(remove.closest('[data-tenant-row]'));

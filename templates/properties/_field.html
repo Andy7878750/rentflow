@@ -18,12 +18,20 @@
     </div>
   {% elif unit_select %}
     <div class="unit-input">
-      {{ field }}
-      <select class="unit-select" data-unit-select aria-label="Единица доли">
-        <option value="percent"{% if share_unit != 'area' %} selected{% endif %}>%</option>
-        <option value="area"{% if share_unit == 'area' %} selected{% endif %}>м²</option>
-      </select>
-      <span class="share-hint" data-share-hint></span>
+      <span class="unit-value">
+        {{ field }}
+        <span class="share-hint" data-share-hint></span>
+      </span>
+      <div class="unit-picker" data-unit-picker>
+        <button type="button" class="unit-trigger" data-unit-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Единица доли">
+          <span data-unit-label>{% if share_unit == 'area' %}м²{% else %}%{% endif %}</span>
+          <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+        </button>
+        <ul class="select-menu unit-menu" role="listbox" data-unit-menu hidden>
+          <li class="select-row" data-unit-value="percent"><button type="button" class="select-option" role="option"><span>Проценты, %</span><svg class="icon select-check"><use href="#i-check"/></svg></button></li>
+          <li class="select-row" data-unit-value="area"><button type="button" class="select-option" role="option"><span>Площадь, м²</span><svg class="icon select-check"><use href="#i-check"/></svg></button></li>
+        </ul>
+      </div>
     </div>
   {% else %}
     {{ field }}

@@ -823,31 +823,62 @@ input.masked {
   box-shadow: none;
 }
 
-.pform .unit-select {
+/* % / м² picker on the right of the share box — same menu style as «Тип». */
+.unit-picker {
+  position: relative;
   flex: 0 0 auto;
-  width: auto;
-  height: 40px;
-  padding: 0 26px 0 10px;
+}
+
+.unit-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 50px;
+  padding: 0 8px 0 12px;
   border: none;
   border-left: 1px solid var(--color-border);
   border-radius: 0 var(--radius) var(--radius) 0;
-  background: var(--color-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7680' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;
+  background: var(--color-bg);
   color: var(--color-text);
+  font-size: 14px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  appearance: none;
 }
 
-.pform .unit-select:focus {
-  box-shadow: none;
+.unit-trigger .icon {
+  width: 14px;
+  height: 14px;
 }
 
-/* The converted value sits under the box without taking space, so nothing jumps. */
+.unit-trigger:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.unit-picker.is-open .select-chevron {
+  transform: rotate(180deg);
+}
+
+.unit-menu {
+  left: auto;
+  right: -1px;
+  width: 190px;
+  margin: 0;
+  list-style: none;
+}
+
+/* The converted value («= 49,5 м²») sits inside the box, bottom right, small and grey. */
+.unit-value {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
 .share-hint {
   position: absolute;
-  top: 100%;
-  left: 2px;
-  margin-top: 1px;
+  right: 10px;
+  bottom: 6px;
   color: var(--color-text-muted);
   font-size: 11px;
   line-height: 13px;
@@ -1000,6 +1031,83 @@ input.masked {
 
 .btn-ghost:hover {
   background: var(--color-bg);
+}
+
+/* ---------- Toast notices ---------- */
+
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 12px 10px 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  color: var(--color-text);
+  font-size: 14px;
+  pointer-events: auto;
+  animation: toast-in 0.25s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.is-leaving {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.toast-icon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.toast-error .toast-icon,
+.toast-warning .toast-icon {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.toast-close {
+  display: flex;
+  padding: 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.toast-close:hover {
+  background: var(--color-bg);
+}
+
+.toast-close .icon {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ---------- Delete confirmation in the modal ---------- */

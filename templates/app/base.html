@@ -110,6 +110,17 @@
   </div>
 </div>
 {% endwith %}
+{% if messages %}
+  <div class="toasts" role="status" aria-live="polite" data-toasts>
+    {% for message in messages %}
+      <div class="toast{% if message.tags %} toast-{{ message.tags }}{% endif %}">
+        <svg class="icon toast-icon"><use href="#{% if message.level_tag == 'error' or message.level_tag == 'warning' %}i-x{% else %}i-check{% endif %}"/></svg>
+        <span>{{ message }}</span>
+        <button type="button" class="toast-close" data-toast-close aria-label="Закрыть уведомление"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
 <dialog class="modal" data-modal-dialog aria-label="Окно"></dialog>
 {% load static %}
 <script src="{% static 'js/app.js' %}"></script>
@@ -140,6 +151,19 @@
     });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') closeDropdowns(null);
+    });
+
+    // Notices («Объект создан») slide in at the bottom and leave on their own after a few seconds.
+    document.querySelectorAll('.toast').forEach(function (toast, index) {
+      function hide() {
+        toast.classList.add('is-leaving');
+        setTimeout(function () { toast.remove(); }, 250);
+      }
+      var timer = setTimeout(hide, 4000 + index * 500);
+      toast.querySelector('[data-toast-close]').addEventListener('click', function () {
+        clearTimeout(timer);
+        hide();
+      });
     });
   })();
 </script>

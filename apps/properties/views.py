@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -63,7 +64,12 @@ def _property_form(request, property_obj=None):
         tenants_ok = owner_used or formset.is_valid()
         if form_ok and tenants_ok:
             saved = services.save_property(form, formset, request.user)
-            url = reverse('property_detail', args=[saved.pk])
+            # Back to the object cards with a short notice (shown as a toast in app/base.html).
+            if property_obj:
+                messages.success(request, f'Изменения в «{saved.name}» сохранены.')
+            else:
+                messages.success(request, f'Объект «{saved.name}» создан.')
+            url = reverse('property_list')
             if is_modal:
                 return HttpResponse(status=204, headers={'X-Modal-Redirect': url})
             return redirect(url)
@@ -134,7 +140,9 @@ def property_delete(request, pk):
     property_obj = _own_property(request, pk)
     is_modal = bool(request.headers.get('X-Modal'))
     if request.method == 'POST':
+        name = property_obj.name
         property_obj.delete()
+        messages.success(request, f'Объект «{name}» удалён.')
         url = reverse('property_list')
         if is_modal:
             return HttpResponse(status=204, headers={'X-Modal-Redirect': url})

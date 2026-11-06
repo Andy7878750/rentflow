@@ -91,7 +91,8 @@ class PropertyPagesTests(TestCase):
         ))
 
         prop = Property.objects.get(name='Глинки 148')
-        self.assertRedirects(response, reverse('property_detail', args=[prop.pk]))
+        self.assertRedirects(response, reverse('property_list'), fetch_redirect_response=False)
+        self.assertContains(self.client.get(reverse('property_list')), 'Объект «Глинки 148» создан.')
         self.assertEqual(prop.owner, self.user)
         self.assertEqual(prop.phone_href, '+79312446838')
 
@@ -137,7 +138,7 @@ class PropertyActionsTests(TestCase):
 
         response = self.client.post(url, form_data(name='Королёва 61', kind='commercial', address='СПб'))
 
-        self.assertRedirects(response, reverse('property_detail', args=[self.prop.pk]))
+        self.assertRedirects(response, reverse('property_list'))
         self.prop.refresh_from_db()
         self.assertEqual(self.prop.name, 'Королёва 61')
 
@@ -249,9 +250,9 @@ class PropertyFormWithTenantsTests(TestCase):
 
     def test_modal_success_returns_redirect_header(self):
         response = self.client.post(self.url, form_data(), headers={'X-Modal': '1'})
-        prop = Property.objects.get()
+        self.assertTrue(Property.objects.exists())
         self.assertEqual(response.status_code, 204)
-        self.assertEqual(response['X-Modal-Redirect'], reverse('property_detail', args=[prop.pk]))
+        self.assertEqual(response['X-Modal-Redirect'], reverse('property_list'))
 
     def test_edit_updates_and_removes_tenants(self):
         prop = Property.objects.create(owner=self.user, name='Королёва 61', area=Decimal('100'))
