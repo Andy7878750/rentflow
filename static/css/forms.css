@@ -922,12 +922,11 @@ input.masked {
   right: auto;
 }
 
-/* The converted value sits right after the box, on the same line, small and grey. */
+/* The converted value («~49,5 м²») sits right after the box, at its top edge, small and grey. */
 .share-hint {
   position: absolute;
-  top: 26px;
+  top: 8px;
   left: 132px;
-  transform: translateY(-50%);
   color: var(--color-text-muted);
   font-size: 11px;
   line-height: 13px;
