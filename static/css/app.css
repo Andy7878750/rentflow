@@ -516,29 +516,6 @@
   text-decoration: underline;
 }
 
-.property-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.property-stats div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-label {
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.stat-value {
-  font-weight: 700;
-}
-
 /* «Настройка N из 3»: replaces the zero stats until tenants and services are added. */
 .property-setup {
   display: flex;
@@ -668,10 +645,6 @@
   .user-meta {
     display: none;
   }
-
-  .property-stats {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 /* ---------- Dropdown (card "…" menu) ---------- */
@@ -791,13 +764,6 @@
   border-color: var(--color-primary-light);
 }
 
-/* «+ Добавить арендатора» / «Изменить арендаторов» under the tenants: only the link acts there. */
-.property-links {
-  padding: 10px 20px 14px;
-  border-top: 1px solid var(--color-border);
-  cursor: default;
-}
-
 /* «Изменить арендаторов», «Добавить услугу»…: an ordinary link, not a call to action. */
 .setup-link {
   display: inline-flex;
@@ -820,28 +786,66 @@
   text-underline-offset: 3px;
 }
 
-/* Card: the numbers (or «Настройка N из 3») with the services link under them, one block. */
-.property-summary {
+/* «услуги · показания · начисления»: three equal centred columns, number over a small caption. */
+.stat-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.stat-cols > div {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--color-border);
+  gap: 2px;
+  min-width: 0;
+  padding: 0 8px;
 }
 
-.property-summary .property-stats {
-  align-self: stretch;
-  padding: 0;
-  border: 0;
+.stat-cols > div + div {
+  border-left: 1px solid var(--color-border);
 }
 
-.card-link-row {
+.stat-num {
+  overflow: hidden;
+  color: var(--color-primary);
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stat-num-accent {
+  color: var(--color-accent);
+}
+
+.stat-cap {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.stat-cols + .property-tenants,
+.property-setup + .property-tenants {
+  border-top: 0;
+}
+
+/* «✎ Арендаторы» on the left, «✎ Услуги» on the right. */
+.card-links {
+  display: flex;
+  gap: 16px;
+  padding: 10px 20px 14px;
+  border-top: 1px solid var(--color-border);
   cursor: default;
 }
 
-.property-summary + .property-tenants {
+.card-links-flat {
   border-top: 0;
+  padding-top: 6px;
+}
+
+.setup-link-end {
+  margin-left: auto;
 }
 
 /* A name that doesn't fit its line fades out on the last letters (app.js adds .is-clipped). */

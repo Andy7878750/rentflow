@@ -21,10 +21,10 @@
 
     {% include "properties/_contacts.html" %}
 
-    <div class="property-stats" id="obj-stats" data-live>
-      <div><span class="stat-label">Услуги</span><span class="stat-value">{{ bill.entries|length }}</span></div>
-      <div><span class="stat-label">Показания</span><span class="stat-value">{{ bill.readings_done }} из {{ bill.readings_total }}</span></div>
-      <div><span class="stat-label">Начисления</span><span class="stat-value stat-accent">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span></div>
+    <div class="stat-cols" id="obj-stats" data-live>
+      <div><span class="stat-num">{{ bill.entries|length }}</span><span class="stat-cap">услуги</span></div>
+      <div><span class="stat-num">{{ bill.readings_done }} из {{ bill.readings_total }}</span><span class="stat-cap">показания</span></div>
+      <div><span class="stat-num stat-num-accent">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span><span class="stat-cap">начисления</span></div>
     </div>
 
     <nav class="payer-list" id="obj-payers" data-live aria-label="Чей счёт показать">
@@ -47,11 +47,12 @@
         {% else %}Объект сдан полностью{% endif %}
       </p>
       {% if not property.is_owner_used %}
-        <p class="payer-link">
-          <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link">
-            {% if bill.payers %}<svg class="icon"><use href="#i-edit"/></svg>Изменить арендаторов{% else %}<svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора{% endif %}
+        <div class="card-links card-links-flat">
+          <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
+             title="{% if bill.payers %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
+            <svg class="icon"><use href="{% if bill.payers %}#i-edit{% else %}#i-plus{% endif %}"/></svg>Арендаторы
           </a>
-        </p>
+        </div>
       {% endif %}
     </nav>
   </aside>

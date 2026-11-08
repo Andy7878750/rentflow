@@ -317,19 +317,6 @@
   font-size: 18px;
 }
 
-.obj-info .property-stats {
-  grid-template-columns: 1fr 1fr;
-}
-
-.obj-info .property-stats div:last-child {
-  grid-column: 1 / -1;
-}
-
-.stat-accent {
-  color: var(--color-accent);
-  font-size: 18px;
-}
-
 .payer-list {
   padding: 8px 0;
 }
@@ -365,10 +352,6 @@
   margin: 8px 20px 4px;
   color: var(--color-text-muted);
   font-size: 13px;
-}
-
-.payer-link {
-  margin: 10px 20px 4px;
 }
 
 .obj-month {
