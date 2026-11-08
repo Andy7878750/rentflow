@@ -73,12 +73,30 @@ class SetupStepsTests(TestCase):
         self.assertEqual(setup['steps'][1], {'label': 'Собственник', 'done': True})
         self.assertEqual(setup['done'], 2)
 
-    def test_list_card_shows_setup_checklist(self):
-        Property.objects.create(owner=self.user, name='Глинки 148')
+    def test_list_card_shows_setup_badge_and_add_links(self):
+        prop = Property.objects.create(owner=self.user, name='Глинки 148')
         self.client.force_login(self.user)
         response = self.client.get(reverse('property_list'))
         self.assertContains(response, 'Настройка 1 из 3')
-        self.assertContains(response, 'Добавить услуги')
+        self.assertNotContains(response, 'setup-steps')
+        self.assertContains(response, f'href="{reverse("property_edit", args=[prop.pk])}?add=tenant"')
+        self.assertContains(response, f'href="{reverse("receipt_pick", args=[prop.pk])}" data-modal class="setup-link">+ Добавить услугу')
+
+    def test_add_service_link_stays_when_setup_is_done(self):
+        prop = Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)
+        prop.receipts.create(name='Свет')
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('property_list'))
+        self.assertNotContains(response, 'Настройка')
+        self.assertContains(response, '+ Добавить услугу')
+        self.assertNotContains(response, '+ Добавить арендатора')
+
+    def test_edit_form_from_add_tenant_link_opens_with_new_row(self):
+        prop = Property.objects.create(owner=self.user, name='Глинки 148')
+        self.client.force_login(self.user)
+        url = reverse('property_edit', args=[prop.pk]) + '?add=tenant'
+        self.assertContains(self.client.get(url, HTTP_X_MODAL='1'), 'data-add-tenant')
+        self.assertNotContains(self.client.get(reverse('property_edit', args=[prop.pk]), HTTP_X_MODAL='1'), 'data-add-tenant')
 
 
 class PropertyPagesTests(TestCase):

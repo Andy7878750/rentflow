@@ -62,22 +62,21 @@
             <div><span class="stat-label">К выставлению</span><span class="stat-value">0,00 ₽</span></div>
           </div>
         {% else %}
-          {# Until the one-time setup is done, numbers would be zeros: show what is left instead. #}
+          {# Until the one-time setup is done, numbers would be zeros: say so instead. #}
           <div class="property-setup">
             <span class="setup-badge">Настройка {{ property.setup.done }} из {{ property.setup.total }}</span>
-            <ul class="setup-steps">
-              {% for step in property.setup.steps %}
-                <li class="{% if step.done %}is-done{% endif %}">
-                  <span class="setup-mark" aria-hidden="true">{% if step.done %}<svg class="icon"><use href="#i-check"/></svg>{% endif %}</span>
-                  {{ step.label }}
-                </li>
-              {% endfor %}
-            </ul>
-            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link">+ Добавить услуги</a>
           </div>
         {% endif %}
 
         {% include "properties/_tenants.html" %}
+
+        {# Only these links act here: a click beside them doesn't open the object page. #}
+        <footer class="property-links" data-card-skip>
+          {% if not property.is_owner_used %}
+            <a href="{% url 'property_edit' property.pk %}?add=tenant" data-modal class="setup-link">+ Добавить арендатора</a>
+          {% endif %}
+          <a href="{% url 'receipt_pick' property.pk %}" data-modal class="setup-link">+ Добавить услугу</a>
+        </footer>
       </article>
     {% endfor %}
   </section>

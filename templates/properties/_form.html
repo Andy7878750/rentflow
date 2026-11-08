@@ -7,7 +7,7 @@
   </header>
 
   <form method="post" action="{% if property %}{% url 'property_edit' property.pk %}{% else %}{% url 'property_create' %}{% endif %}"
-        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form novalidate>
+        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form{% if add_tenant %} data-add-tenant{% endif %} novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 

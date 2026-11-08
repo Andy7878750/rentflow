@@ -87,7 +87,7 @@ def receipt_delete(request, pk):
 
 @login_required
 def receipt_pick(request, property_pk):
-    """«+ Услуга»: choose a ready-made receipt or your own."""
+    """«+ Добавить услугу»: choose a ready-made receipt or your own."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
     template = 'billing/_receipt_pick.html' if request.headers.get('X-Modal') else 'billing/receipt_pick.html'
     return render(request, template, {

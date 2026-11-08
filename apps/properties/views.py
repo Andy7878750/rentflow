@@ -86,6 +86,7 @@ def _property_form(request, property_obj=None):
         'formset': formset,
         'property': property_obj,
         'share_unit': unit,
+        'add_tenant': request.GET.get('add') == 'tenant' and data is None,
         'kind_choices': [
             (value, label) for value, label in Property.Kind.choices
             if value not in (Property.Kind.OTHER, Property.Kind.CUSTOM)
