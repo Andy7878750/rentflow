@@ -49,15 +49,17 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 84px;
+  min-height: 88px;
   padding: 10px 6px;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
+  background: var(--color-surface);
   color: var(--color-text);
   font-size: 13px;
   line-height: 1.3;
   text-align: center;
   text-decoration: none;
-  transition: background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .kind-tile .icon {
@@ -68,11 +70,13 @@
 
 .kind-tile:hover,
 .kind-tile:focus-visible {
-  background: var(--color-bg);
+  border-color: var(--color-accent);
   outline: none;
 }
 
 .kind-tile.is-selected {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
   background: var(--color-accent-soft);
   color: var(--color-accent-hover);
   font-weight: 600;
@@ -80,6 +84,10 @@
 
 .kind-tile.is-selected .icon {
   color: var(--color-accent);
+}
+
+.kind-tile-own {
+  border-style: dashed;
 }
 
 .kind-tile-own,
@@ -803,7 +811,7 @@
 
 .pick-list {
   display: grid;
-  gap: 2px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -814,6 +822,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   color: var(--color-text);
   text-decoration: none;
@@ -821,7 +830,8 @@
 
 .pick-item:hover,
 .pick-item:focus-visible {
-  background: var(--color-bg);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
   outline: none;
 }
 

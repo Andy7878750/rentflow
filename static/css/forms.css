@@ -330,18 +330,11 @@ input.masked {
 
 /* ---------- Sections and grids ---------- */
 
-/* One style for every window: a block is a small caption over its fields, blocks are split
-   by a single thin line. No frames around blocks — frames are only for what you type into. */
+/* One style for every window: a block is a small caption over its fields, blocks are set apart
+   by space alone. No frames or lines around blocks — frames are for tiles and what you type into. */
 .form-section {
   margin: 0;
-  padding: 20px 0;
-  border-top: 1px solid var(--color-border);
-}
-
-.modal-head + .form-section,
-.modal-head + form > .form-section:first-of-type {
-  padding-top: 0;
-  border-top: 0;
+  padding: 0 0 28px;
 }
 
 .form-section-head {
