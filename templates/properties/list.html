@@ -73,7 +73,7 @@
                 </li>
               {% endfor %}
             </ul>
-            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link">+ Добавить квитанции</a>
+            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link">+ Добавить услуги</a>
           </div>
         {% endif %}
 
@@ -84,7 +84,7 @@
 {% else %}
   <section class="empty-state">
     <h2>Начните с первого объекта</h2>
-    <p>Объект. Арендаторы. Квитанции. Честный расчёт.</p>
+    <p>Объект. Арендаторы. Услуги. Честный расчёт.</p>
     <a href="{% url 'property_create' %}" data-modal class="btn btn-primary btn-auto">
       <svg class="icon"><use href="#i-plus"/></svg>Добавить объект
     </a>

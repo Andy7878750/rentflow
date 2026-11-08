@@ -4,11 +4,11 @@
   <div class="confirm-icon confirm-icon-success" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></div>
   <h1 class="confirm-title">Объект «{{ property.name }}» создан</h1>
   <p class="confirm-text">
-    Остался один шаг: отметьте, какие квитанции приходят по объекту, и где есть счётчики.
+    Остался один шаг: отметьте, какие услуги вы оплачиваете по объекту и где есть счётчики.
     Это делается один раз.
   </p>
   <div class="confirm-actions">
     <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto">Позже</a>
-    <a href="{% url 'property_detail' property.pk %}#receipts" class="btn btn-primary btn-auto" autofocus>Добавить квитанции</a>
+    <a href="{% url 'property_detail' property.pk %}#receipts" class="btn btn-primary btn-auto" autofocus>Добавить услуги</a>
   </div>
 </div>

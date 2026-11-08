@@ -71,7 +71,7 @@ def setup_steps(property_obj):
     steps = [
         {'label': 'Объект', 'done': True},
         {'label': people[0], 'done': people[1]},
-        {'label': 'Квитанции и счётчики', 'done': bool(property_obj.receipts.all())},
+        {'label': 'Услуги и счётчики', 'done': bool(property_obj.receipts.all())},
     ]
     return {
         'steps': steps,

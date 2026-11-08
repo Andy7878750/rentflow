@@ -41,6 +41,19 @@ def new_receipt(property_obj, kind):
     return receipt
 
 
+def services_label(count):
+    """«нет услуг», «1 услуга», «3 услуги», «5 услуг»."""
+    if not count:
+        return 'нет услуг'
+    if count % 10 == 1 and count % 100 != 11:
+        word = 'услуга'
+    elif 2 <= count % 10 <= 4 and not 12 <= count % 100 <= 14:
+        word = 'услуги'
+    else:
+        word = 'услуг'
+    return f'{count} {word}'
+
+
 def missing_kinds(property_obj):
     """Ready-made receipts the object doesn't have yet (shown as «add» buttons)."""
     have = set(property_obj.receipts.values_list('kind', flat=True))

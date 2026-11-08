@@ -9,6 +9,9 @@
     <a href="{% url 'property_edit' property.pk %}" data-modal class="dropdown-item" role="menuitem">
       <svg class="icon"><use href="#i-edit"/></svg>Изменить
     </a>
+    <a href="{% url 'receipt_pick' property.pk %}" data-modal class="dropdown-item dropdown-item-add" role="menuitem">
+      <svg class="icon"><use href="#i-plus"/></svg>Услуга
+    </a>
     <a href="{% url 'property_delete' property.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
       <svg class="icon"><use href="#i-trash"/></svg>Удалить
     </a>

@@ -72,7 +72,7 @@
 
     <section class="form-section">
       <div class="form-section-head">
-        <h2>Кто пользуется объектом <span class="help" tabindex="0" role="button" aria-label="Подсказка: Кто пользуется объектом" data-tip-title="Кто пользуется объектом" data-tip="Доли нужны, чтобы делить квитанции между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
+        <h2>Кто пользуется объектом <span class="help" tabindex="0" role="button" aria-label="Подсказка: Кто пользуется объектом" data-tip-title="Кто пользуется объектом" data-tip="Доли нужны, чтобы делить расходы между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
         <span class="occupied tenants-only" data-occupied></span>
       </div>
       <div class="form-section-body">
@@ -83,7 +83,7 @@
           {% endfor %}
         </div>
 
-        <p class="owner-note owner-only">Объектом пользуетесь вы сами — все расходы по квитанциям остаются на вас.</p>
+        <p class="owner-note owner-only">Объектом пользуетесь вы сами — все расходы по услугам остаются на вас.</p>
 
         <div class="tenants-only">
           {{ formset.management_form }}
@@ -105,7 +105,7 @@
       </div>
     </section>
 
-    <p class="form-note">После сохранения добавьте на странице объекта квитанции и счётчики — для каждой квитанции один раз выбираете, как делить её между арендаторами.</p>
+    <p class="form-note">После сохранения добавьте на странице объекта услуги и счётчики — для каждой услуги один раз выбираете, как делить её между арендаторами.</p>
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary btn-auto">{% if property %}Сохранить{% else %}Создать объект{% endif %}</button>

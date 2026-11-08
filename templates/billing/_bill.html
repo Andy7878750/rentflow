@@ -14,7 +14,7 @@
     </ul>
     <div class="bill-total"><span>Итого</span><span>{{ payer.total|floatformat:"2g" }}&nbsp;₽</span></div>
   {% else %}
-    <p class="calc-empty">{% if bill.entries %}Пока нечего начислять — введите суммы и показания слева.{% else %}Добавьте квитанции — здесь появится, кто сколько платит за месяц.{% endif %}</p>
+    <p class="calc-empty">{% if bill.entries %}Пока нечего начислять — введите суммы и показания слева.{% else %}Добавьте услуги — здесь появится, кто сколько платит за месяц.{% endif %}</p>
   {% endif %}
   {% if bill.missing %}
     <p class="bill-missing">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>

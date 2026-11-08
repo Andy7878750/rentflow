@@ -10,7 +10,9 @@
       <a href="{% url 'property_list' %}" class="rail-link{% if url_name|slice:':9' == 'property_' %} is-active{% endif %}" title="Объекты">
         <svg class="icon"><use href="#i-building"/></svg>
       </a>
-      <span class="rail-link is-soon" title="Квитанции и счётчики — скоро"><svg class="icon"><use href="#i-gauge"/></svg></span>
+      <a href="{% url 'receipt_list' %}" class="rail-link{% if url_name == 'receipt_list' %} is-active{% endif %}" title="Услуги">
+        <svg class="icon"><use href="#i-gauge"/></svg>
+      </a>
       <span class="rail-link is-soon" title="Счета — скоро"><svg class="icon"><use href="#i-file"/></svg></span>
       <span class="rail-link is-soon" title="Справочники — скоро"><svg class="icon"><use href="#i-library"/></svg></span>
       <span class="rail-link is-soon" title="Отчёты — скоро"><svg class="icon"><use href="#i-chart"/></svg></span>
@@ -47,19 +49,23 @@
         </ul>
       </details>
 
-      <details class="nav-group">
+      <details class="nav-group"{% if url_name == 'receipt_list' %} open{% endif %}>
         <summary>
           <svg class="icon"><use href="#i-gauge"/></svg>
-          <span>Квитанции и счётчики</span>
+          <span>Услуги</span>
           <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
         </summary>
         <ul class="nav-items">
-          <li><span class="nav-item is-soon" title="Скоро">Квитанции</span></li>
+          <li>
+            <a href="{% url 'receipt_list' %}" class="nav-item{% if url_name == 'receipt_list' %} is-active{% endif %}">
+              <span>Все услуги</span><span class="nav-count">{{ sidebar_receipt_count }}</span>
+            </a>
+          </li>
           <li><span class="nav-item is-soon" title="Скоро">Счётчики</span></li>
           <li>
-            <span class="nav-item nav-item-add is-soon" title="Скоро">
-              <svg class="icon"><use href="#i-plus"/></svg><span>Добавить</span>
-            </span>
+            <a href="{% url 'receipt_add' %}" data-modal class="nav-item nav-item-add">
+              <svg class="icon"><use href="#i-plus"/></svg><span>Добавить услугу</span>
+            </a>
           </li>
         </ul>
       </details>

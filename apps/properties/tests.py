@@ -78,7 +78,7 @@ class SetupStepsTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse('property_list'))
         self.assertContains(response, 'Настройка 1 из 3')
-        self.assertContains(response, 'Добавить квитанции')
+        self.assertContains(response, 'Добавить услуги')
 
 
 class PropertyPagesTests(TestCase):
@@ -293,9 +293,9 @@ class PropertyFormWithTenantsTests(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response['X-Modal-Redirect'], reverse('property_list'))
 
-    def test_sidebar_has_receipts_and_meters_under_objects(self):
+    def test_sidebar_has_services_under_objects(self):
         html = self.client.get(reverse('property_list')).content.decode()
-        item = '<span>Квитанции и счётчики</span>'
+        item = '<span>Услуги</span>'
         self.assertIn(item, html)
         self.assertLess(html.index('Все объекты'), html.index(item))
         self.assertLess(html.index(item), html.index('<span>Счета</span>'))

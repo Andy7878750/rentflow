@@ -126,7 +126,7 @@ class ReceiptViewTests(TestCase):
 
     def test_object_page_offers_receipt_buttons(self):
         response = self.client.get(reverse('property_detail', args=[self.prop.pk]))
-        self.assertContains(response, 'Какие квитанции приходят по объекту?')
+        self.assertContains(response, 'Какие услуги оплачиваете по объекту?')
         self.assertContains(response, reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity')
 
     def test_create_form_is_prefilled_from_preset(self):
@@ -238,3 +238,83 @@ class MonthPageTests(TestCase):
         self.client.force_login(other)
         response = self.client.post(reverse('month_save', args=[self.prop.pk]), {'month': '2026-09'})
         self.assertEqual(response.status_code, 404)
+
+
+class ServicesSectionTests(TestCase):
+    """«Услуги» in the menu: the table of all services and «+ Добавить услугу»."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')
+        self.client.force_login(self.user)
+
+    def test_services_label(self):
+        self.assertEqual(services.services_label(0), 'нет услуг')
+        self.assertEqual(services.services_label(1), '1 услуга')
+        self.assertEqual(services.services_label(3), '3 услуги')
+        self.assertEqual(services.services_label(5), '5 услуг')
+        self.assertEqual(services.services_label(11), '11 услуг')
+        self.assertEqual(services.services_label(22), '22 услуги')
+
+    def test_table_lists_services_of_all_own_objects(self):
+        first = make_property(self.user)
+        second = Property.objects.create(owner=self.user, name='Ленина 5')
+        Receipt.objects.create(property=first, kind='electricity', name='Свет', metered=True, unit='кВт·ч', split='meters')
+        Receipt.objects.create(property=second, kind='internet', name='Интернет', split='equal',
+                               amount_mode='fixed', fixed_amount=Decimal('600'))
+        stranger = User.objects.create_user(username='b@example.ru', email='b@example.ru', password='secret1')
+        Receipt.objects.create(property=make_property(stranger), name='Чужая услуга')
+
+        response = self.client.get(reverse('receipt_list'))
+        self.assertContains(response, 'Свет')
+        self.assertContains(response, 'у арендаторов, кВт·ч')
+        self.assertContains(response, 'Интернет')
+        self.assertContains(response, '600,00')
+        self.assertContains(response, 'Ленина 5')
+        self.assertNotContains(response, 'Чужая услуга')
+        self.assertContains(response, '<span class="nav-count">2</span>')
+
+    def test_empty_table(self):
+        self.assertContains(self.client.get(reverse('receipt_list')), 'Услуг пока нет')
+
+    def test_add_with_one_object_goes_straight_to_kinds(self):
+        prop = make_property(self.user)
+        response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
+        self.assertTemplateUsed(response, 'billing/_receipt_pick.html')
+        self.assertContains(response, reverse('receipt_create', args=[prop.pk]) + '?kind=electricity')
+
+    def test_add_with_several_objects_asks_which(self):
+        first = make_property(self.user)
+        second = Property.objects.create(owner=self.user, name='Ленина 5')
+        Receipt.objects.create(property=first, name='Свет')
+        response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
+        self.assertContains(response, 'К какому объекту?')
+        self.assertContains(response, reverse('receipt_pick', args=[first.pk]))
+        self.assertContains(response, reverse('receipt_pick', args=[second.pk]))
+        self.assertContains(response, '1 услуга')
+        self.assertContains(response, 'нет услуг')
+
+    def test_add_without_objects_offers_an_object(self):
+        response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
+        self.assertContains(response, reverse('property_create'))
+
+    def test_card_menu_has_add_service(self):
+        prop = make_property(self.user)
+        response = self.client.get(reverse('property_list'))
+        self.assertContains(response, f'href="{reverse("receipt_pick", args=[prop.pk])}" data-modal class="dropdown-item')
+
+    def test_saving_from_the_table_returns_to_the_table(self):
+        receipt = Receipt.objects.create(property=make_property(self.user), name='Свет')
+        response = self.client.post(
+            reverse('receipt_delete', args=[receipt.pk]),
+            HTTP_X_MODAL='1', HTTP_REFERER='http://testserver/services/?x=1',
+        )
+        self.assertEqual(response['X-Modal-Redirect'], '/services/?x=1')
+
+    def test_foreign_referer_is_ignored(self):
+        prop = make_property(self.user)
+        receipt = Receipt.objects.create(property=prop, name='Свет')
+        response = self.client.post(
+            reverse('receipt_delete', args=[receipt.pk]),
+            HTTP_X_MODAL='1', HTTP_REFERER='https://evil.example/services/',
+        )
+        self.assertEqual(response['X-Modal-Redirect'], reverse('property_detail', args=[prop.pk]))

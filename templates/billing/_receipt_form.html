@@ -1,6 +1,6 @@
 <div class="modal-panel modal-panel-receipt">
   <header class="modal-head">
-    <h1>{% if receipt.pk %}Квитанция «{{ receipt.name }}»{% else %}Новая квитанция{% endif %}</h1>
+    <h1>{% if receipt.pk %}Услуга «{{ receipt.name }}»{% else %}Новая услуга{% endif %}</h1>
     <a href="{% url 'property_detail' property.pk %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
       <svg class="icon"><use href="#i-x"/></svg>
     </a>
@@ -14,7 +14,7 @@
     {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 
     <div class="form-grid grid-2">
-      {% include "properties/_field.html" with field=form.name required=1 tip="Так квитанция называется в счетах арендаторам." %}
+      {% include "properties/_field.html" with field=form.name required=1 tip="Так услуга называется в счетах арендаторам." %}
       {% include "properties/_field.html" with field=form.provider tip="Кто присылает квитанцию: УК, «Петроэлектросбыт», провайдер. Для вашей памяти." %}
     </div>
 
@@ -65,7 +65,7 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary btn-auto">{% if receipt.pk %}Сохранить{% else %}Добавить квитанцию{% endif %}</button>
+      <button type="submit" class="btn btn-primary btn-auto">{% if receipt.pk %}Сохранить{% else %}Добавить услугу{% endif %}</button>
       <a href="{% url 'property_detail' property.pk %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
     </div>
   </form>

@@ -53,7 +53,7 @@
   <section class="obj-month" id="receipts">
     <div class="section-head">
       <div>
-        <h2>Квитанции и показания</h2>
+        <h2>Услуги и показания</h2>
         <div class="month-switch month-switch-sm">
           <a href="?month={{ prev_month }}" class="icon-button" aria-label="Предыдущий месяц"><svg class="icon"><use href="#i-chevron-left"/></svg></a>
           <span class="month-label">{{ month_label }}</span>
@@ -62,7 +62,7 @@
       </div>
       {% if bill.entries %}
         <a href="{% url 'receipt_pick' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm">
-          <svg class="icon"><use href="#i-plus"/></svg>Квитанция
+          <svg class="icon"><use href="#i-plus"/></svg>Услуга
         </a>
       {% endif %}
     </div>
@@ -95,7 +95,7 @@
                 </label>
               {% endif %}
               <details class="dropdown" data-dropdown>
-                <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с квитанцией">
+                <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с услугой">
                   <svg class="icon"><use href="#i-more"/></svg>
                 </summary>
                 <div class="dropdown-menu" role="menu">
@@ -154,7 +154,7 @@
       </form>
     {% else %}
       <div class="receipts-start">
-        <h2>Какие квитанции приходят по объекту?</h2>
+        <h2>Какие услуги оплачиваете по объекту?</h2>
         <p>Нажмите на каждую — и один раз выберите, как её делить. Дальше останется только вводить суммы и показания.</p>
         {% include "billing/_kind_chips.html" %}
       </div>

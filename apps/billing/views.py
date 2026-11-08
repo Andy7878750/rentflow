@@ -1,8 +1,12 @@
+from urllib.parse import urlsplit
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.properties import services as property_services
@@ -14,12 +18,22 @@ from .forms import ReceiptForm
 from .models import Receipt
 
 
+def _back_url(request):
+    """The page the modal was opened on (the object page, the services table, the object list)."""
+    referer = request.headers.get('Referer', '')
+    safe = url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}, require_https=request.is_secure())
+    if not referer or not safe:
+        return None
+    parts = urlsplit(referer)
+    return (parts.path + (f'?{parts.query}' if parts.query else '')) or None
+
+
 def _done(request, property_obj, message):
-    """Back to the object page with a toast; in the modal, tell app.js where to go."""
+    """Back with a toast: in the modal, to the page it was opened on; otherwise to the object page."""
     messages.success(request, message)
     url = reverse('property_detail', args=[property_obj.pk])
     if request.headers.get('X-Modal'):
-        return HttpResponse(status=204, headers={'X-Modal-Redirect': url})
+        return HttpResponse(status=204, headers={'X-Modal-Redirect': _back_url(request) or url})
     return redirect(url)
 
 
@@ -29,7 +43,7 @@ def _receipt_form(request, property_obj, receipt):
         is_new = receipt.pk is None
         services.save_receipt(form.save(commit=False))
         verb = 'добавлена' if is_new else 'сохранена'
-        return _done(request, property_obj, f'Квитанция «{receipt.name}» {verb}.')
+        return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
 
     template = 'billing/_receipt_form.html' if request.headers.get('X-Modal') else 'billing/receipt_form.html'
     return render(request, template, {
@@ -66,20 +80,45 @@ def receipt_delete(request, pk):
     receipt = _own_receipt(request, pk)
     if request.method == 'POST':
         receipt.delete()
-        return _done(request, receipt.property, f'Квитанция «{receipt.name}» удалена.')
+        return _done(request, receipt.property, f'Услуга «{receipt.name}» удалена.')
     template = 'billing/_receipt_delete.html' if request.headers.get('X-Modal') else 'billing/receipt_delete.html'
     return render(request, template, {'receipt': receipt, 'property': receipt.property})
 
 
 @login_required
 def receipt_pick(request, property_pk):
-    """«+ Квитанция»: choose a ready-made receipt or your own."""
+    """«+ Услуга»: choose a ready-made receipt or your own."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
     template = 'billing/_receipt_pick.html' if request.headers.get('X-Modal') else 'billing/receipt_pick.html'
     return render(request, template, {
         'property': property_obj,
         'missing_kinds': [(kind, kind.label) for kind in services.missing_kinds(property_obj)],
     })
+
+
+@login_required
+def receipt_add(request):
+    """«+ Добавить услугу» in the menu: «К какому объекту?» first, unless there is only one."""
+    properties = list(
+        Property.objects.filter(owner=request.user).annotate(receipt_count=Count('receipts')).order_by('name')
+    )
+    for property_obj in properties:
+        property_obj.receipt_label = services.services_label(property_obj.receipt_count)
+    if len(properties) == 1:
+        return receipt_pick(request, properties[0].pk)
+    template = 'billing/_receipt_add.html' if request.headers.get('X-Modal') else 'billing/receipt_add.html'
+    return render(request, template, {'properties': properties})
+
+
+@login_required
+def receipt_list(request):
+    """«Услуги»: every service of every object in one table."""
+    receipts = (
+        Receipt.objects.filter(property__owner=request.user)
+        .select_related('property')
+        .order_by('property__name', 'property_id', 'created_at', 'id')
+    )
+    return render(request, 'billing/receipt_list.html', {'receipts': receipts})
 
 
 @login_required

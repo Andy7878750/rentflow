@@ -1,0 +1,32 @@
+{# «+ Добавить услугу» in the menu, when there are several objects (or none yet). #}
+<div class="modal-panel modal-panel-pick">
+  <header class="modal-head">
+    <h1>{% if properties %}К какому объекту?{% else %}Сначала объект{% endif %}</h1>
+    <a href="{% url 'receipt_list' %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </a>
+  </header>
+  {% if properties %}
+    <ul class="pick-list">
+      {% for property in properties %}
+        <li>
+          <a href="{% url 'receipt_pick' property.pk %}" data-modal class="pick-item">
+            <span class="receipt-icon"><svg class="icon"><use href="{% if property.kind == 'commercial' %}#i-building{% else %}#i-home{% endif %}"/></svg></span>
+            <span class="pick-body">
+              <span class="pick-title fade">{{ property.name }}</span>
+              <span class="pick-meta">{{ property.receipt_label }}</span>
+            </span>
+            <svg class="icon pick-arrow"><use href="#i-chevron-right"/></svg>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="month-hint">Услуги добавляются к объекту. Добавьте первый объект — это минута.</p>
+    <div class="confirm-actions">
+      <a href="{% url 'property_create' %}" data-modal class="btn btn-primary btn-auto">
+        <svg class="icon"><use href="#i-plus"/></svg>Добавить объект
+      </a>
+    </div>
+  {% endif %}
+</div>

@@ -18,7 +18,7 @@ class Receipt(models.Model):
         INTERNET = 'internet', 'Интернет'
         CAPITAL_REPAIR = 'capital_repair', 'Капремонт'
         GARBAGE = 'garbage', 'Вывоз мусора'
-        CUSTOM = 'custom', 'Своя квитанция'
+        CUSTOM = 'custom', 'Своя услуга'
 
     class Split(models.TextChoices):
         SHARES = 'shares', 'По долям'

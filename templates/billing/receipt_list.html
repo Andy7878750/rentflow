@@ -1,0 +1,68 @@
+{% extends "app/base.html" %}
+{% block title %}Услуги — RentFlow{% endblock %}
+{% block app_content %}
+<div class="page-head">
+  <div class="page-title"><h1>Услуги</h1></div>
+  <a href="{% url 'receipt_add' %}" data-modal class="btn btn-primary btn-auto">
+    <svg class="icon"><use href="#i-plus"/></svg>Услуга
+  </a>
+</div>
+
+{% if receipts %}
+  <div class="svc-wrap">
+  <table class="svc-table">
+    <thead>
+      <tr><th>Услуга</th><th>Объект</th><th>Как делить</th><th>Счётчик</th><th class="svc-num">Сумма</th><th><span class="visually-hidden">Действия</span></th></tr>
+    </thead>
+    <tbody>
+      {% for receipt in receipts %}
+        <tr>
+          <td class="svc-name"><div class="svc-name-cell">
+            <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
+            <span class="svc-name-body">
+              <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="fade">{{ receipt.name }}</a>
+              {% if receipt.provider %}<span class="svc-meta fade">{{ receipt.provider }}</span>{% endif %}
+            </span>
+          </div></td>
+          <td class="svc-object"><a href="{% url 'property_detail' receipt.property.pk %}" class="fade">{{ receipt.property.name }}</a></td>
+          <td class="svc-split"><span class="tag{% if receipt.split == 'owner' %} tag-muted{% endif %}">{{ receipt.get_split_display|lower }}</span></td>
+          <td data-label="Счётчик">
+            {% if receipt.metered %}
+              {% if receipt.split == 'meters' %}у арендаторов{% else %}общий{% endif %}{% if receipt.unit %}, {{ receipt.unit }}{% endif %}
+            {% else %}<span class="svc-muted">нет</span>{% endif %}
+          </td>
+          <td class="svc-num" data-label="Сумма">
+            {% if receipt.amount_mode == 'fixed' %}
+              {{ receipt.fixed_amount|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}<span class="svc-muted"> / мес</span>
+            {% else %}<span class="svc-muted">каждый месяц разная</span>{% endif %}
+          </td>
+          <td class="svc-actions">
+            <details class="dropdown" data-dropdown>
+              <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с услугой «{{ receipt.name }}»">
+                <svg class="icon"><use href="#i-more"/></svg>
+              </summary>
+              <div class="dropdown-menu" role="menu">
+                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="dropdown-item" role="menuitem">
+                  <svg class="icon"><use href="#i-edit"/></svg>Настроить
+                </a>
+                <a href="{% url 'receipt_delete' receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
+                  <svg class="icon"><use href="#i-trash"/></svg>Удалить
+                </a>
+              </div>
+            </details>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% else %}
+  <section class="empty-state">
+    <h2>Услуг пока нет</h2>
+    <p>Свет, вода, УК, интернет — добавьте, что вы оплачиваете по объектам, и один раз выберите, как делить.</p>
+    <a href="{% url 'receipt_add' %}" data-modal class="btn btn-primary btn-auto">
+      <svg class="icon"><use href="#i-plus"/></svg>Услуга
+    </a>
+  </section>
+{% endif %}
+{% endblock %}

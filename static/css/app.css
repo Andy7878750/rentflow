@@ -781,6 +781,17 @@
   background: var(--color-danger-soft);
 }
 
+/* «+ Услуга» in the card menu: an «add» item, so it carries the accent like the side menu. */
+.dropdown-item-add,
+.dropdown-item-add .icon {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.dropdown-item-add:hover {
+  background: var(--color-accent-soft);
+}
+
 .property-title h2 a {
   color: inherit;
   text-decoration: none;
