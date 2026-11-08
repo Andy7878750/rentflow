@@ -27,7 +27,7 @@ class ReceiptServiceTests(TestCase):
 
     def test_presets(self):
         light = services.new_receipt(self.prop, 'electricity')
-        self.assertEqual(light.name, 'Свет')
+        self.assertEqual(light.name, 'Электричество')
         self.assertTrue(light.metered)
         self.assertEqual(light.unit, 'кВт·ч')
         self.assertEqual(light.split, Receipt.Split.METERS)
@@ -132,7 +132,7 @@ class ReceiptViewTests(TestCase):
     def test_create_form_is_prefilled_from_preset(self):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
         response = self.client.get(url, HTTP_X_MODAL='1')
-        self.assertContains(response, 'value="Свет"')
+        self.assertContains(response, 'value="Электричество"')
         self.assertContains(response, 'name="split" value="meters" checked')
 
     def test_create_in_modal(self):
@@ -229,20 +229,23 @@ class MonthPageTests(TestCase):
 
     def test_new_service_window_has_templates_on_top(self):
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]), HTTP_X_MODAL='1')
+        self.assertContains(response, 'Что за услуга')
         self.assertContains(response, '?kind=electricity')
-        self.assertNotContains(response, '?kind=management')  # already added
-        self.assertContains(response, 'chip-dashed is-selected')  # nothing picked yet: «Своя услуга»
+        self.assertContains(response, '?kind=heating')
+        self.assertContains(response, 'kind-tile-mark')  # «УК» is already there: marked, still offered
+        self.assertContains(response, 'kind-tile-own is-selected')  # nothing picked yet: «Своя»
         self.assertContains(response, 'name="split"')  # and the settings in the same window
+        self.assertContains(response, 'Королева 61 ·')  # who shares it, under the title
 
     def test_template_from_object_page_opens_picked(self):
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=water', HTTP_X_MODAL='1')
-        self.assertContains(response, 'chip chip-sm is-selected" aria-current="true">')
-        self.assertContains(response, 'value="Вода"')
+        self.assertContains(response, 'kind-tile is-selected" aria-current="true"')
+        self.assertContains(response, 'value="Вода холодная"')
 
     def test_editing_has_no_templates(self):
         receipt = self.prop.receipts.first()
         response = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
-        self.assertNotContains(response, 'kind-tabs')
+        self.assertNotContains(response, 'kind-tiles')
 
     def test_other_landlord_cannot_save(self):
         other = User.objects.create_user(username='b@example.ru', email='b@example.ru', password='secret1')

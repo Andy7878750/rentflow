@@ -1,25 +1,39 @@
 <div class="modal-panel modal-panel-receipt">
   <header class="modal-head">
-    <h1>{% if receipt.pk %}Услуга «{{ receipt.name }}»{% else %}Новая услуга{% endif %}</h1>
+    <div class="modal-title">
+      <h1>{% if receipt.pk %}Услуга «{{ receipt.name }}»{% else %}Новая услуга{% endif %}</h1>
+      {# Who will share it: the object and its tenants with their shares. #}
+      <p class="modal-sub fade">{{ property.name }} ·
+        {% if property.is_owner_used %}пользуется собственник
+        {% else %}{% for tenant in tenants %}{{ tenant.name }} {% if property.share_unit == 'area' and tenant.area is not None %}{{ tenant.area|floatformat:"-2" }} м²{% else %}{{ tenant.share_percent|floatformat:"-2" }}%{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}арендаторов пока нет{% endfor %}{% endif %}
+      </p>
+    </div>
     <a href="{% url 'property_detail' property.pk %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
       <svg class="icon"><use href="#i-x"/></svg>
     </a>
   </header>
 
-  {% if kind_chips is not None %}
-    {# Templates: one click fills the fields below with sensible defaults; «Своя» starts from scratch. #}
-    <nav class="kind-tabs" aria-label="Шаблон услуги">
-      {% for kind, label in kind_chips %}
-        <a href="{% url 'receipt_create' property.pk %}?kind={{ kind }}" data-modal
-           class="chip chip-sm{% if kind == receipt.kind %} is-selected{% endif %}"{% if kind == receipt.kind %} aria-current="true"{% endif %}>
-          <svg class="icon"><use href="#i-r-{{ kind }}"/></svg>{{ label }}
+  {% if kind_tiles is not None %}
+    <section class="form-section">
+      <h2 class="form-section-head">Что за услуга</h2>
+      {# A tile fills the settings below with sensible defaults; «Своя» starts from scratch. #}
+      <nav class="form-section-body kind-tiles" aria-label="Шаблон услуги">
+        {% for tile in kind_tiles %}
+          <a href="{% url 'receipt_create' property.pk %}?kind={{ tile.kind }}" data-modal
+             class="kind-tile{% if tile.selected %} is-selected{% endif %}"{% if tile.selected %} aria-current="true"{% endif %}
+             {% if tile.added %}title="Уже есть у объекта — можно добавить ещё одну"{% endif %}>
+            {% if tile.added %}<span class="kind-tile-mark" aria-label="уже есть"><svg class="icon"><use href="#i-check"/></svg></span>{% endif %}
+            <svg class="icon"><use href="#i-r-{{ tile.kind }}"/></svg>
+            <span>{{ tile.label }}</span>
+          </a>
+        {% endfor %}
+        <a href="{% url 'receipt_create' property.pk %}?kind=custom" data-modal
+           class="kind-tile kind-tile-own{% if receipt.kind == 'custom' %} is-selected{% endif %}"{% if receipt.kind == 'custom' %} aria-current="true"{% endif %}>
+          <svg class="icon"><use href="#i-plus"/></svg>
+          <span>Своя</span>
         </a>
-      {% endfor %}
-      <a href="{% url 'receipt_create' property.pk %}?kind=custom" data-modal
-         class="chip chip-sm chip-dashed{% if receipt.kind == 'custom' %} is-selected{% endif %}"{% if receipt.kind == 'custom' %} aria-current="true"{% endif %}>
-        <svg class="icon"><use href="#i-plus"/></svg>Своя услуга
-      </a>
-    </nav>
+      </nav>
+    </section>
   {% endif %}
 
   <form method="post"
@@ -29,11 +43,19 @@
     <input type="hidden" name="kind" value="{{ receipt.kind }}">
     {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 
-    <div class="form-grid grid-2">
-      {% include "properties/_field.html" with field=form.name required=1 tip="Так услуга называется в счетах арендаторам." %}
-      {% include "properties/_field.html" with field=form.provider tip="Кто присылает квитанцию: УК, «Петроэлектросбыт», провайдер. Для вашей памяти." %}
-    </div>
+    <section class="form-section">
+      <h2 class="form-section-head">Услуга</h2>
+      <div class="form-section-body">
+        <div class="form-grid grid-2">
+          {% include "properties/_field.html" with field=form.provider label="Поставщик" tip="Кто присылает квитанцию: УК, ТСЖ, «Петроэлектросбыт», провайдер. Для вашей памяти." %}
+          {% include "properties/_field.html" with field=form.name label="Название в счёте арендатору" required=1 tip="Так услуга называется в счетах арендаторам." %}
+        </div>
+      </div>
+    </section>
 
+    <section class="form-section">
+      <h2 class="form-section-head">Как считаем</h2>
+      <div class="form-section-body">
     <div class="rform-question">
       <h2>Есть счётчик?</h2>
       <div class="segmented" role="radiogroup" aria-label="Есть счётчик">
@@ -79,6 +101,9 @@
         {% include "properties/_field.html" with field=form.fixed_amount label="Сумма в месяц, "|add:receipt.currency_symbol required=1 %}
       </div>
     </div>
+
+      </div>
+    </section>
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary btn-auto">{% if receipt.pk %}Сохранить{% else %}Добавить услугу{% endif %}</button>

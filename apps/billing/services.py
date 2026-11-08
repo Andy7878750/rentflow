@@ -16,6 +16,11 @@ PRESETS = {
     Receipt.Kind.MANAGEMENT: {'split': Receipt.Split.SHARES},
     Receipt.Kind.ELECTRICITY: {'metered': True, 'unit': 'кВт·ч', 'split': Receipt.Split.METERS},
     Receipt.Kind.WATER: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
+    Receipt.Kind.HOT_WATER: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
+    # Heating of hot water (Гкал) and sewage (= cold + hot) are simplified for now: by meters, in м³.
+    Receipt.Kind.HOT_WATER_HEATING: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
+    Receipt.Kind.SEWAGE: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
+    Receipt.Kind.HEATING: {'split': Receipt.Split.AREA},
     Receipt.Kind.GAS: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
     Receipt.Kind.INTERNET: {'split': Receipt.Split.EQUAL, 'amount_mode': Receipt.AmountMode.FIXED},
     # Capital repair is usually the owner's own expense.
@@ -41,10 +46,13 @@ def new_receipt(property_obj, kind):
     return receipt
 
 
-def template_kinds(property_obj, selected):
-    """Templates offered in the «Новая услуга» window: the ones the object lacks, plus the picked one."""
-    missing = set(missing_kinds(property_obj))
-    return [kind for kind in OFFERED_KINDS if kind in missing or kind == selected]
+def template_tiles(property_obj, selected):
+    """Template tiles of «Новая услуга»: every ready-made kind, the picked one and the ones already added marked."""
+    have = set(property_obj.receipts.values_list('kind', flat=True))
+    return [
+        {'kind': kind, 'label': kind.label, 'selected': kind == selected, 'added': kind in have}
+        for kind in OFFERED_KINDS
+    ]
 
 
 def services_label(count):

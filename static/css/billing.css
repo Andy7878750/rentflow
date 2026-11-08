@@ -81,22 +81,99 @@
   height: 15px;
 }
 
-/* «Новая услуга»: the templates as one wrapping row above the settings. */
-.kind-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--color-border);
+/* «Новая услуга»: template tiles — icon over the name, the picked one in the accent. */
+.kind-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
 }
 
-.chip.is-selected {
+.kind-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 92px;
+  padding: 12px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.kind-tile .icon {
+  width: 22px;
+  height: 22px;
+  color: var(--color-primary);
+}
+
+.kind-tile:hover,
+.kind-tile:focus-visible {
   border-color: var(--color-accent);
-  border-style: solid;
+  outline: none;
+}
+
+.kind-tile.is-selected {
+  border-color: var(--color-accent);
   background: var(--color-accent-soft);
-  color: var(--color-accent-hover);
   box-shadow: inset 0 0 0 1px var(--color-accent);
+  color: var(--color-accent-hover);
+}
+
+.kind-tile.is-selected .icon {
+  color: var(--color-accent);
+}
+
+.kind-tile-own {
+  border-style: dashed;
+  color: var(--color-text-muted);
+}
+
+.kind-tile-own .icon {
+  color: var(--color-text-muted);
+}
+
+/* Already added to the object: a small check, the tile still works (a second meter, say). */
+.kind-tile-mark {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.kind-tile .kind-tile-mark .icon {
+  width: 11px;
+  height: 11px;
+  color: #fff;
+  stroke-width: 3;
+}
+
+.modal-title {
+  min-width: 0;
+}
+
+.modal-sub {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.rform .form-section {
+  margin-bottom: 0;
 }
 
 .receipt-list {
@@ -225,7 +302,7 @@
 /* ---------- Receipt form (modal) ---------- */
 
 .modal-panel-receipt {
-  max-width: 640px;
+  max-width: 920px;
 }
 
 .rform {

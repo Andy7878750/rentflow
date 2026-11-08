@@ -39,7 +39,8 @@ def _receipt_form(request, property_obj, receipt):
         'property': property_obj,
         'warning': services.split_warning(form.instance),
         # New service: the templates on top of the same window; picking one refills the fields below.
-        'kind_chips': None if receipt.pk else [(kind, kind.label) for kind in services.template_kinds(property_obj, receipt.kind)],
+        'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
+        'tenants': property_obj.tenants.all(),
         'split_choices': [
             choice for choice in Receipt.Split.choices
             if not (property_obj.is_owner_used and choice[0] not in (Receipt.Split.METERS, Receipt.Split.OWNER))

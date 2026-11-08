@@ -11,13 +11,18 @@ class Receipt(models.Model):
     """
 
     class Kind(models.TextChoices):
-        MANAGEMENT = 'management', 'УК / ЖКУ'
-        ELECTRICITY = 'electricity', 'Свет'
-        WATER = 'water', 'Вода'
+        # The order is the order of the template tiles in «Новая услуга».
+        ELECTRICITY = 'electricity', 'Электричество'
+        WATER = 'water', 'Вода холодная'
+        HOT_WATER = 'hot_water', 'Вода горячая'
+        HOT_WATER_HEATING = 'hot_water_heating', 'Вода горячая / подогрев'
+        SEWAGE = 'sewage', 'Водоотведение'
+        HEATING = 'heating', 'Отопление'
         GAS = 'gas', 'Газ'
-        INTERNET = 'internet', 'Интернет'
-        CAPITAL_REPAIR = 'capital_repair', 'Капремонт'
+        MANAGEMENT = 'management', 'Содержание и ремонт'
+        CAPITAL_REPAIR = 'capital_repair', 'Капитальный ремонт'
         GARBAGE = 'garbage', 'Вывоз мусора'
+        INTERNET = 'internet', 'Интернет'
         CUSTOM = 'custom', 'Своя услуга'
 
     class Split(models.TextChoices):
