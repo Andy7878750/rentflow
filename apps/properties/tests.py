@@ -283,7 +283,7 @@ class PropertyFormWithTenantsTests(TestCase):
         prop = Property.objects.get()
         self.assertTemplateUsed(response, 'properties/_created.html')
         self.assertContains(response, 'Остался один шаг')
-        self.assertContains(response, f'href="{reverse("property_detail", args=[prop.pk])}"')
+        self.assertContains(response, f'href="{reverse("property_detail", args=[prop.pk])}#receipts"')
         self.assertContains(response, f'href="{reverse("property_list")}"')
 
     def test_edit_in_modal_returns_redirect_header(self):

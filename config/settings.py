@@ -34,6 +34,8 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 # 'ru' (pilot) or 'eu': one codebase, two installations.
 REGION = env('REGION', default='ru')
+# Money is always Decimal + an explicit currency; each installation bills in one currency.
+CURRENCY = 'RUB' if REGION == 'ru' else 'EUR'
 
 
 # Application definition
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.properties',
     'apps.tenants',
+    'apps.billing',
 ]
 
 SITE_ID = 1

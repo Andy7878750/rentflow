@@ -4,7 +4,7 @@
       <ul class="property-tenants">
         {% for tenant in tenants %}
           <li>
-            <span>{{ tenant.name }}</span>
+            <span class="fade">{{ tenant.name }}</span>
             <span class="tenant-share">
               {% if property.share_unit == 'area' %}
                 {{ tenant.area|floatformat:"-2" }} м²{% if tenant.share_percent is not None %} · {{ tenant.share_percent|floatformat:"-2" }}%{% endif %}

@@ -1,21 +1,176 @@
 {% extends "app/base.html" %}
+{% load billing %}
 {% block title %}{{ property.name }} — RentFlow{% endblock %}
 {% block app_content %}
-<div class="page-head">
-  <div class="page-title">
-    <h1>{{ property.name }}</h1>
-    <span class="page-subtitle">{{ property.kind_label }}</span>
-  </div>
-  {% include "properties/_actions.html" %}
+<div class="object-wrap">
+<div class="object-page">
+ <div class="obj-panel">
+
+  {# ---------- 1. The object: contacts, month figures, who pays ---------- #}
+  <aside class="obj-info">
+    <header class="property-card-head">
+      <span class="property-icon">
+        <svg class="icon"><use href="{% if property.kind == 'commercial' %}#i-building{% else %}#i-home{% endif %}"/></svg>
+      </span>
+      <div class="property-title">
+        <h1 class="fade">{{ property.name }}</h1>
+        <span class="property-kind">{{ property.kind_label }}</span>
+      </div>
+      {% include "properties/_actions.html" %}
+    </header>
+
+    {% include "properties/_contacts.html" %}
+
+    <div class="property-stats" id="obj-stats" data-live>
+      <div><span class="stat-label">Арендаторы</span><span class="stat-value">{{ bill.payers|length }}</span></div>
+      <div><span class="stat-label">Показания</span><span class="stat-value">{{ bill.readings_done }} из {{ bill.readings_total }}</span></div>
+      <div><span class="stat-label">К выставлению</span><span class="stat-value stat-accent">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span></div>
+    </div>
+
+    <nav class="payer-list" id="obj-payers" data-live aria-label="Чей счёт показать">
+      {% for payer in bill.payers %}
+        <a href="?month={{ month }}&tenant={{ payer.tenant.pk }}" class="payer{% if payer.tenant.pk == selected_tenant %} is-active{% endif %}" data-payer="{{ payer.tenant.pk }}">
+          <span class="fade">{{ payer.tenant.name }}</span>
+          <span class="payer-share">{% if property.share_unit == 'area' and payer.tenant.area is not None %}{{ payer.tenant.area|floatformat:"-2" }} м²{% else %}доля {{ payer.tenant.share_percent|floatformat:"-2" }}%{% endif %}</span>
+        </a>
+      {% endfor %}
+      {% if bill.owner.lines or property.is_owner_used %}
+        <a href="?month={{ month }}&tenant=0" class="payer{% if not bill.payers or selected_tenant == 0 %} is-active{% endif %}" data-payer="0">
+          <span>Остаётся на вас</span>
+          <span class="payer-share">{{ bill.owner.total|floatformat:"2g" }}&nbsp;₽</span>
+        </a>
+      {% endif %}
+      <p class="payer-note">
+        {% if property.is_owner_used %}Пользуется собственник
+        {% elif not bill.payers %}Арендаторов пока нет — <a href="{% url 'property_edit' property.pk %}" data-modal>добавить</a>
+        {% elif free_percent %}Свободно {{ free_percent|floatformat:"-2" }}% — эта часть остаётся на вас
+        {% else %}Объект сдан полностью{% endif %}
+      </p>
+    </nav>
+  </aside>
+
+  {# ---------- 2. The month's receipts: amounts and readings ---------- #}
+  <section class="obj-month" id="receipts">
+    <div class="section-head">
+      <div>
+        <h2>Квитанции и показания</h2>
+        <div class="month-switch month-switch-sm">
+          <a href="?month={{ prev_month }}" class="icon-button" aria-label="Предыдущий месяц"><svg class="icon"><use href="#i-chevron-left"/></svg></a>
+          <span class="month-label">{{ month_label }}</span>
+          <a href="?month={{ next_month }}" class="icon-button" aria-label="Следующий месяц"><svg class="icon"><use href="#i-chevron-right"/></svg></a>
+        </div>
+      </div>
+      {% if bill.entries %}
+        <a href="{% url 'receipt_pick' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm">
+          <svg class="icon"><use href="#i-plus"/></svg>Квитанция
+        </a>
+      {% endif %}
+    </div>
+
+    {% if bill.entries %}
+      <p class="month-hint">Введите суммы и показания за {{ month_name }} — счета справа посчитаются сами.</p>
+
+      <form method="post" action="{% url 'month_save' property.pk %}" class="month-form" data-month-form>
+        {% csrf_token %}
+        <input type="hidden" name="month" value="{{ month }}">
+
+        {% for entry in bill.entries %}
+          {% with receipt=entry.receipt %}
+          <article class="mreceipt{% if entry.total is None %} is-missing{% endif %}" id="mreceipt-{{ receipt.pk }}">
+            <header class="mreceipt-head">
+              <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
+              <div class="receipt-body">
+                <div class="receipt-title">
+                  <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="fade">{{ receipt.name }}</a>
+                  <span class="missing-dot" title="За месяц ещё не введено" aria-hidden="true"></span>
+                  <span class="tag">{{ receipt.get_split_display|lower }}</span>
+                  {% if receipt.metered and receipt.split != 'meters' %}<span class="tag tag-muted">общий счётчик</span>{% endif %}
+                </div>
+                {% if receipt.provider %}<p class="receipt-meta fade">{{ receipt.provider }}</p>{% endif %}
+              </div>
+              {% if receipt.split != 'owner' %}
+                <label class="coef" title="Умножает сумму арендатора: например, 1,2 — НДС 20% или ваша надбавка">
+                  <span>коэф. ×</span>
+                  <input type="text" inputmode="decimal" class="num-input num-input-coef" name="coef-{{ receipt.pk }}" value="{{ receipt.coefficient|num }}" aria-label="Коэффициент для «{{ receipt.name }}»">
+                </label>
+              {% endif %}
+              <details class="dropdown" data-dropdown>
+                <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с квитанцией">
+                  <svg class="icon"><use href="#i-more"/></svg>
+                </summary>
+                <div class="dropdown-menu" role="menu">
+                  <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="dropdown-item" role="menuitem">
+                    <svg class="icon"><use href="#i-edit"/></svg>Настроить
+                  </a>
+                  <a href="{% url 'receipt_delete' receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
+                    <svg class="icon"><use href="#i-trash"/></svg>Удалить
+                  </a>
+                </div>
+              </details>
+            </header>
+
+            {% if receipt.metered %}
+              <div class="mreceipt-row">
+                <label for="tariff-{{ receipt.pk }}">Тариф, {{ receipt.currency_symbol }} за {{ receipt.unit }}</label>
+                <input type="text" inputmode="decimal" class="num-input" id="tariff-{{ receipt.pk }}" name="tariff-{{ receipt.pk }}"
+                       value="{{ entry.tariff|num }}" placeholder="0,00">
+              </div>
+              <table class="readings">
+                <thead><tr><th>{% if receipt.split == 'meters' %}Арендатор{% else %}Счётчик{% endif %}</th><th>Было</th><th>Стало</th><th>Расход</th></tr></thead>
+                <tbody>
+                  {% for meter, reading in entry.readings %}
+                    <tr>
+                      <td>{{ meter.name }}</td>
+                      <td><input type="text" inputmode="decimal" class="num-input" name="prev-{{ meter.pk }}" aria-label="{{ meter.name }}: было"
+                                 value="{{ reading.previous|num }}"></td>
+                      <td><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}" aria-label="{{ meter.name }}: стало"
+                                 value="{{ reading.current|num }}"></td>
+                      <td class="consumption" id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ receipt.unit }}{% else %}—{% endif %}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% elif receipt.amount_mode == 'fixed' %}
+              <p class="mreceipt-fixed">
+                Каждый месяц вводить ничего не нужно — начислится само:
+                <strong>{{ receipt.fixed_amount|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>
+                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить сумму"><svg class="icon"><use href="#i-edit"/></svg></a>
+              </p>
+            {% else %}
+              <div class="mreceipt-row">
+                <label for="amount-{{ receipt.pk }}">Сумма за {{ month_name }}, {{ receipt.currency_symbol }}</label>
+                <input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
+                       value="{{ entry.amount.amount|num }}" placeholder="0,00">
+              </div>
+            {% endif %}
+          </article>
+          {% endwith %}
+        {% endfor %}
+
+        <div class="month-actions">
+          <button type="submit" class="btn btn-ghost btn-auto btn-sm" data-month-submit>Сохранить</button>
+          <span class="save-status" data-save-status aria-live="polite"></span>
+        </div>
+      </form>
+    {% else %}
+      <div class="receipts-start">
+        <h2>Какие квитанции приходят по объекту?</h2>
+        <p>Нажмите на каждую — и один раз выберите, как её делить. Дальше останется только вводить суммы и показания.</p>
+        {% include "billing/_kind_chips.html" %}
+      </div>
+    {% endif %}
+  </section>
+ </div>
+
+  {# ---------- 3. The bill of the selected payer ---------- #}
+  <aside class="obj-bill" id="obj-bill" data-live>
+    {% for payer in bill.payers %}
+      {% include "billing/_bill.html" with title=payer.tenant.name active=payer.tenant.pk|stringformat:'s' %}
+    {% endfor %}
+    {% if bill.owner.lines or property.is_owner_used or not bill.payers %}
+      {% include "billing/_bill.html" with payer=bill.owner title="Остаётся на вас" active="0" %}
+    {% endif %}
+  </aside>
 </div>
-
-<article class="property-card property-card-wide">
-  {% include "properties/_contacts.html" %}
-  {% include "properties/_tenants.html" %}
-  <p class="property-tenants-empty">
-    Здесь появится страница объекта: квитанции и показания за месяц слева, расчёт по арендаторам справа.
-  </p>
-</article>
-
-<p class="footer-note footer-note-start"><a href="{% url 'property_list' %}">← Все объекты</a></p>
+</div>
 {% endblock %}

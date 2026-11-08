@@ -1,0 +1,22 @@
+{# One payer's bill for the month. All are rendered; app.js shows the selected one. #}
+<div class="bill" data-bill="{{ active }}"{% if selected_tenant|stringformat:'s' != active %} hidden{% endif %}>
+  <h2>Счёт</h2>
+  <p class="bill-sub">{{ title }} · {{ month_name }} {{ month_label|slice:"-4:" }}</p>
+  {% if payer.lines %}
+    <ul class="bill-lines">
+      {% for line in payer.lines %}
+        <li>
+          <span class="bill-name fade">{{ line.receipt.name }}</span>
+          <span class="bill-amount">{{ line.amount|floatformat:"2g" }}&nbsp;{{ line.receipt.currency_symbol }}</span>
+          <span class="bill-formula">{{ line.formula }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+    <div class="bill-total"><span>Итого</span><span>{{ payer.total|floatformat:"2g" }}&nbsp;₽</span></div>
+  {% else %}
+    <p class="calc-empty">{% if bill.entries %}Пока нечего начислять — введите суммы и показания слева.{% else %}Добавьте квитанции — здесь появится, кто сколько платит за месяц.{% endif %}</p>
+  {% endif %}
+  {% if bill.missing %}
+    <p class="bill-missing">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+  {% endif %}
+</div>

@@ -37,13 +37,13 @@
 {% if properties %}
   <section class="property-grid">
     {% for property in properties %}
-      <article class="property-card" id="property-{{ property.id }}">
+      <article class="property-card is-clickable" id="property-{{ property.id }}" data-card-href="{% url 'property_detail' property.pk %}">
         <header class="property-card-head">
           <span class="property-icon">
             <svg class="icon"><use href="{% if property.kind == 'commercial' %}#i-building{% else %}#i-home{% endif %}"/></svg>
           </span>
           <div class="property-title">
-            <h2><a href="{% url 'property_detail' property.pk %}">{{ property.name }}</a></h2>
+            <h2 class="fade"><a href="{% url 'property_detail' property.pk %}">{{ property.name }}</a></h2>
             <span class="property-kind">{{ property.kind_label }}</span>
           </div>
           {% include "properties/_actions.html" %}
@@ -73,9 +73,7 @@
                 </li>
               {% endfor %}
             </ul>
-            <a href="{% url 'property_detail' property.pk %}" class="btn btn-primary btn-auto">
-              <svg class="icon"><use href="#i-plus"/></svg>Добавить квитанции
-            </a>
+            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link">+ Добавить квитанции</a>
           </div>
         {% endif %}
 

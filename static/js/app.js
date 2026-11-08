@@ -854,5 +854,151 @@
     root.querySelectorAll('[data-property-form]').forEach(initPropertyForm);
   }
 
+  // Receipt form: a meter usually means «split by readings»; no meter rules that option out.
+  document.addEventListener('change', function (event) {
+    var input = event.target;
+    if (!input.matches || !input.matches('.rform input[name=metered]')) return;
+    var form = input.form;
+    var meters = form.querySelector('input[name=split][value=meters]');
+    var fallback = form.querySelector('input[name=split][value=shares]') || form.querySelector('input[name=split][value=owner]');
+    if (input.value === '1' && meters) {
+      meters.checked = true;
+    } else if (input.value === '0' && meters && meters.checked && fallback) {
+      fallback.checked = true;
+    }
+  });
+
+  // Names that don't fit fade out at the end (.fade.is-clipped); the full name shows on hover.
+  var fadeObserver = window.ResizeObserver ? new ResizeObserver(function (entries) {
+    entries.forEach(function (entry) { markFade(entry.target); });
+  }) : null;
+
+  function markFade(el) {
+    var clipped = el.scrollWidth > el.clientWidth + 1;
+    el.classList.toggle('is-clipped', clipped);
+    if (clipped) el.title = el.textContent.trim();
+    else el.removeAttribute('title');
+  }
+
+  function initFades(root) {
+    root.querySelectorAll('.fade').forEach(function (el) {
+      markFade(el);
+      if (fadeObserver) fadeObserver.observe(el);
+    });
+  }
+  initFades(document);
+
+  // Object cards: a click anywhere opens the object, except on links, buttons and menus.
+  document.addEventListener('click', function (event) {
+    var card = event.target.closest && event.target.closest('[data-card-href]');
+    if (!card || event.target.closest('a, button, summary, details, input, label')) return;
+    if (window.getSelection && String(window.getSelection())) return;  // selecting text to copy
+    if (event.ctrlKey || event.metaKey) {
+      window.open(card.getAttribute('data-card-href'), '_blank');
+    } else {
+      window.location.href = card.getAttribute('data-card-href');
+    }
+  });
+
+  // ---------- Object page: monthly input saves itself, bills recalc ----------
+
+  var monthForm = document.querySelector('[data-month-form]');
+  var selectedPayer = null;
+
+  function showPayer(id) {
+    selectedPayer = String(id);
+    document.querySelectorAll('[data-payer]').forEach(function (link) {
+      link.classList.toggle('is-active', link.getAttribute('data-payer') === selectedPayer);
+    });
+    document.querySelectorAll('[data-bill]').forEach(function (bill) {
+      bill.hidden = bill.getAttribute('data-bill') !== selectedPayer;
+    });
+  }
+
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest && event.target.closest('a[data-payer]');
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    showPayer(link.getAttribute('data-payer'));
+    history.replaceState(null, '', link.href);
+  });
+
+  if (monthForm) {
+    var status = monthForm.querySelector('[data-save-status]');
+    var timer = null;
+    var pending = null;
+
+    var active = document.querySelector('a[data-payer].is-active');
+    if (active) selectedPayer = active.getAttribute('data-payer');
+
+    // Only the read-only parts are swapped, so the field being typed in keeps focus.
+    function applyPage(html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      document.querySelectorAll('[data-live]').forEach(function (el) {
+        var fresh = el.id && doc.getElementById(el.id);
+        if (fresh) el.replaceWith(fresh);
+      });
+      document.querySelectorAll('.mreceipt').forEach(function (card) {
+        var fresh = doc.getElementById(card.id);
+        if (fresh) card.classList.toggle('is-missing', fresh.classList.contains('is-missing'));
+      });
+      if (selectedPayer !== null && document.querySelector('[data-bill="' + selectedPayer + '"]')) {
+        showPayer(selectedPayer);
+      }
+      initFades(document);
+    }
+
+    function save() {
+      timer = null;
+      if (pending) pending.abort();
+      pending = new AbortController();
+      status.textContent = 'Сохраняю…';
+      fetch(monthForm.action, {
+        method: 'POST',
+        body: new FormData(monthForm),
+        headers: { 'X-Live': '1' },
+        credentials: 'same-origin',
+        signal: pending.signal
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error(response.status);
+          return response.text();
+        })
+        .then(function (html) {
+          applyPage(html);
+          status.textContent = 'Сохранено';
+        })
+        .catch(function (error) {
+          if (error.name !== 'AbortError') status.textContent = 'Не сохранилось — нажмите «Сохранить»';
+        });
+    }
+
+    monthForm.addEventListener('input', function () {
+      status.textContent = '';
+      clearTimeout(timer);
+      timer = setTimeout(save, 700);
+    });
+    monthForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      clearTimeout(timer);
+      save();
+    });
+    // Enter moves to the next number instead of submitting.
+    monthForm.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' || !event.target.matches('.num-input')) return;
+      event.preventDefault();
+      var inputs = Array.prototype.slice.call(monthForm.querySelectorAll('.num-input'));
+      var next = inputs[inputs.indexOf(event.target) + 1];
+      if (next) next.focus(); else event.target.blur();
+    });
+    window.addEventListener('beforeunload', function () {
+      if (!timer) return;
+      clearTimeout(timer);
+      var data = new FormData(monthForm);
+      data.append('beacon', '1');  // leaving the page: just store, no answer needed
+      navigator.sendBeacon(monthForm.action, data);
+    });
+  }
+
   initForms(document);
 })();
