@@ -1,10 +1,13 @@
-<div class="chip-grid">
+{# Object page before any service: the same template tiles as in «Новая услуга». #}
+<nav class="kind-tiles" aria-label="Шаблон услуги">
   {% for kind, label in missing_kinds %}
-    <a href="{% url 'receipt_create' property.pk %}?kind={{ kind }}" data-modal class="chip">
-      <svg class="icon"><use href="#i-r-{{ kind }}"/></svg>{{ label }}
+    <a href="{% url 'receipt_create' property.pk %}?kind={{ kind }}" data-modal class="kind-tile">
+      <svg class="icon"><use href="#i-r-{{ kind }}"/></svg>
+      <span>{{ label }}</span>
     </a>
   {% endfor %}
-  <a href="{% url 'receipt_create' property.pk %}?kind=custom" data-modal class="chip chip-dashed">
-    <svg class="icon"><use href="#i-plus"/></svg>Своя услуга
+  <a href="{% url 'receipt_create' property.pk %}?kind=custom" data-modal class="kind-tile kind-tile-own">
+    <svg class="icon"><use href="#i-plus"/></svg>
+    <span>Своя</span>
   </a>
-</div>
+</nav>
