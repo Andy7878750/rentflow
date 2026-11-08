@@ -51,22 +51,25 @@
 
         {% include "properties/_contacts.html" %}
 
-        {% if property.setup.complete %}
-          <div class="property-stats">
-            {% if property.is_owner_used %}
-              <div><span class="stat-label">Пользуется</span><span class="stat-value">собственник</span></div>
-            {% else %}
-              <div><span class="stat-label">Арендаторы</span><span class="stat-value">{{ property.tenants.all|length|default:"—" }}</span></div>
-            {% endif %}
-            <div><span class="stat-label">Показания</span><span class="stat-value">не внесены</span></div>
-            <div><span class="stat-label">К выставлению</span><span class="stat-value">0,00 ₽</span></div>
-          </div>
-        {% else %}
-          {# Until the one-time setup is done, numbers would be zeros: say so instead. #}
-          <div class="property-setup">
+        <div class="property-summary">
+          {% if property.setup.complete %}
+            <div class="property-stats">
+              <div><span class="stat-label">Услуги</span><span class="stat-value">{{ property.receipts.all|length }}</span></div>
+              <div><span class="stat-label">Показания</span><span class="stat-value">не внесены</span></div>
+              <div><span class="stat-label">Начисления</span><span class="stat-value">0,00 ₽</span></div>
+            </div>
+          {% else %}
+            {# Until the one-time setup is done, numbers would be zeros: say so instead. #}
             <span class="setup-badge">Настройка {{ property.setup.done }} из {{ property.setup.total }}</span>
+          {% endif %}
+          <div class="card-link-row" data-card-skip>
+            {% if property.receipts.all %}
+              <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link"><svg class="icon"><use href="#i-edit"/></svg>Изменить услуги</a>
+            {% else %}
+              <a href="{% url 'receipt_pick' property.pk %}" data-modal class="setup-link"><svg class="icon"><use href="#i-plus"/></svg>Добавить услугу</a>
+            {% endif %}
           </div>
-        {% endif %}
+        </div>
 
         {% include "properties/_tenants.html" %}
 
@@ -74,7 +77,7 @@
           {# Tenants change often: one click from the card, without «Изменить объект». #}
           <div class="property-links" data-card-skip>
             <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link">
-              {% if property.tenants.all %}<svg class="icon"><use href="#i-edit"/></svg>Изменить арендаторов{% else %}+ Добавить арендатора{% endif %}
+              {% if property.tenants.all %}<svg class="icon"><use href="#i-edit"/></svg>Изменить арендаторов{% else %}<svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора{% endif %}
             </a>
           </div>
         {% endif %}

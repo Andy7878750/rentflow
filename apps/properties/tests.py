@@ -80,7 +80,7 @@ class SetupStepsTests(TestCase):
         self.assertContains(response, 'Настройка 1 из 3')
         self.assertNotContains(response, 'setup-steps')
         self.assertContains(response, f'href="{reverse("property_tenants", args=[prop.pk])}"')
-        self.assertContains(response, '+ Добавить арендатора')
+        self.assertContains(response, 'Добавить арендатора')
         self.assertNotContains(response, 'Изменить арендаторов')
 
     def test_card_offers_to_edit_tenants_once_there_is_one(self):
@@ -89,7 +89,19 @@ class SetupStepsTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse('property_list'))
         self.assertContains(response, 'Изменить арендаторов')
-        self.assertNotContains(response, '+ Добавить арендатора')
+        self.assertNotContains(response, 'Добавить арендатора')
+
+    def test_card_summary_names_and_services_link(self):
+        prop = Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('property_list'))
+        self.assertContains(response, f'href="{reverse("receipt_pick", args=[prop.pk])}" data-modal class="setup-link"')
+        prop.receipts.create(name='Свет')
+        response = self.client.get(reverse('property_list'))
+        self.assertContains(response, '<span class="stat-label">Услуги</span><span class="stat-value">1</span>')
+        self.assertContains(response, '<span class="stat-label">Начисления</span>')
+        self.assertContains(response, f'href="{reverse("property_detail", args=[prop.pk])}#receipts" class="setup-link"')
+        self.assertContains(response, 'Изменить услуги')
 
     def test_owner_used_card_has_no_tenant_link(self):
         Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)

@@ -22,9 +22,9 @@
     {% include "properties/_contacts.html" %}
 
     <div class="property-stats" id="obj-stats" data-live>
-      <div><span class="stat-label">Арендаторы</span><span class="stat-value">{{ bill.payers|length }}</span></div>
+      <div><span class="stat-label">Услуги</span><span class="stat-value">{{ bill.entries|length }}</span></div>
       <div><span class="stat-label">Показания</span><span class="stat-value">{{ bill.readings_done }} из {{ bill.readings_total }}</span></div>
-      <div><span class="stat-label">К выставлению</span><span class="stat-value stat-accent">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span></div>
+      <div><span class="stat-label">Начисления</span><span class="stat-value stat-accent">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span></div>
     </div>
 
     <nav class="payer-list" id="obj-payers" data-live aria-label="Чей счёт показать">
@@ -42,10 +42,17 @@
       {% endif %}
       <p class="payer-note">
         {% if property.is_owner_used %}Пользуется собственник
-        {% elif not bill.payers %}Арендаторов пока нет — <a href="{% url 'property_edit' property.pk %}" data-modal>добавить</a>
+        {% elif not bill.payers %}Арендаторов пока нет
         {% elif free_percent %}Свободно {{ free_percent|floatformat:"-2" }}% — эта часть остаётся на вас
         {% else %}Объект сдан полностью{% endif %}
       </p>
+      {% if not property.is_owner_used %}
+        <p class="payer-link">
+          <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link">
+            {% if bill.payers %}<svg class="icon"><use href="#i-edit"/></svg>Изменить арендаторов{% else %}<svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора{% endif %}
+          </a>
+        </p>
+      {% endif %}
     </nav>
   </aside>
 

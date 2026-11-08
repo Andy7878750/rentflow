@@ -367,6 +367,10 @@
   font-size: 13px;
 }
 
+.payer-link {
+  margin: 10px 20px 4px;
+}
+
 .obj-month {
   padding: 20px;
 }
