@@ -812,3 +812,45 @@
   background: var(--color-danger);
   color: #fff;
 }
+
+/* The whole object card opens the object page. */
+.property-card.is-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.property-card.is-clickable:hover {
+  border-color: var(--color-primary-light);
+}
+
+.setup-link {
+  color: var(--color-accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.setup-link:hover {
+  text-decoration: underline;
+}
+
+/* A name that doesn't fit its line fades out on the last letters (app.js adds .is-clipped). */
+.fade {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.fade.is-clipped {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+
+.property-contacts dd.fade {
+  flex: 1;
+}
+
+.property-contacts dt {
+  flex-shrink: 0;
+}

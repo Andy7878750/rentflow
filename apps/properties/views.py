@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from apps.billing import services as billing_services
 from apps.tenants.forms import TenantFormSet
 
 from . import services
@@ -17,7 +18,7 @@ from .models import Property, PropertyKind
 @login_required
 def property_list(request):
     month = services.parse_month(request.GET.get('month'))
-    properties = list(Property.objects.filter(owner=request.user).prefetch_related('tenants'))
+    properties = list(Property.objects.filter(owner=request.user).prefetch_related('tenants', 'receipts'))
     for property_obj in properties:
         property_obj.setup = services.setup_steps(property_obj)
 
@@ -132,7 +133,33 @@ def property_detail(request, pk):
             'property': property_obj,
             'tenants': property_obj.tenants.all(),
         })
-    return render(request, 'properties/detail.html', {'property': property_obj})
+    month = services.parse_month(request.GET.get('month'))
+    return render(request, 'properties/detail.html', object_page_context(request, property_obj, month))
+
+
+def object_page_context(request, property_obj, month):
+    """The object page: object info, the month's input and the selected payer's bill."""
+    bill = billing_services.month_bill(property_obj, month)
+    try:
+        selected = int(request.GET.get('tenant', ''))
+    except ValueError:
+        selected = None  # not chosen: the first tenant
+    owner_shown = bool(bill.owner.lines) or property_obj.is_owner_used or not bill.payers
+    if not bill.payer_for(selected) and not (selected == 0 and owner_shown):
+        selected = bill.payers[0].tenant.pk if bill.payers else 0
+    occupied = sum((t.share_percent or 0 for t in property_obj.tenants.all()), 0)
+    return {
+        'property': property_obj,
+        'bill': bill,
+        'selected_tenant': selected,
+        'free_percent': max(100 - occupied, 0),
+        'missing_kinds': [(kind, kind.label) for kind in billing_services.missing_kinds(property_obj)],
+        'month': services.month_param(month),
+        'month_label': services.month_label(month),
+        'month_name': services.MONTH_NAMES[month.month - 1].lower(),
+        'prev_month': services.month_param(services.shift_month(month, -1)),
+        'next_month': services.month_param(services.shift_month(month, 1)),
+    }
 
 
 @login_required

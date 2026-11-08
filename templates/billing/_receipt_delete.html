@@ -1,0 +1,10 @@
+<div class="modal-panel modal-panel-confirm">
+  <div class="confirm-icon" aria-hidden="true"><svg class="icon"><use href="#i-trash"/></svg></div>
+  <h1 class="confirm-title">Удалить квитанцию «{{ receipt.name }}»?</h1>
+  <p class="confirm-text">Вместе с ней удалятся её счётчики. Отменить это действие нельзя.</p>
+  <form method="post" action="{% url 'receipt_delete' receipt.pk %}" data-modal-form class="confirm-actions">
+    {% csrf_token %}
+    <a href="{% url 'property_detail' property.pk %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+    <button type="submit" class="btn btn-danger btn-auto">Удалить</button>
+  </form>
+</div>

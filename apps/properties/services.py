@@ -4,6 +4,7 @@ import datetime
 
 from django.db import transaction
 
+from apps.billing.services import resync_property
 from apps.tenants.services import apply_share
 
 from .models import Property, PropertyKind
@@ -62,10 +63,7 @@ def month_label(month):
 
 
 def setup_steps(property_obj):
-    """The one-time setup checklist shown on the object card until everything is done.
-
-    Receipts don't exist yet, so that step stays open for every object for now.
-    """
+    """The one-time setup checklist shown on the object card until everything is done."""
     if property_obj.is_owner_used:
         people = ('Собственник', True)
     else:
@@ -73,7 +71,7 @@ def setup_steps(property_obj):
     steps = [
         {'label': 'Объект', 'done': True},
         {'label': people[0], 'done': people[1]},
-        {'label': 'Квитанции и счётчики', 'done': False},
+        {'label': 'Квитанции и счётчики', 'done': bool(property_obj.receipts.all())},
     ]
     return {
         'steps': steps,
@@ -97,6 +95,7 @@ def save_property(form, tenant_formset, owner):
     if property_obj.is_owner_used:
         # The landlord uses the object themselves: nobody else shares the bills.
         property_obj.tenants.all().delete()
+        resync_property(property_obj)
         return property_obj
 
     for tenant_form in tenant_formset.forms:
@@ -111,4 +110,5 @@ def save_property(form, tenant_formset, owner):
         tenant.property = property_obj
         apply_share(tenant, tenant_form.cleaned_data['share'], property_obj.share_unit, property_obj.area)
         tenant.save()
+    resync_property(property_obj)  # tenants changed: per-tenant meters follow
     return property_obj

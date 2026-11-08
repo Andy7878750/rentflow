@@ -1,0 +1,180 @@
+"""Monthly input and the split between tenants (billing.services.month_bill)."""
+
+import datetime
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+
+from apps.properties.models import Property
+from apps.tenants.models import Tenant
+
+from . import services
+from .models import Reading, Receipt
+
+User = get_user_model()
+SEPT = datetime.date(2026, 9, 1)
+AUG = datetime.date(2026, 8, 1)
+
+
+class MonthBillTests(TestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')
+        self.prop = Property.objects.create(owner=user, name='Королева 61', area=Decimal('60'))
+        self.viktor = Tenant.objects.create(
+            property=self.prop, name='Виктор', share_percent=Decimal('45'), area=Decimal('27'))
+        self.vlad = Tenant.objects.create(
+            property=self.prop, name='Владислав', share_percent=Decimal('55'), area=Decimal('33'))
+
+    def add(self, kind, **changes):
+        receipt = services.new_receipt(self.prop, kind)
+        for name, value in changes.items():
+            setattr(receipt, name, value)
+        return services.save_receipt(receipt)
+
+    def line(self, bill, tenant, receipt):
+        payer = bill.payer_for(tenant.pk)
+        return next(line for line in payer.lines if line.receipt.pk == receipt.pk)
+
+    def test_shares(self):
+        receipt = self.add('management', name='Содержание и ремонт')
+        services.save_month_input(self.prop, SEPT, {f'amount-{receipt.pk}': '4 200'})
+
+        bill = services.month_bill(self.prop, SEPT)
+
+        line = self.line(bill, self.viktor, receipt)
+        self.assertEqual(line.amount, Decimal('1890.00'))
+        self.assertEqual(line.formula, '4 200,00 ₽ × 45%')
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('2310.00'))
+        self.assertEqual(bill.to_invoice, Decimal('4200.00'))
+        self.assertEqual(bill.owner.total, 0)
+
+    def test_equal_and_rounding_remainder_stays_with_owner(self):
+        Tenant.objects.create(property=self.prop, name='Ольга', share_percent=Decimal('0'))
+        receipt = self.add('garbage')
+        services.save_month_input(self.prop, SEPT, {f'amount-{receipt.pk}': '100'})
+
+        bill = services.month_bill(self.prop, SEPT)
+
+        self.assertEqual([p.total for p in bill.payers], [Decimal('33.33')] * 3)
+        self.assertEqual(bill.owner.total, Decimal('0.01'))
+        self.assertEqual(bill.to_invoice + bill.owner.total, Decimal('100'))
+
+    def test_area(self):
+        receipt = self.add('custom', name='Благоустройство', split=Receipt.Split.AREA)
+        services.save_month_input(self.prop, SEPT, {f'amount-{receipt.pk}': '1638'})
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('737.10'))
+
+    def test_unoccupied_share_stays_with_owner(self):
+        self.vlad.share_percent = Decimal('30')
+        self.vlad.save()
+        receipt = self.add('management')
+        services.save_month_input(self.prop, SEPT, {f'amount-{receipt.pk}': '1000'})
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(bill.to_invoice, Decimal('750.00'))
+        self.assertEqual(bill.owner.total, Decimal('250.00'))
+
+    def test_fixed_amount_needs_no_input(self):
+        receipt = self.add('custom', name='Охрана', amount_mode=Receipt.AmountMode.FIXED,
+                           fixed_amount=Decimal('2000'))
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('900.00'))
+        self.assertEqual(bill.missing, [])
+
+    def test_owner_pays_himself(self):
+        self.add('capital_repair', amount_mode=Receipt.AmountMode.FIXED, fixed_amount=Decimal('500'))
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(bill.to_invoice, 0)
+        self.assertEqual(bill.owner.total, Decimal('500'))
+
+    def test_tenant_meters(self):
+        receipt = self.add('electricity', tariff=Decimal('6.5'))
+        viktor_meter = receipt.meters.get(tenant=self.viktor)
+        vlad_meter = receipt.meters.get(tenant=self.vlad)
+        services.save_month_input(self.prop, SEPT, {
+            f'prev-{viktor_meter.pk}': '1000', f'cur-{viktor_meter.pk}': '1120',
+            f'prev-{vlad_meter.pk}': '500', f'cur-{vlad_meter.pk}': '',
+        })
+
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(bill.missing, [receipt])
+        self.assertEqual((bill.readings_done, bill.readings_total), (1, 2))
+
+        services.save_month_input(self.prop, SEPT, {f'cur-{vlad_meter.pk}': '530'})
+        bill = services.month_bill(self.prop, SEPT)
+        line = self.line(bill, self.viktor, receipt)
+        self.assertEqual(line.amount, Decimal('780.00'))
+        self.assertEqual(line.formula, '120 кВт·ч × 6,5 ₽')
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('195.00'))
+
+    def test_previous_reading_comes_from_last_month(self):
+        receipt = self.add('water', tariff=Decimal('300'))
+        meter = receipt.meters.get(tenant=self.viktor)
+        Reading.objects.create(meter=meter, month=AUG, previous=Decimal('10'), current=Decimal('13'))
+
+        bill = services.month_bill(self.prop, SEPT)
+        entry = bill.entries[0]
+        reading = dict((m.pk, r) for m, r in entry.readings)[meter.pk]
+        self.assertEqual(reading.previous, Decimal('13'))
+        self.assertIsNone(reading.current)
+
+    def test_monthly_tariff_overrides_setup(self):
+        receipt = self.add('water', split=Receipt.Split.SHARES, tariff=Decimal('300'))
+        meter = receipt.meters.get()
+        services.save_month_input(self.prop, SEPT, {
+            f'tariff-{receipt.pk}': '310', f'prev-{meter.pk}': '0', f'cur-{meter.pk}': '10',
+        })
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(bill.entries[0].total, Decimal('3100.00'))
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('1395.00'))
+
+    def test_months_are_separate(self):
+        receipt = self.add('management')
+        services.save_month_input(self.prop, SEPT, {f'amount-{receipt.pk}': '1000'})
+        self.assertEqual(services.month_bill(self.prop, AUG).missing, [receipt])
+
+    def test_coefficient_raises_tenant_bills_only(self):
+        receipt = self.add('management', name='Содержание и ремонт')
+        services.save_month_input(self.prop, SEPT, {f'amount-{receipt.pk}': '4200', f'coef-{receipt.pk}': '1,2'})
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.coefficient, Decimal('1.2'))
+
+        bill = services.month_bill(self.prop, SEPT)
+        line = self.line(bill, self.viktor, receipt)
+        self.assertEqual(line.amount, Decimal('2268.00'))   # 4 200 × 45 % × 1,2
+        self.assertEqual(line.formula, '4 200,00 ₽ × 45% × 1,2')
+        self.assertEqual(bill.to_invoice, Decimal('5040.00'))
+        self.assertEqual(bill.owner.total, 0, 'the markup is not an owner expense')
+
+    def test_coefficient_on_meters_and_with_free_share(self):
+        self.vlad.share_percent = Decimal('30')
+        self.vlad.save()
+        light = self.add('electricity', tariff=Decimal('5'), coefficient=Decimal('1.1'))
+        meter = light.meters.get(tenant=self.viktor)
+        other = light.meters.get(tenant=self.vlad)
+        services.save_month_input(self.prop, SEPT, {
+            f'prev-{meter.pk}': '0', f'cur-{meter.pk}': '100', f'prev-{other.pk}': '0', f'cur-{other.pk}': '0',
+        })
+        water = self.add('management')
+        services.save_month_input(self.prop, SEPT, {f'amount-{water.pk}': '1000', f'coef-{water.pk}': '2'})
+
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, light).amount, Decimal('550.00'))
+        self.assertEqual(bill.entries[0].total, Decimal('500.00'))
+        # 25 % of the 1 000 is unoccupied: the owner keeps 250, without the coefficient.
+        self.assertEqual(bill.owner.total, Decimal('250.00'))
+
+    def test_bad_coefficient_falls_back_to_one(self):
+        receipt = self.add('management')
+        for bad in ('', '0', '-1', 'abc', '1000'):
+            services.save_month_input(self.prop, SEPT, {f'coef-{receipt.pk}': bad})
+            receipt.refresh_from_db()
+            self.assertEqual(receipt.coefficient, 1, bad)
+
+    def test_parse_and_format(self):
+        self.assertEqual(services.parse_decimal('4 200,50'), Decimal('4200.50'))
+        self.assertIsNone(services.parse_decimal('abc'))
+        self.assertIsNone(services.parse_decimal(''))
+        self.assertEqual(services.fmt_number(Decimal('14961.49'), 2), '14 961,49')
+        self.assertEqual(services.fmt_number(Decimal('6.50')), '6,5')

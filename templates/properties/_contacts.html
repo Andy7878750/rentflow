@@ -1,11 +1,11 @@
 <dl class="property-contacts">
   {% if property.address %}
-    <div><svg class="icon"><use href="#i-pin"/></svg><dt>Адрес:</dt><dd>{{ property.address }}{% if property.floor %}, этаж {{ property.floor }}{% endif %}</dd></div>
+    <div><svg class="icon"><use href="#i-pin"/></svg><dt>Адрес:</dt><dd class="fade">{{ property.address }}</dd></div>
   {% endif %}
   {% if property.management_company %}
-    <div><svg class="icon"><use href="#i-building"/></svg><dt>УК:</dt><dd>{{ property.management_company }}</dd></div>
+    <div><svg class="icon"><use href="#i-building"/></svg><dt>УК:</dt><dd class="fade">{{ property.management_company }}</dd></div>
   {% endif %}
   {% if property.management_phone %}
-    <div><svg class="icon"><use href="#i-phone"/></svg><dt>Тел.:</dt><dd><a href="tel:{{ property.phone_href }}">{{ property.management_phone }}</a></dd></div>
+    <div><svg class="icon"><use href="#i-phone"/></svg><dt>Тел.:</dt><dd class="fade"><a href="tel:{{ property.phone_href }}">{{ property.management_phone }}</a></dd></div>
   {% endif %}
 </dl>
