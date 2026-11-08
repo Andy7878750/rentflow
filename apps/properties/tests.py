@@ -73,30 +73,100 @@ class SetupStepsTests(TestCase):
         self.assertEqual(setup['steps'][1], {'label': 'Собственник', 'done': True})
         self.assertEqual(setup['done'], 2)
 
-    def test_list_card_shows_setup_badge_and_add_links(self):
+    def test_card_offers_to_add_tenants_when_there_are_none(self):
         prop = Property.objects.create(owner=self.user, name='Глинки 148')
         self.client.force_login(self.user)
         response = self.client.get(reverse('property_list'))
         self.assertContains(response, 'Настройка 1 из 3')
         self.assertNotContains(response, 'setup-steps')
-        self.assertContains(response, f'href="{reverse("property_edit", args=[prop.pk])}?add=tenant"')
-        self.assertContains(response, f'href="{reverse("receipt_pick", args=[prop.pk])}" data-modal class="setup-link">+ Добавить услугу')
+        self.assertContains(response, f'href="{reverse("property_tenants", args=[prop.pk])}"')
+        self.assertContains(response, '+ Добавить арендатора')
+        self.assertNotContains(response, 'Изменить арендаторов')
 
-    def test_add_service_link_stays_when_setup_is_done(self):
-        prop = Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)
-        prop.receipts.create(name='Свет')
+    def test_card_offers_to_edit_tenants_once_there_is_one(self):
+        prop = Property.objects.create(owner=self.user, name='Королёва 61')
+        Tenant.objects.create(property=prop, name='Виктор', share_percent=Decimal('45'))
         self.client.force_login(self.user)
         response = self.client.get(reverse('property_list'))
-        self.assertNotContains(response, 'Настройка')
-        self.assertContains(response, '+ Добавить услугу')
+        self.assertContains(response, 'Изменить арендаторов')
         self.assertNotContains(response, '+ Добавить арендатора')
 
-    def test_edit_form_from_add_tenant_link_opens_with_new_row(self):
-        prop = Property.objects.create(owner=self.user, name='Глинки 148')
+    def test_owner_used_card_has_no_tenant_link(self):
+        Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)
         self.client.force_login(self.user)
-        url = reverse('property_edit', args=[prop.pk]) + '?add=tenant'
-        self.assertContains(self.client.get(url, HTTP_X_MODAL='1'), 'data-add-tenant')
-        self.assertNotContains(self.client.get(reverse('property_edit', args=[prop.pk]), HTTP_X_MODAL='1'), 'data-add-tenant')
+        response = self.client.get(reverse('property_list'))
+        self.assertNotContains(response, 'Добавить арендатора')
+        self.assertNotContains(response, 'Изменить арендаторов')
+
+
+class TenantsWindowTests(TestCase):
+    """«Арендаторы · Объект»: only the tenants, from the card."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')
+        self.prop = Property.objects.create(owner=self.user, name='Королёва 61', area=Decimal('100'))
+        self.viktor = Tenant.objects.create(property=self.prop, name='Виктор', share_percent=Decimal('45'),
+                                            area=Decimal('45'))
+        self.url = reverse('property_tenants', args=[self.prop.pk])
+        self.client.force_login(self.user)
+
+    def rows(self, *tenants, unit='percent'):
+        data = {
+            'share_unit': unit,
+            'tenants-TOTAL_FORMS': str(len(tenants)),
+            'tenants-INITIAL_FORMS': str(sum(1 for t in tenants if t.get('id'))),
+            'tenants-MIN_NUM_FORMS': '0',
+            'tenants-MAX_NUM_FORMS': '1000',
+        }
+        for i, tenant in enumerate(tenants):
+            for key, value in tenant.items():
+                data[f'tenants-{i}-{key}'] = value
+        return data
+
+    def test_opens_with_existing_tenants_only(self):
+        response = self.client.get(self.url, HTTP_X_MODAL='1')
+        self.assertTemplateUsed(response, 'properties/_tenants_form.html')
+        self.assertContains(response, 'Арендаторы · Королёва 61')
+        self.assertContains(response, 'value="Виктор"')
+        self.assertNotContains(response, 'name="address"')
+        self.assertContains(response, 'name="tenants-TOTAL_FORMS" value="1"')
+
+    def test_empty_object_opens_with_one_blank_row(self):
+        empty = Property.objects.create(owner=self.user, name='Глинки 148')
+        response = self.client.get(reverse('property_tenants', args=[empty.pk]), HTTP_X_MODAL='1')
+        self.assertContains(response, 'name="tenants-TOTAL_FORMS" value="1"')
+
+    def test_saves_changes_and_new_tenant(self):
+        data = self.rows(
+            {'id': str(self.viktor.pk), 'name': 'Виктор', 'share': '40'},
+            {'name': 'Владислав', 'share': '60'},
+        )
+        response = self.client.post(self.url, data, HTTP_X_MODAL='1', HTTP_REFERER='http://testserver/properties/?month=2026-11')
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response['X-Modal-Redirect'], '/properties/?month=2026-11')
+        self.viktor.refresh_from_db()
+        self.assertEqual(self.viktor.share_percent, Decimal('40'))
+        self.assertEqual(self.viktor.area, Decimal('40'))
+        self.assertEqual(self.prop.tenants.count(), 2)
+
+    def test_shares_over_100_are_refused(self):
+        data = self.rows(
+            {'id': str(self.viktor.pk), 'name': 'Виктор', 'share': '45'},
+            {'name': 'Владислав', 'share': '60'},
+        )
+        response = self.client.post(self.url, data, HTTP_X_MODAL='1')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.prop.tenants.count(), 1)
+
+    def test_removes_tenant(self):
+        data = self.rows({'id': str(self.viktor.pk), 'name': 'Виктор', 'share': '45', 'DELETE': 'on'})
+        self.client.post(self.url, data, HTTP_X_MODAL='1')
+        self.assertFalse(self.prop.tenants.exists())
+
+    def test_other_landlord_gets_404(self):
+        other = User.objects.create_user(username='b@example.ru', email='b@example.ru', password='secret1')
+        self.client.force_login(other)
+        self.assertEqual(self.client.get(self.url).status_code, 404)
 
 
 class PropertyPagesTests(TestCase):

@@ -1,0 +1,7 @@
+{% extends "app/base.html" %}
+{% block title %}Арендаторы: {{ property.name }} — RentFlow{% endblock %}
+{% block app_content %}
+<div class="modal-page">
+  {% include "properties/_tenants_form.html" %}
+</div>
+{% endblock %}

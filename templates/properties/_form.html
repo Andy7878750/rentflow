@@ -7,7 +7,7 @@
   </header>
 
   <form method="post" action="{% if property %}{% url 'property_edit' property.pk %}{% else %}{% url 'property_create' %}{% endif %}"
-        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form{% if add_tenant %} data-add-tenant{% endif %} novalidate>
+        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 
@@ -86,21 +86,7 @@
         <p class="owner-note owner-only">Объектом пользуетесь вы сами — все расходы по услугам остаются на вас.</p>
 
         <div class="tenants-only">
-          {{ formset.management_form }}
-          {% if formset.non_form_errors %}<ul class="errorlist">{% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-          <div class="tenant-list" data-tenant-list>
-            {% for tenant_form in formset %}
-              {% include "properties/_tenant_row.html" %}
-            {% endfor %}
-          </div>
-          <template data-tenant-template>
-            {% include "properties/_tenant_row.html" with tenant_form=formset.empty_form %}
-          </template>
-          <div class="tenant-add-row">
-            <button type="button" class="btn-dashed" data-tenant-add>
-              <svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора
-            </button>
-          </div>
+          {% include "properties/_tenant_rows.html" %}
         </div>
       </div>
     </section>

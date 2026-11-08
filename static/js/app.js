@@ -41,23 +41,7 @@
       dialog.scrollTop = 0;
       var first = dialog.querySelector('[data-select-trigger], input:not([type=hidden]):not([type=radio])');
       if (first) first.focus();
-      addTenantOnOpen();
     }
-  }
-
-  // «+ Добавить арендатора» on a card opens the object form with a new tenant row ready to type in.
-  function addTenantOnOpen() {
-    var form = dialog.querySelector('[data-property-form][data-add-tenant]');
-    if (!form) return;
-    form.removeAttribute('data-add-tenant');
-    var rows = form.querySelectorAll('[data-tenant-row]:not([hidden])');
-    var last = rows.length ? rows[rows.length - 1].querySelector('input[type=text]') : null;
-    if (last && !last.value) {
-      last.focus();
-      return;
-    }
-    var add = form.querySelector('[data-tenant-add]');
-    if (add) add.click();
   }
 
   function openModal(url) {

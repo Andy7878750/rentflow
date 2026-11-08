@@ -9,5 +9,6 @@ urlpatterns = [
     path('kinds/<int:pk>/delete/', views.kind_delete, name='property_kind_delete'),
     path('<int:pk>/', views.property_detail, name='property_detail'),
     path('<int:pk>/edit/', views.property_edit, name='property_edit'),
+    path('<int:pk>/tenants/', views.property_tenants, name='property_tenants'),
     path('<int:pk>/delete/', views.property_delete, name='property_delete'),
 ]

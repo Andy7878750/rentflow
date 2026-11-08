@@ -1,0 +1,16 @@
+{# Tenant rows with «Добавить арендатора»: in «Изменить объект» and in the «Арендаторы» window. #}
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<ul class="errorlist">{% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+  <div class="tenant-list" data-tenant-list>
+    {% for tenant_form in formset %}
+      {% include "properties/_tenant_row.html" %}
+    {% endfor %}
+  </div>
+  <template data-tenant-template>
+    {% include "properties/_tenant_row.html" with tenant_form=formset.empty_form %}
+  </template>
+  <div class="tenant-add-row">
+    <button type="button" class="btn-dashed" data-tenant-add>
+      <svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора
+    </button>
+  </div>

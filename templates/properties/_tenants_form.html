@@ -1,0 +1,30 @@
+{# «Арендаторы · Королева 61»: only the tenants, opened from the object card. #}
+<div class="modal-panel">
+  <header class="modal-head">
+    <h1 class="fade">Арендаторы · {{ property.name }}</h1>
+    <a href="{% url 'property_list' %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </a>
+  </header>
+
+  <form method="post" action="{% url 'property_tenants' property.pk %}" class="pform" data-property-form data-modal-form novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="share_unit" value="{{ share_unit }}">
+    <input type="hidden" value="{{ property.area|default_if_none:''|stringformat:'s' }}" data-total-area>
+
+    <section class="form-section">
+      <div class="form-section-head">
+        <h2>Кто арендует <span class="help" tabindex="0" role="button" aria-label="Подсказка: доли" data-tip-title="Доли" data-tip="Доли нужны, чтобы делить расходы между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
+        <span class="occupied" data-occupied></span>
+      </div>
+      <div class="form-section-body">
+        {% include "properties/_tenant_rows.html" %}
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-auto">Сохранить</button>
+      <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+    </div>
+  </form>
+</div>

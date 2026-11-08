@@ -98,6 +98,22 @@ def save_property(form, tenant_formset, owner):
         resync_property(property_obj)
         return property_obj
 
+    _save_tenant_rows(property_obj, tenant_formset)
+    return property_obj
+
+
+@transaction.atomic
+def save_tenants(property_obj, tenant_formset, share_unit):
+    """The «Арендаторы» window: only the tenants and the share unit change."""
+    property_obj.share_unit = share_unit
+    if property_obj.is_owner_used and tenant_formset.active_forms():
+        property_obj.occupancy = Property.Occupancy.TENANTS  # tenants added: no longer the landlord's own use
+    property_obj.save(update_fields=['share_unit', 'occupancy'])
+    _save_tenant_rows(property_obj, tenant_formset)
+    return property_obj
+
+
+def _save_tenant_rows(property_obj, tenant_formset):
     for tenant_form in tenant_formset.forms:
         tenant = tenant_form.instance
         if tenant_form in tenant_formset.deleted_forms:
@@ -111,4 +127,3 @@ def save_property(form, tenant_formset, owner):
         apply_share(tenant, tenant_form.cleaned_data['share'], property_obj.share_unit, property_obj.area)
         tenant.save()
     resync_property(property_obj)  # tenants changed: per-tenant meters follow
-    return property_obj

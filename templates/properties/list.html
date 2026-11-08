@@ -61,22 +61,23 @@
             <div><span class="stat-label">Показания</span><span class="stat-value">не внесены</span></div>
             <div><span class="stat-label">К выставлению</span><span class="stat-value">0,00 ₽</span></div>
           </div>
+        {% else %}
+          {# Until the one-time setup is done, numbers would be zeros: say so instead. #}
+          <div class="property-setup">
+            <span class="setup-badge">Настройка {{ property.setup.done }} из {{ property.setup.total }}</span>
+          </div>
         {% endif %}
 
-        {# Not a link to the object page: only «+ Добавить …» act here, and they stay after setup. #}
-        <div class="property-setup" data-card-skip>
-          {% if not property.setup.complete %}
-            <span class="setup-badge">Настройка {{ property.setup.done }} из {{ property.setup.total }}</span>
-          {% endif %}
-          <div class="property-links">
-            {% if not property.is_owner_used %}
-              <a href="{% url 'property_edit' property.pk %}?add=tenant" data-modal class="setup-link">+ Добавить арендатора</a>
-            {% endif %}
-            <a href="{% url 'receipt_pick' property.pk %}" data-modal class="setup-link">+ Добавить услугу</a>
-          </div>
-        </div>
-
         {% include "properties/_tenants.html" %}
+
+        {% if not property.is_owner_used %}
+          {# Tenants change often: one click from the card, without «Изменить объект». #}
+          <div class="property-links" data-card-skip>
+            <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link">
+              {% if property.tenants.all %}<svg class="icon"><use href="#i-edit"/></svg>Изменить арендаторов{% else %}+ Добавить арендатора{% endif %}
+            </a>
+          </div>
+        {% endif %}
       </article>
     {% endfor %}
   </section>

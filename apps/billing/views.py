@@ -1,31 +1,18 @@
-from urllib.parse import urlsplit
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.properties import services as property_services
 from apps.properties.models import Property
-from apps.properties.views import object_page_context
+from apps.properties.views import modal_back_url, object_page_context
 
 from . import services
 from .forms import ReceiptForm
 from .models import Receipt
-
-
-def _back_url(request):
-    """The page the modal was opened on (the object page, the services table, the object list)."""
-    referer = request.headers.get('Referer', '')
-    safe = url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}, require_https=request.is_secure())
-    if not referer or not safe:
-        return None
-    parts = urlsplit(referer)
-    return (parts.path + (f'?{parts.query}' if parts.query else '')) or None
 
 
 def _done(request, property_obj, message):
@@ -33,7 +20,7 @@ def _done(request, property_obj, message):
     messages.success(request, message)
     url = reverse('property_detail', args=[property_obj.pk])
     if request.headers.get('X-Modal'):
-        return HttpResponse(status=204, headers={'X-Modal-Redirect': _back_url(request) or url})
+        return HttpResponse(status=204, headers={'X-Modal-Redirect': modal_back_url(request) or url})
     return redirect(url)
 
 

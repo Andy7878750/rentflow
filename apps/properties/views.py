@@ -1,10 +1,12 @@
 from decimal import Decimal
+from urllib.parse import urlsplit
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.billing import services as billing_services
@@ -13,6 +15,17 @@ from apps.tenants.forms import TenantFormSet
 from . import services
 from .forms import PropertyForm
 from .models import Property, PropertyKind
+
+
+
+def modal_back_url(request):
+    """The page a modal was opened on (Referer of app.js's request); None if unknown or foreign."""
+    referer = request.headers.get('Referer', '')
+    safe = url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}, require_https=request.is_secure())
+    if not referer or not safe:
+        return None
+    parts = urlsplit(referer)
+    return (parts.path + (f'?{parts.query}' if parts.query else '')) or None
 
 
 @login_required
@@ -86,7 +99,6 @@ def _property_form(request, property_obj=None):
         'formset': formset,
         'property': property_obj,
         'share_unit': unit,
-        'add_tenant': request.GET.get('add') == 'tenant' and data is None,
         'kind_choices': [
             (value, label) for value, label in Property.Kind.choices
             if value not in (Property.Kind.OTHER, Property.Kind.CUSTOM)
@@ -186,3 +198,31 @@ def property_delete(request, pk):
         'property': property_obj,
         'tenant_count': property_obj.tenants.count(),
     })
+
+
+@login_required
+def property_tenants(request, pk):
+    """«+ Добавить арендатора» / «Изменить арендаторов» on the card: only the tenants, in the modal."""
+    property_obj = get_object_or_404(Property, pk=pk, owner=request.user)
+    is_modal = request.headers.get('X-Modal') == '1'
+    data = request.POST if request.method == 'POST' else None
+    unit = (data or {}).get('share_unit') or property_obj.share_unit
+    if unit not in Property.ShareUnit.values:
+        unit = Property.ShareUnit.PERCENT
+    formset = TenantFormSet(data, instance=property_obj, prefix='tenants', form_kwargs={'share_unit': unit})
+    if property_obj.tenants.exists():
+        formset.extra = 0
+
+    if data is not None:
+        formset.share_unit = unit
+        formset.total_area = property_obj.area
+        if formset.is_valid():
+            services.save_tenants(property_obj, formset, unit)
+            messages.success(request, f'Арендаторы «{property_obj.name}» сохранены.')
+            url = reverse('property_list')
+            if is_modal:
+                return HttpResponse(status=204, headers={'X-Modal-Redirect': modal_back_url(request) or url})
+            return redirect(url)
+
+    template = 'properties/_tenants_form.html' if is_modal else 'properties/tenants_form.html'
+    return render(request, template, {'property': property_obj, 'formset': formset, 'share_unit': unit})
