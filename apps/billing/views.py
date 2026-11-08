@@ -38,6 +38,8 @@ def _receipt_form(request, property_obj, receipt):
         'receipt': receipt,
         'property': property_obj,
         'warning': services.split_warning(form.instance),
+        # New service: the templates on top of the same window; picking one refills the fields below.
+        'kind_chips': None if receipt.pk else [(kind, kind.label) for kind in services.template_kinds(property_obj, receipt.kind)],
         'split_choices': [
             choice for choice in Receipt.Split.choices
             if not (property_obj.is_owner_used and choice[0] not in (Receipt.Split.METERS, Receipt.Split.OWNER))
@@ -47,6 +49,7 @@ def _receipt_form(request, property_obj, receipt):
 
 @login_required
 def receipt_create(request, property_pk):
+    """«+ Добавить услугу»: templates on top, settings below; ?kind=water opens with «Вода» picked."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
     receipt = services.new_receipt(property_obj, request.GET.get('kind') or request.POST.get('kind'))
     return _receipt_form(request, property_obj, receipt)
@@ -73,17 +76,6 @@ def receipt_delete(request, pk):
 
 
 @login_required
-def receipt_pick(request, property_pk):
-    """«+ Добавить услугу»: choose a ready-made receipt or your own."""
-    property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
-    template = 'billing/_receipt_pick.html' if request.headers.get('X-Modal') else 'billing/receipt_pick.html'
-    return render(request, template, {
-        'property': property_obj,
-        'missing_kinds': [(kind, kind.label) for kind in services.missing_kinds(property_obj)],
-    })
-
-
-@login_required
 def receipt_add(request):
     """«+ Добавить услугу» in the menu: «К какому объекту?» first, unless there is only one."""
     properties = list(
@@ -92,7 +84,7 @@ def receipt_add(request):
     for property_obj in properties:
         property_obj.receipt_label = services.services_label(property_obj.receipt_count)
     if len(properties) == 1:
-        return receipt_pick(request, properties[0].pk)
+        return receipt_create(request, properties[0].pk)
     template = 'billing/_receipt_add.html' if request.headers.get('X-Modal') else 'billing/receipt_add.html'
     return render(request, template, {'properties': properties})
 

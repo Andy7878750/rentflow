@@ -41,6 +41,12 @@ def new_receipt(property_obj, kind):
     return receipt
 
 
+def template_kinds(property_obj, selected):
+    """Templates offered in the «Новая услуга» window: the ones the object lacks, plus the picked one."""
+    missing = set(missing_kinds(property_obj))
+    return [kind for kind in OFFERED_KINDS if kind in missing or kind == selected]
+
+
 def services_label(count):
     """«нет услуг», «1 услуга», «3 услуги», «5 услуг»."""
     if not count:

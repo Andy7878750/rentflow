@@ -6,6 +6,22 @@
     </a>
   </header>
 
+  {% if kind_chips is not None %}
+    {# Templates: one click fills the fields below with sensible defaults; «Своя» starts from scratch. #}
+    <nav class="kind-tabs" aria-label="Шаблон услуги">
+      {% for kind, label in kind_chips %}
+        <a href="{% url 'receipt_create' property.pk %}?kind={{ kind }}" data-modal
+           class="chip chip-sm{% if kind == receipt.kind %} is-selected{% endif %}"{% if kind == receipt.kind %} aria-current="true"{% endif %}>
+          <svg class="icon"><use href="#i-r-{{ kind }}"/></svg>{{ label }}
+        </a>
+      {% endfor %}
+      <a href="{% url 'receipt_create' property.pk %}?kind=custom" data-modal
+         class="chip chip-sm chip-dashed{% if receipt.kind == 'custom' %} is-selected{% endif %}"{% if receipt.kind == 'custom' %} aria-current="true"{% endif %}>
+        <svg class="icon"><use href="#i-plus"/></svg>Своя услуга
+      </a>
+    </nav>
+  {% endif %}
+
   <form method="post"
         action="{% if receipt.pk %}{% url 'receipt_edit' receipt.pk %}{% else %}{% url 'receipt_create' property.pk %}{% endif %}"
         class="rform{% if property.is_owner_used %} is-owner{% endif %}" data-modal-form novalidate>

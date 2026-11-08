@@ -79,7 +79,7 @@
               <svg class="icon"><use href="#i-edit"/></svg>Услуги
             </a>
           {% else %}
-            <a href="{% url 'receipt_pick' property.pk %}" data-modal class="setup-link setup-link-end" title="Добавить услугу">
+            <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link setup-link-end" title="Добавить услугу">
               <svg class="icon"><use href="#i-plus"/></svg>Услуги
             </a>
           {% endif %}

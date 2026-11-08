@@ -150,7 +150,7 @@ class ReceiptViewTests(TestCase):
 
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
         self.assertContains(page, 'Интернет')
-        self.assertContains(page, reverse('receipt_pick', args=[self.prop.pk]))
+        self.assertContains(page, reverse('receipt_create', args=[self.prop.pk]))
 
     def test_fixed_amount_is_required(self):
         response = self.client.post(
@@ -227,11 +227,22 @@ class MonthPageTests(TestCase):
         self.assertEqual(self.client.get(url, {'tenant': self.vlad.pk}).context['selected_tenant'], self.vlad.pk)
         self.assertEqual(self.client.get(url, {'tenant': 'junk'}).context['selected_tenant'], self.viktor.pk)
 
-    def test_picker(self):
-        response = self.client.get(reverse('receipt_pick', args=[self.prop.pk]), HTTP_X_MODAL='1')
+    def test_new_service_window_has_templates_on_top(self):
+        response = self.client.get(reverse('receipt_create', args=[self.prop.pk]), HTTP_X_MODAL='1')
         self.assertContains(response, '?kind=electricity')
         self.assertNotContains(response, '?kind=management')  # already added
-        self.assertContains(response, '?kind=custom')
+        self.assertContains(response, 'chip-dashed is-selected')  # nothing picked yet: «Своя услуга»
+        self.assertContains(response, 'name="split"')  # and the settings in the same window
+
+    def test_template_from_object_page_opens_picked(self):
+        response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=water', HTTP_X_MODAL='1')
+        self.assertContains(response, 'chip chip-sm is-selected" aria-current="true">')
+        self.assertContains(response, 'value="Вода"')
+
+    def test_editing_has_no_templates(self):
+        receipt = self.prop.receipts.first()
+        response = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
+        self.assertNotContains(response, 'kind-tabs')
 
     def test_other_landlord_cannot_save(self):
         other = User.objects.create_user(username='b@example.ru', email='b@example.ru', password='secret1')
@@ -279,7 +290,7 @@ class ServicesSectionTests(TestCase):
     def test_add_with_one_object_goes_straight_to_kinds(self):
         prop = make_property(self.user)
         response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
-        self.assertTemplateUsed(response, 'billing/_receipt_pick.html')
+        self.assertTemplateUsed(response, 'billing/_receipt_form.html')
         self.assertContains(response, reverse('receipt_create', args=[prop.pk]) + '?kind=electricity')
 
     def test_add_with_several_objects_asks_which(self):
@@ -288,8 +299,8 @@ class ServicesSectionTests(TestCase):
         Receipt.objects.create(property=first, name='Свет')
         response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
         self.assertContains(response, 'К какому объекту?')
-        self.assertContains(response, reverse('receipt_pick', args=[first.pk]))
-        self.assertContains(response, reverse('receipt_pick', args=[second.pk]))
+        self.assertContains(response, reverse('receipt_create', args=[first.pk]))
+        self.assertContains(response, reverse('receipt_create', args=[second.pk]))
         self.assertContains(response, '1 услуга')
         self.assertContains(response, 'нет услуг')
 
@@ -300,7 +311,7 @@ class ServicesSectionTests(TestCase):
     def test_card_menu_has_add_service(self):
         prop = make_property(self.user)
         response = self.client.get(reverse('property_list'))
-        self.assertContains(response, f'href="{reverse("receipt_pick", args=[prop.pk])}" data-modal class="dropdown-item')
+        self.assertContains(response, f'href="{reverse("receipt_create", args=[prop.pk])}" data-modal class="dropdown-item')
 
     def test_saving_from_the_table_returns_to_the_table(self):
         receipt = Receipt.objects.create(property=make_property(self.user), name='Свет')

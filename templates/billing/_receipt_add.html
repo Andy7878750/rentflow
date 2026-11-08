@@ -10,7 +10,7 @@
     <ul class="pick-list">
       {% for property in properties %}
         <li>
-          <a href="{% url 'receipt_pick' property.pk %}" data-modal class="pick-item">
+          <a href="{% url 'receipt_create' property.pk %}" data-modal class="pick-item">
             <span class="receipt-icon"><svg class="icon"><use href="{% if property.kind == 'commercial' %}#i-building{% else %}#i-home{% endif %}"/></svg></span>
             <span class="pick-body">
               <span class="pick-title fade">{{ property.name }}</span>
