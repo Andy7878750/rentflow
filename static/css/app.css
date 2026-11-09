@@ -844,31 +844,49 @@
   padding-top: 6px;
 }
 
-/* Object card: each link sits on the left right under its block — «✎ Услуги» under the numbers,
-   «✎ Арендаторы» under the tenants. The block's line moves below its link. */
-.property-card .stat-cols,
-.property-card .property-setup {
-  padding-bottom: 8px;
-  border-bottom: 0;
+/* Object card: a block starts with a small grey caption, its link on the right —
+   «УСЛУГИ … ✎ изменить», «АРЕНДАТОРЫ … ✎ изменить». */
+.card-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: default;
 }
 
-.card-links-under {
-  padding: 0 20px 12px;
+.card-block-head .setup-link {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.card-block-head .setup-link .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.card-block-head + .stat-cols {
+  padding-top: 8px;
+}
+
+.card-block-head + .property-setup {
+  padding-top: 10px;
+}
+
+.card-block-head + .property-tenants {
+  padding: 6px 20px 16px;
   border-top: 0;
-  border-bottom: 1px solid var(--color-border);
 }
 
-.card-links-under + .property-tenants {
-  border-top: 0;
-}
-
-.card-links-last {
-  border-bottom: 0;
-}
-
-.property-card .property-tenants + .card-links-last,
-.property-card .property-tenants-empty + .card-links-last {
-  margin-top: -6px;
+.card-block-head + .property-tenants-empty {
+  padding-top: 6px;
 }
 
 /* A name that doesn't fit its line fades out on the last letters (app.js adds .is-clipped). */

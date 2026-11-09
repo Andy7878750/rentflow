@@ -51,6 +51,20 @@
 
         {% include "properties/_contacts.html" %}
 
+        {# Each block has a small caption with its own link on the right: «Услуги ✎ изменить». #}
+        <div class="card-block-head" data-card-skip>
+          <span>Услуги</span>
+          {% if property.receipts.all %}
+            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link" title="Изменить услуги">
+              <svg class="icon"><use href="#i-edit"/></svg>изменить
+            </a>
+          {% else %}
+            <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link" title="Добавить услугу">
+              <svg class="icon"><use href="#i-plus"/></svg>добавить
+            </a>
+          {% endif %}
+        </div>
+
         {% if property.setup.complete %}
           <div class="stat-cols">
             <div><span class="stat-num">{{ property.receipts.all|length }}</span><span class="stat-cap">услуги</span></div>
@@ -64,29 +78,17 @@
           </div>
         {% endif %}
 
-        {# Under the numbers: the services link, left, in the accent. A click beside it doesn't open the object page. #}
-        <div class="card-links card-links-under" data-card-skip>
-          {% if property.receipts.all %}
-            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link" title="Изменить услуги">
-              <svg class="icon"><use href="#i-edit"/></svg>Услуги
-            </a>
-          {% else %}
-            <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link" title="Добавить услугу">
-              <svg class="icon"><use href="#i-plus"/></svg>Услуги
-            </a>
-          {% endif %}
-        </div>
-
-        {% include "properties/_tenants.html" %}
-
         {% if not property.is_owner_used %}
-          <div class="card-links card-links-under card-links-last" data-card-skip>
+          <div class="card-block-head" data-card-skip>
+            <span>Арендаторы</span>
             <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
                title="{% if property.tenants.all %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
-              <svg class="icon"><use href="{% if property.tenants.all %}#i-edit{% else %}#i-plus{% endif %}"/></svg>Арендаторы
+              {% if property.tenants.all %}<svg class="icon"><use href="#i-edit"/></svg>изменить{% else %}<svg class="icon"><use href="#i-plus"/></svg>добавить{% endif %}
             </a>
           </div>
         {% endif %}
+
+        {% include "properties/_tenants.html" %}
       </article>
     {% endfor %}
   </section>
