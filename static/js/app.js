@@ -857,13 +857,13 @@
   // Receipt form: a meter usually means «split by readings»; no meter rules that option out.
   document.addEventListener('change', function (event) {
     var input = event.target;
-    if (!input.matches || !input.matches('.rform input[name=metered]')) return;
+    if (!input.matches || !input.matches('.rform input[type=checkbox][name=metered]')) return;
     var form = input.form;
     var meters = form.querySelector('input[name=split][value=meters]');
     var fallback = form.querySelector('input[name=split][value=shares]') || form.querySelector('input[name=split][value=owner]');
-    if (input.value === '1' && meters) {
+    if (input.checked && meters) {
       meters.checked = true;
-    } else if (input.value === '0' && meters && meters.checked && fallback) {
+    } else if (!input.checked && meters && meters.checked && fallback) {
       fallback.checked = true;
     }
   });

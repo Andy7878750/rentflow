@@ -53,55 +53,62 @@
       </div>
     </section>
 
+    {% comment %}A short survey: yes/no questions are switches, a pick from several answers is a row of buttons;
+       the next question shows up only when it applies (CSS :has, no JS).{% endcomment %}
     <section class="form-section">
       <h2 class="form-section-head">Как считаем</h2>
       <div class="form-section-body">
-    <div class="rform-question">
-      <h2>Есть счётчик?</h2>
-      <div class="segmented" role="radiogroup" aria-label="Есть счётчик">
-        {% for value, label in form.fields.metered.choices %}
-          <label><input type="radio" name="metered" value="{{ value }}"{% if form.metered.value|stringformat:'s' == value %} checked{% endif %}><span>{{ label }}</span></label>
-        {% endfor %}
-      </div>
-    </div>
+        <label class="rform-toggle">
+          <span class="rform-toggle-text">
+            <span class="rform-toggle-q">Есть счётчик?</span>
+            <span class="rform-hint metered-only">Каждый месяц вводите показания — сумма посчитается по тарифу.</span>
+            <span class="rform-hint unmetered-only">Без счётчика — сумма из квитанции.</span>
+          </span>
+          <input type="hidden" name="metered" value="0">
+          <input type="checkbox" name="metered" value="1" class="switch-input"{% if form.metered.value|stringformat:'s' == '1' or form.metered.value is True %} checked{% endif %}>
+          <span class="switch" aria-hidden="true"></span>
+        </label>
 
-    <div class="form-grid grid-2 metered-only">
-      {% include "properties/_field.html" with field=form.tariff label="Тариф, "|add:receipt.currency_symbol|add:" за единицу" tip="Можно оставить пустым и вводить каждый месяц вместе с показаниями." %}
-      {% include "properties/_field.html" with field=form.unit label="Единица" tip="кВт·ч, м³ — как в квитанции." %}
-    </div>
+        <div class="form-grid grid-2 metered-only">
+          {% include "properties/_field.html" with field=form.tariff label="Тариф, "|add:receipt.currency_symbol|add:" за единицу" tip="Можно оставить пустым и вводить каждый месяц вместе с показаниями." %}
+          {% include "properties/_field.html" with field=form.unit label="Единица" tip="кВт·ч, м³ — как в квитанции." %}
+        </div>
 
-    <div class="rform-question">
-      <h2>Как делить между арендаторами</h2>
-      {% if property.is_owner_used %}
-        <p class="rform-note">Объектом пользуетесь вы сами — расходы остаются на вас.</p>
-      {% endif %}
-      <div class="segmented segmented-wrap" role="radiogroup" aria-label="Как делить">
-        {% for value, label in split_choices %}
-          <label{% if value == 'meters' %} class="metered-only"{% endif %}><input type="radio" name="split" value="{{ value }}"{% if form.split.value == value %} checked{% endif %}><span>{{ label }}</span></label>
-        {% endfor %}
+        <div class="rform-question unmetered-only">
+          <h2>Сумма</h2>
+          <div class="segmented" role="radiogroup" aria-label="Сумма">
+            {% for value, label in form.fields.amount_mode.choices %}
+              <label><input type="radio" name="amount_mode" value="{{ value }}"{% if form.amount_mode.value == value %} checked{% endif %}><span>{{ label }}</span></label>
+            {% endfor %}
+          </div>
+          <p class="rform-hint amount-hint" data-for="monthly">Сумму из квитанции вводите раз в месяц.</p>
+          <p class="rform-hint amount-hint" data-for="fixed">Каждый месяц вводить ничего не нужно — начислится само.</p>
+          <div class="form-grid grid-2 fixed-only">
+            {% include "properties/_field.html" with field=form.fixed_amount label="Сумма в месяц, "|add:receipt.currency_symbol required=1 %}
+          </div>
+        </div>
       </div>
-      <p class="rform-hint split-hint" data-for="shares">Каждый платит свою долю, указанную в карточке объекта.</p>
-      <p class="rform-hint split-hint" data-for="equal">Сумма делится поровну на всех арендаторов.</p>
-      <p class="rform-hint split-hint" data-for="area">Пропорционально площади, которую занимает каждый.</p>
-      <p class="rform-hint split-hint" data-for="meters">У каждого арендатора свой счётчик — платит за свой расход.</p>
-      <p class="rform-hint split-hint" data-for="owner">Арендаторам не выставляется — остаётся на вас.</p>
-      {% if warning %}<p class="rform-warning">{{ warning }}</p>{% endif %}
-    </div>
+    </section>
 
-    <div class="rform-question unmetered-only">
-      <h2>Сумма</h2>
-      <div class="segmented" role="radiogroup" aria-label="Сумма">
-        {% for value, label in form.fields.amount_mode.choices %}
-          <label><input type="radio" name="amount_mode" value="{{ value }}"{% if form.amount_mode.value == value %} checked{% endif %}><span>{{ label }}</span></label>
-        {% endfor %}
-      </div>
-      <p class="rform-hint amount-hint" data-for="monthly">Сумму из квитанции вводите раз в месяц.</p>
-      <p class="rform-hint amount-hint" data-for="fixed">Каждый месяц вводить ничего не нужно — начислится само.</p>
-      <div class="form-grid grid-2 fixed-only">
-        {% include "properties/_field.html" with field=form.fixed_amount label="Сумма в месяц, "|add:receipt.currency_symbol required=1 %}
-      </div>
-    </div>
-
+    <section class="form-section">
+      <h2 class="form-section-head">Как делим между арендаторами</h2>
+      <div class="form-section-body">
+        <div class="rform-question">
+          {% if property.is_owner_used %}
+            <p class="rform-note">Объектом пользуетесь вы сами — расходы остаются на вас.</p>
+          {% endif %}
+          <div class="segmented segmented-wrap" role="radiogroup" aria-label="Как делить">
+            {% for value, label in split_choices %}
+              <label{% if value == 'meters' %} class="metered-only"{% endif %}><input type="radio" name="split" value="{{ value }}"{% if form.split.value == value %} checked{% endif %}><span>{{ label }}</span></label>
+            {% endfor %}
+          </div>
+          <p class="rform-hint split-hint" data-for="shares">Каждый платит свою долю, указанную в карточке объекта.</p>
+          <p class="rform-hint split-hint" data-for="equal">Сумма делится поровну на всех арендаторов.</p>
+          <p class="rform-hint split-hint" data-for="area">Пропорционально площади, которую занимает каждый.</p>
+          <p class="rform-hint split-hint" data-for="meters">У каждого арендатора свой счётчик — платит за свой расход.</p>
+          <p class="rform-hint split-hint" data-for="owner">Арендаторам не выставляется — остаётся на вас.</p>
+          {% if warning %}<p class="rform-warning">{{ warning }}</p>{% endif %}
+        </div>
       </div>
     </section>
 

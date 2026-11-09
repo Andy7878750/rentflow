@@ -345,11 +345,36 @@
   margin-top: 12px;
 }
 
+/* A yes/no question: the question on the left, a switch on the right; the whole row is clickable. */
+.rform-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.rform-toggle-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rform-toggle-q {
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.rform-toggle .rform-hint {
+  margin-top: 4px;
+}
+
 /* Show only what applies to the current choices (no JS needed). */
 .rform .split-hint,
 .rform .amount-hint,
-.rform:has(input[name=metered][value="0"]:checked) .metered-only,
-.rform:has(input[name=metered][value="1"]:checked) .unmetered-only,
+.rform:not(:has(input[name=metered]:checked)) .metered-only,
+.rform:has(input[name=metered]:checked) .unmetered-only,
 .rform:not(:has(input[name=amount_mode][value=fixed]:checked)) .fixed-only {
   display: none;
 }

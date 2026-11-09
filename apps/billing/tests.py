@@ -152,6 +152,22 @@ class ReceiptViewTests(TestCase):
         self.assertContains(page, 'Интернет')
         self.assertContains(page, reverse('receipt_create', args=[self.prop.pk]))
 
+    def test_meter_switch_on_sends_both_values_and_the_last_wins(self):
+        # The switch is a hidden «0» plus a checkbox «1»: when it's on, both are posted.
+        response = self.client.post(
+            reverse('receipt_create', args=[self.prop.pk]),
+            {'kind': 'electricity', 'name': 'Свет', 'metered': ['0', '1'], 'unit': 'кВт·ч',
+             'split': 'shares', 'amount_mode': 'monthly'},
+            HTTP_X_MODAL='1',
+        )
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(self.prop.receipts.get().metered)
+
+    def test_meter_switch_is_rendered_on_for_a_metered_preset(self):
+        url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
+        response = self.client.get(url, HTTP_X_MODAL='1')
+        self.assertContains(response, 'name="metered" value="1" class="switch-input" checked')
+
     def test_fixed_amount_is_required(self):
         response = self.client.post(
             reverse('receipt_create', args=[self.prop.pk]),
