@@ -5,6 +5,7 @@ Two parts: the one-time setup of an object's receipts, and the monthly input
 """
 
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
@@ -12,16 +13,17 @@ from django.db import transaction
 from .models import Meter, MonthlyAmount, Reading, Receipt
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
+_BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
 PRESETS = {
     Receipt.Kind.MANAGEMENT: {'split': Receipt.Split.SHARES},
-    Receipt.Kind.ELECTRICITY: {'metered': True, 'unit': 'кВт·ч', 'split': Receipt.Split.METERS},
-    Receipt.Kind.WATER: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
-    Receipt.Kind.HOT_WATER: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
+    Receipt.Kind.ELECTRICITY: {**_BY_OWN_METERS, 'unit': 'кВт·ч'},
+    Receipt.Kind.WATER: {**_BY_OWN_METERS, 'unit': 'м³'},
+    Receipt.Kind.HOT_WATER: {**_BY_OWN_METERS, 'unit': 'м³'},
     # Heating of hot water (Гкал) and sewage (= cold + hot) are simplified for now: by meters, in м³.
-    Receipt.Kind.HOT_WATER_HEATING: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
-    Receipt.Kind.SEWAGE: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
+    Receipt.Kind.HOT_WATER_HEATING: {**_BY_OWN_METERS, 'unit': 'м³'},
+    Receipt.Kind.SEWAGE: {**_BY_OWN_METERS, 'unit': 'м³'},
     Receipt.Kind.HEATING: {'split': Receipt.Split.AREA},
-    Receipt.Kind.GAS: {'metered': True, 'unit': 'м³', 'split': Receipt.Split.METERS},
+    Receipt.Kind.GAS: {**_BY_OWN_METERS, 'unit': 'м³'},
     Receipt.Kind.INTERNET: {'split': Receipt.Split.EQUAL, 'amount_mode': Receipt.AmountMode.FIXED},
     # Capital repair is usually the owner's own expense.
     Receipt.Kind.CAPITAL_REPAIR: {'split': Receipt.Split.OWNER},
@@ -42,7 +44,8 @@ def new_receipt(property_obj, kind):
     for field, value in PRESETS[kind].items():
         setattr(receipt, field, value)
     if property_obj.is_owner_used:
-        receipt.split = Receipt.Split.METERS if receipt.metered else Receipt.Split.OWNER
+        receipt.layout = Receipt.Layout.COMMON
+        receipt.split = Receipt.Split.OWNER
     return receipt
 
 
@@ -76,9 +79,13 @@ def missing_kinds(property_obj):
 
 def normalize(receipt):
     """Bring the choices into a consistent state before saving."""
+    if receipt.property.is_owner_used:
+        receipt.layout = Receipt.Layout.COMMON
     if not receipt.metered:
         receipt.unit = ''
-        receipt.tariff = None
+        receipt.tariff = receipt.tariff_night = None
+        receipt.zones = 1
+        receipt.layout = Receipt.Layout.COMMON
         if receipt.split == Receipt.Split.METERS:
             receipt.split = Receipt.Split.SHARES
     else:
@@ -86,34 +93,51 @@ def normalize(receipt):
         receipt.amount_mode = Receipt.AmountMode.MONTHLY
         if not receipt.unit:
             receipt.unit = 'ед.'
+        if receipt.zones != 2:
+            receipt.zones = 1
+            receipt.tariff_night = None
+        # The tenants' own meters decide what each pays; one common meter is split like a sum.
+        if receipt.layout != Receipt.Layout.COMMON:
+            receipt.split = Receipt.Split.METERS
+        elif receipt.split == Receipt.Split.METERS:
+            receipt.split = Receipt.Split.SHARES
     if receipt.amount_mode != Receipt.AmountMode.FIXED:
         receipt.fixed_amount = None
-    if receipt.property.is_owner_used and receipt.split != Receipt.Split.METERS:
+    if receipt.property.is_owner_used:
         receipt.split = Receipt.Split.OWNER
     return receipt
+
+
+COMMON_METER = 'Общий счётчик'
+
+
+def wanted_meters(receipt):
+    """{tenant_id or None: meter name} — the meters the receipt's settings call for."""
+    if not receipt.metered:
+        return {}
+    tenants = [] if receipt.property.is_owner_used else list(receipt.property.tenants.all())
+    if receipt.layout == Receipt.Layout.COMMON or not tenants:
+        return {None: COMMON_METER}
+    wanted = {None: COMMON_METER} if receipt.layout == Receipt.Layout.BOTH else {}
+    wanted.update({tenant.pk: tenant.name for tenant in tenants})
+    return wanted
 
 
 def sync_meters(receipt):
     """Keep the receipt's meters in line with its settings.
 
-    Split by readings → one meter per tenant (each has their own). Metered but split
-    another way, or the owner uses the object → one common meter. Not metered → none.
-    Meters belong to the object; the receipt only links to them. Existing ones are kept
-    where possible, so their history survives an edit.
+    «Общий на объект» → one common meter; «У каждого свой» → one per tenant; «Общий + у каждого
+    свой» → both. Not metered → none. Meters belong to the object; the receipt only links to
+    them. Existing ones are kept where possible, so their history survives an edit.
+    Returns {tenant_id or None: Meter}.
     """
-    tenants = [] if receipt.property.is_owner_used else list(receipt.property.tenants.all())
-    if not receipt.metered:
-        wanted = {}
-    elif receipt.split == Receipt.Split.METERS and tenants:
-        wanted = {tenant.pk: tenant.name for tenant in tenants}
-    else:
-        wanted = {None: 'Общий счётчик'}
-
+    wanted = wanted_meters(receipt)
     existing = {meter.tenant_id: meter for meter in receipt.meters.all()}
     for tenant_id, meter in existing.items():
         if tenant_id not in wanted:
             receipt.meters.remove(meter)
             drop_if_unused(meter)
+    result = {}
     for tenant_id, name in wanted.items():
         meter = existing.get(tenant_id)
         if meter is None:
@@ -124,6 +148,97 @@ def sync_meters(receipt):
         elif meter.name != name:
             meter.name = name
             meter.save(update_fields=['name'])
+        result[tenant_id] = meter
+    return result
+
+
+def _meter_key(tenant_id):
+    return 'common' if tenant_id is None else f't{tenant_id}'
+
+
+def meter_rows(receipt, data=None):
+    """Rows of the meter list in the service window, one per possible meter.
+
+    The common meter shows for «Общий на объект» and «Общий + у каждого свой», each tenant's
+    for «У каждого свой» and «Общий + …» (the template hides the rest by the chosen layout).
+    Values come from what was posted, else from the service's meters.
+    """
+    property_obj = receipt.property
+    tenants = [] if property_obj.is_owner_used else list(property_obj.tenants.all())
+    existing = {meter.tenant_id: meter for meter in receipt.meters.all()} if receipt.pk else {}
+    rows = [(None, COMMON_METER if tenants else 'Счётчик', 'common both' if tenants else 'common tenants both')]
+    rows += [(tenant.pk, tenant.name, 'tenants both') for tenant in tenants]
+    result = []
+    for tenant_id, name, layouts in rows:
+        key = _meter_key(tenant_id)
+        meter = existing.get(tenant_id)
+        if data is not None:
+            values = {
+                'serial': data.get(f'serial-{key}', ''),
+                'initial': data.get(f'initial-{key}', ''),
+                'initial_night': data.get(f'initialn-{key}', ''),
+            }
+        else:
+            values = {
+                'serial': meter.serial if meter else '',
+                'initial': fmt_number(meter.initial) if meter and meter.initial is not None else '',
+                'initial_night': fmt_number(meter.initial_night) if meter and meter.initial_night is not None else '',
+            }
+        result.append({'key': key, 'name': name, 'layouts': layouts, **values})
+    return result
+
+
+def parse_meter_details(property_obj, data):
+    """{tenant_id or None: {serial, initial, initial_night}} from the posted service window."""
+    tenant_ids = [None] + list(property_obj.tenants.values_list('pk', flat=True))
+    details = {}
+    for tenant_id in tenant_ids:
+        key = _meter_key(tenant_id)
+        if f'serial-{key}' not in data and f'initial-{key}' not in data:
+            continue
+        details[tenant_id] = {
+            'serial': (data.get(f'serial-{key}') or '').strip(),
+            'initial': parse_decimal(data.get(f'initial-{key}')),
+            'initial_night': parse_decimal(data.get(f'initialn-{key}')),
+        }
+    return details
+
+
+def apply_meter_details(meters, details):
+    """Numbers and starting readings typed in the service window: {tenant_id or None: {...}}."""
+    for tenant_id, meter in meters.items():
+        values = details.get(tenant_id)
+        if not values:
+            continue
+        meter.serial = values.get('serial', '')[:50]
+        meter.initial = values.get('initial')
+        meter.initial_night = values.get('initial_night')
+        meter.save(update_fields=['serial', 'initial', 'initial_night'])
+
+
+def first_of_month(day):
+    return day.replace(day=1)
+
+
+def keep_past_tariffs(receipt, old_tariff, old_tariff_night, today):
+    """The tariff changed: months before the current one stay billed at the old one.
+
+    Every past month that already has input (an amount row or readings) and no tariff of its
+    own gets the old tariff written into it. The new tariff applies from this month on.
+    """
+    if old_tariff == receipt.tariff and old_tariff_night == receipt.tariff_night:
+        return
+    this_month = first_of_month(today)
+    months = set(
+        Reading.objects.filter(meter__receipts=receipt, month__lt=this_month).values_list('month', flat=True)
+    )
+    months |= set(receipt.monthly_amounts.filter(month__lt=this_month).values_list('month', flat=True))
+    for month in months:
+        row, _ = MonthlyAmount.objects.get_or_create(receipt=receipt, month=month)
+        if row.tariff is None and row.tariff_night is None:
+            row.tariff = old_tariff
+            row.tariff_night = old_tariff_night
+            row.save(update_fields=['tariff', 'tariff_night'])
 
 
 def drop_if_unused(meter):
@@ -141,10 +256,16 @@ def delete_receipt(receipt):
 
 
 @transaction.atomic
-def save_receipt(receipt):
+def save_receipt(receipt, meter_details=None, today=None):
+    """Save the service from its window; meter_details are the numbers and starting readings."""
+    old = Receipt.objects.filter(pk=receipt.pk).values('tariff', 'tariff_night').first() if receipt.pk else None
     normalize(receipt)
     receipt.save()
-    sync_meters(receipt)
+    if old and receipt.metered:
+        keep_past_tariffs(receipt, old['tariff'], old['tariff_night'], today or date.today())
+    meters = sync_meters(receipt)
+    if meter_details:
+        apply_meter_details(meters, meter_details)
     return receipt
 
 
@@ -240,7 +361,8 @@ class MonthEntry:
 
     receipt: object
     amount: object = None                        # MonthlyAmount or None
-    tariff: object = None                        # effective tariff for metered receipts
+    tariff: object = None                        # effective tariff for metered receipts (day, if two)
+    tariff_night: object = None
     readings: list = field(default_factory=list)  # [(meter, Reading)]
     total: object = None                         # the month's sum; None while input is missing
 
@@ -266,17 +388,37 @@ class MonthBill:
 
 
 def _readings_for(meters, month):
-    """This month's reading for each meter; «было» defaults to last month's «стало»."""
+    """This month's reading for each meter.
+
+    «Было» defaults to last month's «стало», and in the meter's first month to the starting
+    reading typed in the service window. The same for the night part of day / night meters.
+    """
     result = []
     for meter in meters:
         readings = list(meter.readings.all())
         reading = next((r for r in readings if r.month == month), None) or Reading(meter=meter, month=month)
-        if reading.previous is None:
-            earlier = [r for r in readings if r.month < month and r.current is not None]
-            if earlier:
-                reading.previous = earlier[-1].current
+        for prev, cur, initial in (('previous', 'current', 'initial'), ('previous_night', 'current_night', 'initial_night')):
+            if getattr(reading, prev) is not None:
+                continue
+            earlier = [r for r in readings if r.month < month and getattr(r, cur) is not None]
+            setattr(reading, prev, getattr(earlier[-1], cur) if earlier else getattr(meter, initial))
         result.append((meter, reading))
     return result
+
+
+def _meter_cost(receipt, entry, reading):
+    """(exact cost, formula) of one meter's month, or None while something is missing."""
+    unit, currency = receipt.unit, receipt.currency_symbol
+    if entry.tariff is None or reading.consumption is None:
+        return None
+    if receipt.zones != 2:
+        formula = f'{fmt_number(reading.consumption)} {unit} × {fmt_number(entry.tariff)}{NBSP}{currency}'
+        return reading.consumption * entry.tariff, formula
+    if entry.tariff_night is None or reading.consumption_night is None:
+        return None
+    formula = (f'день {fmt_number(reading.consumption)} {unit} × {fmt_number(entry.tariff)}{NBSP}{currency} + '
+               f'ночь {fmt_number(reading.consumption_night)} {unit} × {fmt_number(entry.tariff_night)}{NBSP}{currency}')
+    return reading.consumption * entry.tariff + reading.consumption_night * entry.tariff_night, formula
 
 
 def _split(total, receipt, tenants, property_obj):
@@ -320,28 +462,42 @@ def month_bill(property_obj, month):
         entries.append(entry)
 
         if receipt.metered:
-            entry.tariff = amount.tariff if amount and amount.tariff is not None else receipt.tariff
+            # A past month keeps the tariff it was billed at; otherwise the service's current one.
+            if amount and (amount.tariff is not None or amount.tariff_night is not None):
+                entry.tariff, entry.tariff_night = amount.tariff, amount.tariff_night
+            else:
+                entry.tariff, entry.tariff_night = receipt.tariff, receipt.tariff_night
             entry.readings = _readings_for(receipt.meters.all(), month)
-            readings_total += len(entry.readings)
-            readings_done += sum(1 for _, r in entry.readings if r.consumption is not None)
-            if entry.tariff is None or any(r.consumption is None for _, r in entry.readings):
+            costs = [(meter, _meter_cost(receipt, entry, reading)) for meter, reading in entry.readings]
+            readings_total += len(costs)
+            readings_done += sum(1 for _, cost in costs if cost is not None)
+            if any(cost is None for _, cost in costs):
                 continue
             if receipt.split == Receipt.Split.METERS:
                 # Each tenant pays for what their own meter shows.
-                entry.total = Decimal('0')
-                for meter, reading in entry.readings:
-                    formula = (f'{fmt_number(reading.consumption)} {receipt.unit} × '
-                               f'{fmt_number(entry.tariff)}{NBSP}{receipt.currency_symbol}')
+                common = None
+                billed = Decimal('0')
+                for meter, (exact, formula) in costs:
                     payer = payers.get(meter.tenant_id)
-                    if payer:
-                        line = tenant_line(receipt, reading.consumption * entry.tariff, formula)
+                    if meter.tenant_id is None and receipt.layout == Receipt.Layout.BOTH:
+                        common = exact
+                    elif payer:
+                        line = tenant_line(receipt, exact, formula)
+                        payer.lines.append(line)
+                        billed += line.base
                     else:
-                        line = Line(receipt, money(reading.consumption * entry.tariff), formula)
-                    (payer or owner).lines.append(line)
-                    entry.total += line.base
+                        line = Line(receipt, money(exact), formula)
+                        owner.lines.append(line)
+                        billed += line.base
+                if common is None:
+                    entry.total = billed
+                else:
+                    # The supplier bills the common meter; what the tenants' meters don't cover is the owner's.
+                    entry.total = money(common)
+                    if entry.total != billed:
+                        owner.lines.append(Line(receipt, entry.total - billed, 'разница общего и счётчиков арендаторов'))
                 continue
-            consumption = sum((r.consumption for _, r in entry.readings), Decimal('0'))
-            entry.total = money(consumption * entry.tariff)
+            entry.total = money(sum((cost[0] for _, cost in costs), Decimal('0')))
         elif receipt.amount_mode == Receipt.AmountMode.FIXED:
             entry.total = receipt.fixed_amount
         else:
@@ -371,9 +527,10 @@ def month_bill(property_obj, month):
 def save_month_input(property_obj, month, data):
     """Store the monthly input posted from the object page.
 
-    Field names: amount-<receipt>, tariff-<receipt>, prev-<meter>, cur-<meter>, and
-    coef-<receipt> — the coefficient belongs to the receipt itself, not to the month.
-    Only posted fields change; an emptied field clears the stored value.
+    Field names: amount-<receipt>, prev-<meter>, cur-<meter> (and prevn-/curn- for the night
+    of day / night meters), and coef-<receipt> — the coefficient belongs to the receipt itself,
+    not to the month. The tariff is set only in the service window. Only posted fields change;
+    an emptied field clears the stored value.
     """
     for receipt in property_obj.receipts.prefetch_related('meters'):
         if f'coef-{receipt.pk}' in data:
@@ -383,20 +540,15 @@ def save_month_input(property_obj, month, data):
             if coefficient != receipt.coefficient:
                 receipt.coefficient = coefficient
                 receipt.save(update_fields=['coefficient'])
-        keys = (f'amount-{receipt.pk}', f'tariff-{receipt.pk}')
-        if any(key in data for key in keys):
+        if f'amount-{receipt.pk}' in data:
             row, _ = MonthlyAmount.objects.get_or_create(receipt=receipt, month=month)
-            if keys[0] in data:
-                row.amount = parse_decimal(data.get(keys[0]))
-            if keys[1] in data:
-                row.tariff = parse_decimal(data.get(keys[1]))
-            row.save()
+            row.amount = parse_decimal(data.get(f'amount-{receipt.pk}'))
+            row.save(update_fields=['amount'])
+        fields = {'prev': 'previous', 'cur': 'current', 'prevn': 'previous_night', 'curn': 'current_night'}
         for meter in receipt.meters.all():
-            keys = (f'prev-{meter.pk}', f'cur-{meter.pk}')
-            if any(key in data for key in keys):
+            posted = {name: f'{key}-{meter.pk}' for key, name in fields.items() if f'{key}-{meter.pk}' in data}
+            if posted:
                 reading, _ = Reading.objects.get_or_create(meter=meter, month=month)
-                if keys[0] in data:
-                    reading.previous = parse_decimal(data.get(keys[0]))
-                if keys[1] in data:
-                    reading.current = parse_decimal(data.get(keys[1]))
+                for name, key in posted.items():
+                    setattr(reading, name, parse_decimal(data.get(key)))
                 reading.save()

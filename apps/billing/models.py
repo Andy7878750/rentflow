@@ -41,9 +41,20 @@ class Receipt(models.Model):
     name = models.CharField('Название', max_length=100)
     provider = models.CharField('Кому платим', max_length=150, blank=True)
 
+    class Layout(models.TextChoices):
+        COMMON = 'common', 'Общий на объект'
+        TENANTS = 'tenants', 'У каждого свой'
+        BOTH = 'both', 'Общий + у каждого свой'
+
     metered = models.BooleanField('Есть счётчик', default=False)
     unit = models.CharField('Единица', max_length=10, blank=True)  # кВт·ч, м³ — for metered receipts
+    # Single-rate meters use `tariff`; day / night ones use `tariff` for the day and `tariff_night`.
+    zones = models.PositiveSmallIntegerField('Тарифы', default=1, choices=[(1, 'Однотарифный'), (2, 'День / ночь')])
     tariff = models.DecimalField('Тариф', max_digits=10, decimal_places=4, null=True, blank=True)
+    tariff_night = models.DecimalField('Тариф ночь', max_digits=10, decimal_places=4, null=True, blank=True)
+    # Which meters there are: one common, one per tenant, or a common one for the supplier plus
+    # the tenants' own (the difference stays with the owner for now).
+    layout = models.CharField('Какие счётчики', max_length=10, choices=Layout.choices, default=Layout.COMMON)
 
     split = models.CharField('Как делить', max_length=10, choices=Split.choices, default=Split.SHARES)
     amount_mode = models.CharField('Сумма', max_length=10, choices=AmountMode.choices, default=AmountMode.MONTHLY)
@@ -81,6 +92,9 @@ class Meter(models.Model):
     kind = models.CharField(max_length=20, choices=Receipt.Kind.choices, blank=True)  # what it measures
     name = models.CharField(max_length=100)
     serial = models.CharField('Номер счётчика', max_length=50, blank=True)
+    # What it showed when it was set up: «было» of its first month.
+    initial = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    initial_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
 
     class Meta:
         ordering = ['id']
@@ -95,7 +109,9 @@ class MonthlyAmount(models.Model):
     receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, related_name='monthly_amounts')
     month = models.DateField()  # always the 1st of the month
     amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    # The tariff a past month was billed at, kept when the service's tariff changes.
     tariff = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    tariff_night = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['receipt', 'month'], name='unique_amount_per_receipt_month')]
@@ -108,6 +124,9 @@ class Reading(models.Model):
     month = models.DateField()  # always the 1st of the month
     previous = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     current = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    # Day / night meters: the fields above are the day, these the night.
+    previous_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    current_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
 
     class Meta:
         ordering = ['month']
@@ -118,3 +137,9 @@ class Reading(models.Model):
         if self.previous is None or self.current is None:
             return None
         return self.current - self.previous
+
+    @builtins.property
+    def consumption_night(self):
+        if self.previous_night is None or self.current_night is None:
+            return None
+        return self.current_night - self.previous_night

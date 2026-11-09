@@ -54,13 +54,35 @@ class ReceiptServiceTests(TestCase):
             ['Виктор', 'Владислав'],
         )
 
-    def test_metered_but_split_by_shares_has_one_common_meter(self):
+    def test_common_meter_layout_has_one_common_meter(self):
         receipt = services.new_receipt(self.prop, 'water')
-        receipt.split = Receipt.Split.SHARES
+        receipt.layout = Receipt.Layout.COMMON
         services.save_receipt(receipt)
         meters = list(receipt.meters.all())
         self.assertEqual(len(meters), 1)
         self.assertIsNone(meters[0].tenant)
+        self.assertEqual(receipt.split, Receipt.Split.SHARES, 'a common meter is split like a sum')
+
+    def test_common_plus_own_meters(self):
+        receipt = services.new_receipt(self.prop, 'water')
+        receipt.layout = Receipt.Layout.BOTH
+        services.save_receipt(receipt)
+        self.assertEqual(sorted(receipt.meters.values_list('name', flat=True)), ['Виктор', 'Владислав', 'Общий счётчик'])
+        self.assertEqual(receipt.split, Receipt.Split.METERS)
+
+    def test_single_rate_drops_the_night_tariff(self):
+        receipt = services.new_receipt(self.prop, 'electricity')
+        receipt.tariff, receipt.tariff_night = Decimal('7'), Decimal('3')
+        services.save_receipt(receipt)
+        self.assertIsNone(receipt.tariff_night)
+
+    def test_meter_numbers_and_starting_readings(self):
+        receipt = services.new_receipt(self.prop, 'electricity')
+        services.save_receipt(receipt, meter_details={
+            self.viktor.pk: {'serial': '0123', 'initial': Decimal('1000'), 'initial_night': None},
+        })
+        meter = receipt.meters.get(tenant=self.viktor)
+        self.assertEqual((meter.serial, meter.initial), ('0123', Decimal('1000')))
 
     def test_unmetered_receipt_drops_meters_and_reading_split(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
@@ -106,9 +128,9 @@ class ReceiptServiceTests(TestCase):
         self.assertTrue(Meter.objects.filter(pk=shared.pk).exists(), 'still used by sewage')
         self.assertFalse(Meter.objects.filter(tenant=self.vlad, kind='water').exists(), 'unused meter goes away')
 
-    def test_unlinked_meter_goes_away_when_split_changes(self):
+    def test_unlinked_meter_goes_away_when_layout_changes(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
-        receipt.split = Receipt.Split.SHARES
+        receipt.layout = Receipt.Layout.COMMON
         services.save_receipt(receipt)
         self.assertEqual(list(self.prop.meters.values_list('tenant', flat=True)), [None])
 
@@ -156,7 +178,8 @@ class ReceiptViewTests(TestCase):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
         response = self.client.get(url, HTTP_X_MODAL='1')
         self.assertContains(response, 'value="Электричество"')
-        self.assertContains(response, 'name="split" value="meters" checked')
+        self.assertContains(response, 'name="layout" value="tenants" checked')
+        self.assertContains(response, 'data-pick-value="кВт·ч"')
 
     def test_create_in_modal(self):
         response = self.client.post(
@@ -175,21 +198,33 @@ class ReceiptViewTests(TestCase):
         self.assertContains(page, 'Интернет')
         self.assertContains(page, reverse('receipt_create', args=[self.prop.pk]))
 
-    def test_meter_switch_on_sends_both_values_and_the_last_wins(self):
-        # The switch is a hidden «0» plus a checkbox «1»: when it's on, both are posted.
-        response = self.client.post(
-            reverse('receipt_create', args=[self.prop.pk]),
-            {'kind': 'electricity', 'name': 'Свет', 'metered': ['0', '1'], 'unit': 'кВт·ч',
-             'split': 'shares', 'amount_mode': 'monthly'},
-            HTTP_X_MODAL='1',
-        )
-        self.assertEqual(response.status_code, 204)
-        self.assertTrue(self.prop.receipts.get().metered)
+    def test_metered_service_needs_tariff_and_night_tariff(self):
+        url = reverse('receipt_create', args=[self.prop.pk])
+        data = {'kind': 'electricity', 'name': 'Свет', 'metered': '1', 'zones': '2', 'unit': 'кВт·ч',
+                'layout': 'tenants', 'amount_mode': 'monthly', 'tariff': '7,20'}
+        response = self.client.post(url, data, HTTP_X_MODAL='1')
+        self.assertContains(response, 'Укажите ночной тариф')
+        self.assertFalse(self.prop.receipts.exists())
 
-    def test_meter_switch_is_rendered_on_for_a_metered_preset(self):
+        tenant = self.prop.tenants.get()
+        data.update({'tariff_night': '3,10', f'serial-t{tenant.pk}': '0123456', f'initial-t{tenant.pk}': '1 000',
+                     f'initialn-t{tenant.pk}': '400'})
+        response = self.client.post(url, data, HTTP_X_MODAL='1')
+        self.assertEqual(response.status_code, 204)
+        receipt = self.prop.receipts.get()
+        self.assertEqual((receipt.zones, receipt.tariff_night, receipt.split), (2, Decimal('3.1'), 'meters'))
+        meter = receipt.meters.get()
+        self.assertEqual((meter.serial, meter.initial, meter.initial_night), ('0123456', Decimal('1000'), Decimal('400')))
+
+        response = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
+        self.assertContains(response, 'data-state="locked"')
+        self.assertContains(response, 'value="0123456" maxlength="50"')
+
+    def test_meter_question_is_rendered_yes_for_a_metered_preset(self):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
         response = self.client.get(url, HTTP_X_MODAL='1')
-        self.assertContains(response, 'name="metered" value="1" class="switch-input" checked')
+        self.assertContains(response, 'name="metered" value="1" checked')
+        self.assertNotContains(response, 'name="split" value="meters"')
 
     def test_fixed_amount_is_required(self):
         response = self.client.post(

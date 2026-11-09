@@ -104,7 +104,7 @@
                   <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="fade">{{ receipt.name }}</a>
                   <span class="missing-dot" title="За месяц ещё не введено" aria-hidden="true"></span>
                   <span class="tag">{{ receipt.get_split_display|lower }}</span>
-                  {% if receipt.metered and receipt.split != 'meters' %}<span class="tag tag-muted">общий счётчик</span>{% endif %}
+                  {% if receipt.metered and receipt.layout == 'common' %}<span class="tag tag-muted">общий счётчик</span>{% elif receipt.metered and receipt.layout == 'both' %}<span class="tag tag-muted">общий + свои</span>{% endif %}
                 </div>
                 {% if receipt.provider %}<p class="receipt-meta fade">{{ receipt.provider }}</p>{% endif %}
               </div>
@@ -130,23 +130,34 @@
             </header>
 
             {% if receipt.metered %}
-              <div class="mreceipt-row">
-                <label for="tariff-{{ receipt.pk }}">Тариф, {{ receipt.currency_symbol }} за {{ receipt.unit }}</label>
-                <input type="text" inputmode="decimal" class="num-input" id="tariff-{{ receipt.pk }}" name="tariff-{{ receipt.pk }}"
-                       value="{{ entry.tariff|num }}" placeholder="0,00">
-              </div>
+              {# The tariff is set in the service window only; here it is just shown. #}
+              <p class="mreceipt-tariff">
+                {% if receipt.zones == 2 %}Тариф день {{ entry.tariff|num|default:'—' }} · ночь {{ entry.tariff_night|num|default:'—' }}&nbsp;{{ receipt.currency_symbol }} за {{ receipt.unit }}
+                {% else %}Тариф {{ entry.tariff|num|default:'—' }}&nbsp;{{ receipt.currency_symbol }} за {{ receipt.unit }}{% endif %}
+                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить тариф"><svg class="icon"><use href="#i-edit"/></svg></a>
+              </p>
               <table class="readings">
-                <thead><tr><th>{% if receipt.split == 'meters' %}Арендатор{% else %}Счётчик{% endif %}</th><th>Было</th><th>Стало</th><th>Расход</th></tr></thead>
+                <thead><tr><th>Счётчик</th><th>Было</th><th>Стало</th><th>Расход</th></tr></thead>
                 <tbody>
                   {% for meter, reading in entry.readings %}
                     <tr>
-                      <td>{{ meter.name }}</td>
+                      <td>{{ meter.name }}{% if receipt.zones == 2 %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
                       <td><input type="text" inputmode="decimal" class="num-input" name="prev-{{ meter.pk }}" aria-label="{{ meter.name }}: было"
                                  value="{{ reading.previous|num }}"></td>
                       <td><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}" aria-label="{{ meter.name }}: стало"
                                  value="{{ reading.current|num }}"></td>
                       <td class="consumption" id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ receipt.unit }}{% else %}—{% endif %}</td>
                     </tr>
+                    {% if receipt.zones == 2 %}
+                      <tr>
+                        <td>{{ meter.name }} · ночь</td>
+                        <td><input type="text" inputmode="decimal" class="num-input" name="prevn-{{ meter.pk }}" aria-label="{{ meter.name }}: было ночью"
+                                   value="{{ reading.previous_night|num }}"></td>
+                        <td><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}" aria-label="{{ meter.name }}: стало ночью"
+                                   value="{{ reading.current_night|num }}"></td>
+                        <td class="consumption" id="consn-{{ meter.pk }}" data-live>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ receipt.unit }}{% else %}—{% endif %}</td>
+                      </tr>
+                    {% endif %}
                   {% endfor %}
                 </tbody>
               </table>

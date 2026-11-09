@@ -28,7 +28,8 @@ def _receipt_form(request, property_obj, receipt):
     form = ReceiptForm(request.POST or None, instance=receipt)
     if request.method == 'POST' and form.is_valid():
         is_new = receipt.pk is None
-        services.save_receipt(form.save(commit=False))
+        details = services.parse_meter_details(property_obj, request.POST)
+        services.save_receipt(form.save(commit=False), meter_details=details)
         verb = 'добавлена' if is_new else 'сохранена'
         return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
 
@@ -41,9 +42,13 @@ def _receipt_form(request, property_obj, receipt):
         # New service: the templates on top of the same window; picking one refills the fields below.
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
         'tenants': property_obj.tenants.all(),
+        'meter_rows': services.meter_rows(receipt, request.POST if request.method == 'POST' else None),
+        'layout_choices': Receipt.Layout.choices,
+        # By readings is not a button any more: it follows from «У каждого свой».
         'split_choices': [
             choice for choice in Receipt.Split.choices
-            if not (property_obj.is_owner_used and choice[0] not in (Receipt.Split.METERS, Receipt.Split.OWNER))
+            if choice[0] != Receipt.Split.METERS
+            and not (property_obj.is_owner_used and choice[0] != Receipt.Split.OWNER)
         ],
     })
 

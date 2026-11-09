@@ -854,18 +854,120 @@
     root.querySelectorAll('[data-property-form]').forEach(initPropertyForm);
   }
 
-  // Receipt form: a meter usually means «split by readings»; no meter rules that option out.
+  // ---------- Service window ----------
+
+  // «Единица»: a small menu that writes into a hidden input.
+  function setPickOpen(pick, open) {
+    pick.classList.toggle('is-open', open);
+    pick.querySelector('[data-pick-menu]').hidden = !open;
+    pick.querySelector('[data-pick-trigger]').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  document.addEventListener('click', function (event) {
+    var current = event.target.closest && event.target.closest('[data-pick]');
+    document.querySelectorAll('[data-pick].is-open').forEach(function (pick) {
+      if (pick !== current) setPickOpen(pick, false);
+    });
+    if (!current) return;
+    if (event.target.closest('[data-pick-trigger]')) {
+      var open = !current.classList.contains('is-open');
+      setPickOpen(current, open);
+      if (open) (current.querySelector('.is-selected .select-option') || current.querySelector('.select-option')).focus();
+      return;
+    }
+    var row = event.target.closest('[data-pick-value]');
+    if (row) {
+      current.querySelector('input').value = row.dataset.pickValue;
+      current.querySelector('[data-pick-label]').textContent = row.dataset.pickValue;
+      current.querySelectorAll('[data-pick-value]').forEach(function (r) { r.classList.toggle('is-selected', r === row); });
+      setPickOpen(current, false);
+      current.querySelector('[data-pick-trigger]').focus();
+    }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    var pick = event.target.closest && event.target.closest('[data-pick].is-open');
+    if (!pick) return;
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      setPickOpen(pick, false);
+      pick.querySelector('[data-pick-trigger]').focus();
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      var options = Array.prototype.slice.call(pick.querySelectorAll('.select-option'));
+      var next = options[options.indexOf(document.activeElement) + (event.key === 'ArrowDown' ? 1 : -1)];
+      if (next) { event.preventDefault(); next.focus(); }
+    }
+  }, true);
+
+  // Meter number: «+ № счётчика» opens a field (green frame, ✓); typed and left or ✓ → saved
+  // (blue frame, ✎); ✎ opens it again; left empty → back to the chip.
+  function setSerialState(serial, state) {
+    var input = serial.querySelector('input');
+    if (state === 'locked' && !input.value.trim()) state = 'empty';
+    serial.dataset.state = state;
+    input.readOnly = state === 'locked';
+    serial.querySelector('[data-serial-toggle]').setAttribute('aria-label', state === 'locked' ? 'Изменить номер' : 'Готово');
+  }
+
+  function editSerial(serial) {
+    setSerialState(serial, 'edit');
+    var input = serial.querySelector('input');
+    input.focus();
+    input.select();
+  }
+
+  document.addEventListener('mousedown', function (event) {
+    // Keep the focus in the field, so «✓» doesn't first save it through blur and then reopen it.
+    if (event.target.closest && event.target.closest('[data-serial-toggle]')) event.preventDefault();
+  });
+
+  document.addEventListener('click', function (event) {
+    var add = event.target.closest && event.target.closest('[data-serial-add]');
+    if (add) { editSerial(add.closest('[data-serial]')); return; }
+    var toggle = event.target.closest && event.target.closest('[data-serial-toggle]');
+    if (!toggle) return;
+    var serial = toggle.closest('[data-serial]');
+    if (serial.dataset.state === 'locked') editSerial(serial);
+    else setSerialState(serial, 'locked');
+  });
+
+  // A click into a saved number counts as nothing; leaving a typed one saves it.
+  document.addEventListener('focusout', function (event) {
+    var serial = event.target.closest && event.target.closest('[data-serial]');
+    if (serial && event.target.matches('input') && serial.dataset.state === 'edit') setSerialState(serial, 'locked');
+  });
+
+  // «Как делим» shows up (no meter, or one common meter) with nothing picked → «По долям».
   document.addEventListener('change', function (event) {
     var input = event.target;
-    if (!input.matches || !input.matches('.rform input[type=checkbox][name=metered]')) return;
+    if (!input.matches || !input.matches('.rform input[name=metered], .rform input[name=layout]')) return;
     var form = input.form;
-    var meters = form.querySelector('input[name=split][value=meters]');
-    var fallback = form.querySelector('input[name=split][value=shares]') || form.querySelector('input[name=split][value=owner]');
-    if (input.checked && meters) {
-      meters.checked = true;
-    } else if (!input.checked && meters && meters.checked && fallback) {
-      fallback.checked = true;
-    }
+    if (form.querySelector('input[name=split]:checked')) return;
+    var first = form.querySelector('input[name=split]');
+    if (first) first.checked = true;
+  });
+
+  // The unit picked for the service shows next to its price.
+  document.addEventListener('click', function (event) {
+    var row = event.target.closest && event.target.closest('.rform [data-pick-value]');
+    if (!row) return;
+    row.closest('form').querySelectorAll('[data-unit-text]').forEach(function (el) { el.textContent = row.dataset.pickValue; });
+  });
+
+  // Enter in the service window moves to the next field (a number gets locked on the way).
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter' || event.defaultPrevented) return;
+    var target = event.target;
+    var form = target.closest && target.closest('form.rform');
+    if (!form || !target.matches('input[type=text], input:not([type])')) return;
+    event.preventDefault();
+    if (event.ctrlKey || event.metaKey) { form.requestSubmit(); return; }
+    var fields = Array.prototype.filter.call(
+      form.querySelectorAll('input[type=text]:not([readonly]), [type=submit]'),
+      function (el) { return !el.disabled && el.offsetParent !== null; }
+    );
+    var index = fields.indexOf(target);
+    if (index >= 0 && fields[index + 1]) fields[index + 1].focus();
   });
 
   // Names that don't fit fade out at the end (.fade.is-clipped); the full name shows on hover.

@@ -119,15 +119,69 @@ class MonthBillTests(TestCase):
         self.assertEqual(reading.previous, Decimal('13'))
         self.assertIsNone(reading.current)
 
-    def test_monthly_tariff_overrides_setup(self):
-        receipt = self.add('water', split=Receipt.Split.SHARES, tariff=Decimal('300'))
+    def test_common_meter_is_split_by_shares(self):
+        receipt = self.add('water', layout=Receipt.Layout.COMMON, tariff=Decimal('310'))
         meter = receipt.meters.get()
-        services.save_month_input(self.prop, SEPT, {
-            f'tariff-{receipt.pk}': '310', f'prev-{meter.pk}': '0', f'cur-{meter.pk}': '10',
-        })
+        services.save_month_input(self.prop, SEPT, {f'prev-{meter.pk}': '0', f'cur-{meter.pk}': '10'})
         bill = services.month_bill(self.prop, SEPT)
         self.assertEqual(bill.entries[0].total, Decimal('3100.00'))
         self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('1395.00'))
+
+    def test_tariff_is_not_taken_from_the_object_page(self):
+        receipt = self.add('water', layout=Receipt.Layout.COMMON, tariff=Decimal('300'))
+        services.save_month_input(self.prop, SEPT, {f'tariff-{receipt.pk}': '999'})
+        self.assertEqual(services.month_bill(self.prop, SEPT).entries[0].tariff, Decimal('300'))
+
+    def test_new_tariff_applies_from_this_month_past_months_keep_the_old(self):
+        receipt = self.add('water', layout=Receipt.Layout.COMMON, tariff=Decimal('300'))
+        meter = receipt.meters.get()
+        services.save_month_input(self.prop, AUG, {f'prev-{meter.pk}': '0', f'cur-{meter.pk}': '10'})
+        services.save_month_input(self.prop, SEPT, {f'cur-{meter.pk}': '20'})
+
+        receipt.tariff = Decimal('400')
+        services.save_receipt(receipt, today=datetime.date(2026, 9, 15))
+
+        self.assertEqual(services.month_bill(self.prop, AUG).entries[0].total, Decimal('3000.00'))
+        self.assertEqual(services.month_bill(self.prop, SEPT).entries[0].total, Decimal('4000.00'))
+
+    def test_day_night_meter(self):
+        receipt = self.add('electricity', zones=2, tariff=Decimal('7'), tariff_night=Decimal('3'))
+        meter = receipt.meters.get(tenant=self.viktor)
+        other = receipt.meters.get(tenant=self.vlad)
+        services.save_month_input(self.prop, SEPT, {
+            f'prev-{meter.pk}': '100', f'cur-{meter.pk}': '110', f'prevn-{meter.pk}': '50', f'curn-{meter.pk}': '70',
+            f'prev-{other.pk}': '0', f'cur-{other.pk}': '1',
+        })
+        self.assertEqual(services.month_bill(self.prop, SEPT).missing, [receipt], 'night reading still missing')
+
+        services.save_month_input(self.prop, SEPT, {f'prevn-{other.pk}': '0', f'curn-{other.pk}': '1'})
+        bill = services.month_bill(self.prop, SEPT)
+        line = self.line(bill, self.viktor, receipt)
+        self.assertEqual(line.amount, Decimal('130.00'))
+        self.assertEqual(line.formula, 'день 10 кВт·ч × 7\xa0₽ + ночь 20 кВт·ч × 3\xa0₽')
+
+    def test_starting_reading_is_the_first_previous(self):
+        receipt = self.add('water', tariff=Decimal('300'))
+        meter = receipt.meters.get(tenant=self.viktor)
+        meter.initial = Decimal('42')
+        meter.save()
+        reading = dict((m.pk, r) for m, r in services.month_bill(self.prop, SEPT).entries[0].readings)[meter.pk]
+        self.assertEqual(reading.previous, Decimal('42'))
+
+    def test_common_plus_own_meters_difference_stays_with_owner(self):
+        receipt = self.add('water', layout=Receipt.Layout.BOTH, tariff=Decimal('100'))
+        common = receipt.meters.get(tenant=None)
+        viktor_meter = receipt.meters.get(tenant=self.viktor)
+        vlad_meter = receipt.meters.get(tenant=self.vlad)
+        services.save_month_input(self.prop, SEPT, {
+            f'prev-{common.pk}': '0', f'cur-{common.pk}': '10',
+            f'prev-{viktor_meter.pk}': '0', f'cur-{viktor_meter.pk}': '4',
+            f'prev-{vlad_meter.pk}': '0', f'cur-{vlad_meter.pk}': '5',
+        })
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(bill.entries[0].total, Decimal('1000.00'))
+        self.assertEqual(bill.to_invoice, Decimal('900.00'))
+        self.assertEqual(bill.owner.total, Decimal('100.00'))
 
     def test_months_are_separate(self):
         receipt = self.add('management')

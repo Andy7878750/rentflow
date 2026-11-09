@@ -341,10 +341,6 @@
   font-size: 13px;
 }
 
-.rform .fixed-only {
-  margin-top: 12px;
-}
-
 /* A yes/no question: the question on the left, a switch on the right; the whole row is clickable. */
 .rform-toggle {
   display: flex;
@@ -370,23 +366,375 @@
   margin-top: 4px;
 }
 
+/* «Как считаем»: a list of questions — the question on the left, the answer on the right. */
+.calc-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.calc-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.calc-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.calc-label {
+  padding-top: 11px; /* the middle of a 42px control */
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.calc-ctrl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.calc-hint,
+.calc-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.calc-error {
+  color: var(--color-danger);
+}
+
+/* Switch: a grey track, the chosen answer is a white raised button. */
+.seg-track {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+}
+
+.seg-track label {
+  cursor: pointer;
+}
+
+.seg-track input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seg-track span {
+  display: block;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 7px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 34px;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.seg-track label:hover span {
+  color: var(--color-text);
+}
+
+.seg-track input:checked + span {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+.seg-track input:focus-visible + span {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* A compact inline field: words before / after the number sit inside the frame. */
+.ifield {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  cursor: text;
+}
+
+.ifield:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.ifield.has-error {
+  border-color: var(--color-danger);
+}
+
+.ifield input {
+  width: 84px;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: right;
+}
+
+.ifield input:focus {
+  outline: none;
+}
+
+.ifield input::placeholder {
+  color: #b1b8bf;
+}
+
+.ifield-fix {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* «Единица»: same height and frame as the switch track. */
+.pick {
+  position: relative;
+}
+
+.pick-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pick-trigger .select-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+}
+
+.pick-trigger:focus-visible,
+.pick.is-open .pick-trigger {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.pick.has-error .pick-trigger {
+  border-color: var(--color-danger);
+}
+
+.pick.is-open .select-chevron {
+  transform: rotate(180deg);
+}
+
+.pick-menu {
+  right: auto;
+  min-width: 140px;
+}
+
+/* Meters: a quiet list — who, the number (a chip until typed), the reading at the start. */
+.meter-list {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.meter-list-head {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.meter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.meter-item-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 220px;
+  font-size: 14px;
+}
+
+.meter-item-start {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.ifield-num input {
+  width: 72px;
+}
+
+.serial-add {
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 13px;
+  background: var(--color-info-soft);
+  color: var(--color-info);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.serial-add:hover {
+  background: #d6e8f6;
+}
+
+/* The number: green frame and ✓ while typing, blue frame and ✎ once saved. */
+.serial-field {
+  height: 34px;
+  padding: 0 0 0 10px;
+  border-color: var(--color-accent);
+  overflow: hidden;
+}
+
+.serial-field input {
+  width: 120px;
+  text-align: left;
+}
+
+.serial[data-state=empty] .serial-field,
+.serial:not([data-state=empty]) .serial-add {
+  display: none;
+}
+
+.serial[data-state=locked] .serial-field {
+  border-color: var(--color-info);
+  background: var(--color-info-soft);
+  box-shadow: none;
+  cursor: default;
+}
+
+.serial[data-state=locked] .serial-field input {
+  color: var(--color-primary);
+  cursor: default;
+}
+
+.serial-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 34px;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.serial-toggle .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.serial-toggle:hover {
+  background: var(--color-accent-soft);
+}
+
+.serial[data-state=locked] .serial-toggle {
+  border-left-color: #c9dff0;
+  color: var(--color-info);
+}
+
+.serial[data-state=locked] .serial-toggle:hover {
+  background: #d6e8f6;
+}
+
+.serial-toggle .icon-edit,
+.serial[data-state=locked] .serial-toggle .icon-done {
+  display: none;
+}
+
+.serial[data-state=locked] .serial-toggle .icon-edit {
+  display: block;
+}
+
 /* Show only what applies to the current choices (no JS needed). */
 .rform .split-hint,
 .rform .amount-hint,
-.rform:not(:has(input[name=metered]:checked)) .metered-only,
-.rform:has(input[name=metered]:checked) .unmetered-only,
-.rform:not(:has(input[name=amount_mode][value=fixed]:checked)) .fixed-only {
+.rform .layout-hint,
+.rform:not(:has(input[name=metered][value="1"]:checked)) .metered-only,
+.rform:has(input[name=metered][value="1"]:checked) .unmetered-only,
+.rform:not(:has(input[name=amount_mode][value=fixed]:checked)) .fixed-only,
+.rform:has(input[name=zones][value="2"]:checked) .zones1-only,
+.rform:not(:has(input[name=zones][value="2"]:checked)) .zones2-only,
+.rform:has(input[name=layout][value=common]:checked) .meter-item:not([data-layouts~=common]),
+.rform:has(input[name=layout][value=tenants]:checked) .meter-item:not([data-layouts~=tenants]),
+.rform:has(input[name=layout][value=both]:checked) .meter-item:not([data-layouts~=both]),
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .split-section,
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .split-section {
   display: none;
 }
 
 .rform:has(input[name=split][value=shares]:checked) .split-hint[data-for=shares],
 .rform:has(input[name=split][value=equal]:checked) .split-hint[data-for=equal],
 .rform:has(input[name=split][value=area]:checked) .split-hint[data-for=area],
-.rform:has(input[name=split][value=meters]:checked) .split-hint[data-for=meters],
 .rform:has(input[name=split][value=owner]:checked) .split-hint[data-for=owner],
 .rform:has(input[name=amount_mode][value=monthly]:checked) .amount-hint[data-for=monthly],
-.rform:has(input[name=amount_mode][value=fixed]:checked) .amount-hint[data-for=fixed] {
+.rform:has(input[name=amount_mode][value=fixed]:checked) .amount-hint[data-for=fixed],
+.rform:has(input[name=layout][value=common]:checked) .layout-hint[data-for=common],
+.rform:has(input[name=layout][value=tenants]:checked) .layout-hint[data-for=tenants],
+.rform:has(input[name=layout][value=both]:checked) .layout-hint[data-for=both] {
   display: block;
+}
+
+@media (max-width: 640px) {
+  .calc-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .calc-label {
+    padding-top: 0;
+  }
+
+  .meter-item {
+    flex-wrap: wrap;
+  }
+
+  .meter-item-start {
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 520px) {
@@ -632,7 +980,8 @@
   font-size: 13px;
 }
 
-.mreceipt-fixed {
+.mreceipt-fixed,
+.mreceipt-tariff {
   margin: 14px 0 0;
   color: var(--color-text-muted);
   font-size: 14px;
@@ -874,8 +1223,15 @@
 }
 
 .mreceipt-row,
-.mreceipt-fixed {
+.mreceipt-fixed,
+.mreceipt-tariff {
   margin-left: var(--mreceipt-indent);
+}
+
+.meter-serial {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
 .mreceipt .readings {
