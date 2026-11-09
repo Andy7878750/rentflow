@@ -330,11 +330,10 @@ input.masked {
 
 /* ---------- Sections and grids ---------- */
 
-/* One style for every window: a block is a small caption over its fields, blocks are set apart
-   by space alone. No frames or lines around blocks — frames are for tiles and what you type into. */
 .form-section {
-  margin: 0;
-  padding: 0 0 28px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
 }
 
 .form-section-head {
@@ -343,9 +342,13 @@ input.masked {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 0 0 14px;
-  padding: 0;
-  color: var(--color-text-muted);
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 12px 12px 0 0;
+  background: var(--color-bg);
+  color: var(--color-primary);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -364,7 +367,7 @@ input.masked {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0;
+  padding: 16px;
 }
 
 .form-grid {
@@ -1058,7 +1061,9 @@ input.masked {
 }
 
 .tenant-add-row {
-  margin-top: 16px;
+  margin: 16px -16px -16px;
+  padding: 16px;
+  border-top: 1px solid var(--color-border);
 }
 
 .btn-dashed {
@@ -1398,6 +1403,18 @@ input.masked {
     grid-column: 1 / -1;
   }
 
+  .form-section-head {
+    padding: 10px 12px;
+  }
+
+  .form-section-body {
+    padding: 12px;
+  }
+
+  .tenant-add-row {
+    margin: 16px -12px -12px;
+    padding: 12px;
+  }
 
   .tenant-line-main {
     grid-template-columns: minmax(0, 1fr) 36px;

@@ -22,7 +22,7 @@
           <a href="{% url 'receipt_create' property.pk %}?kind={{ tile.kind }}" data-modal
              class="kind-tile{% if tile.selected %} is-selected{% endif %}"{% if tile.selected %} aria-current="true"{% endif %}
              {% if tile.added %}title="Уже есть у объекта — можно добавить ещё одну"{% endif %}>
-            {% if tile.added %}<span class="kind-tile-mark" aria-label="уже есть"></span>{% endif %}
+            {% if tile.added %}<span class="kind-tile-mark" aria-label="уже есть"><svg class="icon"><use href="#i-check"/></svg></span>{% endif %}
             <svg class="icon"><use href="#i-r-{{ tile.kind }}"/></svg>
             <span>{{ tile.label }}</span>
           </a>
