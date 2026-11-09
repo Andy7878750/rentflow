@@ -60,12 +60,10 @@
           <span class="payer-share">{{ bill.owner.total|floatformat:"2g" }}&nbsp;₽</span>
         </a>
       {% endif %}
-      <p class="payer-note">
-        {% if property.is_owner_used %}Пользуется собственник
-        {% elif not bill.payers %}Арендаторов пока нет
-        {% elif free_percent %}Свободно {{ free_percent|floatformat:"-2" }}% — эта часть остаётся на вас
-        {% else %}Объект сдан полностью{% endif %}
-      </p>
+      {# Fully let objects need no note; only what is not let is worth a word. #}
+      {% if property.is_owner_used %}<p class="payer-note">Пользуется собственник</p>
+      {% elif not bill.payers %}<p class="payer-note">Арендаторов пока нет</p>
+      {% elif free_percent %}<p class="payer-note">Свободно {{ free_percent|floatformat:"-2" }}%</p>{% endif %}
     </nav>
   </aside>
 
