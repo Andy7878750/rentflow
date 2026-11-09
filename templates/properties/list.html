@@ -64,26 +64,29 @@
           </div>
         {% endif %}
 
-        {% include "properties/_tenants.html" %}
-
-        {# Only the two links act in this row: a click beside them doesn't open the object page. #}
-        <div class="card-links" data-card-skip>
-          {% if not property.is_owner_used %}
-            <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
-               title="{% if property.tenants.all %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
-              <svg class="icon"><use href="{% if property.tenants.all %}#i-edit{% else %}#i-plus{% endif %}"/></svg>Арендаторы
-            </a>
-          {% endif %}
+        {# Under the numbers: the services link, left, in the accent. A click beside it doesn't open the object page. #}
+        <div class="card-links card-links-under" data-card-skip>
           {% if property.receipts.all %}
-            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link setup-link-end" title="Изменить услуги">
+            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link" title="Изменить услуги">
               <svg class="icon"><use href="#i-edit"/></svg>Услуги
             </a>
           {% else %}
-            <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link setup-link-end" title="Добавить услугу">
+            <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link" title="Добавить услугу">
               <svg class="icon"><use href="#i-plus"/></svg>Услуги
             </a>
           {% endif %}
         </div>
+
+        {% include "properties/_tenants.html" %}
+
+        {% if not property.is_owner_used %}
+          <div class="card-links card-links-under card-links-last" data-card-skip>
+            <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
+               title="{% if property.tenants.all %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
+              <svg class="icon"><use href="{% if property.tenants.all %}#i-edit{% else %}#i-plus{% endif %}"/></svg>Арендаторы
+            </a>
+          </div>
+        {% endif %}
       </article>
     {% endfor %}
   </section>

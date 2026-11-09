@@ -764,12 +764,12 @@
   border-color: var(--color-primary-light);
 }
 
-/* «Изменить арендаторов», «Добавить услугу»…: an ordinary link, not a call to action. */
+/* «✎ Услуги», «✎ Арендаторы»: a quiet link in the accent colour, not a bold call to action. */
 .setup-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-primary-light);
+  color: var(--color-accent);
   font-size: 14px;
   font-weight: 400;
   text-decoration: none;
@@ -781,7 +781,7 @@
 }
 
 .setup-link:hover {
-  color: var(--color-primary);
+  color: var(--color-accent-hover);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -830,7 +830,7 @@
   border-top: 0;
 }
 
-/* «✎ Арендаторы» on the left, «✎ Услуги» on the right. */
+/* A row of links: «✎ Арендаторы» on the object page. */
 .card-links {
   display: flex;
   gap: 16px;
@@ -844,8 +844,31 @@
   padding-top: 6px;
 }
 
-.setup-link-end {
-  margin-left: auto;
+/* Object card: each link sits on the left right under its block — «✎ Услуги» under the numbers,
+   «✎ Арендаторы» under the tenants. The block's line moves below its link. */
+.property-card .stat-cols,
+.property-card .property-setup {
+  padding-bottom: 8px;
+  border-bottom: 0;
+}
+
+.card-links-under {
+  padding: 0 20px 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-links-under + .property-tenants {
+  border-top: 0;
+}
+
+.card-links-last {
+  border-bottom: 0;
+}
+
+.property-card .property-tenants + .card-links-last,
+.property-card .property-tenants-empty + .card-links-last {
+  margin-top: -6px;
 }
 
 /* A name that doesn't fit its line fades out on the last letters (app.js adds .is-clipped). */

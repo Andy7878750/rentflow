@@ -95,12 +95,12 @@ class SetupStepsTests(TestCase):
         prop = Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)
         self.client.force_login(self.user)
         response = self.client.get(reverse('property_list'))
-        self.assertContains(response, f'href="{reverse("receipt_create", args=[prop.pk])}" data-modal class="setup-link setup-link-end"')
+        self.assertContains(response, f'href="{reverse("receipt_create", args=[prop.pk])}" data-modal class="setup-link"')
         prop.receipts.create(name='Свет')
         response = self.client.get(reverse('property_list'))
         self.assertContains(response, '<span class="stat-num">1</span><span class="stat-cap">услуги</span>')
         self.assertContains(response, '<span class="stat-cap">начисления</span>')
-        self.assertContains(response, f'href="{reverse("property_detail", args=[prop.pk])}#receipts" class="setup-link setup-link-end"')
+        self.assertContains(response, f'href="{reverse("property_detail", args=[prop.pk])}#receipts" class="setup-link"')
         self.assertContains(response, 'title="Изменить услуги"')
 
     def test_owner_used_card_has_no_tenant_link(self):
