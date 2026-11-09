@@ -687,6 +687,7 @@
   border-radius: 6px;
   color: var(--color-text);
   font-size: 14px;
+  white-space: nowrap;
   text-decoration: none;
 }
 
@@ -809,16 +810,13 @@
 
 .stat-num {
   overflow: hidden;
-  color: var(--color-primary);
+  color: var(--color-text);
   font-size: 17px;
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.stat-num-accent {
-  color: var(--color-accent);
-}
 
 .stat-cap {
   color: var(--color-text-muted);
@@ -838,7 +836,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 20px 0;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;

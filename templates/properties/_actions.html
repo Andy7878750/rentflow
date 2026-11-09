@@ -9,6 +9,12 @@
     <a href="{% url 'property_edit' property.pk %}" data-modal class="dropdown-item" role="menuitem">
       <svg class="icon"><use href="#i-edit"/></svg>Изменить
     </a>
+    {% if not property.is_owner_used %}
+      {# Same window as «Арендаторы ✎ изменить»: a new row is added there. #}
+      <a href="{% url 'property_tenants' property.pk %}" data-modal class="dropdown-item dropdown-item-add" role="menuitem">
+        <svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора
+      </a>
+    {% endif %}
     <a href="{% url 'receipt_create' property.pk %}" data-modal class="dropdown-item dropdown-item-add" role="menuitem">
       <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
     </a>

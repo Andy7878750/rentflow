@@ -38,7 +38,7 @@
     <div class="stat-cols" id="obj-stats" data-live>
       <div><span class="stat-num">{{ bill.entries|length }}</span><span class="stat-cap">услуги</span></div>
       <div><span class="stat-num">{{ bill.readings_done }} из {{ bill.readings_total }}</span><span class="stat-cap">показания</span></div>
-      <div><span class="stat-num stat-num-accent">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span><span class="stat-cap">начисления</span></div>
+      <div><span class="stat-num">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span><span class="stat-cap">начисления</span></div>
     </div>
 
     {% if not property.is_owner_used %}
