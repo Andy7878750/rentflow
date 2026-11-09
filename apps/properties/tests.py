@@ -88,8 +88,8 @@ class SetupStepsTests(TestCase):
         Tenant.objects.create(property=prop, name='Виктор', share_percent=Decimal('45'))
         self.client.force_login(self.user)
         response = self.client.get(reverse('property_list'))
-        self.assertContains(response, 'Изменить арендаторов')
-        self.assertNotContains(response, 'Добавить арендатора')
+        self.assertContains(response, 'title="Изменить арендаторов"')
+        self.assertNotContains(response, 'title="Добавить арендатора"')
 
     def test_card_summary_names_and_services_link(self):
         prop = Property.objects.create(owner=self.user, name='Дача', occupancy=Property.Occupancy.OWNER)
