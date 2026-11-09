@@ -21,14 +21,10 @@
 
     {% include "properties/_contacts.html" %}
 
-    {# Same captions as on the object card: «УСЛУГИ ✎ изменить», «АРЕНДАТОРЫ ✎ изменить». #}
+    {# Captions as on the card; services are edited in the middle column, so only «добавить» while there are none. #}
     <div class="card-block-head">
       <span>Услуги</span>
-      {% if bill.entries %}
-        <a href="#receipts" class="setup-link" title="Изменить услуги">
-          <svg class="icon"><use href="#i-edit"/></svg>изменить
-        </a>
-      {% else %}
+      {% if not bill.entries %}
         <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link" title="Добавить услугу">
           <svg class="icon"><use href="#i-plus"/></svg>добавить
         </a>
