@@ -21,11 +21,35 @@
 
     {% include "properties/_contacts.html" %}
 
+    {# Same captions as on the object card: «УСЛУГИ ✎ изменить», «АРЕНДАТОРЫ ✎ изменить». #}
+    <div class="card-block-head">
+      <span>Услуги</span>
+      {% if bill.entries %}
+        <a href="#receipts" class="setup-link" title="Изменить услуги">
+          <svg class="icon"><use href="#i-edit"/></svg>изменить
+        </a>
+      {% else %}
+        <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link" title="Добавить услугу">
+          <svg class="icon"><use href="#i-plus"/></svg>добавить
+        </a>
+      {% endif %}
+    </div>
+
     <div class="stat-cols" id="obj-stats" data-live>
       <div><span class="stat-num">{{ bill.entries|length }}</span><span class="stat-cap">услуги</span></div>
       <div><span class="stat-num">{{ bill.readings_done }} из {{ bill.readings_total }}</span><span class="stat-cap">показания</span></div>
       <div><span class="stat-num stat-num-accent">{{ bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span><span class="stat-cap">начисления</span></div>
     </div>
+
+    {% if not property.is_owner_used %}
+      <div class="card-block-head">
+        <span>Арендаторы</span>
+        <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
+           title="{% if bill.payers %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
+          {% if bill.payers %}<svg class="icon"><use href="#i-edit"/></svg>изменить{% else %}<svg class="icon"><use href="#i-plus"/></svg>добавить{% endif %}
+        </a>
+      </div>
+    {% endif %}
 
     <nav class="payer-list" id="obj-payers" data-live aria-label="Чей счёт показать">
       {% for payer in bill.payers %}
@@ -46,14 +70,6 @@
         {% elif free_percent %}Свободно {{ free_percent|floatformat:"-2" }}% — эта часть остаётся на вас
         {% else %}Объект сдан полностью{% endif %}
       </p>
-      {% if not property.is_owner_used %}
-        <div class="card-links card-links-flat">
-          <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
-             title="{% if bill.payers %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
-            <svg class="icon"><use href="{% if bill.payers %}#i-edit{% else %}#i-plus{% endif %}"/></svg>Арендаторы
-          </a>
-        </div>
-      {% endif %}
     </nav>
   </aside>
 
