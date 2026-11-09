@@ -98,7 +98,8 @@ def sync_meters(receipt):
 
     Split by readings → one meter per tenant (each has their own). Metered but split
     another way, or the owner uses the object → one common meter. Not metered → none.
-    Existing meters are kept where possible, so their history survives an edit.
+    Meters belong to the object; the receipt only links to them. Existing ones are kept
+    where possible, so their history survives an edit.
     """
     tenants = [] if receipt.property.is_owner_used else list(receipt.property.tenants.all())
     if not receipt.metered:
@@ -111,14 +112,32 @@ def sync_meters(receipt):
     existing = {meter.tenant_id: meter for meter in receipt.meters.all()}
     for tenant_id, meter in existing.items():
         if tenant_id not in wanted:
-            meter.delete()
+            receipt.meters.remove(meter)
+            drop_if_unused(meter)
     for tenant_id, name in wanted.items():
         meter = existing.get(tenant_id)
         if meter is None:
-            Meter.objects.create(receipt=receipt, tenant_id=tenant_id, name=name)
+            meter = Meter.objects.create(
+                property=receipt.property, tenant_id=tenant_id, kind=receipt.kind, name=name,
+            )
+            receipt.meters.add(meter)
         elif meter.name != name:
             meter.name = name
             meter.save(update_fields=['name'])
+
+
+def drop_if_unused(meter):
+    """A meter no service uses any more goes away with its readings (as before the move to the object)."""
+    if not meter.receipts.exists():
+        meter.delete()
+
+
+@transaction.atomic
+def delete_receipt(receipt):
+    meters = list(receipt.meters.all())
+    receipt.delete()
+    for meter in meters:
+        drop_if_unused(meter)
 
 
 @transaction.atomic

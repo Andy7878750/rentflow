@@ -89,6 +89,29 @@ class ReceiptServiceTests(TestCase):
         self.assertEqual(sorted(receipt.meters.values_list('name', flat=True)), ['Виктор', 'Ольга'])
         self.assertTrue(Meter.objects.filter(pk=kept_meter.pk).exists(), 'existing meter keeps its history')
 
+    def test_meters_belong_to_the_object(self):
+        receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
+        self.assertEqual(self.prop.meters.count(), 2)
+        meter = self.prop.meters.get(tenant=self.viktor)
+        self.assertEqual(meter.kind, 'electricity')
+        self.assertEqual(list(meter.receipts.all()), [receipt])
+
+    def test_a_meter_can_serve_two_services(self):
+        water = services.save_receipt(services.new_receipt(self.prop, 'water'))
+        sewage = services.save_receipt(services.new_receipt(self.prop, 'sewage'))
+        shared = water.meters.get(tenant=self.viktor)
+        sewage.meters.add(shared)
+
+        services.delete_receipt(water)
+        self.assertTrue(Meter.objects.filter(pk=shared.pk).exists(), 'still used by sewage')
+        self.assertFalse(Meter.objects.filter(tenant=self.vlad, kind='water').exists(), 'unused meter goes away')
+
+    def test_unlinked_meter_goes_away_when_split_changes(self):
+        receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
+        receipt.split = Receipt.Split.SHARES
+        services.save_receipt(receipt)
+        self.assertEqual(list(self.prop.meters.values_list('tenant', flat=True)), [None])
+
     def test_owner_used_object(self):
         self.prop.occupancy = Property.Occupancy.OWNER
         self.prop.save()

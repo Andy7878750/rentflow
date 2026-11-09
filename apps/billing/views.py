@@ -70,7 +70,7 @@ def receipt_edit(request, pk):
 def receipt_delete(request, pk):
     receipt = _own_receipt(request, pk)
     if request.method == 'POST':
-        receipt.delete()
+        services.delete_receipt(receipt)
         return _done(request, receipt.property, f'Услуга «{receipt.name}» удалена.')
     template = 'billing/_receipt_delete.html' if request.headers.get('X-Modal') else 'billing/receipt_delete.html'
     return render(request, template, {'receipt': receipt, 'property': receipt.property})

@@ -49,6 +49,9 @@ class Receipt(models.Model):
     amount_mode = models.CharField('Сумма', max_length=10, choices=AmountMode.choices, default=AmountMode.MONTHLY)
     fixed_amount = models.DecimalField('Сумма в месяц', max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, default=settings.CURRENCY)
+    # The object's meters whose readings drive this service. One meter can serve several services
+    # (cold water and sewage, say).
+    meters = models.ManyToManyField('Meter', related_name='receipts', blank=True)
     # Multiplies what tenants are billed: VAT (1,2) or the landlord's own markup. The owner's
     # remainder is counted without it.
     coefficient = models.DecimalField('Коэффициент', max_digits=6, decimal_places=4, default=1)
@@ -67,11 +70,17 @@ class Receipt(models.Model):
 
 
 class Meter(models.Model):
-    """A meter whose readings drive a receipt: one per tenant, or one common meter (tenant is empty)."""
+    """A real meter on the object: a tenant's own one, or a common one (tenant is empty).
 
-    receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, related_name='meters')
+    It belongs to the object, not to a service: services link to it (Receipt.meters), so the
+    same meter can drive several of them and keeps its readings when a service changes.
+    """
+
+    property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='meters')
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True, related_name='meters')
+    kind = models.CharField(max_length=20, choices=Receipt.Kind.choices, blank=True)  # what it measures
     name = models.CharField(max_length=100)
+    serial = models.CharField('Номер счётчика', max_length=50, blank=True)
 
     class Meta:
         ordering = ['id']
