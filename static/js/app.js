@@ -1102,5 +1102,52 @@
     });
   }
 
+  // «Формула» of the service window: the server recounts it from the form as it is now.
+  var formulaTimer = null;
+  var formulaRequest = 0;
+
+  function refreshFormula(form) {
+    var block = form.querySelector('[data-formula]');
+    if (!block) return;
+    var ticket = ++formulaRequest;
+    fetch(block.dataset.formulaUrl, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'X-CSRFToken': csrfToken(form) },
+      credentials: 'same-origin',
+    })
+      .then(function (response) { return response.ok ? response.text() : null; })
+      .then(function (html) {
+        // Only the latest answer counts; an older one may arrive after it.
+        if (html === null || ticket !== formulaRequest) return;
+        var current = form.querySelector('[data-formula]');
+        if (current) current.outerHTML = html;
+      })
+      .catch(function () {});
+  }
+
+  function formulaSoon(form, delay) {
+    clearTimeout(formulaTimer);
+    formulaTimer = setTimeout(function () { refreshFormula(form); }, delay);
+  }
+
+  ['input', 'change'].forEach(function (type) {
+    document.addEventListener(type, function (event) {
+      var form = event.target.closest && event.target.closest('form.rform');
+      if (form && !event.target.closest('[data-formula]')) formulaSoon(form, type === 'input' ? 300 : 0);
+    });
+  });
+
+  document.addEventListener('click', function (event) {
+    // The unit picker writes a hidden input: no change event, so recount by hand.
+    var unit = event.target.closest && event.target.closest('.rform [data-pick-value]');
+    if (unit) { formulaSoon(unit.closest('form'), 0); return; }
+    var who = event.target.closest && event.target.closest('[data-formula-for]');
+    if (!who) return;
+    var form = who.closest('form');
+    form.querySelector('input[name=formula_for]').value = who.dataset.formulaFor;
+    formulaSoon(form, 0);
+  });
+
   initForms(document);
 })();

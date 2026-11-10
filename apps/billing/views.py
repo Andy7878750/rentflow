@@ -24,6 +24,14 @@ def _done(request, property_obj, message):
     return redirect(url)
 
 
+def _preview(form, receipt):
+    """The receipt as the form describes it now, unsaved — for «Формула»."""
+    if form.is_bound:
+        form.is_valid()
+        return form.instance
+    return receipt
+
+
 def _receipt_form(request, property_obj, receipt):
     form = ReceiptForm(request.POST or None, instance=receipt)
     if request.method == 'POST' and form.is_valid():
@@ -41,6 +49,7 @@ def _receipt_form(request, property_obj, receipt):
         'warning': services.split_warning(form.instance),
         # New service: the templates on top of the same window; picking one refills the fields below.
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
+        'formula': services.formula_example(services.normalize(_preview(form, receipt)), request.POST.get('formula_for')),
         'tenants': property_obj.tenants.all(),
         'meter_rows': services.meter_rows(receipt, request.POST if request.method == 'POST' else None),
         'layout_choices': Receipt.Layout.choices,
@@ -69,6 +78,22 @@ def _own_receipt(request, pk):
 def receipt_edit(request, pk):
     receipt = _own_receipt(request, pk)
     return _receipt_form(request, receipt.property, receipt)
+
+
+@login_required
+@require_POST
+def receipt_formula(request, property_pk):
+    """«Формула» of the service window, recounted while the form is filled in (nothing is saved)."""
+    property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
+    pk = request.POST.get('receipt')
+    if pk:
+        receipt = get_object_or_404(Receipt, pk=pk, property=property_obj)
+    else:
+        receipt = services.new_receipt(property_obj, request.POST.get('kind'))
+    form = ReceiptForm(request.POST, instance=receipt)
+    form.is_valid()
+    formula = services.formula_example(services.normalize(form.instance), request.POST.get('formula_for'))
+    return render(request, 'billing/_formula.html', {'formula': formula, 'receipt': receipt, 'property': property_obj})
 
 
 @login_required

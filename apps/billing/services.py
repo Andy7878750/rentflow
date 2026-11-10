@@ -562,3 +562,109 @@ def save_month_input(property_obj, month, data):
                 for name, key in posted.items():
                     setattr(reading, name, parse_decimal(data.get(key)))
                 reading.save()
+
+
+# ---------- «Формула» in the service window: an example of what a tenant will pay ----------
+
+SAMPLE_SUM = Decimal('4200')        # a month's receipt, when the sum comes every month
+SAMPLE_USE = Decimal('120')         # a meter's month (day)
+SAMPLE_USE_NIGHT = Decimal('80')
+SAMPLE_TARIFF = Decimal('5')
+SAMPLE_TARIFF_NIGHT = Decimal('3')
+
+
+@dataclass
+class FormulaStep:
+    """One line of the example: terms and operators, then «= result»."""
+
+    items: list            # ('term', label, value) or ('op', sign)
+    result: str
+
+
+@dataclass
+class FormulaExample:
+    choices: list          # [(key, name)] — whom the example is for
+    chosen: str
+    payer: str             # «Виктор» or «Вы»
+    amount: Decimal
+    amount_text: str
+    steps: list
+
+
+def _rub(value, currency):
+    return f'{fmt_number(value, 2)}{NBSP}{currency}'
+
+
+def formula_example(receipt, chosen=None):
+    """What the service's settings mean, on example numbers, for one tenant (or the owner).
+
+    The same arithmetic as month_bill: kopecks ROUND_HALF_UP, the coefficient only on tenants.
+    Typed tariffs and a fixed sum are used as they are; the usage and a monthly sum are samples.
+    """
+    property_obj = receipt.property
+    currency, unit = receipt.currency_symbol, receipt.unit or 'ед.'
+    tenants = [] if property_obj.is_owner_used else list(property_obj.tenants.all())
+    choices = [(str(tenant.pk), tenant.name) for tenant in tenants]
+    tenant = next((t for t in tenants if str(t.pk) == str(chosen)), tenants[0] if tenants else None)
+    if receipt.split == Receipt.Split.OWNER:
+        tenant = None
+    steps = []
+
+    def term(label, value):
+        return ('term', label, value)
+
+    def op(sign):
+        return ('op', sign)
+
+    def coefficient(items):
+        if tenant and receipt.coefficient != 1:
+            items += [op('×'), term('Коэффициент', fmt_number(receipt.coefficient))]
+
+    if receipt.metered:
+        tariff = receipt.tariff if receipt.tariff is not None else SAMPLE_TARIFF
+        if receipt.zones == 2:
+            night_tariff = receipt.tariff_night if receipt.tariff_night is not None else SAMPLE_TARIFF_NIGHT
+            items = [term('Расход день', f'{fmt_number(SAMPLE_USE)} {unit}'), op('×'),
+                     term('Тариф день', _rub(tariff, currency)), op('+'),
+                     term('Расход ночь', f'{fmt_number(SAMPLE_USE_NIGHT)} {unit}'), op('×'),
+                     term('Тариф ночь', _rub(night_tariff, currency))]
+            exact = SAMPLE_USE * tariff + SAMPLE_USE_NIGHT * night_tariff
+        else:
+            items = [term('Расход', f'{fmt_number(SAMPLE_USE)} {unit}'), op('×'), term('Тариф', _rub(tariff, currency))]
+            exact = SAMPLE_USE * tariff
+        if receipt.split == Receipt.Split.METERS and tenant:
+            # The tenant's own meter is their whole part.
+            coefficient(items)
+            amount = tenant_line(receipt, exact, '').amount
+            steps.append(FormulaStep(items, _rub(amount, currency)))
+            return FormulaExample(choices, str(tenant.pk), tenant.name, amount, _rub(amount, currency), steps)
+        total = money(exact)
+        steps.append(FormulaStep(items, _rub(total, currency)))
+        total_label = 'Сумма по счётчику'
+    else:
+        fixed = receipt.amount_mode == Receipt.AmountMode.FIXED and receipt.fixed_amount
+        total = receipt.fixed_amount if fixed else SAMPLE_SUM
+        total_label = 'Сумма в месяц' if fixed else 'Сумма квитанции'
+
+    total_term = term(total_label, _rub(total, currency))
+    if tenant is None:
+        if not steps:
+            steps.append(FormulaStep([total_term], _rub(total, currency)))
+        return FormulaExample(choices, '', 'Вы', total, _rub(total, currency), steps)
+
+    if receipt.split == Receipt.Split.EQUAL:
+        items = [total_term, op('÷'), term('Арендаторов', str(len(tenants)))]
+        exact = total / len(tenants)
+    elif receipt.split == Receipt.Split.AREA:
+        area, whole = tenant.area or Decimal('0'), property_obj.area
+        items = [total_term, op('×'), term('Площадь', f'{fmt_number(area)}{NBSP}м²'),
+                 op('÷'), term('Площадь объекта', f'{fmt_number(whole)}{NBSP}м²' if whole else '—')]
+        exact = total * area / whole if whole else Decimal('0')
+    else:
+        share = tenant.share_percent or Decimal('0')
+        items = [total_term, op('×'), term('Доля', f'{fmt_number(share)}%')]
+        exact = total * share / HUNDRED
+    coefficient(items)
+    amount = tenant_line(receipt, exact, '').amount
+    steps.append(FormulaStep(items, _rub(amount, currency)))
+    return FormulaExample(choices, str(tenant.pk), tenant.name, amount, _rub(amount, currency), steps)

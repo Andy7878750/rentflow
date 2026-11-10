@@ -58,7 +58,10 @@
        lines up from row to row. Each row is a line + the same padding (.rows in billing.css).{% endcomment %}
     {# ---------- 2. Сколько стоит ---------- #}
     <section class="form-section rows">
-      <h2 class="form-section-head">Сколько стоит</h2>
+      <h2 class="form-section-head">Сколько стоит
+        <span class="badge metered-only">по счётчику</span><span class="badge zones2-only metered-only">день / ночь</span>
+        <span class="badge unmetered-only fixed-only">фиксированная</span><span class="badge unmetered-only monthly-only">каждый месяц разная</span>
+      </h2>
       <div class="form-section-body">
         {# The meter, and next to it — how the sum comes (no meter) or the tariff kind (meter). #}
         <div class="calc-row">
@@ -124,7 +127,11 @@
 
     {# ---------- 3. Кто платит: which meters → the meters themselves → how it is split ---------- #}
     <section class="form-section rows">
-      <h2 class="form-section-head">Кто платит</h2>
+      <h2 class="form-section-head">Кто платит
+        {% if property.is_owner_used %}<span class="badge">на вас</span>
+        {% else %}{% for value, label in layout_choices %}{% if value != 'common' %}<span class="badge head-badge" data-layout="{{ value }}">{{ label|lower }}</span>{% endif %}{% endfor %}
+        {% for value, label in split_choices %}<span class="badge head-badge" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
+      </h2>
       <div class="form-section-body">
         {% if property.is_owner_used %}
           <p class="rform-note">Объектом пользуетесь вы сами — расходы остаются на вас.</p>
@@ -183,12 +190,12 @@
                   <label><input type="radio" name="split" value="{{ value }}"{% if form.split.value == value %} checked{% endif %}><span>{{ label }}</span></label>
                 {% endfor %}
               </div>
-              <p class="calc-hint split-hint" data-for="shares">Каждый платит свою долю, указанную в карточке объекта.</p>
-              <p class="calc-hint split-hint" data-for="equal">Сумма делится поровну на всех арендаторов.</p>
-              <p class="calc-hint split-hint" data-for="area">Пропорционально площади, которую занимает каждый.</p>
-              <p class="calc-hint split-hint" data-for="owner">Арендаторам не выставляется — остаётся на вас.</p>
-              <p class="calc-note layout-hint" data-for="tenants">Каждый арендатор платит по своему счётчику.</p>
-              <p class="calc-note layout-hint" data-for="both">Арендаторы платят по своим счётчикам, поставщику — по общему. Разница пока на вас.</p>
+              <p class="calc-badges split-hint" data-for="shares"><span class="badge badge-info">доля из карточки объекта</span></p>
+              <p class="calc-badges split-hint" data-for="equal"><span class="badge badge-info">поровну на всех арендаторов</span></p>
+              <p class="calc-badges split-hint" data-for="area"><span class="badge badge-info">по площади каждого</span></p>
+              <p class="calc-badges split-hint" data-for="owner"><span class="badge badge-info">арендаторам не выставляется</span></p>
+              <p class="calc-note layout-hint" data-for="tenants"><span class="badge badge-info">каждый платит по своему счётчику</span></p>
+              <p class="calc-note layout-hint" data-for="both"><span class="badge badge-info">арендаторы — по своим</span><span class="badge badge-warn">разница с общим — на вас</span></p>
             </div>
           </div>
         {% endif %}
@@ -196,6 +203,8 @@
       </div>
     </section>
     {% endwith %}
+
+    {% include "billing/_formula.html" %}
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary btn-auto">{% if receipt.pk %}Сохранить{% else %}Добавить услугу{% endif %}</button>

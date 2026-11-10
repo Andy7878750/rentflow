@@ -1,0 +1,33 @@
+{# «Формула»: what the settings above mean, on example numbers. Recounted by app.js on every change. #}
+<section class="form-section formula" data-formula data-formula-url="{% url 'receipt_formula' property.pk %}">
+  <h2 class="form-section-head">Формула <span class="badge badge-ok">{{ formula.payer }} · {{ formula.amount_text }}</span></h2>
+  <div class="form-section-body">
+    <input type="hidden" name="formula_for" value="{{ formula.chosen }}">
+    {% if receipt.pk %}<input type="hidden" name="receipt" value="{{ receipt.pk }}">{% endif %}
+    {% if formula.choices|length > 1 %}
+      <div class="formula-for">
+        <span class="formula-cap">Пример для</span>
+        {% for key, name in formula.choices %}
+          <button type="button" class="formula-who{% if key == formula.chosen %} is-on{% endif %}" data-formula-for="{{ key }}"{% if key == formula.chosen %} aria-pressed="true"{% else %} aria-pressed="false"{% endif %}>
+            {% if key == formula.chosen %}<svg class="icon"><use href="#i-check"/></svg>{% endif %}<span class="fade">{{ name }}</span>
+          </button>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% for step in formula.steps %}
+      <div class="formula-eq">
+        {% for item in step.items %}
+          {% if item.0 == 'op' %}<span class="formula-op">{{ item.1 }}</span>
+          {% else %}<span class="formula-term"><small>{{ item.1 }}</small><b>{{ item.2 }}</b></span>{% endif %}
+        {% endfor %}
+        <span class="formula-op">=</span>
+        <b class="formula-result">{{ step.result }}</b>
+      </div>
+    {% endfor %}
+    <div class="formula-total">
+      <span>{% if formula.payer == 'Вы' %}Вы платите{% else %}{{ formula.payer }} платит{% endif %}</span>
+      <b>{{ formula.amount_text }}</b>
+    </div>
+    <p class="formula-note">Числа — пример. Настоящие суммы и показания впишете на странице объекта.</p>
+  </div>
+</section>

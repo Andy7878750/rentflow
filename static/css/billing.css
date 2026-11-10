@@ -1763,3 +1763,204 @@
     grid-row: 2;
   }
 }
+
+/* ---------- Badges: soft labels for information ----------
+   Grey — what the service is; info — what a choice means; ok — a result; warn — needs attention. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #eceeef;
+  color: #4b5258;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 20px;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.badge-info { background: #e3f0fb; color: #1d5b8f; }
+.badge-ok { background: #dff3ee; color: #0e6b59; }
+.badge-warn { background: #fdf0d5; color: #8a5a00; }
+.badge-danger { background: #fbe3e3; color: #9b2c2c; }
+
+/* ---------- «Новая услуга», variant А + В ----------
+   А: no lines between the rows — the air between them is enough.
+   В: the block's summary as badges in its head. */
+.rform .form-section-head {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.rform .form-section-head .badge:first-of-type {
+  margin-left: 4px;
+}
+
+.rform .rows .calc-row,
+.rform .rows .calc-row:first-child,
+.rform .rows .meter-list,
+.rform .rows .rform-note,
+.rform .meter-item {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.rform .rows .meter-list {
+  margin-bottom: 0;
+}
+
+.rform .meter-item {
+  padding: 6px 0;
+}
+
+/* «Кто платит» in the head: the meters' layout, or the split when there is one sum to split. */
+.rform .head-badge {
+  display: none;
+}
+
+.rform:has(input[name=split][value=shares]:checked) .head-badge[data-split=shares],
+.rform:has(input[name=split][value=equal]:checked) .head-badge[data-split=equal],
+.rform:has(input[name=split][value=area]:checked) .head-badge[data-split=area],
+.rform:has(input[name=split][value=owner]:checked) .head-badge[data-split=owner],
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .head-badge[data-layout=tenants],
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .head-badge[data-layout=both] {
+  display: inline-flex;
+}
+
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .head-badge[data-split],
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .head-badge[data-split] {
+  display: none;
+}
+
+/* The meaning of a choice: badges at the height of a switch. */
+/* No «display» here: the hide / show rules above decide it. */
+.rform .calc-badges,
+.rform .calc-note {
+  margin: 0;
+  line-height: 30px;
+}
+
+.rform .calc-badges .badge,
+.rform .calc-note .badge {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.rform .split-hint {
+  margin-top: 2px;
+}
+
+/* ---------- «Формула» ---------- */
+.formula .form-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formula-for {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.formula-cap {
+  margin-right: 4px;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+
+.formula-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 200px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.formula-who:hover {
+  border-color: var(--color-text-muted);
+}
+
+.formula-who.is-on {
+  border-color: var(--color-text);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.formula-who .icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.formula-eq {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--color-bg);
+}
+
+.formula-term {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.formula-term small {
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+}
+
+.formula-term b,
+.formula-result {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.formula-op {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.formula-result {
+  line-height: 20px;
+}
+
+.formula-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text);
+  font-size: 13.5px;
+}
+
+.formula-total b {
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.formula-note {
+  margin: -6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
