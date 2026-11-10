@@ -1560,7 +1560,7 @@
 .rform .rows .form-section-body {
   gap: 0;
   margin-top: -1px; /* the first row's line lies on the head's line */
-  padding: 0 14px 4px;
+  padding: 0 14px;
 }
 
 .rform .rows .calc-row,
@@ -1568,7 +1568,7 @@
 .rform .rows .meter-list,
 .rform .rows .rform-note {
   margin: 0;
-  padding: 8px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--color-border);
 }
 
@@ -1662,4 +1662,10 @@
   .rform .calc-ctrl.halves {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The same air in every block: 10px above the first control and below the last one.
+   (A standard field keeps 16px under it for stacking in other forms — not here.) */
+.rform .form-section-body > .form-grid > .field {
+  margin-bottom: 0;
 }
