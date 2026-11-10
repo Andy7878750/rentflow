@@ -153,6 +153,37 @@ def sync_meters(receipt):
     return result
 
 
+# «Сколько счётчиков» in the service window: short answers for the switch.
+LAYOUT_SHORT = [
+    (Receipt.Layout.COMMON, 'Один общий'),
+    (Receipt.Layout.TENANTS, 'У каждого свой'),
+    (Receipt.Layout.BOTH, 'Общий + у каждого'),
+]
+
+
+def meters_label(count):
+    """«1 счётчик», «2 счётчика», «5 счётчиков»."""
+    if count % 10 == 1 and count % 100 != 11:
+        word = 'счётчик'
+    elif 2 <= count % 10 <= 4 and not 12 <= count % 100 <= 14:
+        word = 'счётчика'
+    else:
+        word = 'счётчиков'
+    return f'{count} {word}'
+
+
+def meter_counts(property_obj):
+    """How many meters each layout gives, for the badge in the head of «Счётчики»."""
+    tenants = 0 if property_obj.is_owner_used else property_obj.tenants.count()
+    if not tenants:
+        return [{'value': 'any', 'count': meters_label(1)}]
+    return [
+        {'value': Receipt.Layout.COMMON, 'count': meters_label(1)},
+        {'value': Receipt.Layout.TENANTS, 'count': meters_label(tenants)},
+        {'value': Receipt.Layout.BOTH, 'count': meters_label(tenants + 1)},
+    ]
+
+
 def _meter_key(tenant_id):
     return 'common' if tenant_id is None else f't{tenant_id}'
 

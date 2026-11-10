@@ -132,53 +132,44 @@
       </div>
     </section>
 
-    {# ---------- 3. Счётчики: only with a meter — which meters, their numbers and starting readings ---------- #}
-    <section class="form-section rows metered-only">
-      <h2 class="form-section-head">Счётчики</h2>
+    {% comment %}3. Счётчики (variant 1): only with a meter. «Сколько счётчиков» with the same short switches as
+       above; then one row per meter on the same grid — the name in the label column, the number and the
+       starting readings as fields of one height from the answers' column. The head says the result.{% endcomment %}
+    <section class="form-section rows metered-only meters-block">
+      <h2 class="form-section-head">Счётчики
+        {% for layout in meter_counts %}<span class="badge meter-count" data-layout="{{ layout.value }}">{{ layout.count }}</span>{% endfor %}
+        {% if not property.is_owner_used and tenants %}{% for value, label in layout_short %}<span class="badge badge-ok meter-layout" data-layout="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
+      </h2>
       <div class="form-section-body">
         {% if property.is_owner_used or not tenants %}
           <input type="hidden" name="layout" value="common">
         {% else %}
           <div class="calc-row">
-            <span class="calc-label">Какие</span>
+            <span class="calc-label">Сколько счётчиков</span>
             <div class="calc-ctrl">
-              <div class="pick pick-radio" data-drop>
-                <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Какие счётчики">
-                  <span data-drop-label>{% for value, label in layout_choices %}{% if form.layout.value == value %}{{ label }}{% endif %}{% endfor %}</span>
-                  <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
-                </button>
-                <ul class="select-menu pick-menu" role="radiogroup" aria-label="Какие счётчики" data-drop-menu hidden>
-                  {% for value, label in layout_choices %}
-                    <li class="select-row"><label class="select-option"><input type="radio" name="layout" value="{{ value }}"{% if form.layout.value == value %} checked{% endif %}><span>{{ label }}</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
-                  {% endfor %}
-                </ul>
+              <div class="seg-track" role="radiogroup" aria-label="Сколько счётчиков">
+                {% for value, label in layout_short %}
+                  <label><input type="radio" name="layout" value="{{ value }}"{% if form.layout.value == value %} checked{% endif %}><span>{{ label }}</span></label>
+                {% endfor %}
               </div>
             </div>
           </div>
         {% endif %}
         <div class="meter-list">
-          <div class="meter-list-head">
-            <span>Счётчик</span>
-            <span></span>
-            <span class="readings-only">Показание на старте</span>
-          </div>
           {% for row in meter_rows %}
             <div class="meter-item" data-layouts="{{ row.layouts }}">
               <span class="meter-item-name fade">{{ row.name }}</span>
-              <div class="serial" data-serial data-state="{% if row.serial %}locked{% else %}empty{% endif %}">
-                <button type="button" class="serial-add" data-serial-add>+ № счётчика</button>
-                <span class="ifield serial-field">
+              <div class="meter-item-fields">
+                <span class="ifield serial-field" data-serial data-state="{% if row.serial %}locked{% else %}empty{% endif %}">
                   <span class="ifield-fix">№</span>
-                  <input type="text" name="serial-{{ row.key }}" value="{{ row.serial }}" maxlength="50" aria-label="{{ row.name }}: номер счётчика"{% if row.serial %} readonly{% endif %}>
+                  <input type="text" name="serial-{{ row.key }}" value="{{ row.serial }}" maxlength="50" placeholder="не указан" aria-label="{{ row.name }}: номер счётчика"{% if row.serial %} readonly{% endif %}>
                   <button type="button" class="serial-toggle" data-serial-toggle aria-label="{% if row.serial %}Изменить номер{% else %}Готово{% endif %}">
                     <svg class="icon icon-done"><use href="#i-check"/></svg>
                     <svg class="icon icon-edit"><use href="#i-edit"/></svg>
                   </button>
                 </span>
-              </div>
-              <div class="meter-item-start readings-only">
-                <label class="ifield ifield-num"><span class="ifield-fix zones2-only">день</span><input type="text" inputmode="decimal" name="initial-{{ row.key }}" value="{{ row.initial }}" placeholder="0" aria-label="{{ row.name }}: показание на старте"></label>
-                <label class="ifield ifield-num zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="initialn-{{ row.key }}" value="{{ row.initial_night }}" placeholder="0" aria-label="{{ row.name }}: показание на старте ночью"></label>
+                <label class="ifield ifield-num readings-only"><span class="ifield-fix zones1-only">на старте</span><span class="ifield-fix zones2-only">день</span><input type="text" inputmode="decimal" name="initial-{{ row.key }}" value="{{ row.initial }}" placeholder="0" aria-label="{{ row.name }}: показание на старте"></label>
+                <label class="ifield ifield-num readings-only zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="initialn-{{ row.key }}" value="{{ row.initial_night }}" placeholder="0" aria-label="{{ row.name }}: показание на старте ночью"></label>
               </div>
             </div>
           {% endfor %}

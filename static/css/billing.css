@@ -2062,3 +2062,129 @@
 .pick-radio .pick-trigger {
   white-space: nowrap;
 }
+
+/* ---------- «Счётчики», variant 1 (2026-11-10) ----------
+   «Сколько счётчиков» with the same short switches as «Сколько стоит»; under a thin line one row per
+   meter on the same grid: the name in the label column, then fields of one height (30px) from the
+   answers' column — the number, the starting reading (day and night). The head sums it up. */
+.rform .meters-block .calc-row + .meter-list {
+  border-top: 1px solid var(--color-border);
+}
+
+.rform .meters-block .meter-list {
+  padding: 6px 0;
+}
+
+.rform .meters-block .meter-item {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 0;
+  padding: 4px 0;
+  border: 0;
+}
+
+.rform .meters-block .meter-item-name {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.meter-item-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rform .meters-block .ifield {
+  box-sizing: border-box;
+  height: 30px;
+}
+
+.rform .meters-block .ifield-num {
+  width: 112px;
+}
+
+.rform .meters-block .ifield-num input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+/* The number: an ordinary field; green while typed, blue with ✎ once saved. */
+.rform .meters-block .serial-field {
+  width: 170px;
+  padding: 0 0 0 10px;
+  overflow: hidden;
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.rform .meters-block .serial-field input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.rform .meters-block .serial-field[data-state=edit] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.rform .meters-block .serial-field[data-state=locked] {
+  border-color: var(--color-info);
+  background: var(--color-info-soft);
+  box-shadow: none;
+}
+
+.rform .meters-block .serial-field[data-state=locked] input {
+  color: var(--color-primary);
+  cursor: default;
+}
+
+.rform .meters-block .serial-field[data-state=empty] .serial-toggle {
+  display: none;
+}
+
+.rform .meters-block .serial-field .serial-toggle {
+  width: 30px;
+  border-left: 1px solid var(--color-border);
+}
+
+.rform .meters-block .serial-field[data-state=locked] .serial-toggle {
+  border-left-color: #c9dff0;
+  color: var(--color-info);
+}
+
+.rform .meters-block .serial-field[data-state=locked] .serial-toggle .icon-done {
+  display: none;
+}
+
+.rform .meters-block .serial-field[data-state=locked] .serial-toggle .icon-edit {
+  display: block;
+}
+
+/* Head: how many meters and which layout — only the badges of the chosen layout. */
+.rform .meter-count,
+.rform .meter-layout {
+  display: none;
+}
+
+.rform .meter-count[data-layout=any],
+.rform:has(input[name=layout][value=common]:checked) .meter-count[data-layout=common],
+.rform:has(input[name=layout][value=tenants]:checked) .meter-count[data-layout=tenants],
+.rform:has(input[name=layout][value=both]:checked) .meter-count[data-layout=both],
+.rform:has(input[name=layout][value=common]:checked) .meter-layout[data-layout=common],
+.rform:has(input[name=layout][value=tenants]:checked) .meter-layout[data-layout=tenants],
+.rform:has(input[name=layout][value=both]:checked) .meter-layout[data-layout=both] {
+  display: inline-flex;
+}
+
+@media (max-width: 640px) {
+  .rform .meters-block .meter-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+}

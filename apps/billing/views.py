@@ -53,6 +53,8 @@ def _receipt_form(request, property_obj, receipt):
         'tenants': property_obj.tenants.all(),
         'meter_rows': services.meter_rows(receipt, request.POST if request.method == 'POST' else None),
         'layout_choices': Receipt.Layout.choices,
+        'layout_short': services.LAYOUT_SHORT,
+        'meter_counts': services.meter_counts(property_obj),
         # By readings is not a button any more: it follows from «У каждого свой».
         'split_choices': [
             choice for choice in Receipt.Split.choices

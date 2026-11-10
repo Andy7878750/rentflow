@@ -226,6 +226,15 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'name="metered" value="1" checked')
         self.assertNotContains(response, 'name="split" value="meters"')
 
+    def test_meters_block_asks_how_many_and_sums_up_in_the_head(self):
+        url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
+        response = self.client.get(url, HTTP_X_MODAL='1')
+        self.assertContains(response, 'Сколько счётчиков')
+        self.assertContains(response, '<span>Один общий</span>')
+        self.assertContains(response, 'data-layout="tenants">1 счётчик<')
+        self.assertContains(response, 'data-layout="both">2 счётчика<')
+        self.assertContains(response, 'placeholder="не указан"')
+
     def test_usage_mode_is_saved_and_the_object_page_asks_for_usage(self):
         response = self.client.post(
             reverse('receipt_create', args=[self.prop.pk]),

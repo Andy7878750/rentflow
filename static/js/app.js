@@ -899,8 +899,8 @@
     }
   }, true);
 
-  // Meter number: «+ № счётчика» opens a field (green frame, ✓); typed and left or ✓ → saved
-  // (blue frame, ✎); ✎ opens it again; left empty → back to the chip.
+  // Meter number: an ordinary field; typing in it → green frame and ✓; typed and left or ✓ → saved
+  // (blue frame, ✎); ✎ opens it again; left empty → back to «не указан».
   function setSerialState(serial, state) {
     var input = serial.querySelector('input');
     if (state === 'locked' && !input.value.trim()) state = 'empty';
@@ -931,7 +931,13 @@
     else setSerialState(serial, 'locked');
   });
 
-  // A click into a saved number counts as nothing; leaving a typed one saves it.
+  // Into an empty number → typing (green); a click into a saved one counts as nothing.
+  document.addEventListener('focusin', function (event) {
+    var serial = event.target.closest && event.target.closest('[data-serial]');
+    if (serial && event.target.matches('input') && serial.dataset.state === 'empty') setSerialState(serial, 'edit');
+  });
+
+  // Leaving a typed number saves it.
   document.addEventListener('focusout', function (event) {
     var serial = event.target.closest && event.target.closest('[data-serial]');
     if (serial && event.target.matches('input') && serial.dataset.state === 'edit') setSerialState(serial, 'locked');
