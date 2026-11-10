@@ -1669,3 +1669,97 @@
 .rform .form-section-body > .form-grid > .field {
   margin-bottom: 0;
 }
+
+/* ---------- Meters list: the same columns and rhythm as the question rows ----------
+   name in the label column (150px), the number where the answers start, the starting reading
+   at the right edge. A line under each meter; the last line lies on the next row's line. */
+.rform .rows .meter-list {
+  margin-bottom: -1px;
+  padding-bottom: 0;
+}
+
+.rform .meter-list-head,
+.rform .meter-item {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.rform .meter-list-head {
+  padding: 0 0 2px;
+}
+
+.rform .meter-item {
+  min-height: 0;
+  padding: 10px 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rform .meter-item-name {
+  max-width: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.rform .serial {
+  justify-self: start;
+}
+
+.rform .meter-item-start {
+  margin-left: 0;
+}
+
+/* ---------- Switches: thin and light ----------
+   A pale track with no frame of its own, 26px answers, the chosen one white with a hairline. */
+.rform .seg-track {
+  padding: 2px;
+  border: 0;
+  background: #f1f3f4;
+}
+
+.rform .seg-track span {
+  height: 26px;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 26px;
+}
+
+.rform .seg-track input:checked + span {
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+/* Fields and the unit menu at the switches' height (30px). */
+.rform .ifield,
+.rform .pick-trigger,
+.rform .serial-field {
+  height: 30px;
+}
+
+.rform .calc-label {
+  padding-top: 6px; /* the middle of a 30px control, also when a hint follows it */
+}
+
+.calc-note {
+  line-height: 30px;
+}
+
+@media (max-width: 640px) {
+  .rform .meter-list-head,
+  .rform .meter-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .rform .meter-list-head span:nth-child(2) {
+    display: none;
+  }
+
+  .rform .meter-item .serial {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
