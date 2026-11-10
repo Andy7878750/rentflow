@@ -81,36 +81,34 @@
   height: 15px;
 }
 
-/* «Новая услуга»: template tiles — icon over the name, the picked one in the accent. */
+/* «Новая услуга»: templates as compact chips; they wrap (two short rows) so every one stays in sight. */
 .kind-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0 0 16px;
 }
 
 .kind-tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 92px;
-  padding: 12px 8px;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 17px;
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 13px;
-  line-height: 1.3;
-  text-align: center;
+  font-size: 12.5px;
+  white-space: nowrap;
   text-decoration: none;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .kind-tile .icon {
-  width: 22px;
-  height: 22px;
+  width: 15px;
+  height: 15px;
   color: var(--color-primary);
 }
 
@@ -140,28 +138,23 @@
   color: var(--color-text-muted);
 }
 
-/* Already added to the object: a small check, the tile still works (a second meter, say). */
+/* Already added to the object: a small check after the name; the chip still works (a second meter, say). */
 .kind-tile-mark {
-  position: absolute;
-  top: 6px;
-  right: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--color-accent);
-  color: #fff;
 }
 
 .kind-tile .kind-tile-mark .icon {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   color: #fff;
   stroke-width: 3;
 }
-
 .modal-title {
   min-width: 0;
 }
@@ -377,7 +370,7 @@
   grid-template-columns: 150px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
-  padding: 12px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--color-border);
 }
 
@@ -558,80 +551,31 @@
   min-width: 140px;
 }
 
-/* «Услуга»: the picked template as one row; «сменить» opens the tiles (a <details>, no JS). */
-.kind-picker {
-  margin-bottom: 4px;
-}
-
-.kind-current {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  list-style: none;
-  cursor: pointer;
-}
-
-.kind-current::-webkit-details-marker {
-  display: none;
-}
-
-.kind-current-icon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-}
-
-.kind-current-icon .icon {
-  width: 20px;
-  height: 20px;
-}
-
-.kind-current-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.kind-current-name {
-  color: var(--color-text);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.kind-current-note {
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.kind-current-change .select-chevron {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.15s ease;
-}
-
-.kind-picker[open] .kind-current-change .select-chevron {
-  transform: rotate(180deg);
-}
-
-.kind-picker .kind-tiles {
-  margin-top: 14px;
-}
-
 /* «[5,00 ₽] за [кВт·ч ▾]» */
 .calc-word {
   color: var(--color-text-muted);
   font-size: 14px;
 }
 
+.ifield-sum input {
+  width: 190px;
+}
+
+.ifield.is-disabled {
+  background: var(--color-bg);
+  cursor: default;
+}
+
+.ifield.is-disabled input {
+  text-align: left;
+}
+
 /* «Кто платит»: the meters list right under the questions. */
 .calc-list + .meter-list {
+  margin-top: 8px;
+}
+
+.meter-list + .split-row {
   margin-top: 12px;
 }
 
@@ -661,8 +605,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 58px;
-  padding: 8px 0;
+  min-height: 50px;
+  padding: 4px 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -777,6 +721,7 @@
 .rform:not(:has(input[name=metered][value="1"]:checked)) .metered-only,
 .rform:has(input[name=metered][value="1"]:checked) .unmetered-only,
 .rform:not(:has(input[name=amount_mode][value=fixed]:checked)) .fixed-only,
+.rform:not(:has(input[name=amount_mode][value=monthly]:checked)) .monthly-only,
 .rform:has(input[name=zones][value="2"]:checked) .zones1-only,
 .rform:not(:has(input[name=zones][value="2"]:checked)) .zones2-only,
 .rform:has(input[name=layout][value=common]:checked) .meter-item:not([data-layouts~=common]),

@@ -303,7 +303,7 @@ class MonthPageTests(TestCase):
 
     def test_new_service_window_has_templates_on_top(self):
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]), HTTP_X_MODAL='1')
-        self.assertContains(response, '<details class="kind-picker" open>')  # nothing picked: the tiles are open
+        self.assertContains(response, 'data-kind-strip')  # templates as one row of chips on top
         self.assertContains(response, '?kind=electricity')
         self.assertContains(response, '?kind=heating')
         self.assertContains(response, 'kind-tile-mark')  # «УК» is already there: marked, still offered
@@ -315,9 +315,6 @@ class MonthPageTests(TestCase):
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=water', HTTP_X_MODAL='1')
         self.assertContains(response, 'kind-tile is-selected" aria-current="true"')
         self.assertContains(response, 'value="Вода холодная"')
-        # Picked: the tiles fold into one row «Вода холодная · сменить».
-        self.assertContains(response, '<details class="kind-picker">')
-        self.assertContains(response, '<span class="kind-current-name">Вода холодная</span>')
 
     def test_editing_has_no_templates(self):
         receipt = self.prop.receipts.first()
