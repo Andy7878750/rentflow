@@ -558,6 +558,87 @@
   min-width: 140px;
 }
 
+/* «Услуга»: the picked template as one row; «сменить» opens the tiles (a <details>, no JS). */
+.kind-picker {
+  margin-bottom: 4px;
+}
+
+.kind-current {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.kind-current::-webkit-details-marker {
+  display: none;
+}
+
+.kind-current-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.kind-current-icon .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.kind-current-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kind-current-name {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.kind-current-note {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.kind-current-change .select-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.kind-picker[open] .kind-current-change .select-chevron {
+  transform: rotate(180deg);
+}
+
+.kind-picker .kind-tiles {
+  margin-top: 14px;
+}
+
+/* «[5,00 ₽] за [кВт·ч ▾]» */
+.calc-word {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+/* «Кто платит»: the meters list right under the questions. */
+.calc-list + .meter-list {
+  margin-top: 12px;
+}
+
+.rform .form-section-body > .rform-note {
+  margin: 0;
+}
+
 /* Meters: a quiet list — who, the number (a chip until typed), the reading at the start. */
 .meter-list {
   margin-top: 6px;
@@ -701,8 +782,8 @@
 .rform:has(input[name=layout][value=common]:checked) .meter-item:not([data-layouts~=common]),
 .rform:has(input[name=layout][value=tenants]:checked) .meter-item:not([data-layouts~=tenants]),
 .rform:has(input[name=layout][value=both]:checked) .meter-item:not([data-layouts~=both]),
-.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .split-section,
-.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .split-section {
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .split-row,
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .split-row {
   display: none;
 }
 

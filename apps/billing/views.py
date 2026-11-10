@@ -41,6 +41,8 @@ def _receipt_form(request, property_obj, receipt):
         'warning': services.split_warning(form.instance),
         # New service: the templates on top of the same window; picking one refills the fields below.
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
+        # The tiles stay open only until a template is picked; then one row «⚡ Электричество · сменить».
+        'kind_open': receipt.pk is None and not (request.GET.get('kind') or request.POST.get('kind')),
         'tenants': property_obj.tenants.all(),
         'meter_rows': services.meter_rows(receipt, request.POST if request.method == 'POST' else None),
         'layout_choices': Receipt.Layout.choices,
