@@ -1964,3 +1964,61 @@
   color: var(--color-text-muted);
   font-size: 12px;
 }
+
+/* ---------- Switches: short and in the accent colour (2026-11-10) ----------
+   A switch is as wide as its answers, not the whole cell; the switches and fields of a row stand
+   in one line from the answers' column. The chosen answer is filled with the accent, so in a
+   window of many switches the choices stand out from the grey. */
+.rform .calc-ctrl,
+.rform .calc-ctrl.halves {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.rform .calc-ctrl > .calc-hint,
+.rform .calc-ctrl > .calc-note,
+.rform .calc-ctrl > .calc-badges,
+.rform .calc-ctrl > .calc-error {
+  flex-basis: 100%;
+}
+
+.rform .seg-track {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  width: auto;
+}
+
+.rform .seg-track label {
+  flex: 0 0 auto;
+}
+
+.rform .seg-track span {
+  padding: 0 12px;
+  overflow: visible;
+}
+
+.rform .seg-track label:hover input:not(:checked) + span {
+  color: var(--color-text);
+}
+
+.rform .seg-track input:checked + span {
+  background: var(--color-accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+/* Fields keep a sensible width instead of filling the cell. */
+.rform .calc-ctrl > .ifield {
+  width: 200px;
+}
+
+.rform .calc-half {
+  flex: 0 0 auto;
+}
+
+.rform .calc-half .ifield {
+  flex: 0 0 auto;
+  width: 112px;
+}
