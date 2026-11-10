@@ -108,6 +108,15 @@
                   {% endfor %}
                 </ul>
               </div>
+              {# What is typed every month: the meter's readings, or straight the usage. #}
+              <span class="calc-group">
+                <span class="calc-word calc-word-sep">· вводим</span>
+                <span class="seg-track" role="radiogroup" aria-label="Каждый месяц вводим">
+                  {% for value, label in form.fields.input_mode.choices %}{% if value %}
+                    <label><input type="radio" name="input_mode" value="{{ value }}"{% if form.input_mode.value == value %} checked{% endif %}><span>{{ label }}</span></label>
+                  {% endif %}{% endfor %}
+                </span>
+              </span>
               {% if form.tariff.errors %}<p class="calc-error">{{ form.tariff.errors.0 }}</p>{% elif form.tariff_night.errors %}<p class="calc-error">{{ form.tariff_night.errors.0 }}</p>{% elif form.unit.errors %}<p class="calc-error">{{ form.unit.errors.0 }}</p>{% endif %}
             </div>
           </div>
@@ -145,7 +154,7 @@
         <div class="meter-list metered-only">
           <div class="meter-list-head">
             <span>Счётчик</span>
-            <span>Показание на старте</span>
+            <span class="readings-only">Показание на старте</span>
           </div>
           {% for row in meter_rows %}
             <div class="meter-item" data-layouts="{{ row.layouts }}">
@@ -161,7 +170,7 @@
                   </button>
                 </span>
               </div>
-              <div class="meter-item-start">
+              <div class="meter-item-start readings-only">
                 <label class="ifield ifield-num"><span class="ifield-fix zones2-only">день</span><input type="text" inputmode="decimal" name="initial-{{ row.key }}" value="{{ row.initial }}" placeholder="0" aria-label="{{ row.name }}: показание на старте"></label>
                 <label class="ifield ifield-num zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="initialn-{{ row.key }}" value="{{ row.initial_night }}" placeholder="0" aria-label="{{ row.name }}: показание на старте ночью"></label>
               </div>

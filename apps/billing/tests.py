@@ -226,6 +226,21 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'name="metered" value="1" checked')
         self.assertNotContains(response, 'name="split" value="meters"')
 
+    def test_usage_mode_is_saved_and_the_object_page_asks_for_usage(self):
+        response = self.client.post(
+            reverse('receipt_create', args=[self.prop.pk]),
+            {'kind': 'electricity', 'name': 'Свет', 'metered': '1', 'unit': 'кВт·ч', 'tariff': '5',
+             'input_mode': 'usage', 'layout': 'common', 'split': 'shares', 'amount_mode': 'monthly'},
+            HTTP_X_MODAL='1',
+        )
+        self.assertEqual(response.status_code, 204)
+        receipt = self.prop.receipts.get(name='Свет')
+        self.assertEqual(receipt.input_mode, Receipt.InputMode.USAGE)
+        meter = receipt.meters.get()
+        page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
+        self.assertContains(page, f'name="use-{meter.pk}"')
+        self.assertNotContains(page, f'name="cur-{meter.pk}"')
+
     def test_fixed_amount_is_required(self):
         response = self.client.post(
             reverse('receipt_create', args=[self.prop.pk]),

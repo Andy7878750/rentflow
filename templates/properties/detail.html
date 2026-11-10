@@ -134,6 +134,28 @@
                 {% else %}Тариф {{ entry.tariff|num|default:'—' }}&nbsp;{{ receipt.currency_symbol }} за {{ receipt.unit }}{% endif %}
                 <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить тариф"><svg class="icon"><use href="#i-edit"/></svg></a>
               </p>
+              {% if receipt.input_mode == 'usage' %}
+                {# «Вводим расход»: one field per meter (and per night part), no «было / стало». #}
+                <table class="readings readings-usage">
+                  <thead><tr><th>Счётчик</th><th>Расход, {{ receipt.unit }}</th></tr></thead>
+                  <tbody>
+                    {% for meter, reading in entry.readings %}
+                      <tr>
+                        <td>{{ meter.name }}{% if receipt.zones == 2 %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
+                        <td><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}" aria-label="{{ meter.name }}: расход"
+                                   value="{{ reading.usage|num }}"></td>
+                      </tr>
+                      {% if receipt.zones == 2 %}
+                        <tr>
+                          <td>{{ meter.name }} · ночь</td>
+                          <td><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}" aria-label="{{ meter.name }}: расход ночью"
+                                     value="{{ reading.usage_night|num }}"></td>
+                        </tr>
+                      {% endif %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
               <table class="readings">
                 <thead><tr><th>Счётчик</th><th>Было</th><th>Стало</th><th>Расход</th></tr></thead>
                 <tbody>
@@ -159,6 +181,7 @@
                   {% endfor %}
                 </tbody>
               </table>
+              {% endif %}
             {% elif receipt.amount_mode == 'fixed' %}
               <p class="mreceipt-fixed">
                 Каждый месяц вводить ничего не нужно — начислится само:

@@ -18,7 +18,7 @@ class ReceiptForm(forms.ModelForm):
     class Meta:
         model = Receipt
         fields = [
-            'name', 'provider', 'metered', 'zones', 'unit', 'tariff', 'tariff_night', 'layout',
+            'name', 'provider', 'metered', 'zones', 'unit', 'tariff', 'tariff_night', 'input_mode', 'layout',
             'split', 'amount_mode', 'fixed_amount',
         ]
         widgets = {
@@ -39,6 +39,7 @@ class ReceiptForm(forms.ModelForm):
             self.fields[name].localize = True
         # Hidden sections still post their radios, but a service without a meter has no layout.
         self.fields['layout'].required = False
+        self.fields['input_mode'].required = False
         # «По показаниям» is no button: with the tenants' own meters no split radio is checked.
         self.fields['split'].required = False
 
@@ -49,6 +50,8 @@ class ReceiptForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        if not cleaned.get('input_mode'):
+            cleaned['input_mode'] = Receipt.InputMode.READINGS
         if not cleaned.get('layout'):
             cleaned['layout'] = Receipt.Layout.COMMON
         if not cleaned.get('split'):

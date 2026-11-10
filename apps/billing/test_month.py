@@ -144,6 +144,41 @@ class MonthBillTests(TestCase):
         self.assertEqual(services.month_bill(self.prop, AUG).entries[0].total, Decimal('3000.00'))
         self.assertEqual(services.month_bill(self.prop, SEPT).entries[0].total, Decimal('4000.00'))
 
+    def test_usage_is_typed_instead_of_readings(self):
+        receipt = self.add('electricity', tariff=Decimal('6.5'), input_mode=Receipt.InputMode.USAGE)
+        viktor_meter = receipt.meters.get(tenant=self.viktor)
+        vlad_meter = receipt.meters.get(tenant=self.vlad)
+        # Readings left over from before don't count: only the typed usage does.
+        services.save_month_input(self.prop, SEPT, {
+            f'prev-{viktor_meter.pk}': '0', f'cur-{viktor_meter.pk}': '999',
+            f'use-{viktor_meter.pk}': '120',
+        })
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(bill.missing, [receipt])
+        self.assertEqual((bill.readings_done, bill.readings_total), (1, 2))
+
+        services.save_month_input(self.prop, SEPT, {f'use-{vlad_meter.pk}': '30'})
+        bill = services.month_bill(self.prop, SEPT)
+        line = self.line(bill, self.viktor, receipt)
+        self.assertEqual(line.amount, Decimal('780.00'))
+        self.assertEqual(line.formula, '120 кВт·ч × 6,5 ₽')
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('195.00'))
+
+    def test_usage_day_night(self):
+        receipt = self.add('electricity', zones=2, tariff=Decimal('7'), tariff_night=Decimal('3'),
+                           input_mode=Receipt.InputMode.USAGE, layout=Receipt.Layout.COMMON,
+                           split=Receipt.Split.SHARES)
+        meter = receipt.meters.get()
+        services.save_month_input(self.prop, SEPT, {f'use-{meter.pk}': '10', f'usen-{meter.pk}': '20'})
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(bill.entries[0].total, Decimal('130.00'))
+
+    def test_no_meter_resets_input_mode(self):
+        receipt = self.add('electricity', input_mode=Receipt.InputMode.USAGE)
+        receipt.metered = False
+        services.save_receipt(receipt)
+        self.assertEqual(receipt.input_mode, Receipt.InputMode.READINGS)
+
     def test_day_night_meter(self):
         receipt = self.add('electricity', zones=2, tariff=Decimal('7'), tariff_night=Decimal('3'))
         meter = receipt.meters.get(tenant=self.viktor)

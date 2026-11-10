@@ -86,6 +86,7 @@ def normalize(receipt):
         receipt.tariff = receipt.tariff_night = None
         receipt.zones = 1
         receipt.layout = Receipt.Layout.COMMON
+        receipt.input_mode = Receipt.InputMode.READINGS
         if receipt.split == Receipt.Split.METERS:
             receipt.split = Receipt.Split.SHARES
     else:
@@ -406,19 +407,27 @@ def _readings_for(meters, month):
     return result
 
 
+def used(receipt, reading):
+    """(day, night) usage of one meter's month: typed as is («Расход») or «стало − было» («Показания»)."""
+    if receipt.input_mode == Receipt.InputMode.USAGE:
+        return reading.usage, reading.usage_night
+    return reading.consumption, reading.consumption_night
+
+
 def _meter_cost(receipt, entry, reading):
     """(exact cost, formula) of one meter's month, or None while something is missing."""
     unit, currency = receipt.unit, receipt.currency_symbol
-    if entry.tariff is None or reading.consumption is None:
+    day, night = used(receipt, reading)
+    if entry.tariff is None or day is None:
         return None
     if receipt.zones != 2:
-        formula = f'{fmt_number(reading.consumption)} {unit} × {fmt_number(entry.tariff)}{NBSP}{currency}'
-        return reading.consumption * entry.tariff, formula
-    if entry.tariff_night is None or reading.consumption_night is None:
+        formula = f'{fmt_number(day)} {unit} × {fmt_number(entry.tariff)}{NBSP}{currency}'
+        return day * entry.tariff, formula
+    if entry.tariff_night is None or night is None:
         return None
-    formula = (f'день {fmt_number(reading.consumption)} {unit} × {fmt_number(entry.tariff)}{NBSP}{currency} + '
-               f'ночь {fmt_number(reading.consumption_night)} {unit} × {fmt_number(entry.tariff_night)}{NBSP}{currency}')
-    return reading.consumption * entry.tariff + reading.consumption_night * entry.tariff_night, formula
+    formula = (f'день {fmt_number(day)} {unit} × {fmt_number(entry.tariff)}{NBSP}{currency} + '
+               f'ночь {fmt_number(night)} {unit} × {fmt_number(entry.tariff_night)}{NBSP}{currency}')
+    return day * entry.tariff + night * entry.tariff_night, formula
 
 
 def _split(total, receipt, tenants, property_obj):
@@ -528,7 +537,7 @@ def save_month_input(property_obj, month, data):
     """Store the monthly input posted from the object page.
 
     Field names: amount-<receipt>, prev-<meter>, cur-<meter> (and prevn-/curn- for the night
-    of day / night meters), and coef-<receipt> — the coefficient belongs to the receipt itself,
+    of day / night meters), use-<meter> / usen-<meter> for services that take the usage, and coef-<receipt> — the coefficient belongs to the receipt itself,
     not to the month. The tariff is set only in the service window. Only posted fields change;
     an emptied field clears the stored value.
     """
@@ -544,7 +553,8 @@ def save_month_input(property_obj, month, data):
             row, _ = MonthlyAmount.objects.get_or_create(receipt=receipt, month=month)
             row.amount = parse_decimal(data.get(f'amount-{receipt.pk}'))
             row.save(update_fields=['amount'])
-        fields = {'prev': 'previous', 'cur': 'current', 'prevn': 'previous_night', 'curn': 'current_night'}
+        fields = {'prev': 'previous', 'cur': 'current', 'prevn': 'previous_night', 'curn': 'current_night',
+                  'use': 'usage', 'usen': 'usage_night'}
         for meter in receipt.meters.all():
             posted = {name: f'{key}-{meter.pk}' for key, name in fields.items() if f'{key}-{meter.pk}' in data}
             if posted:

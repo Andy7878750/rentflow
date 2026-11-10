@@ -1485,3 +1485,93 @@
     width: auto;
   }
 }
+
+/* ---------- «Новая услуга»: a compact window ----------
+   Everything around the standard 52px fields is smaller here: section heads, question rows,
+   switches (28px), inline fields and the unit menu (34px), meter rows. */
+.rform {
+  gap: 12px;
+}
+
+.rform .form-section-head {
+  min-height: 36px;
+  padding: 7px 14px;
+}
+
+.rform .form-section-body {
+  padding: 10px 14px;
+}
+
+.rform .calc-row {
+  padding: 6px 0;
+}
+
+.rform .calc-label {
+  padding-top: 7px;
+  font-size: 13px;
+}
+
+.rform .calc-ctrl {
+  gap: 8px;
+}
+
+.rform .seg-track {
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.rform .seg-track span {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 28px;
+}
+
+.rform .ifield,
+.rform .pick-trigger {
+  height: 34px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.rform .ifield input {
+  font-size: 13px;
+}
+
+.rform .meter-item {
+  min-height: 42px;
+}
+
+.calc-word-sep {
+  margin-left: 4px;
+}
+
+/* «· вводим [Показания | Расход]» wraps as one piece. */
+.calc-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.rform .ifield input {
+  width: 64px;
+}
+
+.rform .ifield-sum input {
+  width: 190px;
+}
+
+.rform .ifield-num input {
+  width: 72px;
+}
+
+.rform .serial-field input {
+  width: 120px;
+}
+
+/* «· вводим [Показания | Расход]»: with the usage typed in, no starting readings are needed. */
+.rform:has(input[name=input_mode][value=usage]:checked) .readings-only {
+  display: none;
+}

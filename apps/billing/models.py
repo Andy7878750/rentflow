@@ -52,6 +52,13 @@ class Receipt(models.Model):
     zones = models.PositiveSmallIntegerField('Тарифы', default=1, choices=[(1, 'Однотарифный'), (2, 'День / ночь')])
     tariff = models.DecimalField('Тариф', max_digits=10, decimal_places=4, null=True, blank=True)
     tariff_night = models.DecimalField('Тариф ночь', max_digits=10, decimal_places=4, null=True, blank=True)
+
+    class InputMode(models.TextChoices):
+        READINGS = 'readings', 'Показания'  # «было / стало» each month, from the starting reading
+        USAGE = 'usage', 'Расход'           # just how much was used this month
+
+    input_mode = models.CharField('Каждый месяц вводим', max_length=10, choices=InputMode.choices,
+                                  default=InputMode.READINGS)
     # Which meters there are: one common, one per tenant, or a common one for the supplier plus
     # the tenants' own (the difference stays with the owner for now).
     layout = models.CharField('Какие счётчики', max_length=10, choices=Layout.choices, default=Layout.COMMON)
@@ -127,6 +134,9 @@ class Reading(models.Model):
     # Day / night meters: the fields above are the day, these the night.
     previous_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     current_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    # Services that take the month's usage instead of readings («Расход»).
+    usage = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    usage_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
 
     class Meta:
         ordering = ['month']
