@@ -1102,6 +1102,48 @@
     });
   }
 
+  // Drop-downs of radios in the service window: «Счётчики», «Вводим показания / расход».
+  function setDropOpen(drop, open) {
+    drop.classList.toggle('is-open', open);
+    drop.querySelector('[data-drop-menu]').hidden = !open;
+    drop.querySelector('[data-drop-trigger]').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  document.addEventListener('click', function (event) {
+    var current = event.target.closest && event.target.closest('[data-drop]');
+    document.querySelectorAll('[data-drop].is-open').forEach(function (drop) {
+      if (drop !== current) setDropOpen(drop, false);
+    });
+    if (!current || !event.target.closest('[data-drop-trigger]')) return;
+    var open = !current.classList.contains('is-open');
+    setDropOpen(current, open);
+    if (open) (current.querySelector('input:checked') || current.querySelector('input')).focus();
+  });
+
+  document.addEventListener('change', function (event) {
+    var drop = event.target.closest && event.target.closest('[data-drop]');
+    if (!drop) return;
+    drop.querySelector('[data-drop-label]').textContent = event.target.closest('label').textContent.trim();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    var drop = event.target.closest && event.target.closest('[data-drop].is-open');
+    if (!drop) return;
+    if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ' || event.key === 'Tab') {
+      if (event.key !== 'Tab') { event.preventDefault(); event.stopPropagation(); }
+      setDropOpen(drop, false);
+      if (event.key !== 'Tab') drop.querySelector('[data-drop-trigger]').focus();
+    }
+  }, true);
+
+  // A click on an answer picks it and closes the menu.
+  document.addEventListener('click', function (event) {
+    var option = event.target.closest && event.target.closest('[data-drop] .select-option');
+    if (!option || event.target.matches('input')) return;
+    var drop = option.closest('[data-drop]');
+    setTimeout(function () { setDropOpen(drop, false); }, 0);
+  });
+
   // «Формула» of the service window: the server recounts it from the form as it is now.
   var formulaTimer = null;
   var formulaRequest = 0;

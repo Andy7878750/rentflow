@@ -114,10 +114,17 @@
                 </ul>
               </div>
             </div>
-            <div class="seg-track" role="radiogroup" aria-label="Каждый месяц вводим">
-              {% for value, label in form.fields.input_mode.choices %}{% if value %}
-                <label><input type="radio" name="input_mode" value="{{ value }}"{% if form.input_mode.value == value %} checked{% endif %}><span>Вводим {{ label|lower }}</span></label>
-              {% endif %}{% endfor %}
+            {# A menu of radios: the CSS :has rules still see which one is checked. #}
+            <div class="pick pick-radio" data-drop>
+              <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Каждый месяц вводим">
+                <span data-drop-label>{% for value, label in form.fields.input_mode.choices %}{% if value and form.input_mode.value == value %}Вводим {{ label|lower }}{% endif %}{% endfor %}</span>
+                <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+              </button>
+              <ul class="select-menu pick-menu" role="radiogroup" aria-label="Каждый месяц вводим" data-drop-menu hidden>
+                {% for value, label in form.fields.input_mode.choices %}{% if value %}
+                  <li class="select-row"><label class="select-option"><input type="radio" name="input_mode" value="{{ value }}"{% if form.input_mode.value == value %} checked{% endif %}><span>Вводим {{ label|lower }}</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                {% endif %}{% endfor %}
+              </ul>
             </div>
             {% if form.tariff.errors %}<p class="calc-error">{{ form.tariff.errors.0 }}</p>{% elif form.tariff_night.errors %}<p class="calc-error">{{ form.tariff_night.errors.0 }}</p>{% elif form.unit.errors %}<p class="calc-error">{{ form.unit.errors.0 }}</p>{% endif %}
           </div>
@@ -141,10 +148,16 @@
           <div class="calc-row metered-only">
             <span class="calc-label">Счётчики</span>
             <div class="calc-ctrl">
-              <div class="seg-track" role="radiogroup" aria-label="Какие счётчики">
-                {% for value, label in layout_choices %}
-                  <label><input type="radio" name="layout" value="{{ value }}"{% if form.layout.value == value %} checked{% endif %}><span>{{ label }}</span></label>
-                {% endfor %}
+              <div class="pick pick-radio" data-drop>
+                <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Какие счётчики">
+                  <span data-drop-label>{% for value, label in layout_choices %}{% if form.layout.value == value %}{{ label }}{% endif %}{% endfor %}</span>
+                  <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+                </button>
+                <ul class="select-menu pick-menu" role="radiogroup" aria-label="Какие счётчики" data-drop-menu hidden>
+                  {% for value, label in layout_choices %}
+                    <li class="select-row"><label class="select-option"><input type="radio" name="layout" value="{{ value }}"{% if form.layout.value == value %} checked{% endif %}><span>{{ label }}</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                  {% endfor %}
+                </ul>
               </div>
             </div>
           </div>

@@ -2022,3 +2022,43 @@
   flex: 0 0 auto;
   width: 112px;
 }
+
+/* ---------- Drop-downs of radios: «Счётчики», «Вводим показания / расход» ----------
+   The radios stay real, so the :has rules of the window keep working. */
+.pick-radio .pick-menu {
+  min-width: 100%;
+  margin: 0;
+  list-style: none;
+}
+
+.pick-radio .select-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pick-radio .select-option {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.pick-radio .select-row:has(input:checked) {
+  background: #eceef1;
+}
+
+.pick-radio .select-row:has(input:checked) .select-option {
+  font-weight: 600;
+}
+
+.pick-radio .select-row:has(input:checked) .select-check {
+  visibility: visible;
+}
+
+.pick-radio .select-row:has(input:focus-visible) {
+  background: var(--color-bg);
+  box-shadow: inset 0 0 0 2px var(--color-accent-soft);
+}
+
+.pick-radio .pick-trigger {
+  white-space: nowrap;
+}
