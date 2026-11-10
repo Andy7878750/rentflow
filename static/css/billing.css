@@ -727,8 +727,10 @@
 .rform:has(input[name=layout][value=common]:checked) .meter-item:not([data-layouts~=common]),
 .rform:has(input[name=layout][value=tenants]:checked) .meter-item:not([data-layouts~=tenants]),
 .rform:has(input[name=layout][value=both]:checked) .meter-item:not([data-layouts~=both]),
-.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .split-row,
-.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .split-row {
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .split-track,
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .split-track,
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .split-hint,
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .split-hint {
   display: none;
 }
 
@@ -739,8 +741,8 @@
 .rform:has(input[name=amount_mode][value=monthly]:checked) .amount-hint[data-for=monthly],
 .rform:has(input[name=amount_mode][value=fixed]:checked) .amount-hint[data-for=fixed],
 .rform:has(input[name=layout][value=common]:checked) .layout-hint[data-for=common],
-.rform:has(input[name=layout][value=tenants]:checked) .layout-hint[data-for=tenants],
-.rform:has(input[name=layout][value=both]:checked) .layout-hint[data-for=both] {
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=tenants]:checked) .layout-hint[data-for=tenants],
+.rform:has(input[name=metered][value="1"]:checked):has(input[name=layout][value=both]:checked) .layout-hint[data-for=both] {
   display: block;
 }
 
@@ -1543,30 +1545,6 @@
   min-height: 42px;
 }
 
-.calc-word-sep {
-  margin-left: 4px;
-}
-
-/* «· вводим [Показания | Расход]» wraps as one piece. */
-.calc-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.rform .ifield input {
-  width: 64px;
-}
-
-.rform .ifield-sum input {
-  width: 190px;
-}
-
-.rform .ifield-num input {
-  width: 72px;
-}
-
 .rform .serial-field input {
   width: 120px;
 }
@@ -1574,4 +1552,114 @@
 /* «· вводим [Показания | Расход]»: with the usage typed in, no starting readings are needed. */
 .rform:has(input[name=input_mode][value=usage]:checked) .readings-only {
   display: none;
+}
+
+/* ---------- «Новая услуга»: rows on one grid, even spacing ----------
+   Every row of «Сколько стоит» / «Кто платит» is a thin line + 8px above and below. The answers
+   take the full width or two equal halves, so switches and fields line up from row to row. */
+.rform .rows .form-section-body {
+  gap: 0;
+  margin-top: -1px; /* the first row's line lies on the head's line */
+  padding: 0 14px 4px;
+}
+
+.rform .rows .calc-row,
+.rform .rows .calc-row:first-child,
+.rform .rows .meter-list,
+.rform .rows .rform-note {
+  margin: 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.rform .rows .rform-note {
+  padding: 12px 0;
+}
+
+.rform .rows .rform-warning {
+  margin: 0 0 8px;
+}
+
+.rform .calc-ctrl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.rform .calc-ctrl.halves {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rform .calc-ctrl > .calc-hint,
+.rform .calc-ctrl > .calc-note,
+.rform .calc-ctrl > .calc-error {
+  grid-column: 1 / -1;
+}
+
+/* A switch fills its cell; its answers share the width equally. */
+.rform .seg-track {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rform .seg-track label {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.rform .seg-track span {
+  overflow: hidden;
+  padding: 0 8px;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+/* Fields fill their cell too. */
+.rform .calc-ctrl > .ifield {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rform .calc-ctrl .ifield input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.calc-half {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calc-half .ifield {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* With the tenants' own meters «Делим» says it in words, at the height of a switch. */
+.calc-note {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 34px;
+}
+
+/* Meters: a line between rows, as everywhere in the window. */
+.rform .meter-list-head {
+  padding-bottom: 4px;
+}
+
+.rform .meter-item {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .rform .calc-ctrl.halves {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
