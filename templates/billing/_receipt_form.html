@@ -132,21 +132,15 @@
       </div>
     </section>
 
-    {# ---------- 3. Кто платит: which meters → the meters themselves → how it is split ---------- #}
-    <section class="form-section rows">
-      <h2 class="form-section-head">Кто платит
-        {% if property.is_owner_used %}<span class="badge">на вас</span>
-        {% else %}{% for value, label in layout_choices %}{% if value != 'common' %}<span class="badge head-badge" data-layout="{{ value }}">{{ label|lower }}</span>{% endif %}{% endfor %}
-        {% for value, label in split_choices %}<span class="badge head-badge" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
-      </h2>
+    {# ---------- 3. Счётчики: only with a meter — which meters, their numbers and starting readings ---------- #}
+    <section class="form-section rows metered-only">
+      <h2 class="form-section-head">Счётчики</h2>
       <div class="form-section-body">
-        {% if property.is_owner_used %}
-          <p class="rform-note">Объектом пользуетесь вы сами — расходы остаются на вас.</p>
+        {% if property.is_owner_used or not tenants %}
           <input type="hidden" name="layout" value="common">
-          <input type="hidden" name="split" value="owner">
-        {% elif tenants %}
-          <div class="calc-row metered-only">
-            <span class="calc-label">Счётчики</span>
+        {% else %}
+          <div class="calc-row">
+            <span class="calc-label">Какие</span>
             <div class="calc-ctrl">
               <div class="pick pick-radio" data-drop>
                 <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Какие счётчики">
@@ -161,11 +155,8 @@
               </div>
             </div>
           </div>
-        {% else %}
-          <input type="hidden" name="layout" value="common">
         {% endif %}
-
-        <div class="meter-list metered-only">
+        <div class="meter-list">
           <div class="meter-list-head">
             <span>Счётчик</span>
             <span></span>
@@ -192,6 +183,21 @@
             </div>
           {% endfor %}
         </div>
+      </div>
+    </section>
+
+    {# ---------- 4. Кто платит: how the sum is split ---------- #}
+    <section class="form-section rows">
+      <h2 class="form-section-head">Кто платит
+        {% if property.is_owner_used %}<span class="badge">на вас</span>
+        {% else %}{% for value, label in layout_choices %}{% if value != 'common' %}<span class="badge head-badge" data-layout="{{ value }}">{{ label|lower }}</span>{% endif %}{% endfor %}
+        {% for value, label in split_choices %}<span class="badge head-badge" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
+      </h2>
+      <div class="form-section-body">
+        {% if property.is_owner_used %}
+          <p class="rform-note">Объектом пользуетесь вы сами — расходы остаются на вас.</p>
+          <input type="hidden" name="split" value="owner">
+        {% endif %}
 
         {% if not property.is_owner_used %}
           {# Always here: the split buttons (no meter / one common meter), or what the tenants' own meters mean. #}
