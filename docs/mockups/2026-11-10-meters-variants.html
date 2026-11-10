@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счётчики — два варианта</title>
+<style>
+:root{--surface-0:#f5f6f7;--surface-1:#f1f3f4;--surface-2:#fff;--border:#e1e4e8;--border-strong:#cfd4d9;--text-primary:#2c3338;--text-secondary:#6b7680;--text-muted:#9aa3ab}
+body{margin:0;padding:24px 16px;background:var(--surface-0);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text-primary)}
+main{max-width:720px;margin:0 auto}
+h1{font-size:20px;font-weight:600;margin:0 0 4px}
+.lead{font-size:13px;color:var(--text-secondary);margin:0 0 20px}
+.wrap{display:flex;flex-direction:column;gap:26px}
+.vt{font-size:14px;font-weight:600;margin:0 0 6px}
+.vt small{font-weight:400;color:var(--text-secondary)}
+.sec{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);margin-top:10px}
+.sh{display:flex;align-items:center;gap:6px;background:var(--surface-1);padding:0 14px;height:34px;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--text-secondary);border-bottom:1px solid var(--border);border-radius:12px 12px 0 0}
+.bd{font-size:11px;letter-spacing:0;padding:2px 8px;border-radius:10px;background:#e3f1f6;color:#1f6280;font-weight:600}
+.sb{padding:10px 14px}
+.r{display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap}
+.lab{width:120px;flex:none;font-size:12px;color:var(--text-secondary)}
+.f{display:flex;align-items:center;gap:5px;height:30px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-size:12px;background:var(--surface-2);white-space:nowrap}
+.f s{text-decoration:none;color:var(--text-muted)}
+.who{position:relative;display:inline-flex;align-items:center;gap:4px;height:30px;box-sizing:border-box;padding:0 9px;border-radius:8px;background:var(--surface-1);font-size:12px;cursor:pointer;width:150px;flex:none;border:1px solid var(--border)}
+.who:after{content:'▾';margin-left:auto;color:var(--text-muted)}
+.who.common{color:var(--text-secondary)}
+.menu{position:absolute;top:32px;left:0;z-index:5;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:8px;padding:4px;width:170px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.menu div{padding:6px 8px;border-radius:6px;font-size:12px;color:var(--text-primary)}
+.menu div:hover{background:var(--surface-1)}
+.menu small{display:block;color:var(--text-muted);font-size:11px}
+.tf{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:12px;background:#e6f4f1;color:#0e6b59;font-size:11.5px;cursor:pointer;white-space:nowrap}
+.add{color:#148f77;font-size:12.5px;cursor:pointer;padding:6px 0 2px;display:inline-block}
+.x{color:var(--text-muted);cursor:pointer;font-size:13px;padding:0 4px}
+.grp{border-top:1px solid var(--border);padding-top:8px;margin-top:6px}
+.grp:first-child{border-top:none;margin-top:0;padding-top:0}
+.gh{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;margin-bottom:2px}
+.seg{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--surface-1)}
+.seg b{font-weight:500;font-size:12px;padding:0 10px;height:26px;line-height:26px;border-radius:6px;color:var(--text-secondary);white-space:nowrap}
+.seg b.on{background:#148f77;color:#fff}
+</style>
+</head>
+<body>
+<main>
+<h1>Счётчики: «+ счётчик» и привязка тарифа</h1>
+<p class="lead">Макет от 2026-11-10, ветка feature/meters. Всё нажимается: «+ счётчик» добавляет строку, клик по имени — выбор «чей», «×» — убрать. Ждём выбора варианта 1 или 2.</p>
+<div class="wrap">
+
+<div>
+<p class="vt">1 · «Тариф в строке» <small>— тарифы списком в «Сколько стоит», у счётчика метка тарифа</small></p>
+<div class="sec"><div class="sh">СКОЛЬКО СТОИТ<span class="bd">по счётчику</span><span class="bd">2 тарифа</span></div>
+ <div class="sb">
+  <div class="r"><span class="lab">Счётчик</span><div class="seg"><b class="on">Да</b><b>Нет</b></div></div>
+  <div class="r"><span class="lab">Тарифы</span><div class="f"><s>Холодная</s> 45,50 <s>₽ за м³</s></div><div class="f"><s>Горячая</s> 230,00 <s>₽ за м³</s></div><span class="add">+ тариф</span></div>
+ </div></div>
+<div class="sec"><div class="sh">СЧЁТЧИКИ<span class="bd" id="c1">4 счётчика</span></div>
+ <div class="sb" id="l1"></div></div>
+</div>
+
+<div>
+<p class="vt">2 · «Счётчики под тарифом» <small>— каждый тариф — группа, внутри свои счётчики</small></p>
+<div class="sec"><div class="sh">СЧЁТЧИКИ И ТАРИФЫ<span class="bd" id="c2">2 тарифа · 4 счётчика</span></div>
+ <div class="sb" id="l2"></div></div>
+</div>
+
+<div>
+<p class="vt">Простой случай <small>— один арендатор, два счётчика на объект (вариант 1)</small></p>
+<div class="sec"><div class="sh">СЧЁТЧИКИ<span class="bd">2 счётчика</span></div>
+ <div class="sb">
+  <div class="r"><span class="who common">Объект (общий)</span><div class="f"><s>№</s> 4471</div><div class="f"><s>на старте</s> 120</div><span class="tf">Холодная</span></div>
+  <div class="r"><span class="who common">Объект (общий)</span><div class="f"><s>№</s> 8820</div><div class="f"><s>на старте</s> 64</div><span class="tf">Горячая</span></div>
+  <span class="add">+ счётчик</span>
+ </div></div>
+</div>
+
+</div>
+</main>
+<script>
+const people=[['Объект (общий)','делим по долям'],['Виктор «Эгоист»','платит по своему'],['Владислав «Жаркофф»','платит по своему']];
+const tariffs=['Холодная','Горячая'];
+let m1=[[1,0,'0123'],[2,0,''],[1,1,''],[2,1,'']];
+let g2={0:[[1,'0123'],[2,'']],1:[[1,''],[2,'']]};
+function word(n){return n%10==1&&n%100!=11?'счётчик':(n%10>=2&&n%10<=4&&(n%100<12||n%100>14))?'счётчика':'счётчиков'}
+function row(w,num,id,tag){return `<div class="r"><span class="who${w==0?' common':''}" data-who="${id}">${people[w][0]}</span><div class="f" style="width:130px"><s>№</s> ${num||'<s>не указан</s>'}</div><div class="f" style="width:96px"><s>на старте</s> <s>0</s></div>${tag}<span class="x" data-del="${id}">×</span></div>`}
+function draw(){
+ document.getElementById('l1').innerHTML=m1.map((m,i)=>row(m[0],m[2],'a'+i,`<span class="tf" data-tf="${i}">${tariffs[m[1]]} ▾</span>`)).join('')+'<span class="add" data-add="1">+ счётчик</span>';
+ document.getElementById('c1').textContent=m1.length+' '+word(m1.length);
+ document.getElementById('l2').innerHTML=[0,1].map(t=>`<div class="grp"><div class="gh">${tariffs[t]} вода <div class="f" style="font-weight:400">${t?'230,00':'45,50'} <s>₽ за м³</s></div></div>`+g2[t].map((m,i)=>row(m[0],m[1],'b'+t+'_'+i,'')).join('')+`<span class="add" data-add2="${t}">+ счётчик</span></div>`).join('')+'<span class="add">+ тариф</span>';
+ const n=g2[0].length+g2[1].length;document.getElementById('c2').textContent='2 тарифа · '+n+' '+word(n);
+}
+function closeMenus(){document.querySelectorAll('.menu').forEach(m=>m.remove())}
+function set(id,w){if(id[0]=='a')m1[+id.slice(1)][0]=w;else{const [t,i]=id.slice(1).split('_');g2[t][+i][0]=w}}
+document.addEventListener('click',e=>{
+ const who=e.target.closest('[data-who]');const opt=e.target.closest('[data-pick]');
+ if(opt){const [id,w]=opt.dataset.pick.split('|');set(id,+w);closeMenus();draw();return}
+ closeMenus();
+ if(who){const id=who.dataset.who;const mn=document.createElement('div');mn.className='menu';mn.innerHTML=people.map((p,i)=>`<div data-pick="${id}|${i}">${p[0]}<small>${p[1]}</small></div>`).join('');who.appendChild(mn);return}
+ const tf=e.target.closest('[data-tf]');if(tf){const m=m1[+tf.dataset.tf];m[1]=1-m[1];draw();return}
+ if(e.target.closest('[data-add]')){m1.push([0,0,'']);draw();return}
+ const a2=e.target.closest('[data-add2]');if(a2){g2[a2.dataset.add2].push([0,'']);draw();return}
+ const d=e.target.closest('[data-del]');if(d){const id=d.dataset.del;if(id[0]=='a')m1.splice(+id.slice(1),1);else{const [t,i]=id.slice(1).split('_');g2[t].splice(+i,1)}draw()}
+});
+draw();
+</script>
+</body>
+</html>

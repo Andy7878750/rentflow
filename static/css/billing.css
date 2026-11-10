@@ -2188,3 +2188,12 @@
     gap: 6px;
   }
 }
+
+/* ---------- Head badges: pale blue everywhere (2026-11-10) ----------
+   A cool, slightly sea-blue tint, so it sits next to the accent #148f77 without fighting it. */
+.rform .form-section-head .badge,
+.rform .form-section-head .badge-ok,
+.rform .form-section-head .badge-info {
+  background: #e3f1f6;
+  color: #1f6280;
+}
