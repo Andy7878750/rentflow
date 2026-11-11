@@ -64,19 +64,31 @@ class FormulaExampleTests(TestCase):
         formula = self.example('capital_repair')
         self.assertEqual((formula.payer, formula.amount), ('Вы', Decimal('4200')))
 
+    def test_tenants_of_a_fixed_sum_get_their_parts(self):
+        receipt = services.new_receipt(self.prop, 'internet')
+        receipt.metered, receipt.amount_mode, receipt.fixed_amount = False, 'fixed', Decimal('4800')
+        receipt.split = 'shares'
+        rows = services.payer_preview(services.normalize(receipt))
+        self.assertEqual([(r.tenant.name, r.basis, r.amount_text) for r in rows],
+                         [('Виктор', '45%', '2 160,00 ₽'), ('Владислав', '55%', '2 640,00 ₽')])
+        receipt.split = 'equal'
+        self.assertEqual([r.basis for r in services.payer_preview(receipt)], ['÷ 2', '÷ 2'])
+        receipt.amount_mode = 'monthly'
+        self.assertEqual([r.amount_text for r in services.payer_preview(receipt)], ['', ''], 'no sum known yet')
+
     def test_view_recounts_the_unsaved_form(self):
         self.client.force_login(self.user)
         response = self.client.post(reverse('receipt_formula', args=[self.prop.pk]), {
-            'kind': 'electricity', 'name': 'Свет', 'metered': '1', 'zones': '1', 'unit': 'кВт·ч',
-            'tariff': '5,50', 'layout': 'tenants', 'formula_for': str(self.vlad.pk),
+            'kind': 'internet', 'name': 'Интернет', 'metered': '0', 'amount_mode': 'fixed',
+            'fixed_amount': '4800', 'split': 'shares',
         })
-        self.assertContains(response, 'Владислав платит')
-        self.assertContains(response, '660,00\xa0₽')
+        self.assertContains(response, 'class="payer-list"')
+        self.assertContains(response, '2 640,00 ₽')
 
     def test_window_lists_the_tenants_instead_of_the_formula(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=management',
                                    HTTP_X_MODAL='1')
-        self.assertNotContains(response, 'data-formula')
+        self.assertNotContains(response, 'Пример для')
         self.assertContains(response, 'class="payer-list"')
         self.assertContains(response, 'Виктор')

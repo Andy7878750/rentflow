@@ -1,0 +1,16 @@
+{% comment %}«Кто платит» → «Арендаторы»: number, name, the basis of the part (45% · ÷ 2 · 30 м²) and, for a fixed
+   sum, what each pays a month. The server recounts it while the form is filled in (receipt_formula, app.js).{% endcomment %}
+<div class="calc-row payers-row" data-formula data-formula-url="{% url 'receipt_formula' property.pk %}">
+  <span class="calc-label">Арендаторы</span>
+  <div class="calc-ctrl">
+    {% if payers %}
+      <ol class="payer-list">
+        {% for row in payers %}
+          <li class="payer"><span class="payer-num">{{ forloop.counter }}</span><span class="payer-name fade">{{ row.tenant.name }}</span><span class="payer-share">{{ row.basis }}</span><span class="payer-amount">{{ row.amount_text }}</span></li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <span class="badge">арендаторов пока нет</span>
+    {% endif %}
+  </div>
+</div>

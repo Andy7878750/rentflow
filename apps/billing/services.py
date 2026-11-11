@@ -197,12 +197,11 @@ METER_KIND_OF = {Receipt.Kind.SEWAGE: Receipt.Kind.WATER, Receipt.Kind.HOT_WATER
 
 
 def meter_default(receipt):
-    """(kind, name, unit) of a new meter of the service: by its template, else its own name."""
+    """(kind, name, unit) of a new meter of the service: by its template when the menu has that kind,
+    else the menu's first one — «Электричество»."""
     kind = METER_KIND_OF.get(receipt.kind, receipt.kind)
-    for value, name, unit in METER_KINDS:
-        if value == kind:
-            return value, name, unit
-    return Receipt.Kind.CUSTOM, receipt.name or DEFAULT_METER_NAME, receipt.unit or ''
+    menu = [entry for entry in METER_KINDS if entry[0] in MENU_METER_KINDS]
+    return next((entry for entry in menu if entry[0] == kind), menu[0])
 
 
 def meter_kind_options(property_obj):
@@ -621,6 +620,41 @@ def _split(total, receipt, tenants, property_obj):
                 f'{total_text} × {fmt_number(area)} из {fmt_number(property_obj.area)}{NBSP}м²',
             )
     return lines
+
+
+@dataclass
+class PayerPreview:
+    """A tenant in «Кто платит» of the service window: the basis of their part and the sum, when known."""
+
+    tenant: object
+    basis: str
+    amount_text: str = ''
+
+
+def payer_preview(receipt):
+    """«Кто платит» → «Арендаторы»: each tenant's basis (45%, ÷ 2, 30 м²) and, for a fixed sum,
+    what they pay a month — the same split and rounding as month_bill. A sum that changes every
+    month or comes from meters is not known yet, so only the basis is shown."""
+    property_obj = receipt.property
+    tenants = list(property_obj.tenants.all())
+    fixed = (
+        not receipt.metered and receipt.amount_mode == Receipt.AmountMode.FIXED
+        and receipt.fixed_amount and receipt.split != Receipt.Split.OWNER
+    )
+    lines = _split(receipt.fixed_amount, receipt, tenants, property_obj) if fixed else {}
+    rows = []
+    for tenant in tenants:
+        if receipt.split == Receipt.Split.EQUAL:
+            basis = f'÷ {len(tenants)}'
+        elif receipt.split == Receipt.Split.AREA:
+            basis = f'{fmt_number(tenant.area)}{NBSP}м²' if tenant.area is not None else '— м²'
+        elif receipt.split == Receipt.Split.SHARES:
+            basis = f'{fmt_number(tenant.share_percent or Decimal("0"))}%'
+        else:
+            basis = ''
+        line = lines.get(tenant.pk)
+        rows.append(PayerPreview(tenant, basis, _rub(line.amount, receipt.currency_symbol) if line else ''))
+    return rows
 
 
 def month_bill(property_obj, month):

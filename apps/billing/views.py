@@ -24,13 +24,6 @@ def _done(request, property_obj, message):
     return redirect(url)
 
 
-def _formula(receipt, meters, chosen):
-    """«Формула» on the service as the window describes it now; the tariff — of the chosen tenant's meter."""
-    if meters is not None and receipt.metered:
-        services.tariff_from_meters(receipt, meters, tenant_id=chosen)
-    return services.formula_example(services.normalize(receipt), chosen)
-
-
 def _receipt_form(request, property_obj, receipt):
     posted = request.POST if request.method == 'POST' else None
     meter_rows = services.meter_rows(receipt, posted)
@@ -68,6 +61,7 @@ def _receipt_form(request, property_obj, receipt):
         # New service: the templates on top of the same window; picking one refills the fields below.
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
         'meters_error': meters_error,
+        'payers': services.payer_preview(services.normalize(form.instance)),
         'tenants': property_obj.tenants.all(),
         'meter_rows': meter_rows,
         'meter_layout': meter_layout,
@@ -106,7 +100,7 @@ def receipt_edit(request, pk):
 @login_required
 @require_POST
 def receipt_formula(request, property_pk):
-    """«Формула» of the service window, recounted while the form is filled in (nothing is saved)."""
+    """«Кто платит» → «Арендаторы» of the service window, recounted while the form is filled in (nothing is saved)."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
     pk = request.POST.get('receipt')
     if pk:
@@ -115,9 +109,8 @@ def receipt_formula(request, property_pk):
         receipt = services.new_receipt(property_obj, request.POST.get('kind'))
     form = ReceiptForm(request.POST, instance=receipt)
     form.is_valid()
-    meters = services.parse_meters(property_obj, request.POST)
-    formula = _formula(form.instance, meters, request.POST.get('formula_for'))
-    return render(request, 'billing/_formula.html', {'formula': formula, 'receipt': receipt, 'property': property_obj})
+    payers = services.payer_preview(services.normalize(form.instance))
+    return render(request, 'billing/_payers.html', {'payers': payers, 'receipt': receipt, 'property': property_obj})
 
 
 def _meter_row(request):

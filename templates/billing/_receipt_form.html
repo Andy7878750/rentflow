@@ -163,21 +163,7 @@
             </div>
           </div>
 
-          {# Who shares it: the object's tenants with their shares (the settings per tenant come next). #}
-          <div class="calc-row payers-row">
-            <span class="calc-label">Арендаторы</span>
-            <div class="calc-ctrl">
-              {% if tenants %}
-                <ol class="payer-list">
-                  {% for tenant in tenants %}
-                    <li class="payer"><span class="payer-num">{{ forloop.counter }}</span><span class="payer-name fade">{{ tenant.name }}</span><span class="payer-share">{% if property.share_unit == 'area' and tenant.area is not None %}{{ tenant.area|floatformat:"-2" }} м²{% else %}{{ tenant.share_percent|floatformat:"-2" }}%{% endif %}</span></li>
-                  {% endfor %}
-                </ol>
-              {% else %}
-                <span class="badge">арендаторов пока нет</span>
-              {% endif %}
-            </div>
-          </div>
+          {% include "billing/_payers.html" %}
         {% endif %}
         {% if warning %}<p class="rform-warning">{{ warning }}</p>{% endif %}
       </div>
