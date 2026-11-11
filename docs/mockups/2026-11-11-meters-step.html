@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счётчики объекта</title>
+<style>
+:root {
+  --color-primary: #34495e;
+  --color-accent: #148f77;
+  --color-accent-soft: #e6f4f1;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fbecea;
+  --color-bg: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-border: #e1e4e8;
+  --color-text: #2c3338;
+  --color-text-muted: #6b7680;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); color: var(--color-text); line-height: 1.5; font-size: 14px; min-height: 100vh; }
+.overlay { padding: 32px 16px; display: flex; justify-content: center; }
+.modal { width: 100%; max-width: 760px; background: var(--color-surface); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.modal-head { padding: 20px 24px 12px; display: flex; align-items: flex-start; gap: 12px; }
+.modal-head h2 { margin: 0; font-size: 20px; color: var(--color-primary); }
+.modal-head .sub { margin: 2px 0 0; color: var(--color-text-muted); font-size: 13px; }
+.close { margin-left: auto; width: 32px; height: 32px; border: 0; background: none; font-size: 22px; color: var(--color-text-muted); cursor: pointer; border-radius: 8px; }
+.close:hover { background: #f1f2f4; }
+.modal-body { padding: 0 24px 8px; }
+
+/* Setup steps: Объект ✓ · Арендаторы ✓ · Счётчики · Услуги */
+.steps { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; padding: 0; list-style: none; font-size: 12px; }
+.steps li { padding: 3px 10px; border-radius: 999px; background: #f1f2f4; color: var(--color-text-muted); }
+.steps li.done { background: var(--color-accent-soft); color: #0e6b59; }
+.steps li.now { background: var(--color-accent); color: #fff; font-weight: 600; }
+
+.lead { margin: 0 0 14px; font-size: 13px; color: var(--color-text-muted); }
+
+/* Blocks: frame, 12px corners, grey head in CAPS (.form-section in forms.css). */
+.form-section { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.form-section-head { margin: 0; padding: 8px 14px; background: #f7f8f9; border-bottom: 1px solid var(--color-border);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary);
+  display: flex; align-items: center; gap: 8px; }
+.form-section-head .badge { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 999px; background: #e3f1f6; color: #1f6280; }
+.form-section-head .who-num { width: 22px; height: 22px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: grid; place-items: center; font-size: 11px; letter-spacing: 0; }
+.form-section-head .muted-r { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--color-text-muted); font-size: 12px; }
+.form-section-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+/* Floating labels, field 52px, focus — accent (.fl in forms.css). */
+.fl { position: relative; display: block; min-width: 0; }
+.fl input, .fl select { width: 100%; height: 52px; padding: 20px 12px 6px; border: 1px solid var(--color-border); border-radius: var(--radius);
+  font: inherit; font-size: 15px; color: var(--color-text); background: #fff; outline: none; appearance: none; }
+.fl select { padding-right: 30px; cursor: pointer; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7680' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center; }
+.fl input:focus, .fl select:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.fl label { position: absolute; left: 12px; top: 16px; color: var(--color-text-muted); font-size: 14px; pointer-events: none; transition: all .12s ease; white-space: nowrap; }
+.fl input:focus + label, .fl input:not(:placeholder-shown) + label, .fl select + label { top: 6px; font-size: 11px; }
+.fl .unit { position: absolute; right: 12px; top: 22px; color: var(--color-text-muted); font-size: 13px; pointer-events: none; }
+.fl.has-unit input { padding-right: 52px; text-align: right; }
+.fl.bad input { border-color: var(--color-danger); }
+
+/* One meter = one row: what · № · start reading (day/night for electricity) · × */
+.meter { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) 28px; gap: 8px; align-items: center; }
+.meter.dn > .fl:nth-child(2) { grid-column: span 2; }
+.meter-sub { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) 28px; gap: 8px; align-items: center; margin: 0 0 4px; font-size: 12px; color: var(--color-text-muted); }
+.meter-sub .tsw { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@container (max-width: 520px) {
+  .meter, .meter-sub { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px; }
+  .meter.dn > .fl:nth-child(2) { grid-column: auto; }
+  .meter-sub .tsw { grid-column: 1 / -1; }
+}
+.form-section-body { container-type: inline-size; }
+.x { width: 28px; height: 28px; border: 0; background: none; color: var(--color-text-muted); font-size: 18px; cursor: pointer; border-radius: 6px; padding: 0; }
+.x:hover { background: var(--color-danger-soft); color: var(--color-danger); }
+.empty { font-size: 13px; color: var(--color-text-muted); }
+.setup-link { align-self: flex-start; border: 0; background: none; padding: 0; color: var(--color-accent); font: inherit; cursor: pointer; }
+
+/* Day / night: a small switch under an electricity meter */
+.seg-track { display: inline-flex; background: #eef0f2; border-radius: 8px; padding: 2px; gap: 2px; }
+.seg-track button { height: 24px; border: 0; background: none; border-radius: 6px; padding: 0 10px; font: inherit; font-size: 12px; color: var(--color-text); cursor: pointer; }
+.seg-track button.on { background: var(--color-accent); color: #fff; }
+
+.err { font-size: 13px; color: var(--color-danger); margin: 0 0 10px; }
+.form-actions { display: flex; align-items: center; gap: 8px; padding: 14px 24px 20px; border-top: 1px solid var(--color-border); }
+.form-actions .left { margin-right: auto; }
+.btn { height: 40px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--color-border); background: #fff; font: inherit; cursor: pointer; color: var(--color-text); }
+.btn.primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; font-weight: 600; }
+.btn.link { border: 0; padding: 0; height: auto; background: none; color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 3px; }
+.toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--color-primary); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: none; }
+</style>
+</head>
+<body>
+<div class="overlay">
+  <div class="modal" role="dialog" aria-labelledby="t">
+    <div class="modal-head">
+      <div><h2 id="t">Счётчики</h2><p class="sub">Королёва 61 · Нежилое помещение</p></div>
+      <button class="close" aria-label="Закрыть">×</button>
+    </div>
+    <div class="modal-body">
+      <ul class="steps"><li class="done">Объект ✓</li><li class="done">Арендаторы ✓</li><li class="now">Счётчики</li><li>Услуги</li></ul>
+      <p class="lead">Добавьте счётчики и сразу закрепите: чей счётчик — у того и строка. Потом в услугах останется только выбрать их галочкой.</p>
+      <div id="err"></div>
+      <div id="groups"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn link left" data-act="none">Счётчиков нет</button>
+      <button class="btn">Отмена</button>
+      <button class="btn primary" data-act="save">Сохранить</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function () {
+  var KINDS = [
+    { id: 'el', name: 'Электричество', unit: 'кВт·ч' },
+    { id: 'cold', name: 'Вода холодная', unit: 'м³' },
+    { id: 'hot', name: 'Вода горячая', unit: 'м³' },
+    { id: 'heat', name: 'Тепло', unit: 'Гкал' },
+    { id: 'gas', name: 'Газ', unit: 'м³' }
+  ];
+  // Who: the object itself (common meters) and the tenants.
+  var WHO = [
+    { id: '', name: 'Объект', note: 'общие счётчики — на всё помещение' },
+    { id: 'v', name: 'Виктор', note: 'доля 45%' },
+    { id: 'w', name: 'Владислав', note: 'доля 55%' }
+  ];
+  var meters = [
+    { id: 1, who: '', kind: 'el', serial: '01234567', start: '12450', dn: true, startN: '6210' },
+    { id: 2, who: 'v', kind: 'hot', serial: '', start: '100' },
+    { id: 3, who: 'v', kind: 'cold', serial: '', start: '50' },
+    { id: 4, who: 'w', kind: 'hot', serial: '', start: '200' },
+    { id: 5, who: 'w', kind: 'cold', serial: '', start: '' }
+  ];
+  var seq = 10, tried = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var kind = function (id) { return KINDS.find(function (k) { return k.id === id; }); };
+  var plural = function (n) { return n % 10 === 1 && n % 100 !== 11 ? 'счётчик' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'счётчика' : 'счётчиков'); };
+
+  function field(m, f, label, unit) {
+    var bad = tried && f !== 'serial' && !String(m[f] || '').trim();
+    return '<div class="fl' + (unit ? ' has-unit' : '') + (bad ? ' bad' : '') + '"><input id="' + f + m.id + '" data-id="' + m.id + '" data-f="' + f + '" placeholder=" " autocomplete="off"' +
+      (f === 'serial' ? '' : ' inputmode="decimal"') + ' value="' + esc(m[f] || '') + '"><label for="' + f + m.id + '">' + label + '</label>' +
+      (unit ? '<span class="unit">' + unit + '</span>' : '') + '</div>';
+  }
+
+  function row(m) {
+    var k = kind(m.kind), dn = m.kind === 'el' && m.dn;
+    var h = '<div class="meter' + (dn ? ' dn' : '') + '">' +
+      '<div class="fl"><select id="k' + m.id + '" data-id="' + m.id + '" data-f="kind">' + KINDS.map(function (x) {
+        return '<option value="' + x.id + '"' + (x.id === m.kind ? ' selected' : '') + '>' + x.name + '</option>'; }).join('') +
+      '</select><label for="k' + m.id + '">Что меряет</label></div>' +
+      field(m, 'serial', '№ счётчика') +
+      (dn ? '' : field(m, 'start', 'Начальное показание', k.unit)) +
+      '<button class="x" data-del="' + m.id + '" aria-label="Убрать счётчик">×</button></div>';
+    if (m.kind === 'el') h += '<div class="meter-sub"><div class="tsw">Тариф <span class="seg-track">' +
+      '<button data-dn="' + m.id + '" data-v="0" class="' + (dn ? '' : 'on') + '">Однотарифный</button>' +
+      '<button data-dn="' + m.id + '" data-v="1" class="' + (dn ? 'on' : '') + '">День / ночь</button></span></div>' +
+      (dn ? field(m, 'start', 'Начальное · день', k.unit) + field(m, 'startN', 'Начальное · ночь', k.unit) : '') + '</div>';
+    return h;
+  }
+
+  function render() {
+    $('groups').innerHTML = WHO.map(function (w, i) {
+      var list = meters.filter(function (m) { return m.who === w.id; });
+      return '<section class="form-section"><h3 class="form-section-head">' +
+        (w.id ? '<span class="who-num">' + i + '</span>' : '') + esc(w.name) +
+        (list.length ? '<span class="badge">' + list.length + ' ' + plural(list.length) + '</span>' : '') +
+        '<span class="muted-r">' + esc(w.note) + '</span></h3><div class="form-section-body">' +
+        (list.length ? list.map(row).join('') : '<div class="empty">Нет счётчиков</div>') +
+        '<button class="setup-link" data-add="' + w.id + '">+ Добавить счётчик</button></div></section>';
+    }).join('');
+    var missing = tried && meters.some(function (m) { return !String(m.start || '').trim() || (m.kind === 'el' && m.dn && !String(m.startN || '').trim()); });
+    $('err').innerHTML = missing ? '<p class="err">Укажите начальное показание у каждого счётчика — от него считаем расход первого месяца.</p>' : '';
+  }
+
+  function toast(text) { var t = $('toast'); t.textContent = text; t.style.display = 'block'; setTimeout(function () { t.style.display = 'none'; }, 2200); }
+
+  document.addEventListener('input', function (e) {
+    var el = e.target, m = meters.find(function (x) { return x.id === +el.dataset.id; });
+    if (!m) return;
+    m[el.dataset.f] = el.value;
+    if (el.tagName === 'SELECT') { render(); return; }
+    if (tried) { el.parentNode.classList.toggle('bad', el.dataset.f !== 'serial' && !el.value.trim()); }
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.add !== undefined) {
+      var m = { id: ++seq, who: b.dataset.add, kind: b.dataset.add ? 'hot' : 'el', serial: '', start: '' };
+      meters.push(m); render(); $('k' + m.id).focus();
+    } else if (b.dataset.del) { meters = meters.filter(function (m) { return m.id !== +b.dataset.del; }); render(); }
+    else if (b.dataset.dn) { meters.find(function (m) { return m.id === +b.dataset.dn; }).dn = b.dataset.v === '1'; render(); }
+    else if (b.dataset.act === 'save') {
+      tried = true; render();
+      if (!$('err').innerHTML) toast('Сохранено: ' + meters.length + ' ' + plural(meters.length) + '. Дальше — услуги.');
+    } else if (b.dataset.act === 'none') toast('Шаг «Счётчики» пройден: счётчиков нет. Дальше — услуги.');
+  });
+  // Enter — next field
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !e.target.matches('input, select')) return;
+    e.preventDefault();
+    var all = Array.prototype.slice.call(document.querySelectorAll('#groups input, #groups select')), i = all.indexOf(e.target);
+    if (all[i + 1]) all[i + 1].focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
