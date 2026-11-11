@@ -1,7 +1,8 @@
-{% comment %}One meter of «Счётчики» in one line, on the columns of the list's head:
-   what it measures ▾ · № · whose ▾ · tariff «₽/ед.» · start reading · ×.
+{% comment %}One meter of «Счётчики» in one line; the hints live inside the fields:
+   what it measures ▾ · № · whose ▾ · tariff [₽ | ед. ▾] · on start · ✓ save · × delete.
+   «✓» saves the meter to the object right away (data-state: new → saved; any change → new again).
    Every row posts the same ten meter_* fields, so the lists line up (services.parse_meters).{% endcomment %}
-<div class="meter-row" data-meter-row>
+<div class="meter-row" data-meter-row data-state="{% if row.id %}saved{% else %}new{% endif %}">
   <input type="hidden" name="meter_id" value="{{ row.id }}">
   <div class="meter-line">
     {# What it measures: ready-made kinds, the owner's own ones, and «свой вариант…» typed right in the menu. #}
@@ -28,14 +29,7 @@
       </div>
     </div>
 
-    <span class="ifield serial-field" data-serial data-state="{% if row.serial %}locked{% else %}empty{% endif %}">
-      <span class="ifield-fix">№</span>
-      <input type="text" name="meter_serial" value="{{ row.serial }}" maxlength="50" placeholder="не указан" aria-label="Номер счётчика"{% if row.serial %} readonly{% endif %}>
-      <button type="button" class="serial-toggle" data-serial-toggle aria-label="{% if row.serial %}Изменить номер{% else %}Готово{% endif %}">
-        <svg class="icon icon-done"><use href="#i-check"/></svg>
-        <svg class="icon icon-edit"><use href="#i-edit"/></svg>
-      </button>
-    </span>
+    <label class="ifield mserial"><input type="text" name="meter_serial" value="{{ row.serial }}" maxlength="50" placeholder="№ счётчика" aria-label="Номер счётчика"></label>
 
     {# Whose: the object (a common meter) or a tenant. #}
     <div class="pick mwho" data-pick>
@@ -51,17 +45,20 @@
       </ul>
     </div>
 
-    {# Tariff and unit are one value: «45,50 ₽/м³»; the unit is a small menu inside the field. #}
+    {# The tariff with its unit on the right, like «Доля [м² ▾]» in the object window. #}
     <span class="meter-cell">
-      <span class="ifield mtariff"><span class="ifield-fix zones2-only">д</span><input type="text" inputmode="decimal" name="meter_tariff" value="{{ row.tariff }}" placeholder="0,00" aria-label="Тариф счётчика"><span class="ifield-fix">{{ receipt.currency_symbol }}/</span>{% include "billing/_meter_unit.html" %}</span>
-      <span class="ifield mtariff zones2-only"><span class="ifield-fix">н</span><input type="text" inputmode="decimal" name="meter_tariffn" value="{{ row.tariffn }}" placeholder="0,00" aria-label="Тариф счётчика ночью"><span class="ifield-fix">{{ receipt.currency_symbol }}/<span data-unit-echo>{{ row.unit|default:'ед.' }}</span></span></span>
+      <span class="ifield mtariff"><span class="ifield-fix zones2-only">д</span><input type="text" inputmode="decimal" name="meter_tariff" value="{{ row.tariff }}" placeholder="тариф" aria-label="Тариф счётчика"><span class="ifield-fix">{{ receipt.currency_symbol }}</span>{% include "billing/_meter_unit.html" %}</span>
+      <span class="ifield mtariff zones2-only"><span class="ifield-fix">н</span><input type="text" inputmode="decimal" name="meter_tariffn" value="{{ row.tariffn }}" placeholder="тариф" aria-label="Тариф счётчика ночью"><span class="ifield-fix">{{ receipt.currency_symbol }}</span><span class="munit-echo" data-unit-echo>{{ row.unit|default:'ед.' }}</span></span>
     </span>
     <span class="meter-cell">
-      <label class="ifield mstart readings-only"><span class="ifield-fix zones2-only">д</span><input type="text" inputmode="decimal" name="meter_initial" value="{{ row.initial }}" placeholder="0" aria-label="Показание на старте"></label>
-      <label class="ifield mstart readings-only zones2-only"><span class="ifield-fix">н</span><input type="text" inputmode="decimal" name="meter_initialn" value="{{ row.initialn }}" placeholder="0" aria-label="Показание на старте ночью"></label>
+      <label class="ifield mstart"><span class="ifield-fix zones2-only">д</span><input type="text" inputmode="decimal" name="meter_initial" value="{{ row.initial }}" placeholder="на старте" maxlength="7" aria-label="Показание на старте"></label>
+      <label class="ifield mstart zones2-only"><span class="ifield-fix">н</span><input type="text" inputmode="decimal" name="meter_initialn" value="{{ row.initialn }}" placeholder="на старте" maxlength="7" aria-label="Показание на старте ночью"></label>
     </span>
 
-    <button type="button" class="icon-button meter-remove" data-meter-remove aria-label="Убрать счётчик" title="Убрать счётчик">
+    <button type="button" class="icon-button meter-save" data-meter-save aria-label="Сохранить счётчик" title="Сохранить счётчик">
+      <svg class="icon"><use href="#i-check"/></svg>
+    </button>
+    <button type="button" class="icon-button meter-remove" data-meter-remove aria-label="Удалить счётчик" title="Удалить счётчик">
       <svg class="icon"><use href="#i-x"/></svg>
     </button>
   </div>

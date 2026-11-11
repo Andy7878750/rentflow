@@ -2,6 +2,7 @@
   <input type="hidden" name="meter_unit" value="{{ row.unit }}">
   <button type="button" class="munit-trigger" data-pick-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Единица">
     <span data-pick-label>{{ row.unit|default:'ед.' }}</span>
+    <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
   </button>
   <ul class="select-menu pick-menu" role="listbox" data-pick-menu hidden>
     {% for unit in form.units %}

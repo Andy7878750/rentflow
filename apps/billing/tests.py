@@ -105,6 +105,32 @@ class ReceiptServiceTests(TestCase):
         self.assertFalse(Meter.objects.filter(pk=hot.pk).exists())
         self.assertIn({'kind': 'custom', 'name': 'Полив', 'unit': 'м³'}, services.meter_kind_options(self.prop))
 
+    def test_meter_saved_from_its_row_then_linked_by_the_service(self):
+        row = {'id': '', 'kind': 'water', 'name': 'Вода холодная', 'who': str(self.viktor.pk), 'serial': '0123',
+               'tariff': '45,50', 'tariffn': '', 'unit': 'м³', 'initial': '120', 'initialn': ''}
+        meter = services.save_meter(self.prop, row)
+        self.assertEqual((meter.property, meter.tenant, meter.tariff), (self.prop, self.viktor, Decimal('45.50')))
+
+        services.save_meter(self.prop, {**row, 'id': str(meter.pk), 'serial': '0124'})
+        meter.refresh_from_db()
+        self.assertEqual(meter.serial, '0124')
+
+        receipt = services.save_receipt(services.new_receipt(self.prop, 'water'), meters=[
+            services.clean_meter(self.prop, {**row, 'id': str(meter.pk)}),
+        ])
+        self.assertEqual(list(receipt.meters.all()), [meter], 'the saved meter is linked, not copied')
+        self.assertEqual(self.prop.meters.count(), 1)
+
+    def test_delete_meter_keeps_one_another_service_uses(self):
+        water = services.save_receipt(services.new_receipt(self.prop, 'water'))
+        sewage = services.save_receipt(services.new_receipt(self.prop, 'sewage'))
+        shared = water.meters.get(tenant=self.viktor)
+        sewage.meters.add(shared)
+        self.assertFalse(services.delete_meter(shared, keep_for=water.pk))
+        own = water.meters.get(tenant=self.vlad)
+        self.assertTrue(services.delete_meter(own, keep_for=water.pk))
+        self.assertFalse(Meter.objects.filter(pk=own.pk).exists())
+
     def test_unmetered_receipt_drops_meters_and_reading_split(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
         receipt.metered = False
@@ -241,8 +267,23 @@ class ReceiptViewTests(TestCase):
         self.assertEqual((meter.serial, meter.initial, meter.initial_night), ('0123456', Decimal('1000'), Decimal('400')))
 
         response = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
-        self.assertContains(response, 'data-state="locked"')
+        self.assertContains(response, 'data-state="saved"')
         self.assertContains(response, 'value="0123456" maxlength="50"')
+
+    def test_meter_row_save_and_delete(self):
+        url = reverse('meter_save', args=[self.prop.pk])
+        response = self.client.post(url, {'meter_kind': 'custom', 'meter_name': 'Полив', 'meter_tariff': '30'})
+        meter = self.prop.meters.get(pk=response.json()['id'])
+        self.assertEqual((meter.name, meter.tariff, meter.tenant), ('Полив', Decimal('30'), None))
+
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.post(url, {'meter_kind': 'gas'}).status_code, 404)
+        self.assertEqual(self.client.post(reverse('meter_delete', args=[meter.pk])).status_code, 404)
+
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('meter_delete', args=[meter.pk]))
+        self.assertTrue(response.json()['deleted'])
+        self.assertFalse(self.prop.meters.exists())
 
     def test_meter_question_is_rendered_yes_for_a_metered_preset(self):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
@@ -258,7 +299,8 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'name="meter_name" value="Вода холодная"')
         self.assertContains(response, 'data-pick-label="Виктор"')
         self.assertContains(response, '+ Добавить счётчик')
-        self.assertContains(response, 'placeholder="не указан"')
+        self.assertContains(response, 'placeholder="№ счётчика"')
+        self.assertContains(response, 'data-state="new"', count=2)
 
     def test_usage_mode_is_saved_and_the_object_page_asks_for_usage(self):
         response = self.client.post(

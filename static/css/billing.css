@@ -2445,3 +2445,148 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) 30px;
   }
 }
+
+/* ---------- Meter row, round 2 (2026-11-11) ----------
+   No column captions: the hints are inside the fields. Long names fade out (.fade).
+   The unit sits on the right of the tariff field, like «Доля [м² ▾]» in the object window.
+   At the end of the row: ✓ saves the meter to the object, × deletes it. */
+.rform .meter-row .meter-line {
+  grid-template-columns: 150px 130px 140px 132px 84px 30px 30px;
+  gap: 6px;
+}
+
+.rform .mkind .pick-trigger,
+.rform .mwho .pick-trigger {
+  gap: 4px;
+  padding: 0 8px 0 10px;
+}
+
+.rform .mkind .pick-trigger .fade,
+.rform .mwho .pick-trigger .fade {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.rform .mkind .select-chevron,
+.rform .mwho .select-chevron {
+  flex: none;
+}
+
+.rform .meters-block .mserial {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rform .meters-block .mserial input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  text-align: left;
+}
+
+/* Tariff: [ 45,50 ₽ | м³ ▾ ] */
+.rform .meters-block .mtariff {
+  padding-right: 0;
+  overflow: visible;
+}
+
+.munit {
+  align-self: stretch;
+}
+
+.munit-trigger {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 100%;
+  padding: 0 6px 0 8px;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0 7px 7px 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.munit-trigger .icon {
+  width: 12px;
+  height: 12px;
+  color: var(--color-text-muted);
+}
+
+.munit-trigger:hover,
+.munit.is-open .munit-trigger {
+  border-bottom: 0;
+  background: #e9ecef;
+  color: var(--color-text);
+}
+
+.munit.is-open .select-chevron {
+  transform: rotate(180deg);
+}
+
+.munit .pick-menu {
+  top: calc(100% + 6px);
+  right: 0;
+}
+
+.munit-echo {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0 7px 7px 0;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rform .meters-block .mstart input {
+  text-align: right;
+}
+
+/* ✓ and × at the end. A row with changes not saved yet: ✓ in the accent; saved: a quiet check. */
+.meter-save,
+.rform .meter-remove {
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  border-radius: 8px;
+}
+
+.meter-save .icon,
+.rform .meter-remove .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.meter-row[data-state=new] .meter-save,
+.meter-row[data-state=error] .meter-save {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.meter-row[data-state=saving] .meter-save {
+  opacity: 0.6;
+}
+
+.meter-row[data-state=saved] .meter-save {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.meter-row[data-state=error] .meter-save {
+  background: var(--color-danger);
+}
+
+.rform .meter-remove {
+  color: var(--color-text-muted);
+}
+
+.rform .meter-remove:hover {
+  color: var(--color-danger);
+}

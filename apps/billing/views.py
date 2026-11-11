@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -12,7 +12,7 @@ from apps.properties.views import modal_back_url, object_page_context
 
 from . import services
 from .forms import ReceiptForm
-from .models import Receipt
+from .models import Meter, Receipt
 
 
 def _done(request, property_obj, message):
@@ -108,6 +108,30 @@ def receipt_formula(request, property_pk):
     form.is_valid()
     formula = services.formula_example(services.normalize(form.instance), request.POST.get('formula_for'))
     return render(request, 'billing/_formula.html', {'formula': formula, 'receipt': receipt, 'property': property_obj})
+
+
+def _meter_row(request):
+    """The posted row of «Счётчики»: meter_kind → kind, …"""
+    return {key: request.POST.get(f'meter_{key}', '') for key in services.METER_FIELDS}
+
+
+@login_required
+@require_POST
+def meter_save(request, property_pk):
+    """«✓» at the end of a meter row: save the meter to the object, answer with its id."""
+    property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
+    meter = services.save_meter(property_obj, _meter_row(request))
+    return JsonResponse({'id': meter.pk})
+
+
+@login_required
+@require_POST
+def meter_delete(request, pk):
+    """«×» at the end of a meter row."""
+    meter = get_object_or_404(Meter, pk=pk, property__owner=request.user)
+    receipt = request.POST.get('receipt')
+    deleted = services.delete_meter(meter, keep_for=int(receipt) if receipt and receipt.isdigit() else None)
+    return JsonResponse({'deleted': deleted})
 
 
 @login_required

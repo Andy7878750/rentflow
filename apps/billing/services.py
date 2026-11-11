@@ -262,27 +262,62 @@ def meter_rows(receipt, data=None):
     return rows
 
 
+def clean_meter(property_obj, row, tenant_ids=None):
+    """One posted meter row → model values (an unknown tenant means the object's own meter)."""
+    if tenant_ids is None:
+        tenant_ids = {str(pk): pk for pk in property_obj.tenants.values_list('pk', flat=True)}
+    kinds = {value for value, _, _ in METER_KINDS}
+    meter_id = str(row.get('id') or '')
+    return {
+        'id': int(meter_id) if meter_id.isdigit() else None,
+        'kind': row.get('kind') if row.get('kind') in kinds else Receipt.Kind.CUSTOM,
+        'name': (row.get('name') or '').strip()[:100] or 'Счётчик',
+        'tenant_id': None if property_obj.is_owner_used else tenant_ids.get(str(row.get('who') or '')),
+        'serial': (row.get('serial') or '').strip()[:50],
+        'tariff': parse_decimal(row.get('tariff')),
+        'tariff_night': parse_decimal(row.get('tariffn')),
+        'unit': (row.get('unit') or '').strip()[:20],
+        'initial': parse_decimal(row.get('initial')),
+        'initial_night': parse_decimal(row.get('initialn')),
+    }
+
+
 def parse_meters(property_obj, data):
     """The meter list posted from the service window, cleaned; None when the window sent none."""
     if 'meter_kind' not in data:
         return None
     tenant_ids = {str(pk): pk for pk in property_obj.tenants.values_list('pk', flat=True)}
-    kinds = {value for value, _, _ in METER_KINDS}
-    meters = []
-    for row in meter_rows(Receipt(property=property_obj), data):
-        meters.append({
-            'id': int(row['id']) if row['id'].isdigit() else None,
-            'kind': row['kind'] if row['kind'] in kinds else Receipt.Kind.CUSTOM,
-            'name': (row['name'] or '').strip()[:100] or 'Счётчик',
-            'tenant_id': None if property_obj.is_owner_used else tenant_ids.get(row['who']),
-            'serial': (row['serial'] or '').strip()[:50],
-            'tariff': parse_decimal(row['tariff']),
-            'tariff_night': parse_decimal(row['tariffn']),
-            'unit': (row['unit'] or '').strip()[:20],
-            'initial': parse_decimal(row['initial']),
-            'initial_night': parse_decimal(row['initialn']),
-        })
-    return meters
+    return [clean_meter(property_obj, row, tenant_ids) for row in meter_rows(Receipt(property=property_obj), data)]
+
+
+def _store_meter(property_obj, values, meter=None):
+    meter = meter or Meter(property=property_obj)
+    for name, value in values.items():
+        if name != 'id':
+            setattr(meter, name, value)
+    meter.save()
+    return meter
+
+
+@transaction.atomic
+def save_meter(property_obj, row):
+    """«✓» at the end of a meter row: the meter goes into the object's meters right away
+    (a new service links to it when it is saved). Returns the meter."""
+    values = clean_meter(property_obj, row)
+    meter = property_obj.meters.filter(pk=values['id']).first() if values['id'] else None
+    return _store_meter(property_obj, values, meter)
+
+
+@transaction.atomic
+def delete_meter(meter, keep_for=None):
+    """«×» at the end of a meter row. The meter goes away with its readings, unless another
+    service (other than keep_for, the one being edited) still counts by it — then it only
+    leaves this service when the service is saved. Returns True when it was deleted."""
+    others = meter.receipts.exclude(pk=keep_for) if keep_for else meter.receipts.all()
+    if others.exists():
+        return False
+    meter.delete()
+    return True
 
 
 def layout_for(meters):
@@ -301,15 +336,14 @@ def save_meter_list(receipt, meters):
     existing = {meter.pk: meter for meter in receipt.meters.all()}
     kept = set()
     for values in meters:
-        meter = existing.get(values['id']) or Meter(property=receipt.property)
-        for name, value in values.items():
-            if name != 'id':
-                setattr(meter, name, value)
+        # Known to the service, or saved to the object with «✓» before the service was saved.
+        meter = existing.get(values['id'])
+        if meter is None and values['id']:
+            meter = receipt.property.meters.filter(pk=values['id']).first()
         if receipt.zones != 2:
-            meter.tariff_night = meter.initial_night = None
-        is_new = meter.pk is None
-        meter.save()
-        if is_new:
+            values = {**values, 'tariff_night': None, 'initial_night': None}
+        meter = _store_meter(receipt.property, values, meter)
+        if meter.pk not in existing:
             receipt.meters.add(meter)
         kept.add(meter.pk)
     for pk, meter in existing.items():

@@ -852,6 +852,7 @@
 
   function initForms(root) {
     root.querySelectorAll('[data-property-form]').forEach(initPropertyForm);
+    initFades(root);
   }
 
   // ---------- Service window ----------
@@ -878,7 +879,9 @@
     var row = event.target.closest('[data-pick-value]');
     if (row) {
       current.querySelector('input').value = row.dataset.pickValue;
-      current.querySelector('[data-pick-label]').textContent = row.dataset.pickLabel || row.dataset.pickValue;
+      var pickLabel = current.querySelector('[data-pick-label]');
+      pickLabel.textContent = row.dataset.pickLabel || row.dataset.pickValue;
+      if (pickLabel.classList.contains('fade')) markFade(pickLabel);
       current.querySelectorAll('[data-pick-value]').forEach(function (r) { r.classList.toggle('is-selected', r === row); });
       setPickOpen(current, false);
       current.querySelector('[data-pick-trigger]').focus();
@@ -1192,7 +1195,10 @@
   function chooseMkind(pick, option) {
     pick.querySelector('input[name=meter_kind]').value = option.dataset.kind;
     pick.querySelector('input[name=meter_name]').value = option.dataset.name;
-    pick.querySelector('[data-mkind-label]').textContent = option.dataset.name;
+    var kindLabel = pick.querySelector('[data-mkind-label]');
+    kindLabel.textContent = option.dataset.name;
+    markFade(kindLabel);
+    meterChanged(pick.closest('[data-meter-row]'));
     pick.querySelectorAll('.select-row').forEach(function (row) { row.classList.toggle('is-selected', row === option); });
     var unit = option.dataset.unit;
     var unitPick = pick.closest('[data-meter-row]').querySelector('.munit');
@@ -1259,6 +1265,7 @@
       var block = add.closest('[data-meters]');
       var row = block.querySelector('[data-meter-template]').content.firstElementChild.cloneNode(true);
       block.querySelector('[data-meter-list]').appendChild(row);
+      initFades(row);
       updateMeters(add.closest('form'));
       formulaSoon(add.closest('form'), 0);
       row.querySelector('[data-mkind-trigger]').focus();
@@ -1266,13 +1273,10 @@
     }
 
     var remove = target.closest('[data-meter-remove]');
-    if (remove) {
-      var form = remove.closest('form');
-      remove.closest('[data-meter-row]').remove();
-      updateMeters(form);
-      formulaSoon(form, 0);
-      return;
-    }
+    if (remove) { removeMeter(remove.closest('[data-meter-row]')); return; }
+
+    var save = target.closest('[data-meter-save]');
+    if (save) { saveMeter(save.closest('[data-meter-row]')); return; }
 
     var unitRow = target.closest('.munit [data-pick-value]');
     if (unitRow) echoUnit(unitRow.closest('[data-meter-row]'), unitRow.dataset.pickValue);
@@ -1280,15 +1284,66 @@
     // «Чей» picked (the pick handler above has already written it).
     var who = target.closest('.mwho [data-pick-value]');
     if (who) updateMeters(who.closest('form'));
+    if (unitRow || who) meterChanged(target.closest('[data-meter-row]'));
   });
 
+  // A meter row: «✓» saves it to the object; any change after that asks to save again.
+  function meterChanged(row) {
+    if (row && row.dataset.state === 'saved') row.dataset.state = 'new';
+  }
+
+  function meterBlock(row) {
+    return row.closest('[data-meters]');
+  }
+
+  function saveMeter(row) {
+    var block = meterBlock(row);
+    var body = new FormData();
+    row.querySelectorAll('input[name^=meter_]').forEach(function (input) { body.append(input.name, input.value); });
+    body.append('csrfmiddlewaretoken', csrfToken(row.closest('form')));
+    row.dataset.state = 'saving';
+    fetch(block.dataset.saveUrl, { method: 'POST', body: body, credentials: 'same-origin' })
+      .then(function (response) { if (!response.ok) throw new Error(response.status); return response.json(); })
+      .then(function (data) {
+        row.querySelector('input[name=meter_id]').value = data.id;
+        row.dataset.state = 'saved';
+      })
+      .catch(function () { row.dataset.state = 'error'; });
+  }
+
+  function removeMeter(row) {
+    var block = meterBlock(row);
+    var form = row.closest('form');
+    var id = row.querySelector('input[name=meter_id]').value;
+    function drop() {
+      row.remove();
+      updateMeters(form);
+      formulaSoon(form, 0);
+    }
+    if (!id) { drop(); return; }
+    var body = new FormData();
+    body.append('receipt', block.dataset.receipt || '');
+    body.append('csrfmiddlewaretoken', csrfToken(form));
+    fetch(block.dataset.deleteUrl.replace('/0/', '/' + id + '/'), { method: 'POST', body: body, credentials: 'same-origin' })
+      .then(function (response) { if (!response.ok) throw new Error(response.status); drop(); })
+      .catch(function () { row.dataset.state = 'error'; });
+  }
+
   document.addEventListener('input', function (event) {
+    var meterRow = event.target.closest && event.target.closest('[data-meter-row]');
+    if (meterRow && event.target.name && event.target.name.indexOf('meter_') === 0) meterChanged(meterRow);
     if (!event.target.matches || !event.target.matches('[data-mkind-new]')) return;
     event.target.closest('[data-mkind]').querySelector('[data-mkind-add]').hidden = !event.target.value.trim();
   });
 
   document.addEventListener('keydown', function (event) {
     var target = event.target;
+    if (event.key === 'Enter' && target.matches && target.matches('[data-meter-row] input[name^=meter_initial]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      saveMeter(target.closest('[data-meter-row]'));
+      return;
+    }
     var pick = target.closest && target.closest('[data-mkind].is-open');
     if (!pick) return;
     if (event.key === 'Enter' && target.matches('[data-mkind-new]')) {
