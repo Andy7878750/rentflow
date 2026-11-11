@@ -56,9 +56,9 @@
     {% with metered=form.metered.value|stringformat:'s' zones=form.zones.value|stringformat:'s' %}
     {% comment %}Rows on one grid: the answers take the full width, or two equal halves, so every edge
        lines up from row to row. Each row is a line + the same padding (.rows in billing.css).{% endcomment %}
-    {# ---------- 2. Сколько стоит ---------- #}
+    {# ---------- 2. Начисление ---------- #}
     <section class="form-section rows">
-      <h2 class="form-section-head">Сколько стоит
+      <h2 class="form-section-head">Начисление
         <span class="badge metered-only">по счётчику</span><span class="badge zones2-only metered-only">день / ночь</span>
         <span class="badge unmetered-only fixed-only">фиксированная</span><span class="badge unmetered-only monthly-only">каждый месяц разная</span>
       </h2>
