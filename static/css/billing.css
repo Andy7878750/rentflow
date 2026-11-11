@@ -2955,3 +2955,49 @@
   pointer-events: auto;
   cursor: default;
 }
+
+/* «Кто платит» → «Арендаторы»: the object's tenants, one per line — number, name, share (2026-11-11). */
+.rform .payer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rform .payer {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  font-size: 13px;
+}
+
+.rform .payer-num {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rform .payer-share {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rform .payer-list .payer {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}

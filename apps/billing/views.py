@@ -24,14 +24,6 @@ def _done(request, property_obj, message):
     return redirect(url)
 
 
-def _preview(form, receipt):
-    """The receipt as the form describes it now, unsaved — for «Формула»."""
-    if form.is_bound:
-        form.is_valid()
-        return form.instance
-    return receipt
-
-
 def _formula(receipt, meters, chosen):
     """«Формула» on the service as the window describes it now; the tariff — of the chosen tenant's meter."""
     if meters is not None and receipt.metered:
@@ -75,7 +67,6 @@ def _receipt_form(request, property_obj, receipt):
         'warning': services.split_warning(form.instance),
         # New service: the templates on top of the same window; picking one refills the fields below.
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
-        'formula': _formula(_preview(form, receipt), meters, request.POST.get('formula_for')),
         'meters_error': meters_error,
         'tenants': property_obj.tenants.all(),
         'meter_rows': meter_rows,

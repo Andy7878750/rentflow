@@ -73,9 +73,10 @@ class FormulaExampleTests(TestCase):
         self.assertContains(response, 'Владислав платит')
         self.assertContains(response, '660,00\xa0₽')
 
-    def test_window_shows_the_formula(self):
+    def test_window_lists_the_tenants_instead_of_the_formula(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=management',
                                    HTTP_X_MODAL='1')
-        self.assertContains(response, 'data-formula')
-        self.assertContains(response, 'Виктор платит')
+        self.assertNotContains(response, 'data-formula')
+        self.assertContains(response, 'class="payer-list"')
+        self.assertContains(response, 'Виктор')
