@@ -1319,7 +1319,6 @@
       if (!input.dataset.placeholderOne) input.dataset.placeholderOne = input.placeholder;
       input.placeholder = two ? input.dataset.placeholderDay : input.dataset.placeholderOne;
     });
-    form.querySelectorAll('[data-start]').forEach(startLabel);
   }
 
   function initMeters(root) {
@@ -1331,24 +1330,14 @@
     if (event.target.matches && event.target.matches('.rform input[name=zones]')) dayPlaceholders(event.target.form);
   });
 
-  // «Старт»: a link that opens a small card with the start reading (day and night for two tariffs).
+  // «Базовые»: a link that opens a small card with the meter's base readings (day and night for two tariffs).
   function setStartOpen(start, open) {
     start.querySelector('[data-start-card]').hidden = !open;
     start.querySelector('[data-start-toggle]').setAttribute('aria-expanded', open ? 'true' : 'false');
     start.classList.toggle('is-open', open);
   }
 
-  function startLabel(start) {
-    var day = start.querySelector('input[name=meter_initial]').value.trim();
-    var night = start.querySelector('input[name=meter_initialn]');
-    var two = !!start.closest('form').querySelector('input[name=zones][value="2"]:checked');
-    var text = day ? ' ' + day : '';
-    if (day && two && night.value.trim()) text += ' / ' + night.value.trim();
-    start.querySelector('[data-start-label]').textContent = text;
-  }
-
   function startDone(start) {
-    startLabel(start);
     setStartOpen(start, false);
     start.querySelector('[data-start-toggle]').focus();
   }
@@ -1358,14 +1347,13 @@
     if (!target.closest) return;
     var current = target.closest('[data-start]');
     document.querySelectorAll('[data-start].is-open').forEach(function (start) {
-      if (start !== current) { startLabel(start); setStartOpen(start, false); }
+      if (start !== current) setStartOpen(start, false);
     });
     if (!current) return;
     if (target.closest('[data-start-toggle]')) {
       var open = !current.classList.contains('is-open');
       setStartOpen(current, open);
       if (open) current.querySelector('[data-start-card] input').focus();
-      else startLabel(current);
     } else if (target.closest('[data-start-done]')) {
       startDone(current);
     }
@@ -1417,7 +1405,7 @@
 
   document.addEventListener('keydown', function (event) {
     var target = event.target;
-    // Enter in the «Старт» card: done (day → night first, when there are two fields).
+    // Enter in the «Базовые» card: done (day → night first, when there are two fields).
     if (event.key === 'Enter' && target.matches && target.matches('[data-start-card] input')) {
       event.preventDefault();
       event.stopPropagation();

@@ -1559,7 +1559,6 @@
    take the full width or two equal halves, so switches and fields line up from row to row. */
 .rform .rows .form-section-body {
   gap: 0;
-  margin-top: -1px; /* the first row's line lies on the head's line */
   padding: 0 14px;
 }
 
@@ -2788,4 +2787,74 @@
 .rform .meters-block .meter-line > .ifield.mtariff .mtariff-night > input {
   flex: 1 1 0;
   width: 0;
+}
+
+/* ---------- «Счётчики», круг 5 (2026-11-11) ----------
+   The same air as every block: 10px under the head and above the bottom line, 8px between meters
+   and before «+ Добавить счётчик». «Базовые» + «?» instead of «Старт»; the numbers live in the card. */
+.rform .meters-block .form-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.rform .meters-block .meter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+}
+
+.rform .meters-block .meter-row {
+  padding: 0;
+  border-top: 0;
+}
+
+.rform .meters-block .meter-add {
+  margin: 0;
+  line-height: 20px;
+}
+
+.rform .meter-row .meter-line,
+.rform:has(input[name=zones][value="2"]:checked) .meter-row .meter-line {
+  --start-w: 100px;
+}
+
+.mstart {
+  align-items: center;
+  gap: 4px;
+}
+
+.rform .mstart .help {
+  flex: none;
+}
+
+.mstart-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px;
+}
+
+.mstart-title {
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mstart-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rform .mstart-card .ifield {
+  width: 150px;
+}
+
+.rform .mstart-card .ifield .ifield-fix[data-unit-echo]:empty {
+  display: none;
 }

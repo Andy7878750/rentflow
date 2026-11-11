@@ -1,5 +1,5 @@
 {% comment %}One meter of «Счётчики» in one line; the hints live inside the fields:
-   what it measures ▾ · № · whose ▾ · tariff [₽ | ед. ▾] · «Старт» (a link with a small card) · ✓ save · × delete.
+   what it measures ▾ · № · whose ▾ · tariff [₽ | ед. ▾] · «Базовые» (a link with a small card) · × delete · ✓ save.
    «✓» saves the meter to the object right away and locks the row (data-state: new → saved);
    «✎» on a saved row opens it again (→ new).
    Every row posts the same ten meter_* fields, so the lists line up (services.parse_meters).{% endcomment %}
@@ -53,25 +53,27 @@
       {% include "billing/_meter_unit.html" %}
     </span>
 
-    {# «Старт»: a link; the start reading is typed in a small card under it (two fields for day / night). #}
+    {# «Базовые» + «?»: the base readings are typed in a small card (day / night, unit inside); not shown in the row. #}
     <span class="mstart" data-start>
-      <button type="button" class="setup-link mstart-link" data-start-toggle aria-expanded="false">
-        Старт<span class="mstart-value" data-start-label>{% if row.initial %} {{ row.initial }}{% if row.initialn %} / {{ row.initialn }}{% endif %}{% endif %}</span>
-      </button>
-      <span class="mstart-card" data-start-card hidden>
-        <label class="ifield"><span class="ifield-fix zones2-only">день</span><input type="text" inputmode="decimal" name="meter_initial" value="{{ row.initial }}" placeholder="0" maxlength="7" autocomplete="off" aria-label="Показание на старте"></label>
-        <label class="ifield zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="meter_initialn" value="{{ row.initialn }}" placeholder="0" maxlength="7" autocomplete="off" aria-label="Показание на старте ночью"></label>
-        <button type="button" class="icon-button mstart-done" data-start-done aria-label="Готово"><svg class="icon"><use href="#i-check"/></svg></button>
+      <button type="button" class="setup-link mstart-link" data-start-toggle aria-expanded="false" aria-haspopup="dialog">Базовые</button>
+      <span class="help" tabindex="0" role="button" aria-label="Подсказка: Базовые" data-tip-title="Базовые" data-tip="Базовые значения счётчика.">?</span>
+      <span class="mstart-card" data-start-card role="dialog" aria-label="Базовые значения счётчика" hidden>
+        <strong class="mstart-title">Базовые значения счётчика</strong>
+        <span class="mstart-fields">
+          <label class="ifield"><span class="ifield-fix zones2-only">день</span><input type="text" inputmode="decimal" name="meter_initial" value="{{ row.initial }}" placeholder="0" maxlength="7" autocomplete="off" aria-label="Базовое значение"><span class="ifield-fix" data-unit-echo>{{ row.unit|default:receipt.unit }}</span></label>
+          <label class="ifield zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="meter_initialn" value="{{ row.initialn }}" placeholder="0" maxlength="7" autocomplete="off" aria-label="Базовое значение ночью"><span class="ifield-fix" data-unit-echo>{{ row.unit|default:receipt.unit }}</span></label>
+          <button type="button" class="icon-button mstart-done" data-start-done aria-label="Готово"><svg class="icon"><use href="#i-check"/></svg></button>
+        </span>
       </span>
     </span>
 
+    <button type="button" class="icon-button meter-remove" data-meter-remove aria-label="Удалить счётчик" title="Удалить счётчик">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </button>
     {# ✓ saves; once saved the row is locked and the button is ✎ — it opens the row again. #}
     <button type="button" class="icon-button meter-save" data-meter-save aria-label="{% if row.id %}Изменить счётчик{% else %}Сохранить счётчик{% endif %}">
       <svg class="icon icon-done"><use href="#i-check"/></svg>
       <svg class="icon icon-edit"><use href="#i-edit"/></svg>
-    </button>
-    <button type="button" class="icon-button meter-remove" data-meter-remove aria-label="Удалить счётчик" title="Удалить счётчик">
-      <svg class="icon"><use href="#i-x"/></svg>
     </button>
   </div>
 </div>
