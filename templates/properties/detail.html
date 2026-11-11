@@ -141,14 +141,14 @@
                   <tbody>
                     {% for meter, reading in entry.readings %}
                       <tr>
-                        <td>{{ meter.name }}{% if receipt.zones == 2 %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
-                        <td><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}" aria-label="{{ meter.name }}: расход"
+                        <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}{% if receipt.zones == 2 %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
+                        <td><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}" aria-label="{{ meter.who }}: расход"
                                    value="{{ reading.usage|num }}"></td>
                       </tr>
                       {% if receipt.zones == 2 %}
                         <tr>
-                          <td>{{ meter.name }} · ночь</td>
-                          <td><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}" aria-label="{{ meter.name }}: расход ночью"
+                          <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %} · ночь</td>
+                          <td><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}" aria-label="{{ meter.who }}: расход ночью"
                                      value="{{ reading.usage_night|num }}"></td>
                         </tr>
                       {% endif %}
@@ -161,19 +161,19 @@
                 <tbody>
                   {% for meter, reading in entry.readings %}
                     <tr>
-                      <td>{{ meter.name }}{% if receipt.zones == 2 %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
-                      <td><input type="text" inputmode="decimal" class="num-input" name="prev-{{ meter.pk }}" aria-label="{{ meter.name }}: было"
+                      <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}{% if receipt.zones == 2 %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
+                      <td><input type="text" inputmode="decimal" class="num-input" name="prev-{{ meter.pk }}" aria-label="{{ meter.who }}: было"
                                  value="{{ reading.previous|num }}"></td>
-                      <td><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}" aria-label="{{ meter.name }}: стало"
+                      <td><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}" aria-label="{{ meter.who }}: стало"
                                  value="{{ reading.current|num }}"></td>
                       <td class="consumption" id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ receipt.unit }}{% else %}—{% endif %}</td>
                     </tr>
                     {% if receipt.zones == 2 %}
                       <tr>
-                        <td>{{ meter.name }} · ночь</td>
-                        <td><input type="text" inputmode="decimal" class="num-input" name="prevn-{{ meter.pk }}" aria-label="{{ meter.name }}: было ночью"
+                        <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %} · ночь</td>
+                        <td><input type="text" inputmode="decimal" class="num-input" name="prevn-{{ meter.pk }}" aria-label="{{ meter.who }}: было ночью"
                                    value="{{ reading.previous_night|num }}"></td>
-                        <td><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}" aria-label="{{ meter.name }}: стало ночью"
+                        <td><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}" aria-label="{{ meter.who }}: стало ночью"
                                    value="{{ reading.current_night|num }}"></td>
                         <td class="consumption" id="consn-{{ meter.pk }}" data-live>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ receipt.unit }}{% else %}—{% endif %}</td>
                       </tr>

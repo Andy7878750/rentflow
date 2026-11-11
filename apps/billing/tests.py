@@ -67,7 +67,9 @@ class ReceiptServiceTests(TestCase):
         receipt = services.new_receipt(self.prop, 'water')
         receipt.layout = Receipt.Layout.BOTH
         services.save_receipt(receipt)
-        self.assertEqual(sorted(receipt.meters.values_list('name', flat=True)), ['Виктор', 'Владислав', 'Общий счётчик'])
+        meters = receipt.meters.all()
+        self.assertEqual(sorted(meter.who for meter in meters), ['Виктор', 'Владислав', 'Объект (общий)'])
+        self.assertEqual({meter.name for meter in meters}, {'Вода холодная'}, 'the name says what it measures')
         self.assertEqual(receipt.split, Receipt.Split.METERS)
 
     def test_single_rate_drops_the_night_tariff(self):
@@ -76,13 +78,32 @@ class ReceiptServiceTests(TestCase):
         services.save_receipt(receipt)
         self.assertIsNone(receipt.tariff_night)
 
-    def test_meter_numbers_and_starting_readings(self):
-        receipt = services.new_receipt(self.prop, 'electricity')
-        services.save_receipt(receipt, meter_details={
-            self.viktor.pk: {'serial': '0123', 'initial': Decimal('1000'), 'initial_night': None},
-        })
-        meter = receipt.meters.get(tenant=self.viktor)
-        self.assertEqual((meter.serial, meter.initial), ('0123', Decimal('1000')))
+    def meter(self, **values):
+        return {'id': None, 'kind': 'water', 'name': 'Вода холодная', 'tenant_id': None, 'serial': '',
+                'tariff': None, 'tariff_night': None, 'unit': 'м³', 'initial': None, 'initial_night': None,
+                **values}
+
+    def test_meter_list_from_the_window(self):
+        receipt = services.new_receipt(self.prop, 'water')
+        services.save_receipt(receipt, meters=[
+            self.meter(tenant_id=self.viktor.pk, serial='0123', initial=Decimal('1000')),
+            self.meter(kind='hot_water', name='Вода горячая', tenant_id=self.viktor.pk, tariff=Decimal('230')),
+        ])
+        self.assertEqual(receipt.layout, Receipt.Layout.TENANTS, 'only tenants\' meters')
+        cold, hot = receipt.meters.order_by('id')
+        self.assertEqual((cold.serial, cold.initial, cold.tenant), ('0123', Decimal('1000'), self.viktor))
+        self.assertEqual((hot.name, hot.tariff), ('Вода горячая', Decimal('230')))
+
+        # Edited: the known one kept, the removed one gone, a common one added → both layouts.
+        services.save_receipt(receipt, meters=[
+            self.meter(id=cold.pk, tenant_id=self.viktor.pk, serial='0123'),
+            self.meter(kind='custom', name='Полив'),
+        ])
+        self.assertEqual(receipt.layout, Receipt.Layout.BOTH)
+        self.assertEqual(sorted(receipt.meters.values_list('name', flat=True)), ['Вода холодная', 'Полив'])
+        self.assertTrue(Meter.objects.filter(pk=cold.pk).exists())
+        self.assertFalse(Meter.objects.filter(pk=hot.pk).exists())
+        self.assertIn({'kind': 'custom', 'name': 'Полив', 'unit': 'м³'}, services.meter_kind_options(self.prop))
 
     def test_unmetered_receipt_drops_meters_and_reading_split(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
@@ -108,7 +129,7 @@ class ReceiptServiceTests(TestCase):
         Tenant.objects.create(property=self.prop, name='Ольга', share_percent=Decimal('55'))
         services.resync_property(self.prop)
 
-        self.assertEqual(sorted(receipt.meters.values_list('name', flat=True)), ['Виктор', 'Ольга'])
+        self.assertEqual(sorted(receipt.meters.values_list('tenant__name', flat=True)), ['Виктор', 'Ольга'])
         self.assertTrue(Meter.objects.filter(pk=kept_meter.pk).exists(), 'existing meter keeps its history')
 
     def test_meters_belong_to_the_object(self):
@@ -122,11 +143,12 @@ class ReceiptServiceTests(TestCase):
         water = services.save_receipt(services.new_receipt(self.prop, 'water'))
         sewage = services.save_receipt(services.new_receipt(self.prop, 'sewage'))
         shared = water.meters.get(tenant=self.viktor)
+        unused = water.meters.get(tenant=self.vlad)
         sewage.meters.add(shared)
 
         services.delete_receipt(water)
         self.assertTrue(Meter.objects.filter(pk=shared.pk).exists(), 'still used by sewage')
-        self.assertFalse(Meter.objects.filter(tenant=self.vlad, kind='water').exists(), 'unused meter goes away')
+        self.assertFalse(Meter.objects.filter(pk=unused.pk).exists(), 'unused meter goes away')
 
     def test_unlinked_meter_goes_away_when_layout_changes(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
@@ -178,7 +200,8 @@ class ReceiptViewTests(TestCase):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
         response = self.client.get(url, HTTP_X_MODAL='1')
         self.assertContains(response, 'value="Электричество"')
-        self.assertContains(response, 'name="layout" value="tenants" checked')
+        self.assertContains(response, 'name="meter_name" value="Электричество"')
+        self.assertContains(response, 'value="common" aria-label="Общий на объект" checked', msg_prefix='one common meter to start with')
         self.assertContains(response, 'data-pick-value="кВт·ч"')
 
     def test_create_in_modal(self):
@@ -207,8 +230,9 @@ class ReceiptViewTests(TestCase):
         self.assertFalse(self.prop.receipts.exists())
 
         tenant = self.prop.tenants.get()
-        data.update({'tariff_night': '3,10', f'serial-t{tenant.pk}': '0123456', f'initial-t{tenant.pk}': '1 000',
-                     f'initialn-t{tenant.pk}': '400'})
+        data.update({'tariff_night': '3,10', 'meter_id': '', 'meter_kind': 'electricity', 'meter_name': 'Электричество',
+                     'meter_who': str(tenant.pk), 'meter_serial': '0123456', 'meter_tariff': '', 'meter_tariffn': '',
+                     'meter_unit': 'кВт·ч', 'meter_initial': '1 000', 'meter_initialn': '400'})
         response = self.client.post(url, data, HTTP_X_MODAL='1')
         self.assertEqual(response.status_code, 204)
         receipt = self.prop.receipts.get()
@@ -226,13 +250,14 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'name="metered" value="1" checked')
         self.assertNotContains(response, 'name="split" value="meters"')
 
-    def test_meters_block_asks_how_many_and_sums_up_in_the_head(self):
-        url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
+    def test_meters_block_is_a_list_with_one_meter_to_start(self):
+        url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=water'
         response = self.client.get(url, HTTP_X_MODAL='1')
-        self.assertContains(response, 'Сколько счётчиков')
-        self.assertContains(response, '<span>Один общий</span>')
-        self.assertContains(response, 'data-layout="tenants">1 счётчик<')
-        self.assertContains(response, 'data-layout="both">2 счётчика<')
+        self.assertContains(response, 'data-meter-count>1 счётчик<')
+        self.assertContains(response, 'data-meter-row', count=2)  # the row and the «+ Добавить счётчик» template
+        self.assertContains(response, 'name="meter_name" value="Вода холодная"')
+        self.assertContains(response, 'data-pick-label="Виктор"')
+        self.assertContains(response, '+ Добавить счётчик')
         self.assertContains(response, 'placeholder="не указан"')
 
     def test_usage_mode_is_saved_and_the_object_page_asks_for_usage(self):

@@ -96,9 +96,14 @@ class Meter(models.Model):
 
     property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='meters')
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True, related_name='meters')
-    kind = models.CharField(max_length=20, choices=Receipt.Kind.choices, blank=True)  # what it measures
-    name = models.CharField(max_length=100)
+    # What it measures: a ready-made kind, or «custom» with the landlord's own name.
+    kind = models.CharField(max_length=20, choices=Receipt.Kind.choices, blank=True)
+    name = models.CharField(max_length=100)  # «Вода холодная», «Электричество» or the own name
     serial = models.CharField('Номер счётчика', max_length=50, blank=True)
+    # The meter's own tariff and unit; empty — the service's («Сколько стоит»).
+    tariff = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    tariff_night = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    unit = models.CharField(max_length=20, blank=True)
     # What it showed when it was set up: «было» of its first month.
     initial = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     initial_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
@@ -107,7 +112,12 @@ class Meter(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return self.name
+        return f'{self.name} · {self.who}'
+
+    @builtins.property  # «property» here is the object field
+    def who(self):
+        """Whose meter it is: the tenant, or the object itself."""
+        return self.tenant.name if self.tenant_id else 'Объект (общий)'
 
 
 class MonthlyAmount(models.Model):

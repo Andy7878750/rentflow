@@ -1,0 +1,80 @@
+{% comment %}One meter of «Счётчики»: what it measures ▾ · № · whose ▾ · ×, then its tariff and the start reading.
+   Every row posts the same ten meter_* fields, so the lists line up (services.parse_meters).{% endcomment %}
+<div class="meter-row" data-meter-row>
+  <input type="hidden" name="meter_id" value="{{ row.id }}">
+  <div class="meter-line">
+    {# What it measures: ready-made kinds, the owner's own ones, and «свой вариант…» typed right in the menu. #}
+    <div class="pick mkind" data-mkind>
+      <input type="hidden" name="meter_kind" value="{{ row.kind }}">
+      <input type="hidden" name="meter_name" value="{{ row.name }}">
+      <button type="button" class="pick-trigger" data-mkind-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Что за счётчик">
+        <span class="fade" data-mkind-label>{{ row.name }}</span>
+        <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+      </button>
+      <div class="select-menu pick-menu mkind-menu" data-mkind-menu hidden>
+        <ul class="select-list" role="listbox" aria-label="Что за счётчик">
+          {% for option in meter_kinds %}
+            <li class="select-row{% if option.kind == row.kind and option.kind != 'custom' or option.kind == row.kind and option.name == row.name %} is-selected{% endif %}" data-kind="{{ option.kind }}" data-name="{{ option.name }}" data-unit="{{ option.unit }}">
+              <button type="button" class="select-option" role="option"><span>{{ option.name }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button>
+            </li>
+          {% endfor %}
+        </ul>
+        <div class="select-add">
+          <svg class="icon"><use href="#i-plus"/></svg>
+          <input type="text" class="select-add-input" placeholder="свой вариант…" maxlength="100" aria-label="Свой вариант счётчика" data-mkind-new>
+          <button type="button" class="select-add-btn" data-mkind-add hidden>Добавить</button>
+        </div>
+      </div>
+    </div>
+
+    <span class="ifield serial-field" data-serial data-state="{% if row.serial %}locked{% else %}empty{% endif %}">
+      <span class="ifield-fix">№</span>
+      <input type="text" name="meter_serial" value="{{ row.serial }}" maxlength="50" placeholder="не указан" aria-label="Номер счётчика"{% if row.serial %} readonly{% endif %}>
+      <button type="button" class="serial-toggle" data-serial-toggle aria-label="{% if row.serial %}Изменить номер{% else %}Готово{% endif %}">
+        <svg class="icon icon-done"><use href="#i-check"/></svg>
+        <svg class="icon icon-edit"><use href="#i-edit"/></svg>
+      </button>
+    </span>
+
+    {# Whose: the object (a common meter) or a tenant. #}
+    <div class="pick mwho" data-pick>
+      <input type="hidden" name="meter_who" value="{{ row.who }}">
+      <button type="button" class="pick-trigger" data-pick-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Чей счётчик">
+        <span class="fade" data-pick-label>{{ row.who_label }}</span>
+        <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+      </button>
+      <ul class="select-menu pick-menu" role="listbox" data-pick-menu hidden>
+        {% for value, label in meter_who %}
+          <li class="select-row{% if value == row.who %} is-selected{% endif %}" data-pick-value="{{ value }}" data-pick-label="{{ label }}"><button type="button" class="select-option" role="option"><span>{{ label }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <button type="button" class="icon-button meter-remove" data-meter-remove aria-label="Убрать счётчик" title="Убрать счётчик">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </button>
+  </div>
+
+  <div class="meter-line">
+    <span class="meter-cap">Тариф</span>
+    <label class="ifield"><span class="ifield-fix zones2-only">день</span><input type="text" inputmode="decimal" name="meter_tariff" value="{{ row.tariff }}" placeholder="0,00" aria-label="Тариф счётчика"><span class="ifield-fix">{{ receipt.currency_symbol }}</span></label>
+    <label class="ifield zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="meter_tariffn" value="{{ row.tariffn }}" placeholder="0,00" aria-label="Тариф счётчика ночью"><span class="ifield-fix">{{ receipt.currency_symbol }}</span></label>
+    <span class="calc-word">за</span>
+    <div class="pick munit" data-pick>
+      <input type="hidden" name="meter_unit" value="{{ row.unit }}">
+      <button type="button" class="pick-trigger" data-pick-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Единица">
+        <span data-pick-label>{{ row.unit|default:'ед.' }}</span>
+        <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+      </button>
+      <ul class="select-menu pick-menu" role="listbox" data-pick-menu hidden>
+        {% for unit in form.units %}
+          <li class="select-row{% if unit == row.unit %} is-selected{% endif %}" data-pick-value="{{ unit }}"><button type="button" class="select-option" role="option"><span>{{ unit }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <span class="meter-start readings-only">
+      <label class="ifield ifield-num"><span class="ifield-fix zones1-only">на старте</span><span class="ifield-fix zones2-only">старт день</span><input type="text" inputmode="decimal" name="meter_initial" value="{{ row.initial }}" placeholder="0" aria-label="Показание на старте"></label>
+      <label class="ifield ifield-num zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="meter_initialn" value="{{ row.initialn }}" placeholder="0" aria-label="Показание на старте ночью"></label>
+    </span>
+  </div>
+</div>

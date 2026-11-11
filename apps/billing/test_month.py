@@ -127,6 +127,18 @@ class MonthBillTests(TestCase):
         self.assertEqual(bill.entries[0].total, Decimal('3100.00'))
         self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('1395.00'))
 
+    def test_a_meter_with_its_own_tariff_counts_by_it(self):
+        receipt = self.add('water', tariff=Decimal('45.50'))
+        hot = receipt.meters.get(tenant=self.viktor)
+        hot.name, hot.tariff = 'Вода горячая', Decimal('230')
+        hot.save()
+        cold = receipt.meters.get(tenant=self.vlad)
+        services.save_month_input(self.prop, SEPT, {f'prev-{hot.pk}': '0', f'cur-{hot.pk}': '2',
+                                                    f'prev-{cold.pk}': '0', f'cur-{cold.pk}': '2'})
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('460.00'))
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('91.00'), 'no own tariff — the service\'s')
+
     def test_tariff_is_not_taken_from_the_object_page(self):
         receipt = self.add('water', layout=Receipt.Layout.COMMON, tariff=Decimal('300'))
         services.save_month_input(self.prop, SEPT, {f'tariff-{receipt.pk}': '999'})

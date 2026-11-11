@@ -33,11 +33,20 @@ def _preview(form, receipt):
 
 
 def _receipt_form(request, property_obj, receipt):
-    form = ReceiptForm(request.POST or None, instance=receipt)
-    if request.method == 'POST' and form.is_valid():
+    posted = request.POST if request.method == 'POST' else None
+    meter_rows = services.meter_rows(receipt, posted)
+    # The layout follows the meter list (hidden radios kept in step by app.js); a new service
+    # starts with one common meter, so its split is set before the form reads the answers.
+    meter_layout = services.layout_for([{'tenant_id': row['who'] or None} for row in meter_rows])
+    if posted is None and receipt.metered and not property_obj.is_owner_used:
+        receipt.layout = meter_layout
+        services.normalize(receipt)
+
+    form = ReceiptForm(posted, instance=receipt)
+    if posted is not None and form.is_valid():
         is_new = receipt.pk is None
-        details = services.parse_meter_details(property_obj, request.POST)
-        services.save_receipt(form.save(commit=False), meter_details=details)
+        meters = services.parse_meters(property_obj, request.POST)
+        services.save_receipt(form.save(commit=False), meters=meters)
         verb = 'добавлена' if is_new else 'сохранена'
         return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
 
@@ -51,10 +60,13 @@ def _receipt_form(request, property_obj, receipt):
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
         'formula': services.formula_example(services.normalize(_preview(form, receipt)), request.POST.get('formula_for')),
         'tenants': property_obj.tenants.all(),
-        'meter_rows': services.meter_rows(receipt, request.POST if request.method == 'POST' else None),
+        'meter_rows': meter_rows,
+        'meter_layout': meter_layout,
+        'meters_label': services.meters_label(len(meter_rows)),
         'layout_choices': Receipt.Layout.choices,
-        'layout_short': services.LAYOUT_SHORT,
-        'meter_counts': services.meter_counts(property_obj),
+        'meter_kinds': services.meter_kind_options(property_obj),
+        'meter_who': services.meter_who_options(property_obj),
+        'new_meter': {**services.new_meter_row(receipt), 'who_label': 'Объект (общий)'},
         # By readings is not a button any more: it follows from «У каждого свой».
         'split_choices': [
             choice for choice in Receipt.Split.choices

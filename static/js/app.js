@@ -878,7 +878,7 @@
     var row = event.target.closest('[data-pick-value]');
     if (row) {
       current.querySelector('input').value = row.dataset.pickValue;
-      current.querySelector('[data-pick-label]').textContent = row.dataset.pickValue;
+      current.querySelector('[data-pick-label]').textContent = row.dataset.pickLabel || row.dataset.pickValue;
       current.querySelectorAll('[data-pick-value]').forEach(function (r) { r.classList.toggle('is-selected', r === row); });
       setPickOpen(current, false);
       current.querySelector('[data-pick-trigger]').focus();
@@ -1149,6 +1149,149 @@
     var drop = option.closest('[data-drop]');
     setTimeout(function () { setDropOpen(drop, false); }, 0);
   });
+
+  // ---------- «Счётчики» of the service window: a free list of meters ----------
+
+  function metersLabel(count) {
+    var word = 'счётчиков';
+    if (count % 10 === 1 && count % 100 !== 11) word = 'счётчик';
+    else if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)) word = 'счётчика';
+    return count + ' ' + word;
+  }
+
+  // The count in the head, and the hidden layout radios: only common meters, only tenants', or both.
+  function updateMeters(form) {
+    var block = form.querySelector('[data-meters]');
+    if (!block) return;
+    var rows = block.querySelectorAll('[data-meter-list] [data-meter-row]');
+    block.querySelector('[data-meter-count]').textContent = metersLabel(rows.length);
+    var common = false, own = false;
+    rows.forEach(function (row) {
+      if (row.querySelector('input[name=meter_who]').value) own = true; else common = true;
+    });
+    var layout = own && common ? 'both' : own ? 'tenants' : 'common';
+    var radio = form.querySelector('input[name=layout][value=' + layout + ']');
+    if (radio && !radio.checked) {
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+
+  function setMkindOpen(pick, open) {
+    pick.classList.toggle('is-open', open);
+    pick.querySelector('[data-mkind-menu]').hidden = !open;
+    pick.querySelector('[data-mkind-trigger]').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  // A kind picked: its name, and its usual unit for the tariff.
+  function chooseMkind(pick, option) {
+    pick.querySelector('input[name=meter_kind]').value = option.dataset.kind;
+    pick.querySelector('input[name=meter_name]').value = option.dataset.name;
+    pick.querySelector('[data-mkind-label]').textContent = option.dataset.name;
+    pick.querySelectorAll('.select-row').forEach(function (row) { row.classList.toggle('is-selected', row === option); });
+    var unit = option.dataset.unit;
+    var unitPick = pick.closest('[data-meter-row]').querySelector('.munit');
+    if (unit && unitPick) {
+      unitPick.querySelector('input').value = unit;
+      unitPick.querySelector('[data-pick-label]').textContent = unit;
+      unitPick.querySelectorAll('[data-pick-value]').forEach(function (row) {
+        row.classList.toggle('is-selected', row.dataset.pickValue === unit);
+      });
+    }
+    setMkindOpen(pick, false);
+    pick.querySelector('[data-mkind-trigger]').focus();
+    formulaSoon(pick.closest('form'), 0);
+  }
+
+  // «свой вариант…»: a new kind with the landlord's own name, for this meter.
+  function addMkind(pick) {
+    var input = pick.querySelector('[data-mkind-new]');
+    var name = input.value.trim();
+    if (!name) return;
+    var list = pick.querySelector('.select-list');
+    var option = Array.prototype.filter.call(list.querySelectorAll('.select-row'), function (row) {
+      return row.dataset.name.toLowerCase() === name.toLowerCase();
+    })[0];
+    if (!option) {
+      option = document.createElement('li');
+      option.className = 'select-row';
+      option.dataset.kind = 'custom';
+      option.dataset.name = name;
+      option.dataset.unit = '';
+      option.innerHTML = '<button type="button" class="select-option" role="option"><span></span>' +
+        '<svg class="icon select-check"><use href="#i-check"/></svg></button>';
+      option.querySelector('span').textContent = name;
+      list.appendChild(option);
+    }
+    input.value = '';
+    pick.querySelector('[data-mkind-add]').hidden = true;
+    chooseMkind(pick, option);
+  }
+
+  document.addEventListener('click', function (event) {
+    var target = event.target;
+    if (!target.closest) return;
+    var current = target.closest('[data-mkind]');
+    document.querySelectorAll('[data-mkind].is-open').forEach(function (pick) {
+      if (pick !== current) setMkindOpen(pick, false);
+    });
+    if (current) {
+      if (target.closest('[data-mkind-trigger]')) {
+        var open = !current.classList.contains('is-open');
+        setMkindOpen(current, open);
+        if (open) (current.querySelector('.is-selected .select-option') || current.querySelector('.select-option')).focus();
+      } else if (target.closest('[data-mkind-add]')) {
+        addMkind(current);
+      } else if (target.closest('.select-row')) {
+        chooseMkind(current, target.closest('.select-row'));
+      }
+      return;
+    }
+
+    var add = target.closest('[data-meter-add]');
+    if (add) {
+      var block = add.closest('[data-meters]');
+      var row = block.querySelector('[data-meter-template]').content.firstElementChild.cloneNode(true);
+      block.querySelector('[data-meter-list]').appendChild(row);
+      updateMeters(add.closest('form'));
+      formulaSoon(add.closest('form'), 0);
+      row.querySelector('[data-mkind-trigger]').focus();
+      return;
+    }
+
+    var remove = target.closest('[data-meter-remove]');
+    if (remove) {
+      var form = remove.closest('form');
+      remove.closest('[data-meter-row]').remove();
+      updateMeters(form);
+      formulaSoon(form, 0);
+      return;
+    }
+
+    // «Чей» picked (the pick handler above has already written it).
+    var who = target.closest('.mwho [data-pick-value]');
+    if (who) updateMeters(who.closest('form'));
+  });
+
+  document.addEventListener('input', function (event) {
+    if (!event.target.matches || !event.target.matches('[data-mkind-new]')) return;
+    event.target.closest('[data-mkind]').querySelector('[data-mkind-add]').hidden = !event.target.value.trim();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    var target = event.target;
+    var pick = target.closest && target.closest('[data-mkind].is-open');
+    if (!pick) return;
+    if (event.key === 'Enter' && target.matches('[data-mkind-new]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      addMkind(pick);
+    } else if (event.key === 'Escape') {
+      event.stopPropagation();
+      setMkindOpen(pick, false);
+      pick.querySelector('[data-mkind-trigger]').focus();
+    }
+  }, true);
 
   // «Формула» of the service window: the server recounts it from the form as it is now.
   var formulaTimer = null;

@@ -2197,3 +2197,139 @@
   background: #e3f1f6;
   color: #1f6280;
 }
+
+/* ---------- «Счётчики»: a free list (2026-11-11) ----------
+   One meter = two lines: «what it measures ▾ · № · whose ▾ · ×», then «Тариф [₽] за [ед. ▾] · на старте».
+   All 30px high, like the rest of the window; a thin line between meters. */
+.rform .meters-block .meter-list {
+  padding: 4px 0 0;
+}
+
+.meter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+}
+
+.meter-row + .meter-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.meter-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rform .mkind .pick-trigger {
+  width: 190px;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.rform .mwho .pick-trigger {
+  width: 170px;
+  justify-content: space-between;
+}
+
+.rform .mkind .pick-trigger .fade,
+.rform .mwho .pick-trigger .fade {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.rform .meters-block .meter-row .serial-field {
+  width: 160px;
+}
+
+.meter-cap {
+  width: 190px;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  text-align: right;
+  padding-right: 4px;
+  box-sizing: border-box;
+}
+
+.rform .meters-block .meter-line > .ifield:not(.serial-field) {
+  width: 112px;
+}
+
+.rform .meters-block .meter-line > .ifield input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.meter-start {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.rform .meters-block .meter-start .ifield-num {
+  width: 150px;
+}
+
+.meter-remove {
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+.meter-remove .icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* The last meter can't be removed: a metered service has at least one. */
+.meter-list > .meter-row:only-child .meter-remove {
+  visibility: hidden;
+}
+
+.meter-add {
+  align-self: flex-start;
+  margin: 4px 0 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mkind-menu {
+  min-width: 240px;
+}
+
+.rform .select-add-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: 13px;
+}
+
+.rform .select-add-input:focus {
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .meter-cap {
+    width: auto;
+    text-align: left;
+  }
+
+  .meter-start,
+  .meter-remove {
+    margin-left: 0;
+  }
+}
