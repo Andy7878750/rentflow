@@ -6051,10 +6051,19 @@ input.masked {
 body { background: var(--color-bg); }
 .mock-stage { padding: 32px 16px; }
 .mock-note { max-width: 920px; margin: 0 auto 16px; color: var(--color-text-muted); font-size: 13px; }
-.rform .heat-tariff, .rform .heat-norm { width: 150px; }
-/* «Отопление: Нет» or no meter — no heating anywhere. */
-.rform:has(input[name="heating"][value="0"]:checked) .heating-only { display: none !important; }
-.rform:not(:has(input[name="metered"][value="1"]:checked)) .heating-only { display: none !important; }
+/* «Подогрев 1 м³»: [Гкал] × [₽ за Гкал] = sum, 8px apart. */
+.rform .heat-calc { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rform .calc-ctrl.heat-calc .ifield.heat-norm { width: 104px; }
+.rform .calc-ctrl.heat-calc .ifield.heat-tariff { width: 168px; }
+.rform .heat-op { color: var(--color-text-muted); }
+.rform .heat-result { font-weight: 600; color: var(--color-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* «Без подогрева» or no meter — as now. */
+.rform:not(:has(input[name="heated"][value="1"]:checked)) .heated-only,
+.rform:not(:has(input[name="metered"][value="1"]:checked)) .heated-only { display: none !important; }
+/* «С подогревом»: «Делим» shows its buttons — they split the heating. */
+.rform:has(input[name="heated"][value="1"]:checked):has(input[name="metered"][value="1"]:checked) .split-track { display: inline-flex !important; }
+.rform:has(input[name="heated"][value="1"]:checked):has(input[name="metered"][value="1"]:checked) .layout-hint,
+.rform:has(input[name="heated"][value="1"]:checked):has(input[name="metered"][value="1"]:checked) .split-hint { display: none !important; }
 </style>
 </head>
 <body>
@@ -6100,7 +6109,7 @@ body { background: var(--color-bg); }
 </svg>
 
 <div class="mock-stage">
-<p class="mock-note">Макет 2026-11-11: окно «Новая услуга» с шаблоном «Вода горячая / подогрев» и отоплением. Новое — строки «Подогрев» и «Отопление» в «Начислении» и строка «Отопление» в «Кто платит». Ничего не сохраняется.</p>
+<p class="mock-note">Макет 2026-11-11: окно «Новая услуга» с шаблоном «Вода горячая / подогрев» и отоплением. Новое — в строке «Счётчик» переключатель «Без подогрева / С подогревом», при «С подогревом» — строка «Подогрев 1 м³» (итог считается сам), а «Делим» в «Кто платит» делит остаток тепла. Ничего не сохраняется.</p>
 <div class="modal-panel modal-panel-receipt">
   <header class="modal-head">
     <div class="modal-title">
@@ -6257,7 +6266,7 @@ body { background: var(--color-bg); }
     
     <section class="form-section rows">
       <h2 class="form-section-head">Начисление
-        <span class="badge metered-only">по счётчику</span><span class="badge metered-only">подогрев · Гкал</span><span class="badge heating-only">+ отопление</span><span class="badge zones2-only metered-only">день / ночь</span>
+        <span class="badge metered-only">по счётчику</span><span class="badge heated-only">с подогревом</span><span class="badge zones2-only metered-only">день / ночь</span>
         <span class="badge unmetered-only fixed-only">фиксированная</span><span class="badge unmetered-only monthly-only">каждый месяц разная</span>
       </h2>
       <div class="form-section-body">
@@ -6272,6 +6281,10 @@ body { background: var(--color-bg); }
             <div class="seg-track metered-only" role="radiogroup" aria-label="Тариф">
               <label><input type="radio" name="zones" value="1" checked><span>Однотарифный</span></label>
               <label><input type="radio" name="zones" value="2"><span>День / ночь</span></label>
+            </div>
+            <div class="seg-track metered-only" role="radiogroup" aria-label="Подогрев">
+              <label><input type="radio" name="heated" value="0"><span>Без подогрева</span></label>
+              <label><input type="radio" name="heated" value="1" checked><span>С подогревом</span></label>
             </div>
           </div>
         </div>
@@ -6308,22 +6321,15 @@ body { background: var(--color-bg); }
           </div>
         </div>
 
-        <!-- NEW: heat by Gcal (template «Вода горячая / подогрев»). Gcal and m³ come every month on the object page. -->
-        <div class="calc-row metered-only">
-          <span class="calc-label">Подогрев <span class="help" tabindex="0" role="button" aria-label="Подсказка: Подогрев" data-tip-title="Подогрев" data-tip="Тариф за тепло и сколько тепла уходит на нагрев 1 м³ горячей воды. Гкал из квитанции вводятся каждый месяц на странице объекта.">?</span></span>
-          <div class="calc-ctrl">
-            <label class="ifield heat-tariff"><input type="text" inputmode="decimal" value="3 793,91" placeholder="тариф" aria-label="Тариф за тепло"><span class="ifield-fix">₽ / Гкал</span></label>
-            <label class="ifield heat-norm"><input type="text" inputmode="decimal" value="0,06" placeholder="0,00" aria-label="Гкал на подогрев 1 м³"><span class="ifield-fix">Гкал на 1 м³</span></label>
-          </div>
-        </div>
-        <div class="calc-row metered-only">
-          <span class="calc-label">Отопление</span>
-          <div class="calc-ctrl">
-            <div class="seg-track" role="radiogroup" aria-label="Отопление">
-              <label><input type="radio" name="heating" value="1" checked><span>В этой квитанции</span></label>
-              <label><input type="radio" name="heating" value="0"><span>Нет</span></label>
-            </div>
-            <p class="calc-badges heating-only"><span class="badge badge-info">остаток тепла после подогрева</span></p>
+        <!-- NEW (С подогревом): what heating 1 m³ costs — Gcal × tariff = the sum, counted live. -->
+        <div class="calc-row heated-only">
+          <span class="calc-label">Подогрев 1 м³</span>
+          <div class="calc-ctrl heat-calc">
+            <label class="ifield heat-norm"><input type="text" inputmode="decimal" value="0,06" placeholder="0,00" aria-label="Гкал на подогрев 1 м³" data-heat-norm><span class="ifield-fix">Гкал</span></label>
+            <span class="heat-op">×</span>
+            <label class="ifield heat-tariff"><input type="text" inputmode="decimal" value="3 793,91" placeholder="тариф" aria-label="Тариф за Гкал" data-heat-tariff><span class="ifield-fix">₽ за Гкал</span></label>
+            <span class="heat-op">=</span>
+            <span class="heat-result" data-heat-result>227,63 ₽</span>
           </div>
         </div>
       </div>
@@ -6671,7 +6677,7 @@ body { background: var(--color-bg); }
     
     <section class="form-section rows">
       <h2 class="form-section-head">Кто платит
-        <span class="badge head-badge" data-layout="tenants">вода — у каждого свой</span><span class="badge heating-only">отопление — по долям</span><span class="badge head-badge" data-layout="both">общий + у каждого свой</span>
+        <span class="badge head-badge" data-layout="tenants">у каждого свой</span><span class="badge head-badge" data-layout="both">общий + у каждого свой</span>
         <span class="badge head-badge" data-split="shares">по долям</span><span class="badge head-badge" data-split="equal">поровну</span><span class="badge head-badge" data-split="area">по м²</span><span class="badge head-badge" data-split="owner">плачу сам</span>
       </h2>
       <div class="form-section-body">
@@ -6680,7 +6686,7 @@ body { background: var(--color-bg); }
         
           
           <div class="calc-row split-row">
-            <span class="calc-label">Вода</span>
+            <span class="calc-label">Делим</span>
             <div class="calc-ctrl">
               <div class="seg-track split-track" role="radiogroup" aria-label="Как делим">
                 
@@ -6697,24 +6703,13 @@ body { background: var(--color-bg); }
               <p class="calc-badges split-hint" data-for="equal"><span class="badge badge-info">поровну на тех, кто платит</span></p>
               <p class="calc-badges split-hint" data-for="area"><span class="badge badge-info">по площади каждого</span></p>
               <p class="calc-badges split-hint" data-for="owner"><span class="badge badge-info">арендаторам не выставляется</span></p>
+              <p class="calc-badges heated-only heat-hint"><span class="badge badge-info">вода — по своим счётчикам, остаток тепла (отопление) — так</span></p>
               <p class="calc-note layout-hint" data-for="tenants"><span class="badge badge-info">каждый платит по своему счётчику</span></p>
               <p class="calc-note layout-hint" data-for="both"><span class="badge badge-info">арендаторы — по своим</span><span class="badge badge-warn">разница с общим — на вас</span></p>
             </div>
           </div>
 
           
-<!-- NEW: how the heating (rest of the heat) is split. Hidden when «Отопление: Нет». -->
-          <div class="calc-row heating-only">
-            <span class="calc-label">Отопление</span>
-            <div class="calc-ctrl">
-              <div class="seg-track" role="radiogroup" aria-label="Как делим отопление">
-                <label><input type="radio" name="heating_split" value="shares" checked><span>По долям</span></label>
-                <label><input type="radio" name="heating_split" value="equal"><span>Поровну</span></label>
-                <label><input type="radio" name="heating_split" value="area"><span>По м²</span></label>
-              </div>
-            </div>
-          </div>
-
 <div class="calc-row payers-row" data-formula data-formula-url="/properties/1/receipts/formula/">
   <span class="calc-label">Арендаторы</span>
   <div class="calc-ctrl">
@@ -8283,6 +8278,18 @@ body { background: var(--color-bg); }
   initForms(document);
 })();
 
+</script>
+<script>
+// «Подогрев 1 м³»: Gcal × tariff, kopecks half up.
+(function () {
+  var num = function (el) { var n = parseFloat(el.value.replace(/\s/g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
+  function recount() {
+    var sum = Math.round(num(document.querySelector('[data-heat-norm]')) * num(document.querySelector('[data-heat-tariff]')) * 100 + 1e-7) / 100;
+    document.querySelector('[data-heat-result]').textContent = sum.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '\u00a0₽';
+  }
+  document.addEventListener('input', function (e) { if (e.target.matches('[data-heat-norm], [data-heat-tariff]')) recount(); });
+  recount();
+})();
 </script>
 </body>
 </html>
