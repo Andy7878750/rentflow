@@ -97,17 +97,11 @@
         <div class="calc-row metered-only">
           <span class="calc-label">Ввод показаний</span>
           <div class="calc-ctrl">
-            {# A menu of radios: the CSS :has rules still see which one is checked. #}
-            <div class="pick pick-radio" data-drop>
-              <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Каждый месяц вводим">
-                <span data-drop-label>{% for value, label in form.fields.input_mode.choices %}{% if value and form.input_mode.value == value %}Вводим {{ label|lower }}{% endif %}{% endfor %}</span>
-                <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
-              </button>
-              <ul class="select-menu pick-menu" role="radiogroup" aria-label="Каждый месяц вводим" data-drop-menu hidden>
-                {% for value, label in form.fields.input_mode.choices %}{% if value %}
-                  <li class="select-row"><label class="select-option"><input type="radio" name="input_mode" value="{{ value }}"{% if form.input_mode.value == value %} checked{% endif %}><span>Вводим {{ label|lower }}</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
-                {% endif %}{% endfor %}
-              </ul>
+            {# Readings: «было» and «стало» each month; usage: one number. #}
+            <div class="seg-track" role="radiogroup" aria-label="Каждый месяц вводим">
+              {% for value, label in form.fields.input_mode.choices %}{% if value %}
+                <label><input type="radio" name="input_mode" value="{{ value }}"{% if form.input_mode.value == value %} checked{% endif %}><span>{% if value == 'usage' %}Расход{% else %}Было / стало{% endif %}</span></label>
+              {% endif %}{% endfor %}
             </div>
           </div>
         </div>
