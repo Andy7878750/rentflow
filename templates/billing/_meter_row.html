@@ -1,5 +1,5 @@
 {% comment %}One meter of «Счётчики» in one line; the hints live inside the fields:
-   what it measures ▾ · № · whose ▾ · tariff [₽ | ед. ▾] · on start · ✓ save · × delete.
+   what it measures ▾ · № · whose ▾ · tariff [₽ | ед. ▾] · «Старт» (a link with a small card) · ✓ save · × delete.
    «✓» saves the meter to the object right away and locks the row (data-state: new → saved);
    «✎» on a saved row opens it again (→ new).
    Every row posts the same ten meter_* fields, so the lists line up (services.parse_meters).{% endcomment %}
@@ -46,14 +46,23 @@
       </ul>
     </div>
 
-    {# The tariff with its unit on the right, like «Доля [м² ▾]» in the object window. #}
-    <span class="meter-cell">
-      <span class="ifield mtariff"><input type="text" inputmode="decimal" name="meter_tariff" value="{{ row.tariff }}" placeholder="тариф" data-placeholder-day="тариф день" autocomplete="off" aria-label="Тариф счётчика"><span class="ifield-fix">{{ receipt.currency_symbol }}</span>{% include "billing/_meter_unit.html" %}</span>
-      <span class="ifield mtariff zones2-only"><input type="text" inputmode="decimal" name="meter_tariffn" value="{{ row.tariffn }}" placeholder="тариф ночь" autocomplete="off" aria-label="Тариф счётчика ночью"><span class="ifield-fix">{{ receipt.currency_symbol }}</span><span class="munit-echo" data-unit-echo>{{ row.unit|default:'ед.' }}</span></span>
+    {# The tariff: one field in one line — [тариф ₽ | ед. ▾], with day / night [день ₽ · ночь ₽ | ед. ▾]. #}
+    <span class="ifield mtariff">
+      <input type="text" inputmode="decimal" name="meter_tariff" value="{{ row.tariff }}" placeholder="тариф" data-placeholder-day="день" autocomplete="off" aria-label="Тариф счётчика"><span class="ifield-fix">{{ receipt.currency_symbol }}</span>
+      <span class="mtariff-night zones2-only"><input type="text" inputmode="decimal" name="meter_tariffn" value="{{ row.tariffn }}" placeholder="ночь" autocomplete="off" aria-label="Тариф счётчика ночью"><span class="ifield-fix">{{ receipt.currency_symbol }}</span></span>
+      {% include "billing/_meter_unit.html" %}
     </span>
-    <span class="meter-cell">
-      <label class="ifield mstart"><input type="text" inputmode="decimal" name="meter_initial" value="{{ row.initial }}" placeholder="на старте" data-placeholder-day="старт день" maxlength="7" autocomplete="off" aria-label="Показание на старте"></label>
-      <label class="ifield mstart zones2-only"><input type="text" inputmode="decimal" name="meter_initialn" value="{{ row.initialn }}" placeholder="старт ночь" maxlength="7" autocomplete="off" aria-label="Показание на старте ночью"></label>
+
+    {# «Старт»: a link; the start reading is typed in a small card under it (two fields for day / night). #}
+    <span class="mstart" data-start>
+      <button type="button" class="setup-link mstart-link" data-start-toggle aria-expanded="false">
+        Старт<span class="mstart-value" data-start-label>{% if row.initial %} {{ row.initial }}{% if row.initialn %} / {{ row.initialn }}{% endif %}{% endif %}</span>
+      </button>
+      <span class="mstart-card" data-start-card hidden>
+        <label class="ifield"><span class="ifield-fix zones2-only">день</span><input type="text" inputmode="decimal" name="meter_initial" value="{{ row.initial }}" placeholder="0" maxlength="7" autocomplete="off" aria-label="Показание на старте"></label>
+        <label class="ifield zones2-only"><span class="ifield-fix">ночь</span><input type="text" inputmode="decimal" name="meter_initialn" value="{{ row.initialn }}" placeholder="0" maxlength="7" autocomplete="off" aria-label="Показание на старте ночью"></label>
+        <button type="button" class="icon-button mstart-done" data-start-done aria-label="Готово"><svg class="icon"><use href="#i-check"/></svg></button>
+      </span>
     </span>
 
     {# ✓ saves; once saved the row is locked and the button is ✎ — it opens the row again. #}

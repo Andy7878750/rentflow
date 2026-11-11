@@ -1319,6 +1319,7 @@
       if (!input.dataset.placeholderOne) input.dataset.placeholderOne = input.placeholder;
       input.placeholder = two ? input.dataset.placeholderDay : input.dataset.placeholderOne;
     });
+    form.querySelectorAll('[data-start]').forEach(startLabel);
   }
 
   function initMeters(root) {
@@ -1328,6 +1329,46 @@
 
   document.addEventListener('change', function (event) {
     if (event.target.matches && event.target.matches('.rform input[name=zones]')) dayPlaceholders(event.target.form);
+  });
+
+  // «Старт»: a link that opens a small card with the start reading (day and night for two tariffs).
+  function setStartOpen(start, open) {
+    start.querySelector('[data-start-card]').hidden = !open;
+    start.querySelector('[data-start-toggle]').setAttribute('aria-expanded', open ? 'true' : 'false');
+    start.classList.toggle('is-open', open);
+  }
+
+  function startLabel(start) {
+    var day = start.querySelector('input[name=meter_initial]').value.trim();
+    var night = start.querySelector('input[name=meter_initialn]');
+    var two = !!start.closest('form').querySelector('input[name=zones][value="2"]:checked');
+    var text = day ? ' ' + day : '';
+    if (day && two && night.value.trim()) text += ' / ' + night.value.trim();
+    start.querySelector('[data-start-label]').textContent = text;
+  }
+
+  function startDone(start) {
+    startLabel(start);
+    setStartOpen(start, false);
+    start.querySelector('[data-start-toggle]').focus();
+  }
+
+  document.addEventListener('click', function (event) {
+    var target = event.target;
+    if (!target.closest) return;
+    var current = target.closest('[data-start]');
+    document.querySelectorAll('[data-start].is-open').forEach(function (start) {
+      if (start !== current) { startLabel(start); setStartOpen(start, false); }
+    });
+    if (!current) return;
+    if (target.closest('[data-start-toggle]')) {
+      var open = !current.classList.contains('is-open');
+      setStartOpen(current, open);
+      if (open) current.querySelector('[data-start-card] input').focus();
+      else startLabel(current);
+    } else if (target.closest('[data-start-done]')) {
+      startDone(current);
+    }
   });
 
   function meterBlock(row) {
@@ -1376,10 +1417,20 @@
 
   document.addEventListener('keydown', function (event) {
     var target = event.target;
-    if (event.key === 'Enter' && target.matches && target.matches('[data-meter-row] input[name^=meter_initial]')) {
+    // Enter in the «Старт» card: done (day → night first, when there are two fields).
+    if (event.key === 'Enter' && target.matches && target.matches('[data-start-card] input')) {
       event.preventDefault();
       event.stopPropagation();
-      saveMeter(target.closest('[data-meter-row]'));
+      var card = target.closest('[data-start-card]');
+      var inputs = Array.prototype.filter.call(card.querySelectorAll('input'), function (i) { return i.offsetParent; });
+      var next = inputs[inputs.indexOf(target) + 1];
+      if (next) next.focus(); else startDone(target.closest('[data-start]'));
+      return;
+    }
+    if (event.key === 'Escape' && target.closest && target.closest('[data-start-card]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      startDone(target.closest('[data-start]'));
       return;
     }
     var pick = target.closest && target.closest('[data-mkind].is-open');

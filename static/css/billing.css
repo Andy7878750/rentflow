@@ -2642,3 +2642,150 @@
 .rform .meters-block .mserial .ifield-fix {
   color: var(--color-text-muted);
 }
+
+/* ---------- Meter row, round 4 + even gaps (2026-11-11) ----------
+   One gap everywhere between the controls of a line: 8px — in «Сколько стоит» too.
+   The row: what ▾ · № · whose ▾ share the free width; the tariff is one field in one line;
+   «Старт» is a link with a small card; then ✓ and ×. */
+.rform .calc-ctrl,
+.rform .calc-ctrl.halves,
+.rform .calc-half {
+  gap: 8px;
+}
+
+/* Fixed columns for the tariff and «Старт», so every row lines up whatever is typed. */
+.rform .meter-row .meter-line {
+  --tariff-w: 150px;
+  --start-w: 100px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) var(--tariff-w) var(--start-w) 30px 30px;
+  align-items: center;
+  gap: 8px;
+}
+
+.rform:has(input[name=zones][value="2"]:checked) .meter-row .meter-line {
+  --tariff-w: 216px;
+  --start-w: 136px;
+}
+
+.rform .meters-block .meter-line > .ifield.mserial,
+.rform .meters-block .meter-line > .ifield.mtariff {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Tariff: [тариф ₽ | ед. ▾]; day / night: [день ₽ · ночь ₽ | ед. ▾] — still one line. */
+.rform .meters-block .meter-line > .ifield.mtariff {
+  padding-right: 0;
+  overflow: visible;
+}
+
+.rform .meters-block .mtariff input {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  text-align: right;
+}
+
+.mtariff-night {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  align-self: stretch;
+  padding-left: 8px;
+  border-left: 1px solid var(--color-border);
+}
+
+.rform:not(:has(input[name=zones][value="2"]:checked)) .mtariff-night {
+  display: none;
+}
+
+/* «Старт»: a link, the reading next to it once typed. */
+.mstart {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.mstart-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mstart-link {
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 30px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mstart-value {
+  color: var(--color-text);
+}
+
+.mstart-card {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: -6px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+.mstart-card[hidden] {
+  display: none;
+}
+
+.rform .mstart-card .ifield {
+  box-sizing: border-box;
+  width: 120px;
+  height: 30px;
+}
+
+.rform .mstart-card .ifield input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  text-align: right;
+}
+
+.mstart-done {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.mstart-done:hover {
+  background: var(--color-accent-hover);
+}
+
+.mstart-done .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.rform .meter-row[data-state=saved] .mstart-link {
+  pointer-events: none;
+  color: var(--color-text-muted);
+}
+
+/* Day and night share the tariff field equally. */
+.rform .meters-block .meter-line > .ifield.mtariff > input,
+.rform .meters-block .meter-line > .ifield.mtariff .mtariff-night > input {
+  flex: 1 1 0;
+  width: 0;
+}
