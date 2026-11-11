@@ -70,6 +70,9 @@ class Receipt(models.Model):
     # The object's meters whose readings drive this service. One meter can serve several services
     # (cold water and sewage, say).
     meters = models.ManyToManyField('Meter', related_name='receipts', blank=True)
+    # «Кто платит» → tenants switched off for this service (internet only for one of them, say).
+    # Their part stays with the owner; «поровну» divides between those who pay.
+    excluded = models.ManyToManyField('tenants.Tenant', related_name='excluded_receipts', blank=True)
     # Multiplies what tenants are billed: VAT (1,2) or the landlord's own markup. The owner's
     # remainder is counted without it.
     coefficient = models.DecimalField('Коэффициент', max_digits=6, decimal_places=4, default=1)

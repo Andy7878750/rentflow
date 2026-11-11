@@ -1489,7 +1489,9 @@
   ['input', 'change'].forEach(function (type) {
     document.addEventListener(type, function (event) {
       var form = event.target.closest && event.target.closest('form.rform');
-      if (form && !event.target.closest('[data-formula]')) formulaSoon(form, type === 'input' ? 300 : 0);
+      // Inside «Арендаторы» only the «платит» switches change the answer.
+      var inside = event.target.closest('[data-formula]');
+      if (form && (!inside || event.target.name === 'pays')) formulaSoon(form, type === 'input' ? 300 : 0);
     });
   });
 

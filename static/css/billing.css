@@ -3022,3 +3022,51 @@
   text-align: right;
   white-space: nowrap;
 }
+
+/* «Кто платит» → «Арендаторы» with a switch «платит / не платит» (2026-11-11): number · name · switch ·
+   basis · sum. Off: the row fades, «не платит» takes the place of basis and sum. Compact switch 32×18. */
+.rform .payer-list.has-switch {
+  max-width: 520px;
+}
+
+.rform .payer-list.has-switch .payer {
+  grid-template-columns: 24px minmax(0, 1fr) 32px 64px 110px;
+}
+
+.rform .payer-pays {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.rform .payer-pays .switch {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+}
+
+.rform .payer-pays .switch::after {
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+}
+
+.rform .payer-pays .switch-input:checked + .switch::after {
+  transform: translateX(14px);
+}
+
+.rform .payer.is-off .payer-name,
+.rform .payer-off {
+  color: var(--color-text-muted);
+}
+
+.rform .payer-off {
+  grid-column: span 2;
+  text-align: right;
+}
+
+.rform .payer.is-off .payer-num {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}

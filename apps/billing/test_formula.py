@@ -1,5 +1,6 @@
 """«Формула» of the service window (billing.services.formula_example) and its view."""
 
+from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -82,7 +83,7 @@ class FormulaExampleTests(TestCase):
             'kind': 'internet', 'name': 'Интернет', 'metered': '0', 'amount_mode': 'fixed',
             'fixed_amount': '4800', 'split': 'shares',
         })
-        self.assertContains(response, 'class="payer-list"')
+        self.assertContains(response, 'class="payer-list')
         self.assertContains(response, '2 640,00 ₽')
 
     def test_window_lists_the_tenants_instead_of_the_formula(self):
@@ -90,5 +91,56 @@ class FormulaExampleTests(TestCase):
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=management',
                                    HTTP_X_MODAL='1')
         self.assertNotContains(response, 'Пример для')
-        self.assertContains(response, 'class="payer-list"')
+        self.assertContains(response, 'class="payer-list')
         self.assertContains(response, 'Виктор')
+
+
+class PayerSwitchTests(TestCase):
+    """«Кто платит»: a tenant switched off doesn't pay the service; their part stays with the owner."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='b@example.ru', email='b@example.ru', password='secret1')
+        self.prop = Property.objects.create(owner=self.user, name='Королева 61', area=Decimal('60'))
+        self.viktor = Tenant.objects.create(
+            property=self.prop, name='Виктор', share_percent=Decimal('45'), area=Decimal('27'))
+        self.vlad = Tenant.objects.create(
+            property=self.prop, name='Владислав', share_percent=Decimal('55'), area=Decimal('33'))
+
+    def internet(self, split='shares'):
+        receipt = services.new_receipt(self.prop, 'internet')
+        receipt.metered, receipt.amount_mode, receipt.fixed_amount = False, 'fixed', Decimal('1000')
+        receipt.split = split
+        return services.save_receipt(receipt, excluded=[self.vlad.pk])
+
+    def test_preview_marks_the_tenant_off(self):
+        rows = services.payer_preview(self.internet())
+        self.assertEqual([(r.pays, r.amount_text) for r in rows], [(True, '450,00 ₽'), (False, '')])
+
+    def test_equal_divides_between_those_who_pay(self):
+        rows = services.payer_preview(self.internet('equal'))
+        self.assertEqual((rows[0].basis, rows[0].amount_text), ('÷ 1', '1 000,00 ₽'))
+
+    def test_month_bill_leaves_the_part_with_the_owner(self):
+        self.internet()
+        bill = services.month_bill(self.prop, date(2026, 11, 1))
+        totals = {p.tenant.name: sum(line.amount for line in p.lines) for p in bill.payers}
+        self.assertEqual(totals, {'Виктор': Decimal('450.00'), 'Владислав': 0})
+        self.assertEqual(sum(line.amount for line in bill.owner.lines), Decimal('550.00'))
+
+    def test_window_saves_the_switches(self):
+        self.client.force_login(self.user)
+        self.client.post(reverse('receipt_create', args=[self.prop.pk]), {
+            'kind': 'internet', 'name': 'Интернет', 'metered': '0', 'amount_mode': 'fixed',
+            'fixed_amount': '1000', 'split': 'shares', 'payers_shown': '1', 'pays': [str(self.viktor.pk)],
+        })
+        receipt = Receipt.objects.get(property=self.prop)
+        self.assertEqual(list(receipt.excluded.all()), [self.vlad])
+
+    def test_view_recounts_with_the_switch(self):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('receipt_formula', args=[self.prop.pk]), {
+            'kind': 'internet', 'name': 'Интернет', 'metered': '0', 'amount_mode': 'fixed',
+            'fixed_amount': '1000', 'split': 'equal', 'payers_shown': '1', 'pays': [str(self.viktor.pk)],
+        })
+        self.assertContains(response, 'не платит')
+        self.assertContains(response, '1 000,00 ₽')

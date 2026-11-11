@@ -24,6 +24,11 @@ def _done(request, property_obj, message):
     return redirect(url)
 
 
+def _payers_switchable(receipt, property_obj):
+    """«Кто платит»: a switch at each tenant only when the sum is split between them."""
+    return not property_obj.is_owner_used and receipt.split in services.SWITCHABLE_SPLITS
+
+
 def _receipt_form(request, property_obj, receipt):
     posted = request.POST if request.method == 'POST' else None
     meter_rows = services.meter_rows(receipt, posted)
@@ -36,6 +41,7 @@ def _receipt_form(request, property_obj, receipt):
 
     form = ReceiptForm(posted, instance=receipt)
     meters = services.parse_meters(property_obj, posted) if posted is not None else None
+    excluded = services.parse_excluded(property_obj, posted)
     meters_error = ''
     if posted is not None and form.is_valid() and meters is not None and form.instance.metered:
         # The tariff is typed per meter: each one needs it; the service takes the first one's.
@@ -48,7 +54,7 @@ def _receipt_form(request, property_obj, receipt):
             services.tariff_from_meters(form.instance, meters)
     if posted is not None and not meters_error and form.is_valid():
         is_new = receipt.pk is None
-        services.save_receipt(form.save(commit=False), meters=meters)
+        services.save_receipt(form.save(commit=False), meters=meters, excluded=excluded)
         verb = 'добавлена' if is_new else 'сохранена'
         return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
 
@@ -61,7 +67,8 @@ def _receipt_form(request, property_obj, receipt):
         # New service: the templates on top of the same window; picking one refills the fields below.
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
         'meters_error': meters_error,
-        'payers': services.payer_preview(services.normalize(form.instance)),
+        'payers': services.payer_preview(services.normalize(form.instance), excluded),
+        'payers_switchable': _payers_switchable(form.instance, property_obj),
         'tenants': property_obj.tenants.all(),
         'meter_rows': meter_rows,
         'meter_layout': meter_layout,
@@ -109,8 +116,11 @@ def receipt_formula(request, property_pk):
         receipt = services.new_receipt(property_obj, request.POST.get('kind'))
     form = ReceiptForm(request.POST, instance=receipt)
     form.is_valid()
-    payers = services.payer_preview(services.normalize(form.instance))
-    return render(request, 'billing/_payers.html', {'payers': payers, 'receipt': receipt, 'property': property_obj})
+    payers = services.payer_preview(services.normalize(form.instance), services.parse_excluded(property_obj, request.POST))
+    return render(request, 'billing/_payers.html', {
+        'payers': payers, 'receipt': receipt, 'property': property_obj,
+        'payers_switchable': _payers_switchable(form.instance, property_obj),
+    })
 
 
 def _meter_row(request):

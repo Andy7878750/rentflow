@@ -1,12 +1,29 @@
-{% comment %}«Кто платит» → «Арендаторы»: number, name, the basis of the part (45% · ÷ 2 · 30 м²) and, for a fixed
-   sum, what each pays a month. The server recounts it while the form is filled in (receipt_formula, app.js).{% endcomment %}
+{% comment %}«Кто платит» → «Арендаторы»: number, name, a switch «платит / не платит» (when the sum is split between
+   tenants), the basis of the part (45% · ÷ 2 · 30 м²) and, for a fixed sum, what each pays a month. The server
+   recounts it while the form is filled in (receipt_formula, app.js).{% endcomment %}
 <div class="calc-row payers-row" data-formula data-formula-url="{% url 'receipt_formula' property.pk %}">
   <span class="calc-label">Арендаторы</span>
   <div class="calc-ctrl">
     {% if payers %}
-      <ol class="payer-list">
+      {% if payers_switchable %}<input type="hidden" name="payers_shown" value="1">{% endif %}
+      <ol class="payer-list{% if payers_switchable %} has-switch{% endif %}">
         {% for row in payers %}
-          <li class="payer"><span class="payer-num">{{ forloop.counter }}</span><span class="payer-name fade">{{ row.tenant.name }}</span><span class="payer-share">{{ row.basis }}</span><span class="payer-amount">{{ row.amount_text }}</span></li>
+          <li class="payer{% if not row.pays %} is-off{% endif %}">
+            <span class="payer-num">{{ forloop.counter }}</span>
+            <span class="payer-name fade">{{ row.tenant.name }}</span>
+            {% if payers_switchable %}
+              <label class="payer-pays" title="{% if row.pays %}Платит за эту услугу{% else %}Не платит — его часть на вас{% endif %}">
+                <input type="checkbox" class="switch-input" name="pays" value="{{ row.tenant.pk }}"{% if row.pays %} checked{% endif %}>
+                <span class="switch" aria-hidden="true"></span>
+                <span class="visually-hidden">{{ row.tenant.name }} платит</span>
+              </label>
+            {% endif %}
+            {% if row.pays %}
+              <span class="payer-share">{{ row.basis }}</span><span class="payer-amount">{{ row.amount_text }}</span>
+            {% else %}
+              <span class="payer-off">не платит</span>
+            {% endif %}
+          </li>
         {% endfor %}
       </ol>
     {% else %}

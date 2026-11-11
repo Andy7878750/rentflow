@@ -419,9 +419,10 @@ def delete_receipt(receipt):
 
 
 @transaction.atomic
-def save_receipt(receipt, meters=None, today=None):
+def save_receipt(receipt, meters=None, today=None, excluded=None):
     """Save the service. meters — the list from the service window (parse_meters); without it
-    (saved from code, the object's tenants changed) the meters follow the service's layout."""
+    (saved from code, the object's tenants changed) the meters follow the service's layout.
+    excluded — tenants switched off in «Кто платит» (parse_excluded); None keeps them as they are."""
     old = Receipt.objects.filter(pk=receipt.pk).values('tariff', 'tariff_night').first() if receipt.pk else None
     if meters and receipt.metered and not receipt.property.is_owner_used:
         receipt.layout = layout_for(meters)
@@ -433,6 +434,8 @@ def save_receipt(receipt, meters=None, today=None):
         save_meter_list(receipt, meters)
     else:
         sync_meters(receipt)
+    if excluded is not None:
+        receipt.excluded.set(excluded)
     return receipt
 
 
@@ -629,23 +632,47 @@ class PayerPreview:
     tenant: object
     basis: str
     amount_text: str = ''
+    pays: bool = True
 
 
-def payer_preview(receipt):
+# Splits where a tenant can be switched off in «Кто платит»: by own meters each pays what the meter shows.
+SWITCHABLE_SPLITS = (Receipt.Split.SHARES, Receipt.Split.EQUAL, Receipt.Split.AREA)
+
+
+def excluded_ids(receipt):
+    """Tenants switched off for this service («не платит»)."""
+    return {tenant.pk for tenant in receipt.excluded.all()} if receipt.pk else set()
+
+
+def parse_excluded(property_obj, posted):
+    """The switches of «Кто платит»: every tenant whose switch is off. None — the block wasn't posted."""
+    if posted is None or 'payers_shown' not in posted:
+        return None
+    paying = set(posted.getlist('pays'))
+    return [tenant.pk for tenant in property_obj.tenants.all() if str(tenant.pk) not in paying]
+
+
+def payer_preview(receipt, excluded=None):
     """«Кто платит» → «Арендаторы»: each tenant's basis (45%, ÷ 2, 30 м²) and, for a fixed sum,
     what they pay a month — the same split and rounding as month_bill. A sum that changes every
-    month or comes from meters is not known yet, so only the basis is shown."""
+    month or comes from meters is not known yet, so only the basis is shown. excluded — tenants
+    switched off (the posted form); without it, the saved ones."""
     property_obj = receipt.property
     tenants = list(property_obj.tenants.all())
+    excluded = excluded_ids(receipt) if excluded is None else set(excluded)
+    paying = [tenant for tenant in tenants if tenant.pk not in excluded]
     fixed = (
         not receipt.metered and receipt.amount_mode == Receipt.AmountMode.FIXED
         and receipt.fixed_amount and receipt.split != Receipt.Split.OWNER
     )
-    lines = _split(receipt.fixed_amount, receipt, tenants, property_obj) if fixed else {}
+    lines = _split(receipt.fixed_amount, receipt, paying, property_obj) if fixed else {}
     rows = []
     for tenant in tenants:
-        if receipt.split == Receipt.Split.EQUAL:
-            basis = f'÷ {len(tenants)}'
+        pays = tenant.pk not in excluded
+        if not pays:
+            basis = ''
+        elif receipt.split == Receipt.Split.EQUAL:
+            basis = f'÷ {len(paying)}'
         elif receipt.split == Receipt.Split.AREA:
             basis = f'{fmt_number(tenant.area)}{NBSP}м²' if tenant.area is not None else '— м²'
         elif receipt.split == Receipt.Split.SHARES:
@@ -653,7 +680,7 @@ def payer_preview(receipt):
         else:
             basis = ''
         line = lines.get(tenant.pk)
-        rows.append(PayerPreview(tenant, basis, _rub(line.amount, receipt.currency_symbol) if line else ''))
+        rows.append(PayerPreview(tenant, basis, _rub(line.amount, receipt.currency_symbol) if line else '', pays))
     return rows
 
 
@@ -670,7 +697,7 @@ def month_bill(property_obj, month):
     entries = []
     readings_done = readings_total = 0
 
-    for receipt in property_obj.receipts.prefetch_related('meters__readings', 'meters__tenant', 'monthly_amounts'):
+    for receipt in property_obj.receipts.prefetch_related('meters__readings', 'meters__tenant', 'monthly_amounts', 'excluded'):
         amount = next((a for a in receipt.monthly_amounts.all() if a.month == month), None)
         entry = MonthEntry(receipt=receipt, amount=amount)
         entries.append(entry)
@@ -719,7 +746,10 @@ def month_bill(property_obj, month):
 
         if entry.total is None:
             continue
-        lines = {} if receipt.split == Receipt.Split.OWNER else _split(entry.total, receipt, tenants, property_obj)
+        # Tenants switched off in «Кто платит» don't pay: their part stays with the owner.
+        excluded = excluded_ids(receipt)
+        paying = [tenant for tenant in tenants if tenant.pk not in excluded]
+        lines = {} if receipt.split == Receipt.Split.OWNER else _split(entry.total, receipt, paying, property_obj)
         for tenant_id, line in lines.items():
             payers[tenant_id].lines.append(line)
         # The owner's remainder is counted from the receipt itself, without the coefficient.
