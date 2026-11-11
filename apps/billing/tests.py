@@ -104,6 +104,11 @@ class ReceiptServiceTests(TestCase):
         self.assertTrue(Meter.objects.filter(pk=cold.pk).exists())
         self.assertFalse(Meter.objects.filter(pk=hot.pk).exists())
         self.assertIn({'kind': 'custom', 'name': 'Полив', 'unit': 'м³'}, services.meter_kind_options(self.prop))
+        # The menu: electricity and water only, and «Счётчик» (nobody's name) is not an own variant.
+        self.meter(kind='custom', name='')
+        services.save_meter(self.prop, {'kind': 'custom', 'name': ''})
+        names = [option['name'] for option in services.meter_kind_options(self.prop)]
+        self.assertEqual(names, ['Электричество', 'Вода холодная', 'Вода горячая', 'Полив'])
 
     def test_meter_saved_from_its_row_then_linked_by_the_service(self):
         row = {'id': '', 'kind': 'water', 'name': 'Вода холодная', 'who': str(self.viktor.pk), 'serial': '0123',

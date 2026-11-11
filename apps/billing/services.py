@@ -188,6 +188,10 @@ METER_KINDS = [
     (Receipt.Kind.GAS, 'Газ', 'м³'),
     (Receipt.Kind.HEATING, 'Отопление', 'Гкал'),
 ]
+# The «Что за счётчик» menu offers only these; gas and heating meters keep their names when a template sets them.
+MENU_METER_KINDS = {Receipt.Kind.ELECTRICITY, Receipt.Kind.WATER, Receipt.Kind.HOT_WATER}
+# The name of a meter nobody named — not offered in the menu as the owner's own variant.
+DEFAULT_METER_NAME = 'Счётчик'
 # Services whose meters are of another kind: sewage is counted on the water meters, etc.
 METER_KIND_OF = {Receipt.Kind.SEWAGE: Receipt.Kind.WATER, Receipt.Kind.HOT_WATER_HEATING: Receipt.Kind.HOT_WATER}
 
@@ -198,14 +202,17 @@ def meter_default(receipt):
     for value, name, unit in METER_KINDS:
         if value == kind:
             return value, name, unit
-    return Receipt.Kind.CUSTOM, receipt.name or 'Счётчик', receipt.unit or ''
+    return Receipt.Kind.CUSTOM, receipt.name or DEFAULT_METER_NAME, receipt.unit or ''
 
 
 def meter_kind_options(property_obj):
     """The «Что за счётчик» menu: ready-made kinds, then the owner's own names used before."""
-    options = [{'kind': kind, 'name': name, 'unit': unit} for kind, name, unit in METER_KINDS]
+    options = [
+        {'kind': kind, 'name': name, 'unit': unit} for kind, name, unit in METER_KINDS if kind in MENU_METER_KINDS
+    ]
     own = (
         Meter.objects.filter(property__owner=property_obj.owner, kind=Receipt.Kind.CUSTOM)
+        .exclude(name=DEFAULT_METER_NAME)
         .order_by('name').values_list('name', 'unit')
     )
     seen = set()
@@ -271,7 +278,7 @@ def clean_meter(property_obj, row, tenant_ids=None):
     return {
         'id': int(meter_id) if meter_id.isdigit() else None,
         'kind': row.get('kind') if row.get('kind') in kinds else Receipt.Kind.CUSTOM,
-        'name': (row.get('name') or '').strip()[:100] or 'Счётчик',
+        'name': (row.get('name') or '').strip()[:100] or DEFAULT_METER_NAME,
         'tenant_id': None if property_obj.is_owner_used else tenant_ids.get(str(row.get('who') or '')),
         'serial': (row.get('serial') or '').strip()[:50],
         'tariff': parse_decimal(row.get('tariff')),
