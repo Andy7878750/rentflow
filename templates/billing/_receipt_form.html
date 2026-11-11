@@ -63,20 +63,13 @@
         <span class="badge unmetered-only fixed-only">фиксированная</span><span class="badge unmetered-only monthly-only">каждый месяц разная</span>
       </h2>
       <div class="form-section-body">
-        {# The meter, and next to it — how the sum comes (no meter) or the tariff kind (meter). #}
+        {# The meter, and next to it — the tariff kind (with a meter). #}
         <div class="calc-row">
           <span class="calc-label">Счётчик</span>
           <div class="calc-ctrl halves">
             <div class="seg-track" role="radiogroup" aria-label="Счётчик">
               <label><input type="radio" name="metered" value="1"{% if metered == '1' or metered == 'True' %} checked{% endif %}><span>Да</span></label>
               <label><input type="radio" name="metered" value="0"{% if metered == '0' or metered == 'False' %} checked{% endif %}><span>Нет</span></label>
-            </div>
-            {# No meter: the sentence reads «Квитанция — каждый месяц разная / фиксированная». #}
-            <span class="calc-word unmetered-only">Квитанция</span>
-            <div class="seg-track unmetered-only" role="radiogroup" aria-label="Квитанция">
-              {% for value, label in form.fields.amount_mode.choices %}
-                <label><input type="radio" name="amount_mode" value="{{ value }}"{% if form.amount_mode.value == value %} checked{% endif %}><span>{% if value == 'fixed' %}Фиксированная{% else %}Каждый месяц разная{% endif %}</span></label>
-              {% endfor %}
             </div>
             <div class="seg-track metered-only" role="radiogroup" aria-label="Тариф">
               <label><input type="radio" name="zones" value="1"{% if zones != '2' %} checked{% endif %}><span>Однотарифный</span></label>
@@ -85,10 +78,16 @@
           </div>
         </div>
 
-        {# No meter: the sum. Fixed — typed here; different every month — the same field, inactive. #}
+        {% comment %}No meter: «Квитанция — каждый месяц разная / фиксированная» and the sum. Fixed — typed here;
+           different every month — the same field, inactive.{% endcomment %}
         <div class="calc-row unmetered-only">
-          <span class="calc-label">Сумма</span>
+          <span class="calc-label">Квитанция</span>
           <div class="calc-ctrl halves">
+            <div class="seg-track" role="radiogroup" aria-label="Квитанция">
+              {% for value, label in form.fields.amount_mode.choices %}
+                <label><input type="radio" name="amount_mode" value="{{ value }}"{% if form.amount_mode.value == value %} checked{% endif %}><span>{% if value == 'fixed' %}Фиксированная{% else %}Каждый месяц разная{% endif %}</span></label>
+              {% endfor %}
+            </div>
             <label class="ifield fixed-only{% if form.fixed_amount.errors %} has-error{% endif %}">{{ form.fixed_amount }}<span class="ifield-fix">{{ receipt.currency_symbol }} в месяц</span></label>
             <span class="ifield is-disabled monthly-only"><input type="text" disabled placeholder="вводится каждый месяц" aria-label="Сумма вводится каждый месяц на странице объекта"><span class="ifield-fix">{{ receipt.currency_symbol }}</span></span>
             {% if form.fixed_amount.errors %}<p class="calc-error">{{ form.fixed_amount.errors.0 }}</p>{% endif %}
