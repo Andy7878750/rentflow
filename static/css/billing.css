@@ -2451,7 +2451,7 @@
    The unit sits on the right of the tariff field, like «Доля [м² ▾]» in the object window.
    At the end of the row: ✓ saves the meter to the object, × deletes it. */
 .rform .meter-row .meter-line {
-  grid-template-columns: 150px 130px 140px 132px 84px 30px 30px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.1fr) 172px 104px 30px 30px;
   gap: 6px;
 }
 
@@ -2564,19 +2564,62 @@
   height: 15px;
 }
 
-.meter-row[data-state=new] .meter-save,
-.meter-row[data-state=error] .meter-save {
+.meter-save .icon-edit,
+.meter-row[data-state=saved] .meter-save .icon-done {
+  display: none;
+}
+
+.meter-row[data-state=saved] .meter-save .icon-edit {
+  display: block;
+}
+
+.meter-row .meter-save {
   background: var(--color-accent);
   color: #fff;
+}
+
+.meter-row .meter-save:hover {
+  background: var(--color-accent-hover);
 }
 
 .meter-row[data-state=saving] .meter-save {
   opacity: 0.6;
 }
 
+/* Saved: the button is ✎ — clearly a button (white, framed, accent icon), not a faded ✓. */
 .meter-row[data-state=saved] .meter-save {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: var(--color-accent);
+}
+
+.meter-row[data-state=saved] .meter-save:hover {
+  border-color: var(--color-accent);
   background: var(--color-accent-soft);
+}
+
+/* A saved row is locked: quiet grey fields, menus don't open until ✎. */
+.rform .meter-row[data-state=saved] .ifield,
+.rform .meter-row[data-state=saved] .pick-trigger {
+  background: var(--color-bg);
+  box-shadow: none;
+}
+
+.rform .meter-row[data-state=saved] .ifield {
+  cursor: default;
+}
+
+.rform .meter-row[data-state=saved] .pick-trigger,
+.rform .meter-row[data-state=saved] .munit-trigger {
+  pointer-events: none;
+}
+
+.rform .meter-row[data-state=saved] .select-chevron {
+  visibility: hidden;
+}
+
+.rform .meter-row[data-state=saved] .ifield:focus-within {
+  border-color: var(--color-border);
 }
 
 .meter-row[data-state=error] .meter-save {
@@ -2589,4 +2632,13 @@
 
 .rform .meter-remove:hover {
   color: var(--color-danger);
+}
+
+/* No browser autofill colour in the meter fields. */
+.rform .meter-row input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px var(--color-surface) inset;
+}
+
+.rform .meters-block .mserial .ifield-fix {
+  color: var(--color-text-muted);
 }

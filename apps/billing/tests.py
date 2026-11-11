@@ -299,7 +299,7 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'name="meter_name" value="Вода холодная"')
         self.assertContains(response, 'data-pick-label="Виктор"')
         self.assertContains(response, '+ Добавить счётчик')
-        self.assertContains(response, 'placeholder="№ счётчика"')
+        self.assertContains(response, 'placeholder="не указан"')
         self.assertContains(response, 'data-state="new"', count=2)
 
     def test_usage_mode_is_saved_and_the_object_page_asks_for_usage(self):

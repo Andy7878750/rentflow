@@ -853,6 +853,7 @@
   function initForms(root) {
     root.querySelectorAll('[data-property-form]').forEach(initPropertyForm);
     initFades(root);
+    initMeters(root);
   }
 
   // ---------- Service window ----------
@@ -1266,6 +1267,7 @@
       var row = block.querySelector('[data-meter-template]').content.firstElementChild.cloneNode(true);
       block.querySelector('[data-meter-list]').appendChild(row);
       initFades(row);
+      dayPlaceholders(add.closest('form'));
       updateMeters(add.closest('form'));
       formulaSoon(add.closest('form'), 0);
       row.querySelector('[data-mkind-trigger]').focus();
@@ -1276,7 +1278,16 @@
     if (remove) { removeMeter(remove.closest('[data-meter-row]')); return; }
 
     var save = target.closest('[data-meter-save]');
-    if (save) { saveMeter(save.closest('[data-meter-row]')); return; }
+    if (save) {
+      var saveRow = save.closest('[data-meter-row]');
+      if (saveRow.dataset.state === 'saved') {
+        lockMeter(saveRow, false);
+        saveRow.querySelector('input[name=meter_serial]').focus();
+      } else {
+        saveMeter(saveRow);
+      }
+      return;
+    }
 
     var unitRow = target.closest('.munit [data-pick-value]');
     if (unitRow) echoUnit(unitRow.closest('[data-meter-row]'), unitRow.dataset.pickValue);
@@ -1292,6 +1303,33 @@
     if (row && row.dataset.state === 'saved') row.dataset.state = 'new';
   }
 
+  // A saved row is locked: its fields read only, its menus closed; the button turns into ✎.
+  function lockMeter(row, locked) {
+    row.dataset.state = locked ? 'saved' : 'new';
+    row.querySelectorAll('input[type=text]').forEach(function (input) { input.readOnly = locked; });
+    var button = row.querySelector('[data-meter-save]');
+    button.setAttribute('aria-label', locked ? 'Изменить счётчик' : 'Сохранить счётчик');
+    button.title = locked ? 'Изменить' : 'Сохранить';
+  }
+
+  // Day / night: the first tariff and start fields say «день», the second ones «ночь».
+  function dayPlaceholders(form) {
+    var two = !!form.querySelector('input[name=zones][value="2"]:checked');
+    form.querySelectorAll('[data-placeholder-day]').forEach(function (input) {
+      if (!input.dataset.placeholderOne) input.dataset.placeholderOne = input.placeholder;
+      input.placeholder = two ? input.dataset.placeholderDay : input.dataset.placeholderOne;
+    });
+  }
+
+  function initMeters(root) {
+    root.querySelectorAll('[data-meter-row][data-state=saved]').forEach(function (row) { lockMeter(row, true); });
+    root.querySelectorAll('form.rform').forEach(dayPlaceholders);
+  }
+
+  document.addEventListener('change', function (event) {
+    if (event.target.matches && event.target.matches('.rform input[name=zones]')) dayPlaceholders(event.target.form);
+  });
+
   function meterBlock(row) {
     return row.closest('[data-meters]');
   }
@@ -1306,7 +1344,7 @@
       .then(function (response) { if (!response.ok) throw new Error(response.status); return response.json(); })
       .then(function (data) {
         row.querySelector('input[name=meter_id]').value = data.id;
-        row.dataset.state = 'saved';
+        lockMeter(row, true);
       })
       .catch(function () { row.dataset.state = 'error'; });
   }
