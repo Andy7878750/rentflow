@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Услуги из формул</title>
+<style>
+:root {
+  --color-primary: #34495e;
+  --color-accent: #148f77;
+  --color-accent-soft: #e6f4f1;
+  --color-info: #2e86c1;
+  --color-info-soft: #e8f2fa;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fbecea;
+  --color-warning: #d68910;
+  --color-warning-soft: #fdf3e3;
+  --color-bg: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-border: #e1e4e8;
+  --color-text: #2c3338;
+  --color-text-muted: #6b7680;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); background: var(--color-bg); color: var(--color-text); line-height: 1.5; font-size: 14px; }
+.page { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { margin: 0 0 4px; font-size: 22px; color: var(--color-primary); }
+.lead { margin: 0 0 20px; color: var(--color-text-muted); max-width: 820px; }
+.cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; }
+@media (max-width: 960px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--color-surface); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06); padding: 20px; }
+.panel-title { margin: 0 0 2px; font-size: 18px; color: var(--color-primary); }
+.panel-sub { margin: 0 0 16px; color: var(--color-text-muted); font-size: 13px; }
+
+/* Blocks: frame, 12px corners, grey head in CAPS (.form-section in forms.css). */
+.form-section { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.form-section-head { margin: 0; padding: 8px 14px; background: #f7f8f9; border-bottom: 1px solid var(--color-border);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.form-section-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.badge { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 999px; background: #e3f1f6; color: #1f6280; }
+.badge.ok { background: var(--color-accent-soft); color: #0e6b59; }
+.badge.bad { background: var(--color-danger-soft); color: var(--color-danger); }
+.head-right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+/* Compact rows (30px fields, as in the service window). */
+.row { display: grid; gap: 8px; align-items: center; }
+.row.tenant { grid-template-columns: 24px minmax(0, 1fr) 90px; }
+.row.meter { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 76px 76px 70px 24px; }
+.row.const { grid-template-columns: minmax(0, 1fr) 90px 100px 24px; }
+.row.colhead { font-size: 11px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.ci, .cs { height: 30px; width: 100%; min-width: 0; border: 1px solid var(--color-border); border-radius: 6px; padding: 0 8px;
+  font: inherit; font-size: 13px; color: var(--color-text); background: #fff; outline: none; }
+.ci.n { text-align: right; font-variant-numeric: tabular-nums; }
+.ci:focus, .cs:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.has-u { position: relative; }
+.has-u .ci { padding-right: 26px; }
+.has-u span { position: absolute; right: 8px; top: 6px; font-size: 12px; color: var(--color-text-muted); pointer-events: none; }
+.num { width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.use { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
+.x { width: 24px; height: 24px; border: 0; background: none; color: var(--color-text-muted); font-size: 17px; cursor: pointer; border-radius: 6px; padding: 0; }
+.x:hover { background: var(--color-danger-soft); color: var(--color-danger); }
+.setup-link { align-self: flex-start; border: 0; background: none; padding: 0; color: var(--color-accent); font: inherit; cursor: pointer; }
+.muted { color: var(--color-text-muted); font-size: 13px; }
+
+/* Switches: pale track, selected filled with the accent. */
+.seg-track { display: inline-flex; background: #eef0f2; border-radius: 8px; padding: 2px; gap: 2px; }
+.seg-track button { height: 26px; border: 0; background: none; border-radius: 6px; padding: 0 10px; font: inherit; font-size: 12px; color: var(--color-text); cursor: pointer; white-space: nowrap; }
+.seg-track button.on { background: var(--color-accent); color: #fff; }
+
+/* Formula chips. */
+.formula { min-height: 44px; border: 1px dashed var(--color-border); border-radius: var(--radius); padding: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; background: #fcfcfd; }
+.formula.editing { border-color: var(--color-accent); border-style: solid; background: #fff; }
+.formula .empty { color: var(--color-text-muted); font-size: 13px; padding: 0 4px; }
+.chip { display: inline-flex; flex-direction: column; justify-content: center; min-height: 30px; padding: 2px 9px; border-radius: 6px; border: 1px solid transparent;
+  font: inherit; font-size: 13px; line-height: 1.2; cursor: pointer; text-align: left; white-space: nowrap; }
+.chip small { font-size: 10px; opacity: .8; }
+.chip.meter { background: var(--color-info-soft); color: #1f5f8b; border-color: #cfe3f3; }
+.chip.const { background: var(--color-accent-soft); color: #0e6b59; border-color: #cfe8e2; }
+.chip.in { background: var(--color-warning-soft); color: #8a5a08; border-color: #f3e0bd; }
+.chip.num-c { background: #f1f2f4; color: var(--color-text); border-color: #e3e5e8; }
+.chip.op { background: none; color: var(--color-primary); font-weight: 700; font-size: 15px; padding: 2px 5px; min-width: 22px; align-items: center; }
+.formula.editing .chip:hover { text-decoration: line-through; opacity: .7; }
+.formula:not(.editing) .chip { cursor: default; }
+.palette { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--radius); background: #f7f8f9; }
+.palette-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.palette-group > b { width: 100%; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); font-weight: 600; }
+.palette .chip.op { background: #fff; border-color: var(--color-border); min-width: 32px; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { height: 30px; border: 1px solid var(--color-border); background: #fff; border-radius: 6px; padding: 0 12px; font: inherit; font-size: 13px; cursor: pointer; color: var(--color-text); }
+.btn.primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+.name-in { border: 0; background: none; font: inherit; font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary); padding: 0; width: 180px; outline: none; }
+.name-in:focus { border-bottom: 1px solid var(--color-accent); }
+
+/* Result */
+.calc { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.calc li { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 8px; font-size: 13px; align-items: baseline; }
+.calc .f { color: var(--color-text-muted); overflow-wrap: anywhere; }
+.calc b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.calc li.total { border-top: 1px solid var(--color-border); padding-top: 4px; }
+.err { padding: 8px 10px; border-radius: var(--radius); background: var(--color-danger-soft); color: var(--color-danger); font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); font-weight: 600; }
+tr.total td { font-weight: 700; border-bottom: 0; }
+.table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Услуги из формул</h1>
+  <p class="lead">Песочница. Слева то, что есть у объекта: арендаторы, счётчики, постоянные (вводим один раз) и числа из квитанции (каждый месяц).
+    Справа услуги: каждая — формула из этих кубиков. Нажмите «✎ Формула», чтобы собрать или поправить; нажатие на кубик в формуле убирает его. Ничего не сохраняется.</p>
+  <div class="cols">
+    <div class="panel" id="left"></div>
+    <div class="panel" id="right"></div>
+  </div>
+</div>
+<script>
+(function () {
+  var KINDS = {
+    hot:  { name: 'Вода горячая', short: 'ГВС', unit: 'м³' },
+    cold: { name: 'Вода холодная', short: 'ХВС', unit: 'м³' },
+    el:   { name: 'Электричество', short: 'Свет', unit: 'кВт·ч' },
+    heat: { name: 'Тепло', short: 'Тепло', unit: 'Гкал' }
+  };
+  var UNITS = ['₽/м³', '₽/Гкал', '₽/кВт·ч', '₽/м²', '₽', 'Гкал/м³', 'Гкал', 'м³', 'кВт·ч', '—'];
+  var SYM = { '₽': 'rub', 'Гкал': 'gcal', 'м³': 'm3', 'кВт·ч': 'kwh', 'м²': 'm2' };
+  var SYM_BACK = { rub: '₽', gcal: 'Гкал', m3: 'м³', kwh: 'кВт·ч', m2: 'м²' };
+
+  var state = {
+    tenants: [
+      { id: 'v', name: 'Виктор', share: 45 },
+      { id: 'w', name: 'Владислав', share: 55 }
+    ],
+    meters: [
+      { id: 'm1', kind: 'hot', who: 'v', prev: 100, cur: 101 },
+      { id: 'm2', kind: 'hot', who: 'w', prev: 200, cur: 202 },
+      { id: 'm3', kind: 'cold', who: 'v', prev: 50, cur: 54 },
+      { id: 'm4', kind: 'cold', who: 'w', prev: 80, cur: 86 }
+    ],
+    consts: [
+      { id: 'c1', name: 'Тариф тепло', val: 4800, unit: '₽/Гкал' },
+      { id: 'c2', name: 'Тариф ГВС', val: 52, unit: '₽/м³' },
+      { id: 'c3', name: 'Подогрев 1 м³', val: 0.06, unit: 'Гкал/м³' },
+      { id: 'c4', name: 'Водоотведение', val: 89, unit: '₽/м³' }
+    ],
+    inputs: [
+      { id: 'i1', name: 'Тепло по квитанции', val: 0.42, unit: 'Гкал' }
+    ],
+    services: [
+      { id: 's1', name: 'Отопление', mode: 'common', split: 'shares',
+        tokens: [op('('), inp('i1'), op('−'), op('('), mk('hot', 'all'), op('×'), cst('c3'), op(')'), op(')'), op('×'), cst('c1')] },
+      { id: 's2', name: 'Горячая вода', mode: 'own', split: 'shares',
+        tokens: [op('('), mk('hot', 'own'), op('×'), cst('c2'), op(')'), op('+'), op('('), mk('hot', 'own'), op('×'), cst('c3'), op('×'), cst('c1'), op(')')] },
+      { id: 's3', name: 'Водоотведение', mode: 'own', split: 'shares',
+        tokens: [op('('), mk('cold', 'own'), op('+'), mk('hot', 'own'), op(')'), op('×'), cst('c4')] }
+    ],
+    editing: null
+  };
+  var seq = 10;
+
+  function op(v) { return { t: 'op', v: v }; }
+  function mk(kind, scope) { return { t: 'mk', kind: kind, scope: scope }; }
+  function cst(id) { return { t: 'const', id: id }; }
+  function inp(id) { return { t: 'in', id: id }; }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var num = function (s) { var x = parseFloat(String(s).replace(/\s/g, '').replace(',', '.')); return isNaN(x) ? 0 : x; };
+  var kop = function (x) { return Math.sign(x) * Math.round(Math.abs(x) * 100 + 1e-9) / 100; };
+  var rub = function (x) { return x.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽'; };
+  var n4 = function (x) { return x.toLocaleString('ru-RU', { maximumFractionDigits: 4 }); };
+  var byId = function (list, id) { return list.find(function (x) { return x.id === id; }); };
+  var tenantName = function (id) { var t = byId(state.tenants, id); return t ? t.name : 'Объект (общий)'; };
+  var used = function (m) { return num(m.cur) - num(m.prev); };
+  var meterName = function (m) { return KINDS[m.kind].short + ' · ' + tenantName(m.who); };
+
+  // ---- units: {rub: 1, gcal: -1} ----
+  function parseUnit(u) {
+    var d = {};
+    if (!u || u === '—') return d;
+    var parts = u.split('/');
+    if (SYM[parts[0]]) d[SYM[parts[0]]] = 1;
+    if (parts[1] && SYM[parts[1]]) d[SYM[parts[1]]] = (d[SYM[parts[1]]] || 0) - 1;
+    return d;
+  }
+  function clean(d) { var r = {}; Object.keys(d).forEach(function (k) { if (d[k]) r[k] = d[k]; }); return r; }
+  function combine(a, b, sign) { var r = Object.assign({}, a); Object.keys(b).forEach(function (k) { r[k] = (r[k] || 0) + sign * b[k]; }); return clean(r); }
+  function sameUnit(a, b) { a = clean(a); b = clean(b); var ka = Object.keys(a), kb = Object.keys(b); return ka.length === kb.length && ka.every(function (k) { return a[k] === b[k]; }); }
+  function showUnit(d) {
+    d = clean(d);
+    var up = [], down = [];
+    Object.keys(d).forEach(function (k) { var p = Math.abs(d[k]) > 1 ? '^' + Math.abs(d[k]) : ''; (d[k] > 0 ? up : down).push(SYM_BACK[k] + p); });
+    if (!up.length && !down.length) return 'число';
+    return (up.join('·') || '1') + (down.length ? '/' + down.join('·') : '');
+  }
+
+  // ---- a token's value for one tenant (or for the whole object) ----
+  function valueOf(tok, tenant) {
+    if (tok.t === 'const' || tok.t === 'in') {
+      var item = byId(tok.t === 'const' ? state.consts : state.inputs, tok.id);
+      if (!item) throw 'В формуле кубик, которого больше нет';
+      return { v: num(item.val), u: parseUnit(item.unit) };
+    }
+    if (tok.t === 'num') return { v: tok.v, u: {} };
+    if (tok.t === 'meter') {
+      var m = byId(state.meters, tok.id);
+      if (!m) throw 'В формуле счётчик, которого больше нет';
+      return { v: used(m), u: parseUnit(KINDS[m.kind].unit) };
+    }
+    if (tok.t === 'mk') {
+      if (tok.scope === 'own' && !tenant) throw '«' + KINDS[tok.kind].short + ' · свой» — только в услуге «На каждого по своему». В общей сумме берите «· все».';
+      var list = state.meters.filter(function (m) { return m.kind === tok.kind && (tok.scope === 'all' || m.who === tenant.id); });
+      return { v: list.reduce(function (s, m) { return s + used(m); }, 0), u: parseUnit(KINDS[tok.kind].unit) };
+    }
+  }
+
+  // Recursive descent: expr = term (± term)*, term = factor (×÷ factor)*, factor = value | (expr) | −factor.
+  function evaluate(tokens, tenant) {
+    if (!tokens.length) throw 'Формула пуста — добавьте кубики';
+    var p = 0, text = [];
+    tokens.forEach(function (t) { text.push(t.t === 'op' ? t.v : n4(valueOf(t, tenant).v)); });
+    function peekOp(set) { var t = tokens[p]; return t && t.t === 'op' && set.indexOf(t.v) >= 0; }
+    function factor() {
+      var t = tokens[p++];
+      if (!t) throw 'Формула не закончена';
+      if (t.t === 'op') {
+        if (t.v === '(') { var v = expr(); var c = tokens[p++]; if (!c || c.v !== ')') throw 'Не хватает «)»'; return v; }
+        if (t.v === '−') { var f = factor(); return { v: -f.v, u: f.u }; }
+        throw 'Лишний знак «' + t.v + '»';
+      }
+      return valueOf(t, tenant);
+    }
+    function term() {
+      var a = factor();
+      while (peekOp(['×', '÷'])) {
+        var o = tokens[p++].v, b = factor();
+        if (o === '÷' && b.v === 0) throw 'Деление на ноль';
+        a = o === '×' ? { v: a.v * b.v, u: combine(a.u, b.u, 1) } : { v: a.v / b.v, u: combine(a.u, b.u, -1) };
+      }
+      return a;
+    }
+    function expr() {
+      var a = term();
+      while (peekOp(['+', '−'])) {
+        var o = tokens[p++].v, b = term();
+        if (!sameUnit(a.u, b.u)) throw 'Нельзя ' + (o === '+' ? 'сложить' : 'вычесть') + ' «' + showUnit(a.u) + '» и «' + showUnit(b.u) + '»';
+        a = { v: o === '+' ? a.v + b.v : a.v - b.v, u: a.u };
+      }
+      return a;
+    }
+    var r = expr();
+    if (p < tokens.length) throw tokens[p].v === ')' ? 'Лишняя «)»' : 'Между кубиками не хватает знака';
+    if (!sameUnit(r.u, { rub: 1 })) throw 'В итоге получается «' + showUnit(r.u) + '», а нужны рубли (₽)';
+    return { v: r.v, text: text.join(' ').replace(/\( /g, '(').replace(/ \)/g, ')') };
+  }
+
+  // ---- a service's bill: per tenant + owner ----
+  function bill(s) {
+    var res = { per: {}, owner: 0, lines: [], error: null };
+    try {
+      if (s.mode === 'common') {
+        var r = evaluate(s.tokens, null), total = kop(r.v), given = 0;
+        res.lines.push({ who: 'Всего', f: r.text, sum: total, total: true });
+        state.tenants.forEach(function (t) {
+          var part = s.split === 'equal' ? kop(total / state.tenants.length) : kop(total * num(t.share) / 100);
+          res.per[t.id] = part; given += part;
+          res.lines.push({ who: t.name, f: s.split === 'equal' ? '÷ ' + state.tenants.length : n4(num(t.share)) + '%', sum: part });
+        });
+        res.owner = kop(total - given);
+        if (res.owner) res.lines.push({ who: 'Собственник', f: 'остаток', sum: res.owner });
+      } else {
+        state.tenants.forEach(function (t) {
+          var r = evaluate(s.tokens, t);
+          res.per[t.id] = kop(r.v);
+          res.lines.push({ who: t.name, f: r.text, sum: kop(r.v) });
+        });
+      }
+    } catch (e) { res.error = String(e); }
+    return res;
+  }
+
+  // ---- left: what the object has ----
+  function unitSelect(coll, item) {
+    return '<select class="cs" data-coll="' + coll + '" data-id="' + item.id + '" data-field="unit">' +
+      UNITS.map(function (u) { return '<option' + (u === item.unit ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select>';
+  }
+  function renderLeft() {
+    var h = '';
+    h += '<h2 class="panel-title">Объект · Королёва 61</h2><p class="panel-sub">Всё, из чего собираются формулы.</p>';
+
+    h += '<section class="form-section"><h3 class="form-section-head">Арендаторы</h3><div class="form-section-body">';
+    state.tenants.forEach(function (t, i) {
+      h += '<div class="row tenant"><span class="num">' + (i + 1) + '</span>' +
+        '<input class="ci" data-coll="tenants" data-id="' + t.id + '" data-field="name" value="' + esc(t.name) + '">' +
+        '<div class="has-u"><input class="ci n" inputmode="decimal" data-coll="tenants" data-id="' + t.id + '" data-field="share" value="' + esc(n4(t.share)) + '"><span>%</span></div></div>';
+    });
+    h += '</div></section>';
+
+    h += '<section class="form-section"><h3 class="form-section-head">Счётчики <span class="badge">' + state.meters.length + ' · каждый месяц было / стало</span></h3><div class="form-section-body">';
+    h += '<div class="row meter colhead"><span></span><span>Что меряет</span><span>Чей</span><span style="text-align:right">Было</span><span style="text-align:right">Стало</span><span style="text-align:right">Расход</span><span></span></div>';
+    state.meters.forEach(function (m, i) {
+      h += '<div class="row meter"><span class="num">' + (i + 1) + '</span>' +
+        '<select class="cs" data-coll="meters" data-id="' + m.id + '" data-field="kind">' + Object.keys(KINDS).map(function (k) {
+          return '<option value="' + k + '"' + (k === m.kind ? ' selected' : '') + '>' + KINDS[k].name + '</option>'; }).join('') + '</select>' +
+        '<select class="cs" data-coll="meters" data-id="' + m.id + '" data-field="who"><option value="">Объект (общий)</option>' + state.tenants.map(function (t) {
+          return '<option value="' + t.id + '"' + (t.id === m.who ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '</select>' +
+        '<input class="ci n" inputmode="decimal" data-coll="meters" data-id="' + m.id + '" data-field="prev" value="' + esc(n4(m.prev)) + '">' +
+        '<input class="ci n" inputmode="decimal" data-coll="meters" data-id="' + m.id + '" data-field="cur" value="' + esc(n4(m.cur)) + '">' +
+        '<span class="use" data-use="' + m.id + '">' + n4(used(m)) + ' ' + KINDS[m.kind].unit + '</span>' +
+        '<button class="x" data-act="del" data-coll="meters" data-id="' + m.id + '" aria-label="Убрать счётчик">×</button></div>';
+    });
+    h += '<button class="setup-link" data-act="add-meter">+ Добавить счётчик</button></div></section>';
+
+    h += '<section class="form-section"><h3 class="form-section-head">Постоянные <span class="badge">тарифы и нормативы · вводим один раз</span></h3><div class="form-section-body">';
+    state.consts.forEach(function (c) {
+      h += '<div class="row const"><input class="ci" data-coll="consts" data-id="' + c.id + '" data-field="name" value="' + esc(c.name) + '">' +
+        '<input class="ci n" inputmode="decimal" data-coll="consts" data-id="' + c.id + '" data-field="val" value="' + esc(n4(c.val)) + '">' +
+        unitSelect('consts', c) +
+        '<button class="x" data-act="del" data-coll="consts" data-id="' + c.id + '" aria-label="Убрать">×</button></div>';
+    });
+    h += '<button class="setup-link" data-act="add-const">+ Добавить постоянную</button></div></section>';
+
+    h += '<section class="form-section"><h3 class="form-section-head">Из квитанции <span class="badge">каждый месяц</span></h3><div class="form-section-body">';
+    state.inputs.forEach(function (c) {
+      h += '<div class="row const"><input class="ci" data-coll="inputs" data-id="' + c.id + '" data-field="name" value="' + esc(c.name) + '">' +
+        '<input class="ci n" inputmode="decimal" data-coll="inputs" data-id="' + c.id + '" data-field="val" value="' + esc(n4(c.val)) + '">' +
+        unitSelect('inputs', c) +
+        '<button class="x" data-act="del" data-coll="inputs" data-id="' + c.id + '" aria-label="Убрать">×</button></div>';
+    });
+    h += '<button class="setup-link" data-act="add-input">+ Добавить число из квитанции</button></div></section>';
+    $('left').innerHTML = h;
+  }
+
+  // ---- right: services as formulas ----
+  function chip(tok, i) {
+    var cls, label, sub = '';
+    if (tok.t === 'op') { cls = 'op'; label = tok.v; }
+    else if (tok.t === 'num') { cls = 'num-c'; label = n4(tok.v); }
+    else if (tok.t === 'mk') { cls = 'meter'; label = KINDS[tok.kind].short + ' · ' + (tok.scope === 'all' ? 'все' : 'свой'); sub = KINDS[tok.kind].unit; }
+    else if (tok.t === 'meter') { var m = byId(state.meters, tok.id); cls = 'meter'; label = m ? meterName(m) : '?'; sub = m ? KINDS[m.kind].unit : ''; }
+    else { var c = byId(tok.t === 'const' ? state.consts : state.inputs, tok.id); cls = tok.t; label = c ? c.name : '?'; sub = c ? n4(num(c.val)) + ' ' + c.unit : ''; }
+    return '<button class="chip ' + cls + '" ' + (i === undefined ? 'data-add=\'' + esc(JSON.stringify(tok)) + '\'' : 'data-rm="' + i + '"') + '>' +
+      esc(label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
+  }
+  function palette() {
+    var h = '<div class="palette">', kinds = [];
+    state.meters.forEach(function (m) { if (kinds.indexOf(m.kind) < 0) kinds.push(m.kind); });
+    h += '<div class="palette-group"><b>Счётчики · расход за месяц</b>';
+    kinds.forEach(function (k) { h += chip(mk(k, 'all')) + chip(mk(k, 'own')); });
+    state.meters.forEach(function (m) { h += chip({ t: 'meter', id: m.id }); });
+    h += '</div><div class="palette-group"><b>Постоянные</b>' + state.consts.map(function (c) { return chip(cst(c.id)); }).join('') + '</div>';
+    h += '<div class="palette-group"><b>Из квитанции</b>' + state.inputs.map(function (c) { return chip(inp(c.id)); }).join('') + '</div>';
+    h += '<div class="palette-group"><b>Знаки и число</b>' + ['+', '−', '×', '÷', '(', ')'].map(function (o) { return chip(op(o)); }).join('') +
+      '<input class="ci n" id="numIn" inputmode="decimal" placeholder="число" style="width:80px"><button class="btn" data-act="add-num">Добавить</button></div>';
+    h += '<div class="tools"><button class="btn" data-act="back">⌫ Стереть последний</button><button class="btn" data-act="clear">Очистить</button>' +
+      '<button class="btn primary" data-act="done" style="margin-left:auto">Готово</button></div></div>';
+    return h;
+  }
+  function renderRight() {
+    var h = '<h2 class="panel-title">Услуги</h2><p class="panel-sub">Сентябрь 2026. Формула — из кубиков слева; итог всегда в рублях.</p>';
+    var totals = {}, owner = 0;
+    state.tenants.forEach(function (t) { totals[t.id] = 0; });
+    state.services.forEach(function (s) {
+      var b = bill(s), ed = state.editing === s.id;
+      if (!b.error) { state.tenants.forEach(function (t) { totals[t.id] += b.per[t.id] || 0; }); owner += b.owner; }
+      h += '<section class="form-section"><h3 class="form-section-head">' +
+        '<input class="name-in" data-svc="' + s.id + '" data-sfield="name" value="' + esc(s.name) + '">' +
+        (b.error ? '<span class="badge bad">ошибка</span>' : '<span class="badge ok">₽ ✓</span>') +
+        '<span class="head-right"><button class="setup-link" data-act="' + (ed ? 'done' : 'edit') + '" data-svc="' + s.id + '">' + (ed ? 'Готово' : '✎ Формула') + '</button>' +
+        '<button class="x" data-act="del-svc" data-svc="' + s.id + '" aria-label="Убрать услугу">×</button></span></h3><div class="form-section-body">';
+      h += '<div class="tools"><div class="seg-track">' +
+        '<button data-svc="' + s.id + '" data-mode="common" class="' + (s.mode === 'common' ? 'on' : '') + '">Общая сумма → делим</button>' +
+        '<button data-svc="' + s.id + '" data-mode="own" class="' + (s.mode === 'own' ? 'on' : '') + '">На каждого по своему</button></div>' +
+        (s.mode === 'common' ? '<div class="seg-track">' +
+          '<button data-svc="' + s.id + '" data-split="shares" class="' + (s.split === 'shares' ? 'on' : '') + '">по долям</button>' +
+          '<button data-svc="' + s.id + '" data-split="equal" class="' + (s.split === 'equal' ? 'on' : '') + '">поровну</button></div>' : '') + '</div>';
+      h += '<div class="formula' + (ed ? ' editing' : '') + '" data-formula="' + s.id + '">' +
+        (s.tokens.length ? s.tokens.map(function (t, i) { return chip(t, i); }).join('') : '<span class="empty">Пусто — нажмите «✎ Формула» и выберите кубики</span>') + '</div>';
+      if (ed) h += palette();
+      if (b.error) h += '<div class="err">' + esc(b.error) + '</div>';
+      else h += '<ul class="calc">' + b.lines.map(function (l) {
+        return '<li' + (l.total ? ' class="total"' : '') + '><span>' + esc(l.who) + '</span><span class="f">' + esc(l.f) + '</span><b>' + rub(l.sum) + '</b></li>'; }).join('') + '</ul>';
+      h += '</div></section>';
+    });
+    h += '<button class="setup-link" data-act="add-svc" style="margin-bottom:14px">+ Добавить услугу</button>';
+
+    h += '<section class="form-section"><h3 class="form-section-head">Счета за месяц</h3><div class="form-section-body"><div class="table-wrap"><table><tr><th>Кто</th>' +
+      state.services.map(function (s) { return '<th>' + esc(s.name) + '</th>'; }).join('') + '<th>Итого</th></tr>';
+    var cache = state.services.map(bill);
+    state.tenants.forEach(function (t) {
+      h += '<tr><td>' + esc(t.name) + '</td>' + cache.map(function (b) { return '<td>' + (b.error ? '—' : rub(b.per[t.id] || 0)) + '</td>'; }).join('') + '<td><b>' + rub(totals[t.id]) + '</b></td></tr>';
+    });
+    if (owner) h += '<tr><td>Собственник</td>' + cache.map(function (b) { return '<td>' + (b.error ? '—' : rub(b.owner)) + '</td>'; }).join('') + '<td><b>' + rub(owner) + '</b></td></tr>';
+    var all = owner + state.tenants.reduce(function (s, t) { return s + totals[t.id]; }, 0);
+    h += '<tr class="total"><td>Всего</td>' + cache.map(function (b) {
+      return '<td>' + (b.error ? '—' : rub(kop(b.owner + state.tenants.reduce(function (s, t) { return s + (b.per[t.id] || 0); }, 0)))) + '</td>'; }).join('') +
+      '<td>' + rub(kop(all)) + '</td></tr></table></div></div></section>';
+    $('right').innerHTML = h;
+  }
+  function renderAll() { renderLeft(); renderRight(); }
+
+  // ---- events ----
+  var NUMERIC = { share: 1, prev: 1, cur: 1, val: 1 };
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.dataset.coll) {
+      var item = byId(state[el.dataset.coll], el.dataset.id), f = el.dataset.field;
+      item[f] = NUMERIC[f] ? num(el.value) : el.value;
+      if (el.tagName === 'SELECT') { renderAll(); return; }
+      if (el.dataset.coll === 'meters') { var u = document.querySelector('[data-use="' + item.id + '"]'); if (u) u.textContent = n4(used(item)) + ' ' + KINDS[item.kind].unit; }
+      renderRight();
+    } else if (el.dataset.sfield) {
+      byId(state.services, el.dataset.svc).name = el.value;
+    }
+  });
+  document.addEventListener('change', function (e) { if (e.target.dataset.sfield) renderRight(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'numIn') { e.preventDefault(); addNum(); }
+  });
+  function editingSvc() { return byId(state.services, state.editing); }
+  function addNum() {
+    var s = editingSvc(), v = $('numIn').value;
+    if (!s || !String(v).trim()) return;
+    s.tokens.push({ t: 'num', v: num(v) }); renderRight();
+    var f = $('numIn'); if (f) f.focus();
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('button');
+    if (!el) return;
+    var s = el.dataset.svc ? byId(state.services, el.dataset.svc) : editingSvc();
+    if (el.dataset.add !== undefined) { if (s) { s.tokens.push(JSON.parse(el.dataset.add)); renderRight(); } return; }
+    if (el.dataset.rm !== undefined) {
+      var host = el.closest('[data-formula]');
+      if (host && state.editing === host.dataset.formula) { byId(state.services, host.dataset.formula).tokens.splice(+el.dataset.rm, 1); renderRight(); }
+      return;
+    }
+    if (el.dataset.mode) { s.mode = el.dataset.mode; renderRight(); return; }
+    if (el.dataset.split) { s.split = el.dataset.split; renderRight(); return; }
+    switch (el.dataset.act) {
+      case 'edit': state.editing = s.id; renderRight(); break;
+      case 'done': state.editing = null; renderRight(); break;
+      case 'back': if (s) { s.tokens.pop(); renderRight(); } break;
+      case 'clear': if (s) { s.tokens = []; renderRight(); } break;
+      case 'add-num': addNum(); break;
+      case 'del-svc': state.services = state.services.filter(function (x) { return x !== s; }); if (state.editing === s.id) state.editing = null; renderRight(); break;
+      case 'add-svc': var ns = { id: 's' + (++seq), name: 'Своя услуга', mode: 'common', split: 'shares', tokens: [] }; state.services.push(ns); state.editing = ns.id; renderRight(); break;
+      case 'add-meter': state.meters.push({ id: 'm' + (++seq), kind: 'el', who: '', prev: 0, cur: 0 }); renderAll(); break;
+      case 'add-const': state.consts.push({ id: 'c' + (++seq), name: 'Тариф', val: 0, unit: '₽/м³' }); renderAll(); break;
+      case 'add-input': state.inputs.push({ id: 'i' + (++seq), name: 'Сумма по квитанции', val: 0, unit: '₽' }); renderAll(); break;
+      case 'del': state[el.dataset.coll] = state[el.dataset.coll].filter(function (x) { return x.id !== el.dataset.id; }); renderAll(); break;
+    }
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
