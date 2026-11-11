@@ -159,14 +159,34 @@
     tip.style.top = Math.max(margin, top) + 'px';
   }
 
+  // «?» cards, and «Базовые» of a meter: hovering the word shows the base readings typed (saved row too).
+  var TIP_OWNERS = '.help[data-tip], [data-start-toggle]';
+
+  function tipFor(owner) {
+    if (!owner.matches('[data-start-toggle]')) return true;
+    var start = owner.closest('[data-start]');
+    if (start.classList.contains('is-open')) return false;
+    var day = start.querySelector('input[name=meter_initial]').value.trim();
+    var night = start.querySelector('input[name=meter_initialn]').value.trim();
+    var unitInput = owner.closest('[data-meter-row]').querySelector('input[name=meter_unit]');
+    var unit = (unitInput && unitInput.value) || '';
+    var two = !!owner.closest('form').querySelector('input[name=zones][value="2"]:checked');
+    var value = 'Не задано';
+    if (two && (day || night)) value = 'день ' + (day || '—') + ' · ночь ' + (night || '—') + (unit ? ' ' + unit : '');
+    else if (day) value = day + (unit ? ' ' + unit : '');
+    owner.dataset.tipTitle = 'Заданное значение';
+    owner.dataset.tip = value;
+    return true;
+  }
+
   document.addEventListener('mouseover', function (event) {
-    var help = event.target.closest && event.target.closest('.help[data-tip]');
-    if (help) showTip(help);
+    var help = event.target.closest && event.target.closest(TIP_OWNERS);
+    if (help && tipFor(help)) showTip(help);
     else if (tipOwner && document.activeElement !== tipOwner) hideTip();
   });
   document.addEventListener('focusin', function (event) {
-    var help = event.target.closest && event.target.closest('.help[data-tip]');
-    if (help) showTip(help);
+    var help = event.target.closest && event.target.closest(TIP_OWNERS);
+    if (help && tipFor(help)) showTip(help);
   });
   document.addEventListener('focusout', function (event) {
     if (event.target === tipOwner) hideTip();
@@ -1351,6 +1371,9 @@
     });
     if (!current) return;
     if (target.closest('[data-start-toggle]')) {
+      // A saved row is locked: the word only shows its value on hover.
+      if (current.closest('[data-meter-row]').dataset.state === 'saved') return;
+      hideTip();
       var open = !current.classList.contains('is-open');
       setStartOpen(current, open);
       if (open) current.querySelector('[data-start-card] input').focus();

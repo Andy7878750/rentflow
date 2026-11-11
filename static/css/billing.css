@@ -2949,3 +2949,9 @@
     margin-top: 3px;
   }
 }
+
+/* A saved (locked) row: «Базовые» does not open the card, but hovering it still shows the value typed. */
+.rform .meters-block .meter-row[data-state=saved] .mstart-link {
+  pointer-events: auto;
+  cursor: default;
+}
