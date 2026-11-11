@@ -94,8 +94,8 @@
     <p class="form-note">После сохранения добавьте на странице объекта услуги и счётчики — для каждой услуги один раз выбираете, как делить её между арендаторами.</p>
 
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary btn-auto">{% if property %}Сохранить{% else %}Создать объект{% endif %}</button>
       <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+      <button type="submit" class="btn btn-primary btn-auto">{% if property %}Сохранить{% else %}Создать объект{% endif %}</button>
     </div>
   </form>
 </div>

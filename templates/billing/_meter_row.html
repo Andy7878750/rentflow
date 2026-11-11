@@ -6,6 +6,7 @@
 <div class="meter-row" data-meter-row data-state="{% if row.id %}saved{% else %}new{% endif %}">
   <input type="hidden" name="meter_id" value="{{ row.id }}">
   <div class="meter-line">
+    <span class="mnum" aria-hidden="true"></span>
     {# What it measures: ready-made kinds, the owner's own ones, and «свой вариант…» typed right in the menu. #}
     <div class="pick mkind" data-mkind>
       <input type="hidden" name="meter_kind" value="{{ row.kind }}">
@@ -47,7 +48,7 @@
     </div>
 
     {# The tariff: one field in one line — [тариф ₽ | ед. ▾], with day / night [день ₽ · ночь ₽ | ед. ▾]. #}
-    <span class="ifield mtariff">
+    <span class="ifield mtariff{% if row.missing %} has-error{% endif %}">
       <input type="text" inputmode="decimal" name="meter_tariff" value="{{ row.tariff }}" placeholder="тариф" data-placeholder-day="день" autocomplete="off" aria-label="Тариф счётчика"><span class="ifield-fix">{{ receipt.currency_symbol }}</span>
       <span class="mtariff-night zones2-only"><input type="text" inputmode="decimal" name="meter_tariffn" value="{{ row.tariffn }}" placeholder="ночь" autocomplete="off" aria-label="Тариф счётчика ночью"><span class="ifield-fix">{{ receipt.currency_symbol }}</span></span>
       {% include "billing/_meter_unit.html" %}

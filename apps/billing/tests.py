@@ -249,20 +249,24 @@ class ReceiptViewTests(TestCase):
 
     def test_metered_service_needs_tariff_and_night_tariff(self):
         url = reverse('receipt_create', args=[self.prop.pk])
-        data = {'kind': 'electricity', 'name': 'Свет', 'metered': '1', 'zones': '2', 'unit': 'кВт·ч',
-                'layout': 'tenants', 'amount_mode': 'monthly', 'tariff': '7,20'}
+        # From the window the tariff comes with each meter: the night one is missing → not saved.
+        tenant = self.prop.tenants.get()
+        data = {'kind': 'electricity', 'name': '', 'metered': '1', 'zones': '2', 'amount_mode': 'monthly',
+                'meter_id': '', 'meter_kind': 'electricity', 'meter_name': 'Электричество',
+                'meter_who': str(tenant.pk), 'meter_serial': '0123456', 'meter_tariff': '7,20', 'meter_tariffn': '',
+                'meter_unit': 'кВт·ч', 'meter_initial': '1 000', 'meter_initialn': '400'}
         response = self.client.post(url, data, HTTP_X_MODAL='1')
-        self.assertContains(response, 'Укажите ночной тариф')
+        self.assertContains(response, 'Укажите тариф у каждого счётчика')
+        self.assertContains(response, 'mtariff has-error')
         self.assertFalse(self.prop.receipts.exists())
 
-        tenant = self.prop.tenants.get()
-        data.update({'tariff_night': '3,10', 'meter_id': '', 'meter_kind': 'electricity', 'meter_name': 'Электричество',
-                     'meter_who': str(tenant.pk), 'meter_serial': '0123456', 'meter_tariff': '', 'meter_tariffn': '',
-                     'meter_unit': 'кВт·ч', 'meter_initial': '1 000', 'meter_initialn': '400'})
+        data['meter_tariffn'] = '3,10'
         response = self.client.post(url, data, HTTP_X_MODAL='1')
         self.assertEqual(response.status_code, 204)
         receipt = self.prop.receipts.get()
-        self.assertEqual((receipt.zones, receipt.tariff_night, receipt.split), (2, Decimal('3.1'), 'meters'))
+        self.assertEqual(receipt.name, 'Электричество', 'an empty name — the template\'s')
+        self.assertEqual((receipt.zones, receipt.tariff, receipt.tariff_night, receipt.unit, receipt.split),
+                         (2, Decimal('7.2'), Decimal('3.1'), 'кВт·ч', 'meters'), 'the service takes the meter\'s tariff')
         meter = receipt.meters.get()
         self.assertEqual((meter.serial, meter.initial, meter.initial_night), ('0123456', Decimal('1000'), Decimal('400')))
 

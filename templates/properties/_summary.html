@@ -63,9 +63,9 @@
   </section>
 
   <div class="form-actions">
+    <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Закрыть</a>
     <a href="{% url 'property_edit' property.pk %}" data-modal class="btn btn-primary btn-auto">
       <svg class="icon"><use href="#i-edit"/></svg>Изменить
     </a>
-    <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Закрыть</a>
   </div>
 </div>

@@ -42,6 +42,12 @@ class ReceiptForm(forms.ModelForm):
         self.fields['input_mode'].required = False
         # «По показаниям» is no button: with the tenants' own meters no split radio is checked.
         self.fields['split'].required = False
+        # Left empty — the template's name («Электричество»); no error for that.
+        self.fields['name'].required = False
+
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        return name or Receipt.Kind(self.instance.kind or Receipt.Kind.CUSTOM).label
 
     @property
     def units(self):
@@ -57,7 +63,8 @@ class ReceiptForm(forms.ModelForm):
         if not cleaned.get('split'):
             own_meters = cleaned.get('metered') and cleaned['layout'] != Receipt.Layout.COMMON
             cleaned['split'] = Receipt.Split.METERS if own_meters else Receipt.Split.SHARES
-        if cleaned.get('metered'):
+        # From the service window the tariff and unit come with each meter (checked in the view).
+        if cleaned.get('metered') and 'meter_kind' not in self.data:
             if not cleaned.get('unit'):
                 self.add_error('unit', 'Выберите единицу.')
             if cleaned.get('tariff') is None:

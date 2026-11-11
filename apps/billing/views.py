@@ -32,6 +32,13 @@ def _preview(form, receipt):
     return receipt
 
 
+def _formula(receipt, meters, chosen):
+    """«Формула» on the service as the window describes it now; the tariff — of the chosen tenant's meter."""
+    if meters is not None and receipt.metered:
+        services.tariff_from_meters(receipt, meters, tenant_id=chosen)
+    return services.formula_example(services.normalize(receipt), chosen)
+
+
 def _receipt_form(request, property_obj, receipt):
     posted = request.POST if request.method == 'POST' else None
     meter_rows = services.meter_rows(receipt, posted)
@@ -43,9 +50,19 @@ def _receipt_form(request, property_obj, receipt):
         services.normalize(receipt)
 
     form = ReceiptForm(posted, instance=receipt)
-    if posted is not None and form.is_valid():
+    meters = services.parse_meters(property_obj, posted) if posted is not None else None
+    meters_error = ''
+    if posted is not None and form.is_valid() and meters is not None and form.instance.metered:
+        # The tariff is typed per meter: each one needs it; the service takes the first one's.
+        missing = services.meters_without_tariff(meters, form.instance.zones)
+        for index in missing:
+            meter_rows[index]['missing'] = True
+        if missing:
+            meters_error = 'Укажите тариф у каждого счётчика — по нему считается сумма.'
+        else:
+            services.tariff_from_meters(form.instance, meters)
+    if posted is not None and not meters_error and form.is_valid():
         is_new = receipt.pk is None
-        meters = services.parse_meters(property_obj, request.POST)
         services.save_receipt(form.save(commit=False), meters=meters)
         verb = 'добавлена' if is_new else 'сохранена'
         return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
@@ -58,7 +75,8 @@ def _receipt_form(request, property_obj, receipt):
         'warning': services.split_warning(form.instance),
         # New service: the templates on top of the same window; picking one refills the fields below.
         'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
-        'formula': services.formula_example(services.normalize(_preview(form, receipt)), request.POST.get('formula_for')),
+        'formula': _formula(_preview(form, receipt), meters, request.POST.get('formula_for')),
+        'meters_error': meters_error,
         'tenants': property_obj.tenants.all(),
         'meter_rows': meter_rows,
         'meter_layout': meter_layout,
@@ -106,7 +124,8 @@ def receipt_formula(request, property_pk):
         receipt = services.new_receipt(property_obj, request.POST.get('kind'))
     form = ReceiptForm(request.POST, instance=receipt)
     form.is_valid()
-    formula = services.formula_example(services.normalize(form.instance), request.POST.get('formula_for'))
+    meters = services.parse_meters(property_obj, request.POST)
+    formula = _formula(form.instance, meters, request.POST.get('formula_for'))
     return render(request, 'billing/_formula.html', {'formula': formula, 'receipt': receipt, 'property': property_obj})
 
 

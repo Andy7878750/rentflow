@@ -290,6 +290,27 @@ def parse_meters(property_obj, data):
     return [clean_meter(property_obj, row, tenant_ids) for row in meter_rows(Receipt(property=property_obj), data)]
 
 
+def meters_without_tariff(meters, zones):
+    """Indexes of the meters whose tariff is not typed (with day / night — either of the two)."""
+    return [
+        index for index, values in enumerate(meters)
+        if values['tariff'] is None or (zones == 2 and values['tariff_night'] is None)
+    ]
+
+
+def tariff_from_meters(receipt, meters, tenant_id=None):
+    """The service's tariff and unit = those of its meter (the tenant's, if asked, else the first with a tariff).
+    The tariff is typed per meter in the window; the service keeps one for the month history and «Формула»."""
+    with_tariff = [values for values in meters if values['tariff'] is not None]
+    if not with_tariff:
+        return receipt
+    chosen = next((values for values in with_tariff if tenant_id and str(values['tenant_id']) == str(tenant_id)), with_tariff[0])
+    receipt.tariff = chosen['tariff']
+    receipt.tariff_night = chosen['tariff_night']
+    receipt.unit = chosen['unit'] or receipt.unit
+    return receipt
+
+
 def _store_meter(property_obj, values, meter=None):
     meter = meter or Meter(property=property_obj)
     for name, value in values.items():

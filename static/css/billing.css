@@ -2858,3 +2858,73 @@
 .rform .mstart-card .ifield .ifield-fix[data-unit-echo]:empty {
   display: none;
 }
+
+/* ---------- «Счётчики», круг 6 (2026-11-11) ----------
+   A number in front of each meter (1, 2, …), the columns by name, and when the window is narrow
+   the row wraps (a container query on the list: it is the list's width that counts, not the screen's). */
+.rform .meters-block .meter-list {
+  container-type: inline-size;
+  counter-reset: meter;
+}
+
+.rform .meters-block .meter-row {
+  counter-increment: meter;
+}
+
+.mnum {
+  grid-area: num;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.mnum::before {
+  content: counter(meter);
+}
+
+.rform .meters-block .meter-line > .mkind { grid-area: kind; }
+.rform .meters-block .meter-line > .mserial { grid-area: serial; }
+.rform .meters-block .meter-line > .mwho { grid-area: who; }
+.rform .meters-block .meter-line > .mtariff { grid-area: tariff; }
+.rform .meters-block .meter-line > .mstart { grid-area: start; }
+.rform .meters-block .meter-line > .meter-remove { grid-area: remove; }
+.rform .meters-block .meter-line > .meter-save { grid-area: save; }
+
+.rform .meters-block .meter-row .meter-line {
+  grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) var(--tariff-w) var(--start-w) 30px 30px;
+  grid-template-areas: "num kind serial who tariff start remove save";
+  row-gap: 8px;
+}
+
+/* Narrower: two lines — what · № · whose · × ✓, then the tariff and «Базовые» under them. */
+@container (max-width: 700px) {
+  .rform .meters-block .meter-row .meter-line {
+    grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
+    grid-template-areas:
+      "num kind   serial who   remove save"
+      ".   tariff tariff start start  start";
+  }
+
+  .rform .meters-block .meter-row + .meter-row {
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .mstart-card {
+    right: auto;
+    left: 0;
+  }
+}
+
+/* A phone: what ▾ · × ✓, then № · whose, then the tariff, then «Базовые». */
+@container (max-width: 440px) {
+  .rform .meters-block .meter-row .meter-line {
+    grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
+    grid-template-areas:
+      "num kind   kind   remove save"
+      ".   serial who    who    who"
+      ".   tariff tariff tariff tariff"
+      ".   start  start  start  start";
+  }
+}

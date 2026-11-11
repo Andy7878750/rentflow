@@ -48,7 +48,7 @@
       <div class="form-section-body">
         <div class="form-grid grid-2">
           {% include "properties/_field.html" with field=form.provider label="Поставщик" tip="Кто присылает квитанцию: УК, ТСЖ, «Петроэлектросбыт», провайдер. Для вашей памяти." %}
-          {% include "properties/_field.html" with field=form.name label="Название в счёте" required=1 tip="Так услуга называется в счетах арендаторам." %}
+          {% include "properties/_field.html" with field=form.name label="Название в счёте" tip="Так услуга называется в счетах арендаторам. Если оставить пустым — название шаблона." %}
         </div>
       </div>
     </section>
@@ -93,27 +93,10 @@
           </div>
         </div>
 
-        {# Meter: «[5,00 ₽] за [кВт·ч ▾]» on the left half, what is typed every month on the right. #}
+        {# Meter: what is typed every month. The tariff and unit live with each meter («Счётчики»). #}
         <div class="calc-row metered-only">
-          <span class="calc-label">Тариф</span>
-          <div class="calc-ctrl halves">
-            <div class="calc-half">
-              <label class="ifield{% if form.tariff.errors %} has-error{% endif %}"><span class="ifield-fix zones2-only">день</span>{{ form.tariff }}<span class="ifield-fix">{{ receipt.currency_symbol }}</span></label>
-              <label class="ifield zones2-only{% if form.tariff_night.errors %} has-error{% endif %}"><span class="ifield-fix">ночь</span>{{ form.tariff_night }}<span class="ifield-fix">{{ receipt.currency_symbol }}</span></label>
-              <span class="calc-word">за</span>
-              <div class="pick{% if form.unit.errors %} has-error{% endif %}" data-pick>
-                {{ form.unit }}
-                <button type="button" class="pick-trigger" data-pick-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Единица">
-                  <span data-pick-label>{{ form.unit.value|default:'ед.' }}</span>
-                  <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
-                </button>
-                <ul class="select-menu pick-menu" role="listbox" data-pick-menu hidden>
-                  {% for unit in form.units %}
-                    <li class="select-row{% if unit == form.unit.value %} is-selected{% endif %}" data-pick-value="{{ unit }}"><button type="button" class="select-option" role="option"><span>{{ unit }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button></li>
-                  {% endfor %}
-                </ul>
-              </div>
-            </div>
+          <span class="calc-label">Ввод показаний</span>
+          <div class="calc-ctrl">
             {# A menu of radios: the CSS :has rules still see which one is checked. #}
             <div class="pick pick-radio" data-drop>
               <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Каждый месяц вводим">
@@ -126,7 +109,6 @@
                 {% endif %}{% endfor %}
               </ul>
             </div>
-            {% if form.tariff.errors %}<p class="calc-error">{{ form.tariff.errors.0 }}</p>{% elif form.tariff_night.errors %}<p class="calc-error">{{ form.tariff_night.errors.0 }}</p>{% elif form.unit.errors %}<p class="calc-error">{{ form.unit.errors.0 }}</p>{% endif %}
           </div>
         </div>
       </div>
@@ -149,6 +131,7 @@
         <div class="meter-list" data-meter-list>
           {% for row in meter_rows %}{% include "billing/_meter_row.html" %}{% endfor %}
         </div>
+        {% if meters_error %}<p class="calc-error">{{ meters_error }}</p>{% endif %}
         <button type="button" class="setup-link meter-add" data-meter-add>+ Добавить счётчик</button>
         <template data-meter-template>{% include "billing/_meter_row.html" with row=new_meter %}</template>
       </div>
@@ -194,8 +177,8 @@
     {% include "billing/_formula.html" %}
 
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary btn-auto">{% if receipt.pk %}Сохранить{% else %}Добавить услугу{% endif %}</button>
       <a href="{% url 'property_detail' property.pk %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+      <button type="submit" class="btn btn-primary btn-auto">{% if receipt.pk %}Сохранить{% else %}Добавить услугу{% endif %}</button>
     </div>
   </form>
 </div>

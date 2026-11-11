@@ -1139,8 +1139,10 @@ input.masked {
   font-size: 12px;
 }
 
+/* The buttons at the bottom of a window sit on the right: «Отмена» first, the main action last. */
 .form-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 10px;
 }
 
