@@ -1,0 +1,11 @@
+<span class="pick munit" data-pick>
+  <input type="hidden" name="meter_unit" value="{{ row.unit }}">
+  <button type="button" class="munit-trigger" data-pick-trigger aria-haspopup="listbox" aria-expanded="false" aria-label="Единица">
+    <span data-pick-label>{{ row.unit|default:'ед.' }}</span>
+  </button>
+  <ul class="select-menu pick-menu" role="listbox" data-pick-menu hidden>
+    {% for unit in form.units %}
+      <li class="select-row{% if unit == row.unit %} is-selected{% endif %}" data-pick-value="{{ unit }}"><button type="button" class="select-option" role="option"><span>{{ unit }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button></li>
+    {% endfor %}
+  </ul>
+</span>

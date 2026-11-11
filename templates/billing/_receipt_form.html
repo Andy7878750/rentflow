@@ -145,6 +145,9 @@
             {% for value, label in layout_choices %}<input type="radio" name="layout" value="{{ value }}" aria-label="{{ label }}"{% if meter_layout == value %} checked{% endif %}>{% endfor %}
           </div>
         {% endif %}
+        <div class="meter-head" aria-hidden="true">
+          <span>Счётчик</span><span>Номер</span><span>Чей</span><span>Тариф</span><span class="readings-only">На старте</span><span></span>
+        </div>
         <div class="meter-list" data-meter-list>
           {% for row in meter_rows %}{% include "billing/_meter_row.html" %}{% endfor %}
         </div>

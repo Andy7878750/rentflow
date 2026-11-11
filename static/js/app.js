@@ -1177,6 +1177,11 @@
     }
   }
 
+  // The night tariff repeats the meter's unit: «₽/м³».
+  function echoUnit(row, unit) {
+    row.querySelectorAll('[data-unit-echo]').forEach(function (el) { el.textContent = unit; });
+  }
+
   function setMkindOpen(pick, open) {
     pick.classList.toggle('is-open', open);
     pick.querySelector('[data-mkind-menu]').hidden = !open;
@@ -1197,6 +1202,7 @@
       unitPick.querySelectorAll('[data-pick-value]').forEach(function (row) {
         row.classList.toggle('is-selected', row.dataset.pickValue === unit);
       });
+      echoUnit(pick.closest('[data-meter-row]'), unit);
     }
     setMkindOpen(pick, false);
     pick.querySelector('[data-mkind-trigger]').focus();
@@ -1267,6 +1273,9 @@
       formulaSoon(form, 0);
       return;
     }
+
+    var unitRow = target.closest('.munit [data-pick-value]');
+    if (unitRow) echoUnit(unitRow.closest('[data-meter-row]'), unitRow.dataset.pickValue);
 
     // «Чей» picked (the pick handler above has already written it).
     var who = target.closest('.mwho [data-pick-value]');

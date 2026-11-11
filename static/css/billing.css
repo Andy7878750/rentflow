@@ -2333,3 +2333,115 @@
     margin-left: 0;
   }
 }
+
+/* ---------- «Счётчики»: one line per meter, like a table (2026-11-11) ----------
+   The column captions once on top; every meter on the same columns. A field is as wide as its
+   answer: 6–7 digits for the tariff and the start reading. The tariff and its unit are one field,
+   «45,50 ₽/м³» — the unit is a small menu inside it. Day / night: the cell holds two fields. */
+.meter-head,
+.rform .meter-row .meter-line {
+  display: grid;
+  grid-template-columns: 160px 150px 150px 136px 104px 30px;
+  align-items: start;
+  gap: 8px;
+}
+
+.meter-head {
+  padding: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.meter-head span:nth-child(4),
+.meter-head span:nth-child(5) {
+  text-align: right;
+}
+
+.meter-row {
+  padding: 6px 0;
+}
+
+.meter-row + .meter-row {
+  border-top: 0;
+}
+
+.rform .meters-block .meter-list {
+  padding: 0;
+}
+
+.rform .mkind .pick-trigger,
+.rform .mwho .pick-trigger {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rform .meters-block .meter-row .serial-field {
+  width: 100%;
+}
+
+.meter-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rform .meters-block .meter-cell .ifield {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rform .meters-block .meter-cell .ifield input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  text-align: right;
+}
+
+/* The unit inside the tariff field: plain text with a dashed line — it opens a small menu. */
+.munit {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.munit-trigger {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dashed #9aa1a6;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.munit-trigger:hover,
+.munit.is-open .munit-trigger {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.munit .pick-menu {
+  top: calc(100% + 10px);
+  right: -10px;
+  left: auto;
+  min-width: 110px;
+}
+
+.rform .meter-remove {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .meter-head {
+    display: none;
+  }
+
+  .rform .meter-row .meter-line {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 30px;
+  }
+}
