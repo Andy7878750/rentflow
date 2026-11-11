@@ -71,7 +71,9 @@
               <label><input type="radio" name="metered" value="1"{% if metered == '1' or metered == 'True' %} checked{% endif %}><span>Да</span></label>
               <label><input type="radio" name="metered" value="0"{% if metered == '0' or metered == 'False' %} checked{% endif %}><span>Нет</span></label>
             </div>
-            <div class="seg-track unmetered-only" role="radiogroup" aria-label="Сумма">
+            {# No meter: the sentence reads «Квитанция — каждый месяц разная / фиксированная». #}
+            <span class="calc-word unmetered-only">Квитанция</span>
+            <div class="seg-track unmetered-only" role="radiogroup" aria-label="Квитанция">
               {% for value, label in form.fields.amount_mode.choices %}
                 <label><input type="radio" name="amount_mode" value="{{ value }}"{% if form.amount_mode.value == value %} checked{% endif %}><span>{% if value == 'fixed' %}Фиксированная{% else %}Каждый месяц разная{% endif %}</span></label>
               {% endfor %}
