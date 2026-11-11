@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Горячая вода и отопление</title>
+<style>
+:root {
+  --color-primary: #34495e;
+  --color-accent: #148f77;
+  --color-accent-soft: #e6f4f1;
+  --color-info: #2e86c1;
+  --color-info-soft: #e8f2fa;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fbecea;
+  --color-warning: #d68910;
+  --color-warning-soft: #fdf3e3;
+  --color-bg: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-border: #e1e4e8;
+  --color-text: #2c3338;
+  --color-text-muted: #6b7680;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); background: var(--color-bg); color: var(--color-text); line-height: 1.5; font-size: 14px; }
+.page { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { margin: 0 0 4px; font-size: 22px; color: var(--color-primary); }
+.lead { margin: 0 0 20px; color: var(--color-text-muted); }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--color-surface); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06); padding: 20px; }
+.panel-title { margin: 0 0 2px; font-size: 18px; color: var(--color-primary); }
+.panel-sub { margin: 0 0 16px; color: var(--color-text-muted); font-size: 13px; }
+
+/* Blocks: frame, 12px corners, grey head in CAPS (.form-section in forms.css). */
+.form-section { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.form-section-head { margin: 0; padding: 8px 14px; background: #f7f8f9; border-bottom: 1px solid var(--color-border);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary);
+  display: flex; align-items: center; gap: 8px; }
+.form-section-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+@media (max-width: 520px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.badge { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 999px; background: #e3f1f6; color: #1f6280; }
+
+/* Floating labels, field 52px, focus — accent (.fl in forms.css). */
+.fl { position: relative; display: block; }
+.fl input { width: 100%; height: 52px; padding: 20px 12px 6px; border: 1px solid var(--color-border); border-radius: var(--radius);
+  font: inherit; font-size: 15px; color: var(--color-text); background: #fff; outline: none; }
+.fl input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.fl label { position: absolute; left: 12px; top: 16px; color: var(--color-text-muted); font-size: 14px; pointer-events: none; transition: all .12s ease; display: flex; gap: 4px; align-items: center; }
+.fl input:focus + label, .fl input:not(:placeholder-shown) + label { top: 6px; font-size: 11px; }
+.fl .unit { position: absolute; right: 12px; top: 22px; color: var(--color-text-muted); font-size: 13px; pointer-events: none; }
+.fl.has-unit input { padding-right: 70px; }
+.q { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid currentColor; font-size: 10px; font-weight: 700; pointer-events: auto; cursor: help; }
+
+/* Tenants: number in a soft accent circle, then fields. */
+.tenant { display: grid; grid-template-columns: 24px minmax(0, 1fr) 120px 28px; gap: 8px; align-items: center; }
+.tenant.month { grid-template-columns: 24px minmax(0, 1fr) 150px; }
+.num { width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.name-ro { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.x { width: 28px; height: 28px; border: 0; background: none; color: var(--color-text-muted); font-size: 18px; cursor: pointer; border-radius: 6px; }
+.x:hover { background: var(--color-danger-soft); color: var(--color-danger); }
+.setup-link { align-self: flex-start; border: 0; background: none; padding: 0; color: var(--color-accent); font: inherit; cursor: pointer; }
+.muted { color: var(--color-text-muted); font-size: 13px; }
+
+/* Result */
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.steps li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; font-size: 13px; }
+.steps .f { color: var(--color-text-muted); }
+.steps b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); font-weight: 600; }
+tr.total td { font-weight: 700; border-bottom: 0; }
+td .sub { display: block; font-size: 11px; color: var(--color-text-muted); font-weight: 400; }
+.check { padding: 10px 12px; border-radius: var(--radius); font-size: 13px; }
+.check.ok { background: var(--color-accent-soft); color: #0e6b59; }
+.check.warn { background: var(--color-warning-soft); color: #8a5a08; }
+.check.bad { background: var(--color-danger-soft); color: var(--color-danger); }
+.table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Горячая вода и отопление (Гкал)</h1>
+  <p class="lead">Черновик шаблона услуги. Меняйте любые числа — расчёт справа пересчитывается сразу. Ничего не сохраняется.</p>
+
+  <div class="cols">
+    <div>
+      <!-- Once: the service window -->
+      <section class="panel">
+        <h2 class="panel-title">Окно услуги</h2>
+        <p class="panel-sub">Заполняется один раз (меняется, только если поменялся тариф).</p>
+
+        <div class="form-section">
+          <h3 class="form-section-head">Услуга</h3>
+          <div class="form-section-body grid2">
+            <div class="fl"><input id="provider" placeholder=" " value="АО «ТЭК СПб»"><label for="provider">Поставщик</label></div>
+            <div class="fl"><input id="title" placeholder=" " value="Горячая вода и отопление"><label for="title">Название в счёте</label></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section-head">Начисление <span class="badge">тепло · Гкал</span></h3>
+          <div class="form-section-body grid2">
+            <div class="fl has-unit"><input id="tHeat" inputmode="decimal" placeholder=" " value="3 793,91"><label for="tHeat">Тариф за тепло</label><span class="unit">₽ / Гкал</span></div>
+            <div class="fl has-unit"><input id="tCarrier" inputmode="decimal" placeholder=" " value="55,72"><label for="tCarrier">Тариф за теплоноситель</label><span class="unit">₽ / м³</span></div>
+            <div class="fl has-unit"><input id="norm" inputmode="decimal" placeholder=" " value="0,06"><label for="norm">На подогрев 1 м³ <span class="q" title="Сколько тепла уходит на нагрев 1 м³ горячей воды. Всё остальное тепло из квитанции — отопление.">?</span></label><span class="unit">Гкал</span></div>
+            <div class="fl has-unit"><input id="vat" inputmode="decimal" placeholder=" " value="22"><label for="vat">НДС в квитанции</label><span class="unit">%</span></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section-head">Кто платит <span class="badge">вода — по счётчикам · отопление — по долям</span></h3>
+          <div class="form-section-body">
+            <div id="tenants"></div>
+            <button type="button" class="setup-link" id="addTenant">+ Добавить арендатора</button>
+            <div class="muted" id="free"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Every month: the object page -->
+      <section class="panel" style="margin-top:20px">
+        <h2 class="panel-title">Ввод за месяц</h2>
+        <p class="panel-sub">Страница объекта: Гкал из квитанции и расход горячей воды по счётчикам.</p>
+        <div class="form-section">
+          <h3 class="form-section-head">Сентябрь 2026</h3>
+          <div class="form-section-body">
+            <div class="grid2">
+              <div class="fl has-unit"><input id="gcal" inputmode="decimal" placeholder=" " value="0,42"><label for="gcal">Тепло по квитанции</label><span class="unit">Гкал</span></div>
+              <div class="fl has-unit"><input id="billTotal" inputmode="decimal" placeholder=" " value="2 147,94"><label for="billTotal">К оплате по квитанции <span class="q" title="Не обязательно. Только чтобы сверить расчёт с квитанцией.">?</span></label><span class="unit">₽</span></div>
+            </div>
+            <div id="usage"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Result -->
+    <section class="panel">
+      <h2 class="panel-title">Расчёт</h2>
+      <p class="panel-sub">Как будет считать RentFlow. Копейки — по правилам округления, остаток — на собственнике.</p>
+
+      <div class="form-section">
+        <h3 class="form-section-head">Как делится тепло</h3>
+        <div class="form-section-body"><ul class="steps" id="steps"></ul></div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-head">По арендаторам</h3>
+        <div class="form-section-body table-wrap"><table id="table"></table></div>
+      </div>
+
+      <div id="check"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var tenants = [
+    { name: 'Виктор «Эгоист»', share: '45', usage: '1' },
+    { name: 'Владислав «КофеМэн»', share: '55', usage: '2' },
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var num = function (text) {
+    var n = parseFloat(String(text || '').replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  };
+  // Kopecks, half up (as ROUND_HALF_UP in services.py).
+  var kop = function (x) { return Math.sign(x) * Math.round(Math.abs(x) * 100 + 1e-7) / 100; };
+  var rub = function (x) {
+    return x.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+  };
+  var n3 = function (x) { return x.toLocaleString('ru-RU', { maximumFractionDigits: 4 }); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  function field(id, label, value, unit, extra) {
+    return '<div class="fl' + (unit ? ' has-unit' : '') + '"><input data-' + extra + ' inputmode="decimal" placeholder=" " id="' + id + '" value="' + esc(value) + '">' +
+      '<label for="' + id + '">' + label + '</label>' + (unit ? '<span class="unit">' + unit + '</span>' : '') + '</div>';
+  }
+
+  function drawTenants() {
+    $('tenants').innerHTML = tenants.map(function (t, i) {
+      return '<div class="tenant" style="margin-bottom:8px">' +
+        '<span class="num">' + (i + 1) + '</span>' +
+        '<div class="fl"><input data-name="' + i + '" placeholder=" " id="tn' + i + '" value="' + esc(t.name) + '"><label for="tn' + i + '">Арендатор</label></div>' +
+        field('ts' + i, 'Доля', t.share, '%', 'share="' + i + '"') +
+        '<button type="button" class="x" data-del="' + i + '" aria-label="Убрать арендатора">×</button></div>';
+    }).join('');
+    $('usage').innerHTML = tenants.map(function (t, i) {
+      return '<div class="tenant month">' +
+        '<span class="num">' + (i + 1) + '</span><span class="name-ro">' + esc(t.name || 'Арендатор') + ' · счётчик ГВС</span>' +
+        field('tu' + i, 'Расход', t.usage, 'м³', 'usage="' + i + '"') + '</div>';
+    }).join('');
+  }
+
+  function compute() {
+    var tHeat = num($('tHeat').value), tCarrier = num($('tCarrier').value);
+    var norm = num($('norm').value), vat = num($('vat').value) / 100;
+    var gcal = num($('gcal').value);
+
+    var water = tenants.reduce(function (s, t) { return s + num(t.usage); }, 0);
+    // The receipt itself: each line rounded, VAT per line (as the supplier counts it).
+    var heatCost = kop(gcal * tHeat);
+    var carrierCost = kop(water * tCarrier);
+    var billNoVat = kop(heatCost + carrierCost);
+    var billVat = kop(heatCost * vat) + kop(carrierCost * vat);
+    var bill = kop(billNoVat + billVat);
+
+    var heatingGcal = gcal - water * norm;
+    var rows = tenants.map(function (t) {
+      var u = num(t.usage);
+      return { t: t, u: u, carrier: kop(u * tCarrier), warm: kop(u * norm * tHeat) };
+    });
+    var warmSum = kop(rows.reduce(function (s, r) { return s + r.warm; }, 0));
+    var heating = kop(heatCost - warmSum);  // what's left of the heat is heating
+    rows.forEach(function (r) {
+      r.heating = kop(heating * num(r.t.share) / 100);
+      r.base = kop(r.carrier + r.warm + r.heating);
+      // VAT per line, as the supplier: on the carrier and on the heat (warming + heating) apart.
+      r.total = kop(r.base + kop(r.carrier * vat) + kop((r.warm + r.heating) * vat));
+    });
+    var tenantsTotal = kop(rows.reduce(function (s, r) { return s + r.total; }, 0));
+    var owner = kop(bill - tenantsTotal);
+
+    $('steps').innerHTML = [
+      ['Тепло всего', n3(gcal) + ' Гкал × ' + rub(tHeat), heatCost],
+      ['Горячей воды по счётчикам', n3(water) + ' м³', null],
+      ['На подогрев', n3(water) + ' м³ × ' + n3(norm) + ' Гкал = ' + n3(kop3(water * norm)) + ' Гкал', warmSum],
+      ['На отопление', n3(kop3(heatingGcal)) + ' Гкал (остаток тепла)', heating],
+      ['Теплоноситель', n3(water) + ' м³ × ' + rub(tCarrier), carrierCost],
+      ['НДС ' + n3(vat * 100) + '%', 'по строкам квитанции', billVat],
+      ['Квитанция по расчёту', '', bill],
+    ].map(function (s) {
+      return '<li><span>' + s[0] + (s[1] ? ' <span class="f">· ' + s[1] + '</span>' : '') + '</span><b>' + (s[2] === null ? '' : rub(s[2])) + '</b></li>';
+    }).join('');
+
+    var head = '<tr><th>Арендатор</th><th>Тепло&shy;носитель</th><th>Подогрев</th><th>Отопление</th><th>С НДС</th></tr>';
+    var body = rows.map(function (r, i) {
+      return '<tr><td>' + (i + 1) + '. ' + esc(r.t.name || 'Арендатор') + '<span class="sub">' + n3(r.u) + ' м³ · ' + n3(num(r.t.share)) + '%</span></td>' +
+        '<td>' + rub(r.carrier) + '<span class="sub">' + n3(r.u) + ' × ' + n3(tCarrier) + '</span></td>' +
+        '<td>' + rub(r.warm) + '<span class="sub">' + n3(r.u) + ' × ' + n3(norm) + ' × ' + n3(tHeat) + '</span></td>' +
+        '<td>' + rub(r.heating) + '<span class="sub">' + n3(num(r.t.share)) + '% от ' + n3(heating) + '</span></td>' +
+        '<td><b>' + rub(r.total) + '</b><span class="sub">' + rub(r.base) + ' + НДС</span></td></tr>';
+    }).join('');
+    var ownerRow = '<tr><td>Собственник<span class="sub">свободная доля и копейки</span></td><td></td><td></td><td></td><td><b>' + rub(owner) + '</b></td></tr>';
+    var total = '<tr class="total"><td>Итого</td><td>' + rub(carrierCost) + '</td><td>' + rub(warmSum) + '</td><td>' + rub(heating) + '</td><td>' + rub(bill) + '</td></tr>';
+    $('table').innerHTML = head + body + ownerRow + total;
+
+    var notes = [];
+    if (heatingGcal < 0) {
+      notes.push('<div class="check bad">На подогрев ушло больше тепла (' + n3(kop3(water * norm)) + ' Гкал), чем в квитанции (' + n3(gcal) + ' Гкал). Проверьте «На подогрев 1 м³» или расход воды.</div>');
+    }
+    var typed = num($('billTotal').value);
+    if (typed) {
+      var diff = kop(typed - bill);
+      notes.push(diff === 0
+        ? '<div class="check ok">✓ Совпадает с квитанцией: ' + rub(bill) + '.</div>'
+        : '<div class="check warn">Расчёт ' + rub(bill) + ', в квитанции ' + rub(typed) + ' — разница ' + rub(diff) + '.</div>');
+    }
+    $('check').innerHTML = notes.join('<div style="height:8px"></div>');
+  }
+  function kop3(x) { return Math.round(x * 10000) / 10000; }
+
+  document.addEventListener('input', function (e) {
+    var d = e.target.dataset;
+    if (d.name !== undefined) { tenants[d.name].name = e.target.value; drawUsageNames(); }
+    if (d.share !== undefined) tenants[d.share].share = e.target.value;
+    if (d.usage !== undefined) tenants[d.usage].usage = e.target.value;
+    updateFree();
+    compute();
+  });
+  function drawUsageNames() {
+    document.querySelectorAll('#usage .name-ro').forEach(function (el, i) { el.textContent = (tenants[i].name || 'Арендатор') + ' · счётчик ГВС'; });
+  }
+  function updateFree() {
+    var used = tenants.reduce(function (s, t) { return s + num(t.share); }, 0);
+    $('free').textContent = used < 100 ? 'Свободно ' + n3(100 - used) + '% — эта часть отопления на собственнике.' : (used > 100 ? 'Доли больше 100% — проверьте.' : '');
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.id === 'addTenant') { tenants.push({ name: '', share: '0', usage: '0' }); }
+    else if (e.target.dataset.del !== undefined) { tenants.splice(+e.target.dataset.del, 1); }
+    else return;
+    drawTenants(); updateFree(); compute();
+  });
+  // Enter — the next field.
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    var all = Array.prototype.slice.call(document.querySelectorAll('input'));
+    var next = all[all.indexOf(e.target) + 1];
+    if (next) next.focus();
+  });
+
+  drawTenants(); updateFree(); compute();
+})();
+</script>
+</body>
+</html>
