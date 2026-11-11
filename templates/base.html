@@ -5,13 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}RentFlow{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/base.css' %}">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
-  <link rel="stylesheet" href="{% static 'css/forms.css' %}">
-  <link rel="stylesheet" href="{% static 'css/billing.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}?v={{ static_version }}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ static_version }}">
+  <link rel="stylesheet" href="{% static 'css/forms.css' %}?v={{ static_version }}">
+  <link rel="stylesheet" href="{% static 'css/billing.css' %}?v={{ static_version }}">
 </head>
 <body>
   {% block content %}{% endblock %}
-  <script src="{% static 'js/auth.js' %}"></script>
+  <script src="{% static 'js/auth.js' %}?v={{ static_version }}"></script>
 </body>
 </html>

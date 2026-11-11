@@ -147,7 +147,7 @@
 {% endif %}
 <dialog class="modal" data-modal-dialog aria-label="Окно"></dialog>
 {% load static %}
-<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/app.js' %}?v={{ static_version }}"></script>
 <script>
   (function () {
     var layout = document.querySelector('[data-app-layout]');

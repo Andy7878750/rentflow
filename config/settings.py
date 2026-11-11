@@ -84,6 +84,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.properties.context_processors.sidebar',
+                'config.context_processors.static_version',
             ],
         },
     },

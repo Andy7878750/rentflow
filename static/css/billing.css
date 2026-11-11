@@ -2892,7 +2892,7 @@
 .rform .meters-block .meter-line > .meter-save { grid-area: save; }
 
 .rform .meters-block .meter-row .meter-line {
-  grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) var(--tariff-w) var(--start-w) 30px 30px;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) var(--tariff-w) var(--start-w) 30px 30px;
   grid-template-areas: "num kind serial who tariff start remove save";
   row-gap: 8px;
 }
@@ -2900,7 +2900,7 @@
 /* Narrower: two lines — what · № · whose · × ✓, then the tariff and «Базовые» under them. */
 @container (max-width: 700px) {
   .rform .meters-block .meter-row .meter-line {
-    grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
     grid-template-areas:
       "num kind   serial who   remove save"
       ".   tariff tariff start start  start";
@@ -2920,11 +2920,32 @@
 /* A phone: what ▾ · × ✓, then № · whose, then the tariff, then «Базовые». */
 @container (max-width: 440px) {
   .rform .meters-block .meter-row .meter-line {
-    grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
     grid-template-areas:
       "num kind   kind   remove save"
       ".   serial who    who    who"
       ".   tariff tariff tariff tariff"
       ".   start  start  start  start";
+  }
+}
+
+/* The meter's number in a pale accent circle — like the tenants' numbers in the object window. */
+.rform .meters-block .mnum {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@container (max-width: 700px) {
+  .rform .meters-block .mnum {
+    align-self: start;
+    margin-top: 3px;
   }
 }
