@@ -1964,3 +1964,136 @@ input.masked {
 .item .share-hint {
   display: none; /* «≈ 36 м²» is shown in the tenant's info row instead */
 }
+
+/* ---------- Compact windows, 2026-11-12 (2) ----------
+   The label always stands above the box (12px), never inside it. Type scale: window title 20px,
+   field text 14px, labels 12px, secondary links and notes 13px / 12px. Spacing on a 4px grid:
+   12px inside blocks, 10px between rows, 12px between blocks. */
+
+.field.fl > label,
+.fl.is-filled > label,
+.fl:focus-within > label,
+.fl:has(input:not(:placeholder-shown)) > label,
+.item .field.fl-unit > label {
+  top: 0;
+  left: 1px;
+  right: 0;
+  transform: none;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.modal-panel {
+  padding: 20px 24px 20px;
+}
+
+.modal-head {
+  margin-bottom: 14px;
+}
+
+.modal-head h1 {
+  font-size: 20px;
+}
+
+.form-section {
+  margin-bottom: 12px;
+}
+
+.form-section-head,
+.pform .form-section-head {
+  min-height: 38px;
+  padding: 6px 14px;
+  font-size: 11.5px;
+}
+
+.form-section-body,
+.pform .form-section-body,
+.pform [data-items] .form-section-body {
+  gap: 10px;
+  padding: 12px 14px 14px;
+}
+
+.form-note {
+  font-size: 12px;
+}
+
+.uk-toggle,
+.tenant-add,
+.uk-summary {
+  font-size: 13px;
+}
+
+.uk-toggle .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.tenant-add-row {
+  margin-top: 0;
+}
+
+.info-row,
+.tm-row {
+  min-height: 38px;
+  padding: 4px 6px;
+}
+
+.info-empty {
+  padding: 0;
+  font-size: 13px;
+}
+
+/* Nothing added yet: «Счётчиков пока нет» and «+ Добавить …» share one line. */
+[data-items] .form-section-body:has(> .info-list > .info-empty),
+[data-items] .tenants-only:has(> .info-list > .info-empty) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-items] .tenants-only {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pform.is-owner [data-items] .tenants-only {
+  display: none;
+}
+
+/* A modest switch (Арендаторы | Собственник) in the block's head. */
+.segmented.seg-sm {
+  display: inline-flex;
+  height: 26px;
+  padding: 2px;
+}
+
+.segmented.seg-sm span {
+  padding: 0 10px;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.head-seg {
+  margin-right: auto;
+}
+
+.pform [data-items] .form-section-head h2 {
+  flex: none;
+}
+
+/* Window buttons as high as the fields. */
+.modal-panel .form-actions .btn,
+.subwin-panel .form-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+.subwin-delete {
+  font-size: 14px;
+}

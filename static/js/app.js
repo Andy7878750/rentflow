@@ -1031,6 +1031,12 @@
         row.classList.toggle('is-selected', row.dataset.name === name);
       });
       var unit = val(item, 'unit');
+      if (!unit) {
+        // An old meter without a unit: its kind's usual one, else the first of the menu.
+        var known = item.querySelector('[data-msel] .select-row.is-selected');
+        unit = (known && known.dataset.unit) || 'кВт·ч';
+        setVal(item, 'unit', unit);
+      }
       var fixed = val(item, 'kind') !== 'custom';
       item.querySelectorAll('[data-munit]').forEach(function (picker) {
         picker.querySelector('[data-munit-label]').textContent = unit;

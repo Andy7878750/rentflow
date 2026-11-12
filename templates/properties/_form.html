@@ -99,15 +99,15 @@
     <section class="form-section" data-items="tenant">
       <div class="form-section-head">
         <h2>Кто пользуется объектом <span class="help" tabindex="0" role="button" aria-label="Подсказка: Кто пользуется объектом" data-tip-title="Кто пользуется объектом" data-tip="Доли нужны, чтобы делить расходы между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
-        <span class="head-badge occupied tenants-only" data-occupied></span>
-      </div>
-      <div class="form-section-body">
-        {{ form.share_unit }}
-        <div class="segmented" role="radiogroup" aria-label="Кто пользуется объектом">
+        <div class="segmented seg-fill seg-sm head-seg" role="radiogroup" aria-label="Кто пользуется объектом">
           {% for value, label in form.fields.occupancy.choices %}
             <label><input type="radio" name="occupancy" value="{{ value }}"{% if form.occupancy.value == value %} checked{% endif %}><span>{{ label }}</span></label>
           {% endfor %}
         </div>
+        <span class="head-badge occupied tenants-only" data-occupied></span>
+      </div>
+      <div class="form-section-body">
+        {{ form.share_unit }}
 
         <p class="owner-note owner-only">Объектом пользуетесь вы сами — все расходы по услугам остаются на вас.</p>
 
