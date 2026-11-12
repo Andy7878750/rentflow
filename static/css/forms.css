@@ -1541,13 +1541,13 @@ input.masked {
   display: none;
 }
 
-/* ---------- Fields, 2026-11-12: a low 40px box, the label rises ABOVE the box ----------
+/* ---------- Fields, 2026-11-12: a low 38px box, the label rises ABOVE the box ----------
    Every field keeps a line on top for its label from the start, so nothing jumps when the
    label moves up. Empty — the label sits inside the box like a hint; focused or filled — it
    stands over the box in small type. */
 .field.fl {
   --fl-top: 18px; /* the label line above the box */
-  --fl-h: 40px;   /* the box */
+  --fl-h: 38px;   /* the box */
   padding-top: var(--fl-top);
 }
 
@@ -1608,9 +1608,27 @@ input.masked {
 }
 
 .tenant-row::before {
-  top: calc(var(--row-top) + 26px); /* middle of the first box: 18 + (40 − 24) / 2 */
+  top: calc(var(--row-top) + 25px); /* middle of the first box: 18 + (38 − 24) / 2 */
 }
 
 .tenant-remove {
-  margin-top: 20px; /* 18 + (40 − 36) / 2 */
+  margin-top: 19px; /* 18 + (38 − 36) / 2 */
+}
+
+/* «+ Добавить арендатора»: a quiet accent link on the right under the rows, not a big dashed button. */
+.tenant-add-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.tenant-add {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
 }
