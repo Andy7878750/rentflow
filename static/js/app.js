@@ -983,12 +983,18 @@
       row.appendChild(acts);
       var line = el('span', 'mt-line');
       line.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
-      line.appendChild(cell('info-start', 'старт', startText(item), 'старт —'));
-      var who = meterWho(item);
-      var badge = el('span', 'who-badge ' + who.cls, who.text);
-      badge.title = who.text;
-      line.appendChild(badge);
+      // The start reading: a «play» icon instead of the word «старт».
+      var start = el('span', 'info-cell info-start');
+      start.title = 'Начальное показание';
+      start.innerHTML = '<svg class="mt-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/></svg>';
+      var startValue = startText(item);
+      start.appendChild(startValue ? document.createTextNode(startValue) : el('span', 'info-none', '—'));
+      line.appendChild(start);
       row.appendChild(line);
+      var who = meterWho(item);
+      var badge = el('span', 'who-badge mt-who ' + who.cls, who.text);
+      badge.title = who.text;
+      row.appendChild(badge);
       row.title = 'Изменить счётчик';
       return acts;
     }
