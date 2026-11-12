@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Услуга-опрос</title>
+<style>
+:root {
+  --color-primary: #34495e;
+  --color-accent: #148f77;
+  --color-accent-soft: #e6f4f1;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fbecea;
+  --color-warn: #a35c00;
+  --color-warn-soft: #fdf1e1;
+  --color-bg: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-border: #e1e4e8;
+  --color-text: #2c3338;
+  --color-text-muted: #6b7680;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); color: var(--color-text); line-height: 1.5; font-size: 14px; min-height: 100vh; }
+
+/* Mockup switch above the window (not part of the product) */
+.mock-bar { display: flex; justify-content: center; gap: 10px; align-items: center; padding: 14px 16px 0; color: #fff; font-size: 13px; flex-wrap: wrap; }
+.mock-bar .seg-track { background: rgba(255,255,255,.2); }
+.mock-bar .seg-track button { color: #fff; }
+.mock-bar .seg-track button.on { background: #fff; color: var(--color-primary); }
+
+.overlay { padding: 14px 16px 32px; display: flex; justify-content: center; }
+.modal { width: 100%; max-width: 760px; background: var(--color-surface); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.modal-head { padding: 20px 24px 12px; display: flex; align-items: flex-start; gap: 12px; }
+.modal-head h2 { margin: 0; font-size: 20px; color: var(--color-primary); }
+.modal-head .sub { margin: 2px 0 0; color: var(--color-text-muted); font-size: 13px; }
+.close { margin-left: auto; width: 32px; height: 32px; border: 0; background: none; font-size: 22px; color: var(--color-text-muted); cursor: pointer; border-radius: 8px; }
+.modal-body { padding: 0 24px 8px; }
+
+/* Blocks (.form-section in forms.css) */
+.form-section { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.form-section-head { margin: 0; padding: 8px 14px; background: #f7f8f9; border-bottom: 1px solid var(--color-border);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.badge { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 999px; background: #e3f1f6; color: #1f6280; }
+.badge.warn { background: var(--color-warn-soft); color: var(--color-warn); }
+.form-section-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+/* Template tiles: icon + name, 34px */
+.tiles { display: flex; flex-wrap: wrap; gap: 6px; }
+.tile { height: 34px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; color: var(--color-text); cursor: pointer; }
+.tile.on { border-color: var(--color-accent); background: var(--color-accent-soft); color: #0e6b59; font-weight: 600; }
+
+/* Floating labels, 52px (.fl in forms.css) */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fl { position: relative; display: block; min-width: 0; }
+.fl input { width: 100%; height: 52px; padding: 20px 12px 6px; border: 1px solid var(--color-border); border-radius: var(--radius); font: inherit; font-size: 15px; color: var(--color-text); background: #fff; outline: none; }
+.fl input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.fl label { position: absolute; left: 12px; top: 16px; color: var(--color-text-muted); font-size: 14px; pointer-events: none; transition: all .12s ease; white-space: nowrap; }
+.fl input:focus + label, .fl input:not(:placeholder-shown) + label { top: 6px; font-size: 11px; }
+
+/* Questions: label 150px on the left, answer on the right */
+.q { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; align-items: center; min-height: 30px; }
+.q > .lab { color: var(--color-text-muted); font-size: 13px; }
+.q > .ans { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+.note { font-size: 12px; color: var(--color-text-muted); }
+.note b { color: var(--color-text); font-weight: 600; }
+
+/* Switches: pale track, chosen = accent */
+.seg-track { display: inline-flex; flex-wrap: wrap; background: #eef0f2; border-radius: 8px; padding: 2px; gap: 2px; }
+.seg-track button { height: 26px; border: 0; background: none; border-radius: 6px; padding: 0 10px; font: inherit; font-size: 13px; color: var(--color-text); cursor: pointer; white-space: nowrap; }
+.seg-track button.on { background: var(--color-accent); color: #fff; }
+
+/* Compact fields 30px with the unit inside */
+.ifield { display: inline-flex; align-items: center; height: 30px; border: 1px solid var(--color-border); border-radius: 6px; padding: 0 8px; gap: 6px; background: #fff; }
+.ifield input { border: 0; outline: 0; font: inherit; text-align: right; padding: 0; min-width: 0; background: none; }
+.ifield span { color: var(--color-text-muted); font-size: 12px; white-space: nowrap; }
+.ifield:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.ifield.bad { border-color: var(--color-danger); }
+.ifield select { border: 0; font: inherit; font-size: 12px; color: var(--color-text-muted); background: none; cursor: pointer; }
+.pick { height: 30px; border: 1px solid var(--color-border); border-radius: 6px; padding: 0 8px; font: inherit; font-size: 13px; background: #fff; color: var(--color-text); cursor: pointer; }
+.op { color: var(--color-text-muted); }
+.eq { font-weight: 600; color: var(--color-primary); }
+
+/* Meters of the object, ticked */
+.mlist { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+.mrow { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.mrow:hover { background: #f7f8f9; }
+.mrow input { accent-color: var(--color-accent); width: 16px; height: 16px; margin: 0; }
+.mrow .who { display: inline-flex; align-items: center; gap: 6px; }
+.num { width: 20px; height: 20px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: inline-grid; place-items: center; font-size: 11px; font-weight: 600; }
+.mrow .muted { color: var(--color-text-muted); font-size: 12px; }
+.link { border: 0; background: none; padding: 0; color: var(--color-accent); font: inherit; cursor: pointer; }
+
+/* Check: the formula in words, the same with numbers, the result */
+.proof { display: flex; flex-direction: column; gap: 6px; }
+.words { font-weight: 600; color: var(--color-primary); }
+.nums { font-variant-numeric: tabular-nums; font-size: 13px; }
+.nums div { padding: 1px 0; }
+.result { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--color-border); }
+.pay { padding: 3px 10px; border-radius: 999px; background: var(--color-accent-soft); color: #0e6b59; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pay.owner { background: #f1f2f4; color: var(--color-text-muted); }
+.err { color: var(--color-danger); font-size: 13px; }
+
+.form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 24px 20px; border-top: 1px solid var(--color-border); }
+.btn { height: 40px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--color-border); background: #fff; font: inherit; cursor: pointer; color: var(--color-text); }
+.btn.primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; font-weight: 600; }
+.toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--color-primary); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: none; z-index: 5; }
+
+@media (max-width: 560px) {
+  .modal-head, .modal-body { padding-left: 14px; padding-right: 14px; }
+  .q { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .two { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="mock-bar">Макет: <span class="seg-track">
+  <button type="button" data-mode="new" class="on">Новая услуга</button>
+  <button type="button" data-mode="edit">Изменить «Вода горячая» (смена тарифа)</button>
+</span></div>
+<div class="overlay">
+  <div class="modal" role="dialog" aria-labelledby="t">
+    <div class="modal-head">
+      <div><h2 id="t">Новая услуга</h2><p class="sub">Королёва 61 · 1 Виктор 45% · 2 Владислав 55%</p></div>
+      <button class="close" aria-label="Закрыть">×</button>
+    </div>
+    <div class="modal-body" id="body"></div>
+    <div class="form-actions">
+      <button class="btn" type="button">Отмена</button>
+      <button class="btn primary" type="button" data-act="save">Сохранить</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function () {
+  // ---- The object (made earlier: object → tenants → meters) ----
+  var UNITS = { el: 'кВт·ч', cold: 'м³', hot: 'м³', heat: 'Гкал' };
+  var KIND_NAMES = { el: 'Электричество', cold: 'Вода холодная', hot: 'Вода горячая', heat: 'Тепло' };
+  var TENANTS = [
+    { id: 'v', n: 1, name: 'Виктор', share: 0.45, area: 30 },
+    { id: 'w', n: 2, name: 'Владислав', share: 0.55, area: 36 }
+  ];
+  var AREA = 80;
+  // use / useN — example consumption for one month (only for the check line)
+  var METERS = [
+    { id: 1, who: '', kind: 'el', serial: '01234567', dn: true, use: 120, useN: 80 },
+    { id: 2, who: 'v', kind: 'hot', serial: '', use: 1 },
+    { id: 3, who: 'v', kind: 'cold', serial: '', use: 3 },
+    { id: 4, who: 'w', kind: 'hot', serial: '', use: 2 },
+    { id: 5, who: 'w', kind: 'cold', serial: '', use: 4 }
+  ];
+  // The object already has «Вода горячая» with heating 0,06 Gcal per m³ × 4 800 ₽
+  var HEAT = { norm: 0.06, tariff: 4800 };
+  var SAMPLE = { sum: 4200, qty: { 'Гкал': 0.42, 'кВт·ч': 300, 'м³': 10 } };
+
+  // ---- Templates: a tile sets all answers ----
+  var TPL = {
+    el:    { name: 'Электричество', icon: '⚡', kinds: ['el'], supplier: 'Петроэлектросбыт', src: 'meters', meters: [1], td: '7,50', tn: '3,20' },
+    cold:  { name: 'Вода холодная', icon: '💧', kinds: ['cold'], supplier: 'Водоканал', src: 'meters', meters: [3, 5], tariff: '45,50' },
+    hot:   { name: 'Вода горячая', icon: '♨', kinds: ['hot'], supplier: 'ТЭК СПб', src: 'meters', meters: [2, 4], tariff: '52,00', extra: '1', norm: '0,06', normTariff: '4 800' },
+    drain: { name: 'Водоотведение', icon: '↧', kinds: ['cold', 'hot'], supplier: 'Водоканал', src: 'meters', meters: [2, 3, 4, 5], tariff: '35,00' },
+    heat:  { name: 'Отопление', icon: '🔥', kinds: ['heat'], supplier: 'ТЭК СПб', src: 'receipt', recMode: 'qty', recUnit: 'Гкал', recTariff: '4 800', sub: '1' },
+    maint: { name: 'Содержание и ремонт', icon: '🏠', kinds: [], supplier: 'УК «Дом»', src: 'receipt', recMode: 'sum', div: 'area' },
+    net:   { name: 'Интернет', icon: '📶', kinds: [], supplier: 'Ростелеком', src: 'fixed', fixed: '600', div: 'equal' },
+    own:   { name: 'Своя услуга', icon: '＋', kinds: ['el', 'cold', 'hot', 'heat'], supplier: '', src: 'receipt', recMode: 'sum' }
+  };
+  var DIV = { shares: 'По долям', equal: 'Поровну', area: 'По м²', self: 'Плачу сам' };
+  var SRC = { meters: 'По счётчикам × тариф', receipt: 'Из квитанции', fixed: 'Постоянная' };
+  var MONTHS = [['2026-09', 'Сентябрь 2026'], ['2026-10', 'Октябрь 2026'], ['2026-11', 'Ноябрь 2026'], ['2026-12', 'Декабрь 2026']];
+  var NOW = '2026-11';
+  var TARIFF_KEYS = { tariff: 'Тариф', td: 'Тариф день', tn: 'Тариф ночь', norm: 'Подогрев', normTariff: 'Тариф тепла', recTariff: 'Тариф' };
+
+  var S, orig;
+  function applyTpl(id, edit) {
+    var t = TPL[id];
+    S = { tpl: id, edit: !!edit, supplier: t.supplier, title: '', src: t.src, recMode: t.recMode || 'sum', recUnit: t.recUnit || 'Гкал',
+      recTariff: t.recTariff || '', fixed: t.fixed || '', meters: (t.meters || []).slice(), td: t.td || '', tn: t.tn || '',
+      tariff: t.tariff || '', extra: t.extra || '0', norm: t.norm || '', normTariff: t.normTariff || '', sub: t.sub || '0',
+      div: t.div || 'shares', diff: 'owner', from: NOW };
+    orig = {}; Object.keys(TARIFF_KEYS).forEach(function (k) { orig[k] = S[k]; });
+  }
+
+  // ---- helpers ----
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var num = function (s) { s = String(s == null ? '' : s).replace(/\s/g, '').replace(',', '.'); return s === '' ? NaN : Number(s); };
+  var r2 = function (x) { return Math.round((x + Number.EPSILON) * 100) / 100; };
+  var rub = function (x) { return x.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  var n3 = function (x) { return x.toLocaleString('ru-RU', { maximumFractionDigits: 4 }); };
+  var meter = function (id) { return METERS.find(function (m) { return m.id === id; }); };
+  var tenant = function (id) { return TENANTS.find(function (t) { return t.id === id; }); };
+  var whoName = function (m) { return m.who ? tenant(m.who).name : 'Объект'; };
+
+  function seg(key, opts) {
+    return '<span class="seg-track">' + opts.map(function (o) {
+      return '<button type="button" data-seg="' + key + '" data-v="' + o[0] + '" class="' + (S[key] === o[0] ? 'on' : '') + '">' + o[1] + '</button>';
+    }).join('') + '</span>';
+  }
+  function inp(key, unit, w, ph) {
+    var bad = isNaN(num(S[key]));
+    return '<label class="ifield' + (bad ? ' bad' : '') + '"><input id="i-' + key + '" data-k="' + key + '" value="' + esc(S[key]) + '" inputmode="decimal" autocomplete="off" placeholder="' + (ph || '') + '" style="width:' + (w || 64) + 'px">' +
+      (unit ? '<span>' + unit + '</span>' : '') + '</label>';
+  }
+  function q(label, ans) { return '<div class="q"><div class="lab">' + label + '</div><div class="ans">' + ans + '</div></div>'; }
+  function section(title, badges, body) {
+    return '<section class="form-section"><h3 class="form-section-head">' + title + (badges || []).map(function (b) {
+      return '<span class="badge' + (b[1] ? ' ' + b[1] : '') + '">' + b[0] + '</span>'; }).join('') + '</h3><div class="form-section-body">' + body + '</div></section>';
+  }
+
+  // ---- what the answers mean ----
+  function selected() { return S.meters.map(meter); }
+  function unitOf(list) { var u = list.map(function (m) { return UNITS[m.kind]; }); return u.filter(function (x, i) { return u.indexOf(x) === i; }); }
+  function hasDn() { return selected().some(function (m) { return m.dn; }); }
+  function hasHot() { return selected().some(function (m) { return m.kind === 'hot'; }); }
+  function canSub() { return S.src === 'receipt' && (S.tpl === 'heat' || S.tpl === 'own') && (S.recMode === 'sum' || S.recUnit === 'Гкал'); }
+  function hotUse() { return METERS.filter(function (m) { return m.kind === 'hot'; }).reduce(function (a, m) { return a + m.use; }, 0); }
+  function changedTariffs() { return Object.keys(TARIFF_KEYS).filter(function (k) { return S.edit && S[k] !== orig[k] && orig[k] !== ''; }); }
+
+  function split(amount, mode) {
+    var out = { o: 0 }, given = 0;
+    TENANTS.forEach(function (t) {
+      var k = mode === 'shares' ? t.share : mode === 'equal' ? 1 / TENANTS.length : mode === 'area' ? t.area / AREA : 0;
+      out[t.id] = r2(amount * k); given += out[t.id];
+    });
+    out.o = r2(amount - given);
+    return out;
+  }
+  function splitText(mode) {
+    if (mode === 'shares') return 'по долям: ' + TENANTS.map(function (t) { return t.name + ' ' + Math.round(t.share * 100) + '%'; }).join(' · ');
+    if (mode === 'equal') return 'поровну на ' + TENANTS.length;
+    if (mode === 'area') return 'по м²: ' + TENANTS.map(function (t) { return t.name + ' ' + t.area; }).join(' · ') + ' из ' + AREA + ' м²';
+    return 'всё платит собственник';
+  }
+
+  function compute() {
+    var lines = [], words, pay = { o: 0 }, total;
+    TENANTS.forEach(function (t) { pay[t.id] = 0; });
+    var add = function (p) { Object.keys(p).forEach(function (k) { pay[k] = r2(pay[k] + p[k]); }); };
+
+    if (S.src === 'fixed') {
+      total = num(S.fixed);
+      if (isNaN(total)) return { err: 'Укажите сумму в месяц.' };
+      words = 'Постоянная сумма';
+      lines.push(rub(total) + ' ₽ в месяц → ' + splitText(S.div));
+      add(split(total, S.div));
+    } else if (S.src === 'receipt') {
+      var sub = canSub() && S.sub === '1', hu = hotUse();
+      if (S.recMode === 'sum') {
+        words = 'Сумма из квитанции' + (sub ? ' − Горячая вода × Подогрев × Тариф тепла' : '');
+        total = SAMPLE.sum - (sub ? hu * HEAT.norm * HEAT.tariff : 0);
+        lines.push(sub ? rub(SAMPLE.sum) + ' − ' + n3(hu) + ' м³ × ' + n3(HEAT.norm) + ' × ' + n3(HEAT.tariff) + ' = <b>' + rub(r2(total)) + ' ₽</b>' : '<b>' + rub(SAMPLE.sum) + ' ₽</b> (пример суммы из квитанции)');
+      } else {
+        var t = num(S.recTariff), qty = SAMPLE.qty[S.recUnit];
+        if (isNaN(t)) return { err: 'Укажите тариф за ' + S.recUnit + '.' };
+        words = sub ? '(' + S.recUnit + ' из квитанции − Горячая вода × Подогрев) × Тариф' : S.recUnit + ' из квитанции × Тариф';
+        total = (qty - (sub ? hu * HEAT.norm : 0)) * t;
+        lines.push((sub ? '(' + n3(qty) + ' − ' + n3(hu) + ' м³ × ' + n3(HEAT.norm) + ')' : n3(qty)) + ' × ' + n3(t) + ' = <b>' + rub(r2(total)) + ' ₽</b>');
+      }
+      total = r2(total);
+      lines.push('→ ' + splitText(S.div));
+      add(split(total, S.div));
+    } else {
+      var list = selected();
+      if (!list.length) return { err: 'Отметьте хотя бы один счётчик.' };
+      var u = unitOf(list);
+      if (u.length > 1) return { err: 'Счётчики меряют разное (' + u.join(' и ') + ') — отметьте счётчики одного вида.' };
+      var dn = hasDn(), extra = hasHot() && S.extra === '1';
+      var td = num(S.td), tn = num(S.tn), tt = num(S.tariff), nr = num(S.norm), nt = num(S.normTariff);
+      if (dn && (isNaN(td) || isNaN(tn))) return { err: 'Укажите тариф день и ночь.' };
+      if (!dn && isNaN(tt)) return { err: 'Укажите тариф.' };
+      if (extra && (isNaN(nr) || isNaN(nt))) return { err: 'Укажите подогрев: Гкал на 1 м³ и тариф за Гкал.' };
+      words = (dn ? 'День × Тариф день + Ночь × Тариф ночь' : 'Расход × Тариф') + (extra ? ' + Расход × Подогрев × Тариф тепла' : '');
+      var cost = function (m) {
+        var c = m.dn ? m.use * td + m.useN * tn : m.use * tt;
+        if (extra && m.kind === 'hot') c += m.use * nr * nt;
+        return r2(c);
+      };
+      var expr = function (m) {
+        var s = m.dn ? n3(m.use) + ' × ' + n3(td) + ' + ' + n3(m.useN) + ' × ' + n3(tn) : n3(m.use) + ' ' + UNITS[m.kind] + ' × ' + n3(tt);
+        if (extra && m.kind === 'hot') s += ' + ' + n3(m.use) + ' × ' + n3(nr) + ' × ' + n3(nt);
+        return s;
+      };
+      var common = list.filter(function (m) { return !m.who; }), own = list.filter(function (m) { return m.who; });
+      var commonCost = 0, ownCost = 0;
+      list.forEach(function (m) {
+        var c = cost(m);
+        lines.push((m.who ? '<span class="num">' + tenant(m.who).n + '</span> ' : '') + esc(whoName(m)) + ' · ' + KIND_NAMES[m.kind] + ': ' + expr(m) + ' = <b>' + rub(c) + ' ₽</b>');
+        if (m.who) { pay[m.who] = r2(pay[m.who] + c); ownCost += c; } else commonCost += c;
+      });
+      total = r2(commonCost + (common.length ? 0 : ownCost));
+      if (common.length && own.length) {
+        var diff = r2(Math.max(0, commonCost - ownCost));
+        lines.push('Разница: общий − свои = ' + rub(r2(commonCost)) + ' − ' + rub(r2(ownCost)) + ' = <b>' + rub(diff) + ' ₽</b> → ' + (S.diff === 'owner' ? 'на собственнике' : splitText('shares')));
+        add(split(diff, S.diff === 'owner' ? 'self' : 'shares'));
+      } else if (common.length) {
+        lines.push('→ ' + splitText(S.div));
+        add(split(r2(commonCost), S.div));
+      }
+    }
+    return { words: words, lines: lines, pay: pay, total: total };
+  }
+
+  // ---- render ----
+  function render() {
+    var t = TPL[S.tpl], h = '';
+    $('t').textContent = S.edit ? t.name : 'Новая услуга';
+
+    if (!S.edit) {
+      h += section('Что за услуга', [], '<div class="tiles">' + Object.keys(TPL).map(function (id) {
+        return '<button type="button" class="tile' + (S.tpl === id ? ' on' : '') + '" data-tpl="' + id + '"><span>' + TPL[id].icon + '</span>' + TPL[id].name + '</button>';
+      }).join('') + '</div>');
+    }
+
+    h += section('Услуга', [], '<div class="two">' +
+      '<div class="fl"><input id="i-supplier" data-k="supplier" placeholder=" " value="' + esc(S.supplier) + '" autocomplete="off"><label for="i-supplier">Поставщик</label></div>' +
+      '<div class="fl"><input id="i-title" data-k="title" placeholder=" " value="' + esc(S.title) + '" autocomplete="off"><label for="i-title">Название в счёте (пусто — «' + t.name + '»)</label></div></div>');
+
+    // Where the sum comes from
+    var b = q('Сумма берётся', seg('src', Object.keys(SRC).map(function (k) { return [k, SRC[k]]; })));
+    if (S.src === 'fixed') {
+      b += q('Сумма', inp('fixed', '₽ в месяц', 90));
+    } else if (S.src === 'receipt') {
+      b += q('В квитанции', seg('recMode', [['sum', 'Готовая сумма'], ['qty', 'Количество × тариф']]));
+      if (S.recMode === 'qty') {
+        b += q('Тариф', '<label class="ifield' + (isNaN(num(S.recTariff)) ? ' bad' : '') + '"><input id="i-recTariff" data-k="recTariff" value="' + esc(S.recTariff) + '" inputmode="decimal" autocomplete="off" style="width:80px"><span>₽ за</span>' +
+          '<select data-k="recUnit">' + ['Гкал', 'кВт·ч', 'м³'].map(function (u) { return '<option' + (S.recUnit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></label>');
+      }
+      b += q('', '<span class="note">Каждый месяц на странице объекта вводите <b>' + (S.recMode === 'qty' ? S.recUnit + ' из квитанции' : 'сумму из квитанции') + '</b>.</span>');
+      if (canSub()) {
+        b += q('Подогрев воды', seg('sub', [['0', 'Не вычитаем'], ['1', 'Вычесть — он уже в «Вода горячая»']]));
+        if (S.sub === '1') b += q('', '<span class="note">Вычитаем горячую воду всех счётчиков: <b>' + n3(hotUse()) + ' м³ × ' + n3(HEAT.norm) + ' Гкал</b>' + (S.recMode === 'sum' ? ' × ' + n3(HEAT.tariff) + ' ₽' : '') + ' (берём из услуги «Вода горячая»).</span>');
+      }
+    } else {
+      var kinds = t.kinds.length ? t.kinds : Object.keys(UNITS);
+      var avail = METERS.filter(function (m) { return kinds.indexOf(m.kind) >= 0; });
+      b += q('Какие счётчики', '<div class="mlist">' + (avail.length ? avail.map(function (m) {
+        var on = S.meters.indexOf(m.id) >= 0;
+        return '<label class="mrow"><input type="checkbox" data-meter="' + m.id + '"' + (on ? ' checked' : '') + '>' +
+          '<span class="who">' + (m.who ? '<span class="num">' + tenant(m.who).n + '</span>' : '') + esc(whoName(m)) + ' · ' + KIND_NAMES[m.kind] +
+          (m.serial ? ' <span class="muted">№ ' + esc(m.serial) + '</span>' : '') + (m.dn ? ' <span class="badge">день / ночь</span>' : '') + '</span>' +
+          '<span class="muted">пример: ' + (m.dn ? m.use + ' / ' + m.useN : m.use) + ' ' + UNITS[m.kind] + '</span></label>';
+      }).join('') : '<span class="note">У объекта нет таких счётчиков.</span>') +
+        '<span class="note">Здесь только счётчики этого объекта. Нет нужного? <button type="button" class="link" data-act="add-meter">+ Добавить счётчик объекта</button></span></div>');
+      var u = unitOf(selected());
+      var unit = u.length === 1 ? u[0] : (UNITS[kinds[0]] || '');
+      if (hasDn()) b += q('Тариф', inp('td', '₽ день', 64) + inp('tn', '₽ ночь', 64) + '<span class="note">за ' + unit + '</span>');
+      else b += q('Тариф', inp('tariff', '₽ за ' + unit, 70));
+      if (hasHot()) {
+        b += q('Подогрев', seg('extra', [['0', 'В цене м³'], ['1', 'Отдельно, в Гкал']]));
+        if (S.extra === '1') {
+          var per = num(S.norm) * num(S.normTariff);
+          b += q('', inp('norm', 'Гкал на 1 м³', 52) + '<span class="op">×</span>' + inp('normTariff', '₽ за Гкал', 64) +
+            '<span class="op">=</span><span class="eq">' + (isNaN(per) ? '—' : rub(r2(per)) + ' ₽ на 1 м³') + '</span>');
+        }
+      }
+    }
+    var ch = changedTariffs();
+    if (ch.length) {
+      var before = MONTHS.filter(function (m) { return m[0] < S.from; }).map(function (m) { return m[1].split(' ')[0].toLowerCase(); });
+      b += q('Новый тариф с', '<select class="pick" data-k="from">' + MONTHS.map(function (m) {
+        return '<option value="' + m[0] + '"' + (S.from === m[0] ? ' selected' : '') + '>' + m[1] + (m[0] === NOW ? ' (текущий)' : '') + '</option>'; }).join('') + '</select>' +
+        (S.from < NOW ? '<span class="badge warn">Счета за прошлые месяцы пересчитаются</span>' : ''));
+      b += q('', '<span class="note">' + ch.map(function (k) { return TARIFF_KEYS[k] + ' ' + esc(orig[k]) + ' → <b>' + esc(S[k]) + '</b>'; }).join(' · ') +
+        (before.length ? '. ' + before.join(', ').replace(/^./, function (c) { return c.toUpperCase(); }) + ' — по старому тарифу.' : '.') + '</span>');
+    }
+    var srcBadges = [[SRC[S.src].toLowerCase()]];
+    if (ch.length) srcBadges.push(['новый тариф', 'warn']);
+    h += section('Откуда сумма', srcBadges, b);
+
+    // How we split
+    var d, divBadge;
+    if (S.src === 'meters' && selected().length) {
+      var list = selected(), common = list.some(function (m) { return !m.who; }), own = list.some(function (m) { return m.who; });
+      if (own && !common) { d = q('Делим', '<span class="note"><b>Каждый платит по своему счётчику.</b></span>'); divBadge = 'по своим счётчикам'; }
+      else if (own && common) { d = q('Делим', '<span class="note">Каждый платит по своему счётчику.</span>') + q('Разница общего и своих', seg('diff', [['owner', 'На собственнике'], ['shares', 'По долям']])); divBadge = 'свои + разница'; }
+      else { d = q('Делим', seg('div', Object.keys(DIV).map(function (k) { return [k, DIV[k]]; }))); divBadge = DIV[S.div].toLowerCase(); }
+    } else {
+      d = q('Делим', seg('div', Object.keys(DIV).map(function (k) { return [k, DIV[k]]; }))); divBadge = DIV[S.div].toLowerCase();
+    }
+    h += section('Как делим', [[divBadge]], d);
+
+    // Check
+    var r = compute(), p;
+    if (r.err) p = '<div class="err">' + r.err + '</div>';
+    else {
+      p = '<div class="words">' + r.words + '</div><div class="nums">' + r.lines.map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>' +
+        '<div class="result">' + TENANTS.map(function (t) { return '<span class="pay">' + t.name + ' ' + rub(r.pay[t.id]) + ' ₽</span>'; }).join('') +
+        (r.pay.o ? '<span class="pay owner">Собственник ' + rub(r.pay.o) + ' ₽</span>' : '') + '</div>';
+    }
+    h += section('Проверка', [['пример месяца']], '<div class="proof">' + p + '</div>');
+
+    $('body').innerHTML = h;
+  }
+
+  function rerender(focusId) {
+    var el = focusId && $(focusId), pos = el && el.selectionStart;
+    render();
+    el = focusId && $(focusId);
+    if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (e) {} }
+  }
+  function toast(text) { var t = $('toast'); t.textContent = text; t.style.display = 'block'; setTimeout(function () { t.style.display = 'none'; }, 2400); }
+
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.dataset.k) { S[el.dataset.k] = el.value; rerender(el.tagName === 'INPUT' ? el.id : null); }
+  });
+  document.addEventListener('change', function (e) {
+    var el = e.target;
+    if (el.dataset.meter) {
+      var id = +el.dataset.meter;
+      S.meters = el.checked ? S.meters.concat(id) : S.meters.filter(function (x) { return x !== id; });
+      render();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.mode) {
+      document.querySelectorAll('[data-mode]').forEach(function (x) { x.classList.toggle('on', x === b); });
+      applyTpl(b.dataset.mode === 'edit' ? 'hot' : 'el', b.dataset.mode === 'edit'); render();
+    } else if (b.dataset.tpl) { applyTpl(b.dataset.tpl); render(); }
+    else if (b.dataset.seg) { S[b.dataset.seg] = b.dataset.v; render(); }
+    else if (b.dataset.act === 'add-meter') toast('Откроется окно «Счётчики» объекта, потом вернёмся сюда.');
+    else if (b.dataset.act === 'save') { var r = compute(); toast(r.err ? r.err : 'Сохранено (макет).'); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !e.target.matches('#body input')) return;
+    e.preventDefault();
+    var all = Array.prototype.slice.call(document.querySelectorAll('#body input:not([type=checkbox])')), i = all.indexOf(e.target);
+    if (all[i + 1]) all[i + 1].focus();
+  });
+
+  applyTpl('el'); render();
+})();
+</script>
+</body>
+</html>
