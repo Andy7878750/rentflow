@@ -60,7 +60,6 @@
         {% if form.management_company.errors or form.management_phone.errors or form.management_email.errors or form.cabinet_url.errors or form.cabinet_login.errors or form.password_hint.errors %}{% firstof "1" as uk_open %}{% endif %}
         <button type="button" class="setup-link uk-toggle" data-uk-toggle aria-controls="uk-fields" aria-expanded="{% if uk_open %}true{% else %}false{% endif %}">
           Информация об УК<svg class="icon"><use href="#i-chevron-down"/></svg>
-          {% if form.management_company.value %}<span class="uk-summary fade">{{ form.management_company.value }}</span>{% endif %}
         </button>
         <div class="uk-fields" id="uk-fields"{% if not uk_open %} hidden{% endif %}>
           <div class="form-grid grid-3">
