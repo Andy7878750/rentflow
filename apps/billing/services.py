@@ -49,11 +49,26 @@ def new_receipt(property_obj, kind):
     return receipt
 
 
+# Soft hyphens (U+00AD) in long words, so a narrow template tile breaks them with a dash instead of cutting them.
+_TILE_BREAKS = {
+    'Электричество': 'Электри­чество',
+    'Водоотведение': 'Водо­отведение',
+    'Капитальный': 'Капи­тальный',
+    'Содержание': 'Содер­жание',
+    'подогрев': 'подо­грев',
+}
+
+
+def tile_label(label):
+    """A template's name with soft hyphens in its long words."""
+    return ' '.join(_TILE_BREAKS.get(word, word) for word in label.split(' '))
+
+
 def template_tiles(property_obj, selected):
     """Template tiles of «Новая услуга»: every ready-made kind, the picked one and the ones already added marked."""
     have = set(property_obj.receipts.values_list('kind', flat=True))
     return [
-        {'kind': kind, 'label': kind.label, 'selected': kind == selected, 'added': kind in have}
+        {'kind': kind, 'label': tile_label(kind.label), 'name': kind.label, 'selected': kind == selected, 'added': kind in have}
         for kind in OFFERED_KINDS
     ]
 
