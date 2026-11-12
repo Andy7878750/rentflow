@@ -131,6 +131,29 @@ class Meter(models.Model):
         return 'Свободен' if self.vacant else 'Объект (общий)'
 
 
+class ReceiptTariff(models.Model):
+    """A service's tariff for one kind of its meters, from a month on.
+
+    A service may gather meters of several kinds (light day / night, hot and cold water), each kind
+    with its own price; sewage has one price for all its meters (key «*»). A new price is a new row
+    from the current month, so earlier months and issued bills keep the old one.
+    """
+
+    receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, related_name='tariffs')
+    # Which meters: their kind («electricity», «water»…), «custom:<name>» for an own kind, «*» — all of them.
+    key = models.CharField(max_length=120)
+    valid_from = models.DateField()  # the 1st of the month it applies from
+    tariff = models.DecimalField(max_digits=10, decimal_places=4)
+    tariff_night = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+
+    class Meta:
+        ordering = ['receipt', 'key', 'valid_from']
+        constraints = [models.UniqueConstraint(fields=['receipt', 'key', 'valid_from'], name='unique_tariff_per_month')]
+
+    def __str__(self):
+        return f'{self.receipt} · {self.key} · с {self.valid_from:%m.%Y}'
+
+
 class MonthlyAmount(models.Model):
     """What a receipt says for one month: the sum to pay, or (for metered ones) the tariff."""
 

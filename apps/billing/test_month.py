@@ -10,7 +10,7 @@ from apps.properties.models import Property
 from apps.tenants.models import Tenant
 
 from . import services
-from .models import Reading, Receipt
+from .models import Meter, Reading, Receipt
 
 User = get_user_model()
 SEPT = datetime.date(2026, 9, 1)
@@ -294,3 +294,98 @@ class MonthBillTests(TestCase):
         self.assertIsNone(services.parse_decimal(''))
         self.assertEqual(services.fmt_number(Decimal('14961.49'), 2), '14 961,49')
         self.assertEqual(services.fmt_number(Decimal('6.50')), '6,5')
+
+
+class ObjectMetersTariffTests(TestCase):
+    """«Счётчик: Да» from the window: the object's meters ticked, a tariff per kind of them."""
+
+    def setUp(self):
+        user = User.objects.create_user(username='b@example.ru', email='b@example.ru', password='secret1')
+        self.prop = Property.objects.create(owner=user, name='Королева 61', area=Decimal('60'))
+        self.viktor = Tenant.objects.create(property=self.prop, name='Виктор', share_percent=Decimal('45'))
+        self.vlad = Tenant.objects.create(property=self.prop, name='Владислав', share_percent=Decimal('55'))
+
+    def meter(self, kind, name, unit, tenant=None, **extra):
+        return Meter.objects.create(property=self.prop, kind=kind, name=name, unit=unit, tenant=tenant, **extra)
+
+    def save(self, kind, meters, tariffs, today=datetime.date(2026, 9, 10), **changes):
+        receipt = services.new_receipt(self.prop, kind)
+        receipt.metered = True
+        for name, value in changes.items():
+            setattr(receipt, name, value)
+        return services.save_receipt(receipt, meter_ids=[m.pk for m in meters], tariffs=tariffs, today=today)
+
+    def readings(self, month, **values):
+        services.save_month_input(self.prop, month, values)
+
+    def line(self, bill, tenant, receipt):
+        return next(line for line in bill.payer_for(tenant.pk).lines if line.receipt.pk == receipt.pk)
+
+    def test_each_kind_counts_by_its_own_tariff(self):
+        cold = self.meter('water', 'Вода холодная', 'м³', self.viktor)
+        hot = self.meter('hot_water', 'Вода горячая', 'м³', self.vlad)
+        receipt = self.save('water', [cold, hot], {'water': (Decimal('45.5'), None), 'hot_water': (Decimal('230'), None)})
+        self.assertEqual(receipt.split, Receipt.Split.METERS)
+        self.readings(SEPT, **{f'prev-{cold.pk}': '0', f'cur-{cold.pk}': '2', f'prev-{hot.pk}': '0', f'cur-{hot.pk}': '2'})
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('91.00'))
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('460.00'))
+        self.assertEqual(bill.entries[0].tariff_lines, ['Вода холодная 45,5\xa0₽ за м³', 'Вода горячая 230\xa0₽ за м³'])
+
+    def test_new_tariff_from_this_month_past_months_keep_the_old(self):
+        light = self.meter('electricity', 'Электричество', 'кВт·ч')
+        receipt = self.save('electricity', [light], {'electricity': (Decimal('5'), None)})
+        self.readings(AUG, **{f'prev-{light.pk}': '0', f'cur-{light.pk}': '10'})
+        self.readings(SEPT, **{f'cur-{light.pk}': '20'})
+
+        receipt.refresh_from_db()
+        services.save_receipt(receipt, meter_ids=[light.pk], tariffs={'electricity': (Decimal('7'), None)},
+                              today=datetime.date(2026, 9, 15))
+
+        self.assertEqual(services.month_bill(self.prop, AUG).entries[0].total, Decimal('50.00'))
+        self.assertEqual(services.month_bill(self.prop, SEPT).entries[0].total, Decimal('70.00'))
+        # Changed again the same month: the month's row is corrected, not doubled.
+        services.save_receipt(receipt, meter_ids=[light.pk], tariffs={'electricity': (Decimal('8'), None)},
+                              today=datetime.date(2026, 9, 20))
+        self.assertEqual(receipt.tariffs.count(), 2)
+        self.assertEqual(services.month_bill(self.prop, SEPT).entries[0].total, Decimal('80.00'))
+
+    def test_day_night_follows_the_meter(self):
+        light = self.meter('electricity', 'Электричество', 'кВт·ч', self.viktor, day_night=True)
+        receipt = self.save('electricity', [light], {'electricity': (Decimal('7'), Decimal('3'))})
+        self.assertEqual(receipt.zones, 2)
+        self.readings(SEPT, **{f'prev-{light.pk}': '0', f'cur-{light.pk}': '10',
+                               f'prevn-{light.pk}': '0', f'curn-{light.pk}': '20'})
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('130.00'))
+        self.assertEqual(bill.entries[0].tariff_lines, ['день 7 · ночь 3\xa0₽ за кВт·ч'])
+
+    def test_sewage_one_tariff_on_cold_and_hot_water(self):
+        cold = self.meter('water', 'Вода холодная', 'м³', self.viktor)
+        hot = self.meter('hot_water', 'Вода горячая', 'м³', self.viktor)
+        receipt = self.save('sewage', [cold, hot], {'*': (Decimal('35'), None)})
+        self.readings(SEPT, **{f'prev-{cold.pk}': '0', f'cur-{cold.pk}': '4', f'prev-{hot.pk}': '0', f'cur-{hot.pk}': '1'})
+        payer = services.month_bill(self.prop, SEPT).payer_for(self.viktor.pk)
+        self.assertEqual([line.amount for line in payer.lines], [Decimal('140.00'), Decimal('35.00')])
+
+    def test_common_meter_is_split_and_unticking_keeps_the_meter(self):
+        common = self.meter('electricity', 'Электричество', 'кВт·ч')
+        other = self.meter('water', 'Вода холодная', 'м³')
+        receipt = self.save('electricity', [common], {'electricity': (Decimal('10'), None)})
+        self.assertEqual(receipt.layout, Receipt.Layout.COMMON)
+        self.assertEqual(receipt.split, Receipt.Split.SHARES)
+        receipt.metered = False
+        services.save_receipt(receipt, meter_ids=[], tariffs={})
+        self.assertFalse(receipt.meters.exists())
+        self.assertEqual(self.prop.meters.count(), 2, 'the object keeps its meters')
+        self.assertTrue(Meter.objects.filter(pk=other.pk).exists())
+
+    def test_template_ticks_its_kind_and_missing_tariffs(self):
+        light = self.meter('electricity', 'Электричество', 'кВт·ч', day_night=True)
+        cold = self.meter('water', 'Вода холодная', 'м³')
+        hot = self.meter('hot_water', 'Вода горячая', 'м³')
+        self.assertEqual(services.default_meter_ids(services.new_receipt(self.prop, 'electricity')), [light.pk])
+        self.assertEqual(services.default_meter_ids(services.new_receipt(self.prop, 'sewage')), [cold.pk, hot.pk])
+        receipt = services.new_receipt(self.prop, 'electricity')
+        self.assertEqual(services.missing_tariffs(receipt, [light], {'electricity': (Decimal('7'), None)}), ['electricity'])
+        self.assertEqual(services.missing_tariffs(receipt, [light], {'electricity': (Decimal('7'), Decimal('3'))}), [])

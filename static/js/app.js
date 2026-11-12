@@ -1862,6 +1862,35 @@
     }
   }
 
+  // «Счётчик: Да» → the object's meters with a tick. The ticks decide the hidden layout radios
+  // (common / own / both → «Делим»), the count in the head, and which tariff rows show (night too).
+  function updatePicks(form) {
+    var block = form.querySelector('[data-meter-picks]');
+    if (!block) return;
+    var picks = Array.prototype.slice.call(block.querySelectorAll('.meter-pick'));
+    var ticked = picks.filter(function (pick) { return pick.querySelector('input[name=meter_ids]').checked; });
+    block.querySelector('[data-meter-count]').textContent = metersLabel(ticked.length);
+    var own = ticked.some(function (pick) { return pick.dataset.owner === 'tenant'; });
+    var common = ticked.some(function (pick) { return pick.dataset.owner === 'common'; });
+    var radio = form.querySelector('input[name=layout][value=' + (own && common ? 'both' : own ? 'tenants' : 'common') + ']');
+    if (radio && radio.type === 'radio' && !radio.checked) {
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    block.querySelectorAll('[data-tkey]').forEach(function (row) {
+      var mine = ticked.filter(function (pick) { return pick.dataset.key === row.dataset.tkey; });
+      var night = mine.some(function (pick) { return pick.dataset.dn === '1'; });
+      row.hidden = !mine.length;
+      row.querySelector('[data-night-field]').hidden = !night;
+      var fix = row.querySelector('[data-day-fix]');
+      fix.textContent = fix.textContent.replace(/ день$/, '') + (night ? ' день' : '');
+    });
+  }
+
+  document.addEventListener('change', function (event) {
+    if (event.target.matches && event.target.matches('.meter-pick input[name=meter_ids]')) updatePicks(event.target.form);
+  });
+
   // The night tariff repeats the meter's unit: «₽/м³».
   function echoUnit(row, unit) {
     row.querySelectorAll('[data-unit-echo]').forEach(function (el) { el.textContent = unit; });

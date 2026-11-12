@@ -66,7 +66,7 @@ class ReceiptForm(forms.ModelForm):
             own_meters = cleaned.get('metered') and cleaned['layout'] != Receipt.Layout.COMMON
             cleaned['split'] = Receipt.Split.METERS if own_meters else Receipt.Split.SHARES
         # From the service window the tariff and unit come with each meter (checked in the view).
-        if cleaned.get('metered') and 'meter_kind' not in self.data:
+        if cleaned.get('metered') and 'meter_kind' not in self.data and 'meters_shown' not in self.data:
             if not cleaned.get('unit'):
                 self.add_error('unit', 'Выберите единицу.')
             if cleaned.get('tariff') is None:

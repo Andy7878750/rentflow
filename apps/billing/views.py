@@ -31,30 +31,36 @@ def _payers_switchable(receipt, property_obj):
 
 def _receipt_form(request, property_obj, receipt):
     posted = request.POST if request.method == 'POST' else None
-    meter_rows = services.meter_rows(receipt, posted)
-    # The layout follows the meter list (hidden radios kept in step by app.js); a new service
-    # starts with one common meter, so its split is set before the form reads the answers.
-    meter_layout = services.layout_for([{'tenant_id': row['who'] or None} for row in meter_rows])
+    # «Счётчик: Да» → the object's meters with a tick: what was posted, else the service's, else the template's kind.
+    meter_ids = services.parse_meter_ids(property_obj, posted)
+    if meter_ids is not None:
+        checked = set(meter_ids)
+    elif receipt.pk:
+        checked = set(receipt.meters.values_list('pk', flat=True))
+    else:
+        checked = set(services.default_meter_ids(receipt))
+    picks = services.meter_picks(receipt, checked)
+    ticked = [pick['meter'] for pick in picks if pick['checked']]
+    # The layout follows the ticks (hidden radios kept in step by app.js), so «Делим» is right from the start.
+    meter_layout = services._layout_of(ticked) if ticked else Receipt.Layout.COMMON
     if posted is None and receipt.metered and not property_obj.is_owner_used:
         receipt.layout = meter_layout
         services.normalize(receipt)
 
     form = ReceiptForm(posted, instance=receipt)
-    meters = services.parse_meters(property_obj, posted) if posted is not None else None
+    tariffs = services.parse_tariffs(posted) if posted is not None else None
     excluded = services.parse_excluded(property_obj, posted)
-    meters_error = ''
-    if posted is not None and form.is_valid() and meters is not None and form.instance.metered:
-        # The tariff is typed per meter: each one needs it; the service takes the first one's.
-        missing = services.meters_without_tariff(meters, form.instance.zones)
-        for index in missing:
-            meter_rows[index]['missing'] = True
-        if missing:
-            meters_error = 'Укажите тариф у каждого счётчика — по нему считается сумма.'
+    meters_error, missing = '', []
+    if posted is not None and form.is_valid() and form.instance.metered:
+        if not ticked:
+            meters_error = 'Отметьте счётчики, по которым считается услуга.'
         else:
-            services.tariff_from_meters(form.instance, meters)
+            missing = services.missing_tariffs(form.instance, ticked, tariffs)
+            if missing:
+                meters_error = 'Укажите тариф — по нему считается сумма.'
     if posted is not None and not meters_error and form.is_valid():
         is_new = receipt.pk is None
-        services.save_receipt(form.save(commit=False), meters=meters, excluded=excluded)
+        services.save_receipt(form.save(commit=False), meter_ids=[m.pk for m in ticked], tariffs=tariffs, excluded=excluded)
         verb = 'добавлена' if is_new else 'сохранена'
         return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
 
@@ -70,13 +76,11 @@ def _receipt_form(request, property_obj, receipt):
         'payers': services.payer_preview(services.normalize(form.instance), excluded),
         'payers_switchable': _payers_switchable(form.instance, property_obj),
         'tenants': property_obj.tenants.all(),
-        'meter_rows': meter_rows,
+        'meter_picks': picks,
+        'tariff_rows': services.tariff_rows(form.instance, picks, tariffs, missing),
         'meter_layout': meter_layout,
-        'meters_label': services.meters_label(len(meter_rows)),
+        'meters_label': services.meters_label(len(ticked)),
         'layout_choices': Receipt.Layout.choices,
-        'meter_kinds': services.meter_kind_options(property_obj),
-        'meter_who': services.meter_who_options(property_obj),
-        'new_meter': {**services.new_meter_row(receipt), 'who_label': 'Объект (общий)'},
         # By readings is not a button any more: it follows from «У каждого свой».
         'split_choices': [
             choice for choice in Receipt.Split.choices

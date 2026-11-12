@@ -184,7 +184,8 @@ class ReceiptServiceTests(TestCase):
 
         services.delete_receipt(water)
         self.assertTrue(Meter.objects.filter(pk=shared.pk).exists(), 'still used by sewage')
-        self.assertFalse(Meter.objects.filter(pk=unused.pk).exists(), 'unused meter goes away')
+        # The meters are the premises': deleting a service leaves them on the object.
+        self.assertTrue(Meter.objects.filter(pk=unused.pk).exists(), 'stays on the object')
 
     def test_unlinked_meter_goes_away_when_layout_changes(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
@@ -233,12 +234,16 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity')
 
     def test_create_form_is_prefilled_from_preset(self):
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
         response = self.client.get(url, HTTP_X_MODAL='1')
         self.assertContains(response, 'value="Электричество"')
-        self.assertContains(response, 'name="meter_name" value="Электричество"')
-        self.assertContains(response, 'value="common" aria-label="Общий на объект" checked', msg_prefix='one common meter to start with')
-        self.assertContains(response, 'data-pick-value="кВт·ч"')
+        # The object's meters as tiles: the template ticks its own kind only.
+        self.assertContains(response, f'name="meter_ids" value="{light.pk}" checked')
+        self.assertContains(response, 'name="meter_ids" value="', count=2)
+        self.assertContains(response, 'value="common" aria-label="Общий на объект" checked', msg_prefix='a common meter')
+        self.assertContains(response, 'data-meter-count>1 счётчик<')
 
     def test_create_in_modal(self):
         response = self.client.post(
@@ -257,32 +262,36 @@ class ReceiptViewTests(TestCase):
         self.assertContains(page, 'Интернет')
         self.assertContains(page, reverse('receipt_create', args=[self.prop.pk]))
 
-    def test_metered_service_needs_tariff_and_night_tariff(self):
+    def test_metered_service_needs_ticked_meters_and_their_tariffs(self):
         url = reverse('receipt_create', args=[self.prop.pk])
-        # From the window the tariff comes with each meter: the night one is missing → not saved.
         tenant = self.prop.tenants.get()
-        data = {'kind': 'electricity', 'name': '', 'metered': '1', 'zones': '2', 'amount_mode': 'monthly',
-                'meter_id': '', 'meter_kind': 'electricity', 'meter_name': 'Электричество',
-                'meter_who': str(tenant.pk), 'meter_serial': '0123456', 'meter_tariff': '7,20', 'meter_tariffn': '',
-                'meter_unit': 'кВт·ч', 'meter_initial': '1 000', 'meter_initialn': '400'}
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     tenant=tenant, day_night=True, serial='0123456')
+        data = {'kind': 'electricity', 'name': '', 'metered': '1', 'amount_mode': 'monthly', 'meters_shown': '1',
+                'tariff_key': 'electricity', 'tariff_day': '7,20', 'tariff_nightv': ''}
         response = self.client.post(url, data, HTTP_X_MODAL='1')
-        self.assertContains(response, 'Укажите тариф у каждого счётчика')
-        self.assertContains(response, 'mtariff has-error')
+        self.assertContains(response, 'Отметьте счётчики')
         self.assertFalse(self.prop.receipts.exists())
 
-        data['meter_tariffn'] = '3,10'
+        data['meter_ids'] = str(light.pk)
+        response = self.client.post(url, data, HTTP_X_MODAL='1')
+        self.assertContains(response, 'Укажите тариф', msg_prefix='a day / night meter needs the night tariff')
+        self.assertFalse(self.prop.receipts.exists())
+
+        data['tariff_nightv'] = '3,10'
         response = self.client.post(url, data, HTTP_X_MODAL='1')
         self.assertEqual(response.status_code, 204)
         receipt = self.prop.receipts.get()
-        self.assertEqual(receipt.name, 'Электричество', 'an empty name — the template\'s')
-        self.assertEqual((receipt.zones, receipt.tariff, receipt.tariff_night, receipt.unit, receipt.split),
-                         (2, Decimal('7.2'), Decimal('3.1'), 'кВт·ч', 'meters'), 'the service takes the meter\'s tariff')
-        meter = receipt.meters.get()
-        self.assertEqual((meter.serial, meter.initial, meter.initial_night), ('0123456', Decimal('1000'), Decimal('400')))
+        self.assertEqual(receipt.name, 'Электричество', "an empty name — the template's")
+        self.assertEqual((receipt.zones, receipt.unit, receipt.split), (2, 'кВт·ч', 'meters'))
+        self.assertEqual(list(receipt.meters.all()), [light])
+        row = receipt.tariffs.get()
+        self.assertEqual((row.key, row.tariff, row.tariff_night), ('electricity', Decimal('7.2'), Decimal('3.1')))
 
         response = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
-        self.assertContains(response, 'data-state="saved"')
-        self.assertContains(response, 'value="0123456" maxlength="50"')
+        self.assertContains(response, f'name="meter_ids" value="{light.pk}" checked')
+        self.assertContains(response, 'name="tariff_day" value="7,2"')
+        self.assertContains(response, 'name="tariff_nightv" value="3,1"')
 
     def test_meter_row_save_and_delete(self):
         url = reverse('meter_save', args=[self.prop.pk])
@@ -305,31 +314,30 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'name="metered" value="1" checked')
         self.assertNotContains(response, 'name="split" value="meters"')
 
-    def test_meters_block_is_a_list_with_one_meter_to_start(self):
+    def test_meters_block_without_object_meters_points_to_the_object(self):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=water'
         response = self.client.get(url, HTTP_X_MODAL='1')
-        self.assertContains(response, 'data-meter-count>1 счётчик<')
-        self.assertContains(response, 'data-meter-row', count=2)  # the row and the «+ Добавить счётчик» template
-        self.assertContains(response, 'name="meter_name" value="Вода холодная"')
-        self.assertContains(response, 'data-pick-label="Виктор"')
-        self.assertContains(response, '+ Добавить счётчик')
-        self.assertContains(response, 'placeholder="не указан"')
-        self.assertContains(response, 'data-state="new"', count=2)
+        self.assertContains(response, 'data-meter-count>0 счётчиков<')
+        self.assertContains(response, 'У объекта пока нет счётчиков')
+        self.assertContains(response, '+ Добавить счётчик объекта')
+        self.assertContains(response, reverse('property_edit', args=[self.prop.pk]))
 
     def test_usage_mode_is_saved_and_the_object_page_asks_for_usage(self):
+        meter = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
         response = self.client.post(
             reverse('receipt_create', args=[self.prop.pk]),
-            {'kind': 'electricity', 'name': 'Свет', 'metered': '1', 'unit': 'кВт·ч', 'tariff': '5',
-             'input_mode': 'usage', 'layout': 'common', 'split': 'shares', 'amount_mode': 'monthly'},
+            {'kind': 'electricity', 'name': 'Свет', 'metered': '1', 'input_mode': 'usage', 'layout': 'common',
+             'split': 'shares', 'amount_mode': 'monthly', 'meters_shown': '1', 'meter_ids': str(meter.pk),
+             'tariff_key': 'electricity', 'tariff_day': '5', 'tariff_nightv': ''},
             HTTP_X_MODAL='1',
         )
         self.assertEqual(response.status_code, 204)
         receipt = self.prop.receipts.get(name='Свет')
         self.assertEqual(receipt.input_mode, Receipt.InputMode.USAGE)
-        meter = receipt.meters.get()
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
         self.assertContains(page, f'name="use-{meter.pk}"')
         self.assertNotContains(page, f'name="cur-{meter.pk}"')
+        self.assertContains(page, 'Тариф 5 ₽ за кВт·ч')
 
     def test_fixed_amount_is_required(self):
         response = self.client.post(

@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
-from .models import Meter, MonthlyAmount, Reading, Receipt
+from .models import Meter, MonthlyAmount, Reading, Receipt, ReceiptTariff
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
 _BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
@@ -398,6 +398,199 @@ def first_of_month(day):
     return day.replace(day=1)
 
 
+# ---------------------------------------------------------------------------
+# «Счётчик: Да» in the service window: the object's meters ticked, a tariff per kind of them
+# ---------------------------------------------------------------------------
+
+# Months before a service's first tariff change: its tariff applies «from always».
+SINCE_ALWAYS = date(2000, 1, 1)
+# Services with one price for all their meters: sewage is counted on cold and hot water at one rate.
+ONE_TARIFF_KINDS = {Receipt.Kind.SEWAGE}
+READY_METER_KINDS = {value for value, _, _ in METER_KINDS}
+# Which of the object's meters a template ticks by itself.
+TEMPLATE_METERS = {
+    Receipt.Kind.ELECTRICITY: {Receipt.Kind.ELECTRICITY},
+    Receipt.Kind.WATER: {Receipt.Kind.WATER},
+    Receipt.Kind.HOT_WATER: {Receipt.Kind.HOT_WATER},
+    Receipt.Kind.HOT_WATER_HEATING: {Receipt.Kind.HOT_WATER},
+    Receipt.Kind.SEWAGE: {Receipt.Kind.WATER, Receipt.Kind.HOT_WATER},
+    Receipt.Kind.HEATING: {Receipt.Kind.HEATING},
+    Receipt.Kind.GAS: {Receipt.Kind.GAS},
+}
+
+
+def tariff_key(receipt, meter):
+    """Which tariff of the service a meter counts by: its kind, its own name for an own kind, «*» for one price."""
+    if receipt.kind in ONE_TARIFF_KINDS:
+        return '*'
+    return meter.kind if meter.kind in READY_METER_KINDS else f'custom:{meter.name}'
+
+
+def meter_unit(meter):
+    """The meter's unit; for a ready-made kind with none written — the usual one (кВт·ч, м³, Гкал)."""
+    return meter.unit or next((unit for value, _, unit in METER_KINDS if value == meter.kind), '')
+
+
+def tariff_label(key, meters):
+    if key == '*':
+        return 'Все отмеченные'
+    return meters[0].name if meters else key
+
+
+def tariff_at(rows, month):
+    """The row in force in a month (rows of one key, oldest first); None before the first one."""
+    current = None
+    for row in rows:
+        if row.valid_from <= month:
+            current = row
+    return current
+
+
+def kind_tariffs(receipt, month):
+    """{key: ReceiptTariff} in force in the month (uses the prefetched receipt.tariffs)."""
+    by_key = {}
+    for row in sorted(receipt.tariffs.all(), key=lambda r: r.valid_from):
+        by_key.setdefault(row.key, []).append(row)
+    found = {key: tariff_at(rows, month) for key, rows in by_key.items()}
+    return {key: row for key, row in found.items() if row is not None}
+
+
+def default_meter_ids(receipt):
+    """A new service ticks the object's meters its template is about (light — all the light meters)."""
+    kinds = TEMPLATE_METERS.get(receipt.kind, set())
+    return [meter.pk for meter in receipt.property.meters.all() if meter.kind in kinds]
+
+
+def parse_meter_ids(property_obj, posted):
+    """The ticked meters of the service window; None when the window sent no list."""
+    if posted is None or 'meters_shown' not in posted:
+        return None
+    own = set(property_obj.meters.values_list('pk', flat=True))
+    return [int(pk) for pk in posted.getlist('meter_ids') if pk.isdigit() and int(pk) in own]
+
+
+def parse_tariffs(posted):
+    """{key: (day, night)} typed in the tariff rows of the service window."""
+    if posted is None:
+        return {}
+    keys, days, nights = (posted.getlist(name) for name in ('tariff_key', 'tariff_day', 'tariff_nightv'))
+    return {
+        key: (parse_decimal(days[i] if i < len(days) else ''), parse_decimal(nights[i] if i < len(nights) else ''))
+        for i, key in enumerate(keys)
+    }
+
+
+def _meter_who(meter):
+    if meter.tenant_id:
+        return meter.tenant.name, 'is-tenant'
+    if meter.vacant:
+        return 'свободен', 'is-free'
+    return 'общий', ''
+
+
+def meter_picks(receipt, checked):
+    """The object's meters as tiles with a tick: kind (for the colour), name, №, start, whose."""
+    picks = []
+    for meter in receipt.property.meters.select_related('tenant'):
+        who, who_cls = _meter_who(meter)
+        start = ''
+        if meter.initial is not None:
+            start = fmt_number(meter.initial)
+            if meter.day_night:
+                start += ' / ' + (fmt_number(meter.initial_night) if meter.initial_night is not None else '—')
+            start += f' {meter_unit(meter)}'.rstrip()
+        picks.append({
+            'meter': meter, 'checked': meter.pk in checked, 'key': tariff_key(receipt, meter),
+            'kind': meter.kind if meter.kind in READY_METER_KINDS else 'custom',
+            'who': who, 'who_cls': who_cls, 'start': start,
+            'owner_key': 'common' if not meter.tenant_id and not meter.vacant else 'tenant',
+        })
+    return picks
+
+
+def tariff_rows(receipt, picks, posted_tariffs=None, missing=()):
+    """One tariff row per kind of the object's meters (rows of unticked kinds are hidden by app.js).
+    Values: what was typed, else the tariff in force this month, else the meters' old own tariff."""
+    current = kind_tariffs(receipt, first_of_month(date.today())) if receipt.pk else {}
+    rows, order = {}, []
+    for pick in picks:
+        key = pick['key']
+        if key not in rows:
+            order.append(key)
+            rows[key] = {'key': key, 'meters': [], 'used': False, 'night': False, 'unit': meter_unit(pick['meter'])}
+        row = rows[key]
+        row['meters'].append(pick['meter'])
+        row['used'] = row['used'] or pick['checked']
+        row['night'] = row['night'] or (pick['meter'].day_night and pick['checked'])
+        row['any_night'] = row.get('any_night') or pick['meter'].day_night
+    result = []
+    for key in order:
+        row = rows[key]
+        if posted_tariffs is not None and key in posted_tariffs:
+            day, night = posted_tariffs[key]
+        elif key in current:
+            day, night = current[key].tariff, current[key].tariff_night
+        else:
+            legacy = next((m for m in row['meters'] if m.tariff is not None), None)
+            day, night = (legacy.tariff, legacy.tariff_night) if legacy else (None, None)
+        row.update({
+            'label': tariff_label(key, row['meters']),
+            'day': fmt_number(day) if isinstance(day, Decimal) else (day or ''),
+            'night_value': fmt_number(night) if isinstance(night, Decimal) else (night or ''),
+            'missing': key in missing,
+        })
+        result.append(row)
+    return result
+
+
+def missing_tariffs(receipt, meters, tariffs):
+    """Keys of the ticked meters whose tariff is not typed (the night one too, for a day / night meter)."""
+    missing = []
+    for meter in meters:
+        key = tariff_key(receipt, meter)
+        day, night = tariffs.get(key, (None, None))
+        if key not in missing and (day is None or (meter.day_night and night is None)):
+            missing.append(key)
+    return missing
+
+
+def save_tariffs(receipt, tariffs, keys, today):
+    """Store the typed tariffs of the ticked kinds. A changed one starts this month; earlier months keep theirs."""
+    this_month = first_of_month(today)
+    has_past = (
+        Reading.objects.filter(meter__receipts=receipt, month__lt=this_month).exists()
+        or receipt.monthly_amounts.filter(month__lt=this_month).exists()
+    )
+    for key in keys:
+        day, night = tariffs.get(key, (None, None))
+        if day is None:
+            continue
+        rows = list(receipt.tariffs.filter(key=key).order_by('valid_from'))
+        now = tariff_at(rows, this_month)
+        if now and now.tariff == day and now.tariff_night == night:
+            continue
+        if now and now.valid_from == this_month:
+            now.tariff, now.tariff_night = day, night
+            now.save(update_fields=['tariff', 'tariff_night'])
+            continue
+        # The first tariff of a new service counts from always; otherwise from this month.
+        valid_from = this_month if (rows or has_past) else SINCE_ALWAYS
+        ReceiptTariff.objects.create(receipt=receipt, key=key, valid_from=valid_from, tariff=day, tariff_night=night)
+
+
+def link_meters(receipt, meter_ids, tariffs, today):
+    """«Счётчик: Да» saved from the window: the service counts by the ticked meters of the object
+    (they stay the object's — nothing is created or deleted), each kind by its tariff."""
+    meters = list(receipt.property.meters.filter(pk__in=meter_ids))
+    receipt.meters.set(meters)
+    keys = []
+    for meter in meters:
+        key = tariff_key(receipt, meter)
+        if key not in keys:
+            keys.append(key)
+    save_tariffs(receipt, tariffs, keys, today)
+
+
 def keep_past_tariffs(receipt, old_tariff, old_tariff_night, today):
     """The tariff changed: months before the current one stay billed at the old one.
 
@@ -427,31 +620,58 @@ def drop_if_unused(meter):
 
 @transaction.atomic
 def delete_receipt(receipt):
-    meters = list(receipt.meters.all())
+    """The service goes; the object's meters stay (they are the premises', set in the object window)."""
     receipt.delete()
-    for meter in meters:
-        drop_if_unused(meter)
+
+
+def _layout_of(meters):
+    # A free meter (its tenant moved out) still counts as a tenant's one, not a common one.
+    return layout_for([{'tenant_id': m.tenant_id or ('free' if m.vacant else None)} for m in meters])
 
 
 @transaction.atomic
-def save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=False):
+def save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=False, meter_ids=None, tariffs=None):
     """Save the service. meters — the list from the service window (parse_meters); without it
     (saved from code) the meters follow the service's layout.
+    meter_ids / tariffs — the window of «Счётчик: Да»: the object's meters ticked and a tariff per kind of them.
     keep_meters — the object's tenants changed: the service keeps the meters it has (they are the
     premises'; who pays by each is set on the object), only its layout follows them.
     excluded — tenants switched off in «Кто платит» (parse_excluded); None keeps them as they are."""
+    today = today or date.today()
+    if meter_ids is not None:
+        ticked = list(receipt.property.meters.filter(pk__in=meter_ids)) if receipt.metered else []
+        if ticked and not receipt.property.is_owner_used:
+            receipt.layout = _layout_of(ticked)
+        receipt.zones = 2 if any(meter.day_night for meter in ticked) else 1
+        if ticked:
+            # The service keeps its first kind's tariff and unit too (shown on the object page as before).
+            first = tariff_key(receipt, ticked[0])
+            day, night = (tariffs or {}).get(first, (None, None))
+            receipt.tariff, receipt.tariff_night, receipt.unit = day, night, meter_unit(ticked[0]) or receipt.unit
+        normalize(receipt)
+        receipt.save()
+        if receipt.metered:
+            link_meters(receipt, [meter.pk for meter in ticked], tariffs or {}, today)
+        else:
+            receipt.meters.clear()
+        if excluded is not None:
+            receipt.excluded.set(excluded)
+        return receipt
+
     old = Receipt.objects.filter(pk=receipt.pk).values('tariff', 'tariff_night').first() if receipt.pk else None
     linked = list(receipt.meters.all()) if keep_meters and receipt.pk and receipt.metered else []
     if linked and not meters and not receipt.property.is_owner_used:
-        # A free meter (its tenant moved out) still counts as a tenant's one, not a common one.
         meters = None
-        receipt.layout = layout_for([{'tenant_id': m.tenant_id or ('free' if m.vacant else None)} for m in linked])
+        receipt.layout = _layout_of(linked)
+    if linked:
+        # Day / night follows the meters (set in the object window).
+        receipt.zones = 2 if any(meter.day_night for meter in linked) else receipt.zones
     if meters and receipt.metered and not receipt.property.is_owner_used:
         receipt.layout = layout_for(meters)
     normalize(receipt)
     receipt.save()
-    if old and receipt.metered:
-        keep_past_tariffs(receipt, old['tariff'], old['tariff_night'], today or date.today())
+    if old and receipt.metered and not receipt.tariffs.exists():
+        keep_past_tariffs(receipt, old['tariff'], old['tariff_night'], today)
     if meters and receipt.metered:
         save_meter_list(receipt, meters)
     elif not linked:
@@ -557,6 +777,8 @@ class MonthEntry:
     tariff_night: object = None
     readings: list = field(default_factory=list)  # [(meter, Reading)]
     total: object = None                         # the month's sum; None while input is missing
+    kind_tariffs: dict = field(default_factory=dict)  # {key: ReceiptTariff} in force this month
+    tariff_lines: list = field(default_factory=list)  # «Электричество 7,5 / 3,2 ₽ за кВт·ч» for the object page
 
 
 @dataclass
@@ -605,17 +827,26 @@ def used(receipt, reading):
     return reading.consumption, reading.consumption_night
 
 
+def two_zones(receipt, meter):
+    """Day and night: the meter is set so in the object window (or the old service was)."""
+    return meter.day_night or receipt.zones == 2
+
+
 def _meter_cost(receipt, entry, reading):
     """(exact cost, formula) of one meter's month, or None while something is missing."""
     meter = reading.meter
-    unit, currency = meter.unit or receipt.unit, receipt.currency_symbol
-    # A meter with its own tariff counts by it; otherwise by the service's.
-    tariff = meter.tariff if meter.tariff is not None else entry.tariff
-    tariff_night = meter.tariff_night if meter.tariff_night is not None else entry.tariff_night
+    unit, currency = meter_unit(meter) or receipt.unit, receipt.currency_symbol
+    # The service's tariff for this kind of meter; before those, the meter's own old one, then the service's.
+    row = entry.kind_tariffs.get(tariff_key(receipt, meter))
+    if row is not None:
+        tariff, tariff_night = row.tariff, row.tariff_night
+    else:
+        tariff = meter.tariff if meter.tariff is not None else entry.tariff
+        tariff_night = meter.tariff_night if meter.tariff_night is not None else entry.tariff_night
     day, night = used(receipt, reading)
     if tariff is None or day is None:
         return None
-    if receipt.zones != 2:
+    if not two_zones(receipt, meter):
         formula = f'{fmt_number(day)} {unit} × {fmt_number(tariff)}{NBSP}{currency}'
         return day * tariff, formula
     if tariff_night is None or night is None:
@@ -706,6 +937,29 @@ def payer_preview(receipt, excluded=None):
     return rows
 
 
+def _tariff_lines(receipt, entry):
+    """The month's tariffs of a metered service for the object page: one per kind of its meters."""
+    currency = receipt.currency_symbol
+    lines, seen = [], set()
+    for meter, _ in entry.readings:
+        key = tariff_key(receipt, meter)
+        if key in seen:
+            continue
+        seen.add(key)
+        row = entry.kind_tariffs.get(key)
+        day = row.tariff if row else (meter.tariff if meter.tariff is not None else entry.tariff)
+        night = row.tariff_night if row else (meter.tariff_night if meter.tariff is not None else entry.tariff_night)
+        if day is None:
+            lines.append(('' if key == '*' else f'{meter.name} ', 'не указан'))
+            continue
+        price = fmt_number(day)
+        if two_zones(receipt, meter):
+            price = f'день {price} · ночь {fmt_number(night) if night is not None else "—"}'
+        lines.append(('' if key == '*' else f'{meter.name} ', f'{price}{NBSP}{currency} за {meter_unit(meter) or receipt.unit}'))
+    # One kind: just the price; several: each with its name.
+    return [text if len(lines) == 1 else name + text for name, text in lines]
+
+
 def month_bill(property_obj, month):
     """Everything for the object page in one month: the input column and each payer's bill.
 
@@ -719,7 +973,8 @@ def month_bill(property_obj, month):
     entries = []
     readings_done = readings_total = 0
 
-    for receipt in property_obj.receipts.prefetch_related('meters__readings', 'meters__tenant', 'monthly_amounts', 'excluded'):
+    prefetch = ('meters__readings', 'meters__tenant', 'monthly_amounts', 'excluded', 'tariffs')
+    for receipt in property_obj.receipts.prefetch_related(*prefetch):
         amount = next((a for a in receipt.monthly_amounts.all() if a.month == month), None)
         entry = MonthEntry(receipt=receipt, amount=amount)
         entries.append(entry)
@@ -730,7 +985,11 @@ def month_bill(property_obj, month):
                 entry.tariff, entry.tariff_night = amount.tariff, amount.tariff_night
             else:
                 entry.tariff, entry.tariff_night = receipt.tariff, receipt.tariff_night
+            entry.kind_tariffs = kind_tariffs(receipt, month)
             entry.readings = _readings_for(receipt.meters.all(), month)
+            for meter, _ in entry.readings:
+                meter.two_zones = two_zones(receipt, meter)
+            entry.tariff_lines = _tariff_lines(receipt, entry)
             costs = [(meter, _meter_cost(receipt, entry, reading)) for meter, reading in entry.readings]
             readings_total += len(costs)
             readings_done += sum(1 for _, cost in costs if cost is not None)
