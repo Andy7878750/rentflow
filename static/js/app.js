@@ -761,8 +761,8 @@
         if (value !== null) sum += value;
         var text = '';
         if (value !== null && totalArea) {
-          text = isArea ? '~' + formatNumber(value / totalArea * 100) + '%'
-                        : '~' + formatNumber(value * totalArea / 100) + ' м²';
+          text = isArea ? '≈ ' + formatNumber(value / totalArea * 100) + '%'
+                        : '≈ ' + formatNumber(value * totalArea / 100) + ' м²';
         }
         hint.textContent = text;
       });
@@ -975,7 +975,7 @@
         var share = val(item, 'share');
         var hint = item.querySelector('[data-share-hint]');
         var shareCell = cell('info-share', '', share ? share + (shareUnit() === '%' ? '%' : ' м²') : '', 'доля —');
-        if (share && hint && hint.textContent) shareCell.appendChild(el('span', 'info-label', ' · ' + hint.textContent.replace('~', '≈ ')));
+        if (share && hint && hint.textContent) shareCell.appendChild(el('span', 'info-label', ' · ' + hint.textContent));
         row.appendChild(shareCell);
         row.appendChild(cell('info-until', 'до', val(item, 'contract_until'), 'договор —'));
         row.appendChild(cell('info-phone', '', val(item, 'phone'), 'телефон —'));
@@ -1100,7 +1100,9 @@
           found.dataset.name = name;
           found.dataset.unit = '';
           found.innerHTML = '<button type="button" class="select-option" role="option"><span></span>' +
-            '<svg class="icon select-check"><use href="#i-check"/></svg></button>';
+            '<svg class="icon select-check"><use href="#i-check"/></svg></button>' +
+            '<button type="button" class="select-remove" data-msel-remove title="Убрать вариант" aria-label="Убрать вариант">' +
+            '<svg class="icon"><use href="#i-x"/></svg></button>';
           found.querySelector('span').textContent = name;
           list.appendChild(found);
         }
@@ -1109,6 +1111,24 @@
       input.value = '';
       item.querySelector('[data-msel-add]').hidden = true;
       chooseKind(item, mine);
+    }
+
+    // × at an own variant: gone from every menu; this meter goes back to the first kind.
+    function removeKind(item, row) {
+      var name = row.dataset.name;
+      var lists = Array.prototype.slice.call(form.querySelectorAll('[data-msel] .select-list'));
+      var template = blocks.meter.querySelector('[data-item-template]');
+      if (template) lists = lists.concat(Array.prototype.slice.call(template.content.querySelectorAll('.select-list')));
+      lists.forEach(function (list) {
+        list.querySelectorAll('.select-row').forEach(function (other) {
+          if (other.dataset.kind === 'custom' && other.dataset.name === name) other.parentNode.removeChild(other);
+        });
+      });
+      if (val(item, 'kind') === 'custom' && val(item, 'name') === name) {
+        chooseKind(item, item.querySelector('[data-msel] .select-row'));
+      } else {
+        syncMeter(item);
+      }
     }
 
     // ---- the tenant's meters (ticks under the tenant's fields) ----
@@ -1362,6 +1382,7 @@
       var munit = target.closest('[data-munit]');
       if (msel) {
         if (target.closest('[data-msel-trigger]')) toggleMenu(msel);
+        else if (target.closest('[data-msel-remove]')) removeKind(item, target.closest('.select-row'));
         else if (target.closest('[data-msel-add]')) addKind(item);
         else if (target.closest('.select-row')) chooseKind(item, target.closest('.select-row'));
         return;

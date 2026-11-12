@@ -1961,8 +1961,13 @@ input.masked {
   right: 0;
 }
 
+/* The share in the other unit, right inside the field before the % / м² picker: «55  ≈ 49,5 м²  % ▾». */
 .item .share-hint {
-  display: none; /* «≈ 36 м²» is shown in the tenant's info row instead */
+  top: calc(var(--fl-top) + var(--fl-h) / 2);
+  left: auto;
+  right: 68px;
+  transform: translateY(-50%);
+  font-size: 12px;
 }
 
 /* ---------- Compact windows, 2026-11-12 (2) ----------

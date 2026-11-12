@@ -19,6 +19,7 @@
                 {% for option in meter_kinds %}
                   <li class="select-row" data-kind="{{ option.kind }}" data-name="{{ option.name }}" data-unit="{{ option.unit }}">
                     <button type="button" class="select-option" role="option"><span>{{ option.name }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button>
+                    {% if option.kind == 'custom' %}<button type="button" class="select-remove" data-msel-remove title="Убрать вариант" aria-label="Убрать вариант «{{ option.name }}»"><svg class="icon"><use href="#i-x"/></svg></button>{% endif %}
                   </li>
                 {% endfor %}
               </ul>
