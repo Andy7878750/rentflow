@@ -2102,3 +2102,129 @@ input.masked {
 .subwin-delete {
   font-size: 14px;
 }
+
+/* Meters as tiles (variant А, 2026-11-12): an icon in a circle coloured by kind, name, then № · start · whose.
+   Light is turquoise, cold water blue, hot water red, heating orange, gas violet, own kinds grey. */
+.meter-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.mk-electricity { --mk: #0e9aa7; --mk-soft: #e0f4f6; }
+.mk-water       { --mk: #2e86c1; --mk-soft: #e8f2fa; }
+.mk-hot_water   { --mk: #c0392b; --mk-soft: #fbecea; }
+.mk-heating     { --mk: #e67e22; --mk-soft: #fdf0e4; }
+.mk-gas         { --mk: #5b6bc0; --mk-soft: #eceefa; }
+.mk-custom      { --mk: #6b7680; --mk-soft: #f1f2f4; }
+
+.info-row.meter-tile {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  min-height: 0;
+  padding: 10px 8px 10px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.info-row.meter-tile:last-of-type {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.info-row.meter-tile:hover,
+.info-row.meter-tile:focus-visible {
+  background: var(--color-surface);
+  border-color: var(--mk);
+}
+
+.mt-icon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--mk-soft);
+  color: var(--mk);
+}
+
+.mt-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.meter-tile .info-main {
+  font-size: 14px;
+}
+
+.mt-acts {
+  display: flex;
+  gap: 2px;
+}
+
+.info-row.meter-tile .icon-button {
+  width: 26px;
+  height: 26px;
+}
+
+@media (hover: hover) {
+  .mt-acts { opacity: 0; transition: opacity .12s ease; }
+  .meter-tile:hover .mt-acts,
+  .meter-tile:focus-within .mt-acts { opacity: 1; }
+}
+
+.mt-line {
+  grid-column: 2 / 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mt-line .info-cell {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.mt-line .info-label {
+  font-size: 12px;
+}
+
+.mt-line .who-badge {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.meter-tile.has-error {
+  border-color: var(--color-danger);
+}
+
+.meter-add-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 64px;
+  border: 1px dashed #c9cfd5;
+  border-radius: 10px;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.meter-add-tile:hover,
+.meter-add-tile:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  outline: none;
+}
+
+.meter-add-tile .icon {
+  width: 14px;
+  height: 14px;
+}

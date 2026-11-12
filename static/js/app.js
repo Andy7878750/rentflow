@@ -955,22 +955,54 @@
       return span;
     }
 
+    // A meter tile: an icon coloured by its kind (light — turquoise, cold water — blue, hot water — red…),
+    // the name, then № · start and whose it is. Edit and × show on hover.
+    var METER_ICONS = {
+      electricity: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>',
+      water: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/></svg>',
+      heating: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v12M12 6v12M16 6v12M6 18v3M18 18v3"/></svg>',
+      gas: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2s5 4.6 5 10a5 5 0 0 1-10 0c0-2.4 1.3-4.3 2.3-5.4.2 1.6 1 2.6 1.9 2.6C12.6 9.2 11 5.9 12 2z"/></svg>',
+      custom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3"/></svg>'
+    };
+    METER_ICONS.hot_water = METER_ICONS.water;
+    function meterKind(item) {
+      var kind = val(item, 'kind');
+      return METER_ICONS[kind] ? kind : 'custom';
+    }
+
+    function meterTile(item, row) {
+      var kind = meterKind(item);
+      row.className = 'info-row meter-tile mk-' + kind;
+      var icon = el('span', 'mt-icon');
+      icon.innerHTML = METER_ICONS[kind];
+      row.appendChild(icon);
+      var main = el('span', 'info-cell info-main', val(item, 'name'));
+      if (isDayNight(item)) main.appendChild(el('span', 'info-label', ' день / ночь'));
+      row.appendChild(main);
+      var acts = el('span', 'mt-acts');
+      row.appendChild(acts);
+      var line = el('span', 'mt-line');
+      line.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
+      line.appendChild(cell('info-start', 'старт', startText(item), 'старт —'));
+      var who = meterWho(item);
+      var badge = el('span', 'who-badge ' + who.cls, who.text);
+      badge.title = who.text;
+      line.appendChild(badge);
+      row.appendChild(line);
+      row.title = 'Изменить счётчик';
+      return acts;
+    }
+
     function infoRow(item, number, kind) {
       var row = el('div', 'info-row info-' + kind);
       row.tabIndex = 0;
       row.setAttribute('role', 'button');
       row.itemRef = item;
-      row.appendChild(el('span', 'inum', String(number)));
+      var buttons = row;
       if (kind === 'meter') {
-        var main = el('span', 'info-cell info-main', val(item, 'name'));
-        if (isDayNight(item)) main.appendChild(el('span', 'info-label', ' день/ночь'));
-        row.appendChild(main);
-        row.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
-        row.appendChild(cell('info-start', 'старт', startText(item), 'старт —'));
-        var who = meterWho(item);
-        row.appendChild(el('span', 'who-badge ' + who.cls, who.text));
-        row.title = 'Изменить счётчик';
+        buttons = meterTile(item, row);
       } else {
+        row.appendChild(el('span', 'inum', String(number)));
         row.appendChild(el('span', 'info-cell info-main', val(item, 'name')));
         var share = val(item, 'share');
         var hint = item.querySelector('[data-share-hint]');
@@ -995,8 +1027,8 @@
       remove.setAttribute('aria-label', 'Удалить');
       remove.title = 'Удалить';
       remove.innerHTML = '<svg class="icon"><use href="#i-x"/></svg>';
-      row.appendChild(edit);
-      row.appendChild(remove);
+      buttons.appendChild(edit);
+      buttons.appendChild(remove);
       return row;
     }
 
@@ -1008,7 +1040,14 @@
         list.innerHTML = '';
         var all = items(kind);
         all.forEach(function (item, i) { list.appendChild(infoRow(item, i + 1, kind)); });
-        if (!all.length) {
+        if (kind === 'meter') {
+          // Meters are tiles; the last tile adds one more.
+          var addTile = el('button', 'meter-add-tile');
+          addTile.type = 'button';
+          addTile.dataset.itemAdd = '';
+          addTile.innerHTML = '<svg class="icon"><use href="#i-plus"/></svg>Добавить счётчик';
+          list.appendChild(addTile);
+        } else if (!all.length) {
           list.appendChild(el('p', 'info-empty', kind === 'meter' ? 'Счётчиков пока нет' : 'Арендаторов пока нет'));
         }
         var count = block.querySelector('[data-items-count]');

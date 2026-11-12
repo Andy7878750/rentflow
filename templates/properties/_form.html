@@ -85,14 +85,11 @@
       <div class="form-section-body">
         {{ meter_formset.management_form }}
         {% if meter_formset.non_form_errors %}<ul class="errorlist">{% for error in meter_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-        <div class="info-list" data-info-list></div>
+        <div class="info-list meter-tiles" data-info-list></div>
         <div class="item-store" data-item-store hidden>
           {% for mform in meter_formset %}{% include "properties/_meter_item.html" %}{% endfor %}
         </div>
         <template data-item-template>{% include "properties/_meter_item.html" with mform=meter_formset.empty_form %}</template>
-        <div class="tenant-add-row">
-          <button type="button" class="setup-link tenant-add" data-item-add><svg class="icon"><use href="#i-plus"/></svg>Добавить счётчик</button>
-        </div>
       </div>
     </section>
 
