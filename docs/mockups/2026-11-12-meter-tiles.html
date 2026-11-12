@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счётчики плашками</title>
+<style>
+:root {
+  --color-primary: #34495e;
+  --color-accent: #148f77;
+  --color-accent-soft: #e6f4f1;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fbecea;
+  --color-bg: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-border: #e1e4e8;
+  --color-text: #2c3338;
+  --color-text-muted: #6b7680;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Meter kinds: a colour per kind, so a meter is read at a glance */
+  --k-el: #d68910;    --k-el-soft: #fdf3e3;
+  --k-cold: #2e86c1;  --k-cold-soft: #e8f2fa;
+  --k-hot: #c0392b;   --k-hot-soft: #fbecea;
+  --k-heat: #e67e22;  --k-heat-soft: #fdf0e4;
+  --k-gas: #5b6bc0;   --k-gas-soft: #eceefa;
+  --k-own: #6b7680;   --k-own-soft: #f1f2f4;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); background: var(--color-bg); color: var(--color-text); line-height: 1.45; font-size: 14px; }
+.page { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { margin: 0 0 4px; font-size: 22px; color: var(--color-primary); }
+.lead { margin: 0 0 20px; color: var(--color-text-muted); }
+h2.v { margin: 28px 0 8px; font-size: 17px; color: var(--color-primary); }
+h2.v small { font-weight: 400; color: var(--color-text-muted); font-size: 13px; }
+
+/* Blocks as in the object window (.form-section, head 38px). */
+.form-section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+.form-section-head { margin: 0; height: 38px; padding: 0 14px; background: #f7f8f9; border-bottom: 1px solid var(--color-border);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary);
+  display: flex; align-items: center; gap: 8px; }
+.form-section-head .count { margin-left: auto; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 999px; background: #e3f1f6; color: #1f6280; }
+.form-section-body { padding: 12px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.icon { display: grid; place-items: center; flex: none; }
+.icon svg { width: 18px; height: 18px; }
+.k-el   { --k: var(--k-el);   --ks: var(--k-el-soft); }
+.k-cold { --k: var(--k-cold); --ks: var(--k-cold-soft); }
+.k-hot  { --k: var(--k-hot);  --ks: var(--k-hot-soft); }
+.k-heat { --k: var(--k-heat); --ks: var(--k-heat-soft); }
+.k-gas  { --k: var(--k-gas);  --ks: var(--k-gas-soft); }
+.k-own  { --k: var(--k-own);  --ks: var(--k-own-soft); }
+.who { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--color-accent-soft); color: #0e6b59; }
+.who.common { background: #eef0f2; color: var(--color-primary); }
+.who.free { background: #fdf3e3; color: #8a5a08; }
+.acts { display: flex; gap: 2px; }
+.acts button { width: 26px; height: 26px; border: 0; background: none; border-radius: 6px; color: var(--color-text-muted); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.acts button:hover { background: #f1f2f4; color: var(--color-primary); }
+.acts button.del:hover { background: var(--color-danger-soft); color: var(--color-danger); }
+.acts svg { width: 15px; height: 15px; }
+.muted { color: var(--color-text-muted); }
+.num { font-variant-numeric: tabular-nums; }
+.name { font-weight: 600; color: var(--color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-tile { border: 1px dashed #c9cfd5; border-radius: 10px; background: none; color: var(--color-accent); font: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 64px; }
+.add-tile:hover { background: var(--color-accent-soft); border-color: var(--color-accent); }
+
+/* ---- Variant A: coloured circle on the left, two lines, tenant on the right ---- */
+.a { border: 1px solid var(--color-border); border-radius: 10px; padding: 10px 10px 10px 12px; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: #fff; }
+.a .icon { grid-row: span 2; width: 36px; height: 36px; border-radius: 50%; background: var(--ks); color: var(--k); }
+.a .line2 { grid-column: 2 / 4; display: flex; gap: 8px; align-items: center; font-size: 12px; min-width: 0; }
+.a .line2 .who { margin-left: auto; }
+.a .line2 > span, .c .line2 > span { white-space: nowrap; flex: none; }
+.a .line2 > .who, .c .line2 > .who { flex: 0 1 auto; min-width: 0; }
+.a .acts { opacity: .0; transition: opacity .12s; }
+.a:hover .acts, .a:focus-within .acts { opacity: 1; }
+
+/* ---- Variant B: coloured top stripe, kind on top, numbers in the body ---- */
+.b { border: 1px solid var(--color-border); border-top: 3px solid var(--k); border-radius: 10px; background: #fff; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.b .top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.b .top .icon { color: var(--k); }
+.b .top .acts { margin-left: auto; }
+.b .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; font-size: 12px; }
+.b .facts dt { color: var(--color-text-muted); }
+.b .facts dd { margin: 0; text-align: right; }
+
+/* ---- Variant C: whole tile tinted by kind, big icon, compact ---- */
+.c { border-radius: 10px; background: var(--ks); border: 1px solid transparent; padding: 10px 12px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; }
+.c .icon { grid-row: span 2; width: 40px; height: 40px; border-radius: 10px; background: #fff; color: var(--k); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.c .icon svg { width: 22px; height: 22px; }
+.c .name { color: var(--color-text); }
+.c .line2 { grid-column: 2 / 4; display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--color-text-muted); min-width: 0; }
+.c .line2 .who { margin-left: auto; background: #fff; }
+.c .acts button:hover { background: rgba(255,255,255,.7); }
+
+/* ---- Variant D: grouped by who uses it; tiles inside each group ---- */
+.group + .group { margin-top: 12px; }
+.group-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-muted); margin: 0 0 6px; }
+.group-head b { color: var(--color-primary); font-size: 13px; }
+.group-head .inum { width: 20px; height: 20px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+.group-head::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+.d-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.d { border: 1px solid var(--color-border); border-radius: 10px; background: #fff; padding: 8px 8px 8px 10px; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 0 8px; align-items: center; }
+.d .icon { grid-row: span 2; width: 30px; height: 30px; border-radius: 8px; background: var(--ks); color: var(--k); }
+.d .icon svg { width: 16px; height: 16px; }
+.d .name { font-size: 13px; }
+.d .sub { grid-column: 2 / 4; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d .acts { grid-row: 1; grid-column: 3; opacity: 0; }
+.d:hover .acts { opacity: 1; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 8px; font-size: 12px; color: var(--color-text-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend .icon { color: var(--k); }
+.legend .icon svg { width: 15px; height: 15px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Счётчики плашками</h1>
+  <p class="lead">Блок «Счётчики» в окне объекта, четыре варианта на одних и тех же счётчиках Королёва 61.
+    Цвет и иконка — по виду: свет жёлтый, холодная вода синяя, горячая красная, тепло оранжевое, газ фиолетовый, свой вид серый.
+    В вариантах А и Г карандаш и × появляются при наведении.</p>
+  <div class="legend" id="legend"></div>
+
+  <h2 class="v">А · Кружок слева <small>— иконка в цветном кружке, № и старт второй строкой, чей — справа</small></h2>
+  <div id="va"></div>
+
+  <h2 class="v">Б · Цветная полоса сверху <small>— больше воздуха, данные столбиком</small></h2>
+  <div id="vb"></div>
+
+  <h2 class="v">В · Плашка в цвет вида <small>— самая заметная, видно издалека</small></h2>
+  <div id="vc"></div>
+
+  <h2 class="v">Г · По арендаторам <small>— группы «Виктор», «Владислав», «Общие», плашки помельче</small></h2>
+  <div id="vd"></div>
+</div>
+<script>
+(function () {
+  var I = {
+    el: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>',
+    drop: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/></svg>',
+    heat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v12M12 6v12M16 6v12M6 18v3M18 18v3"/></svg>',
+    gas: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2s5 4.6 5 10a5 5 0 0 1-10 0c0-2.4 1.3-4.3 2.3-5.4.2 1.6 1 2.6 1.9 2.6C12.6 9.2 11 5.9 12 2z"/></svg>',
+    own: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3"/></svg>',
+    pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+  };
+  var KINDS = {
+    el:   { name: 'Электричество', icon: I.el, unit: 'кВт·ч' },
+    cold: { name: 'Вода холодная', icon: I.drop, unit: 'м³' },
+    hot:  { name: 'Вода горячая', icon: I.drop, unit: 'м³' },
+    heat: { name: 'Тепло', icon: I.heat, unit: 'Гкал' },
+    gas:  { name: 'Газ', icon: I.gas, unit: 'м³' },
+    own:  { name: 'Свой вид', icon: I.own, unit: '' }
+  };
+  var TENANTS = [ { id: 'v', name: 'Виктор "Эгоист"' }, { id: 'w', name: 'Владислав "Жаркофф"' } ];
+  var METERS = [
+    { kind: 'el', who: 'v', serial: '01234567', start: '12 450', night: '6 210' },
+    { kind: 'el', who: 'w', serial: '07654321', start: '8 300' },
+    { kind: 'cold', who: 'v', serial: '', start: '50' },
+    { kind: 'cold', who: 'w', serial: '7781', start: '86' },
+    { kind: 'hot', who: 'v', serial: '', start: '100' },
+    { kind: 'hot', who: 'w', serial: '5521', start: '202' },
+    { kind: 'heat', who: '', serial: 'ОДПУ 12', start: '1 204,3' },
+    { kind: 'own', who: 'free', name: 'Кондиционер', serial: '', start: '0', unit: 'кВт·ч' }
+  ];
+
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var name = function (m) { return m.name || KINDS[m.kind].name; };
+  var unit = function (m) { return m.unit || KINDS[m.kind].unit; };
+  var who = function (m) {
+    if (!m.who) return '<span class="who common">Общий</span>';
+    if (m.who === 'free') return '<span class="who free" title="Арендатора нет — платит собственник">Свободный</span>';
+    var t = TENANTS.find(function (x) { return x.id === m.who; });
+    return '<span class="who" title="' + esc(t.name) + '">' + esc(t.name) + '</span>';
+  };
+  var start = function (m) { return m.night ? m.start + ' / ' + m.night : m.start; };
+  var acts = '<span class="acts"><button aria-label="Изменить">' + I.pen + '</button><button class="del" aria-label="Убрать">' + I.x + '</button></span>';
+  var icon = function (m) { return '<span class="icon">' + KINDS[m.kind].icon + '</span>'; };
+  var add = '<button class="add-tile">' + I.plus + ' Добавить счётчик</button>';
+  function block(inner) {
+    return '<section class="form-section"><h3 class="form-section-head">Счётчики <span class="count">' + METERS.length + ' шт.</span></h3><div class="form-section-body">' + inner + '</div></section>';
+  }
+
+  document.getElementById('legend').innerHTML = ['el', 'cold', 'hot', 'heat', 'gas', 'own'].map(function (k) {
+    return '<span class="k-' + k + '">' + '<span class="icon">' + KINDS[k].icon + '</span>' + KINDS[k].name + '</span>';
+  }).join('');
+
+  document.getElementById('va').innerHTML = block('<div class="tiles">' + METERS.map(function (m) {
+    return '<div class="a k-' + m.kind + '">' + icon(m) + '<span class="name">' + esc(name(m)) + (m.night ? ' <span class="muted" style="font-weight:400;font-size:12px">день / ночь</span>' : '') + '</span>' + acts +
+      '<div class="line2"><span class="muted">№ ' + esc(m.serial || '—') + '</span><span class="muted num">старт ' + esc(start(m)) + '</span>' + who(m) + '</div></div>';
+  }).join('') + add + '</div>');
+
+  document.getElementById('vb').innerHTML = block('<div class="tiles">' + METERS.map(function (m) {
+    return '<div class="b k-' + m.kind + '"><div class="top">' + icon(m) + '<span class="name">' + esc(name(m)) + '</span>' + acts + '</div>' +
+      '<dl class="facts"><dt>Номер</dt><dd>' + esc(m.serial || '—') + '</dd><dt>' + (m.night ? 'Старт день / ночь' : 'Старт') + '</dt><dd class="num">' + esc(start(m)) + ' ' + unit(m) + '</dd></dl>' +
+      '<div>' + who(m) + '</div></div>';
+  }).join('') + add + '</div>');
+
+  document.getElementById('vc').innerHTML = block('<div class="tiles">' + METERS.map(function (m) {
+    return '<div class="c k-' + m.kind + '">' + icon(m) + '<span class="name">' + esc(name(m)) + '</span>' + acts +
+      '<div class="line2"><span>№ ' + esc(m.serial || '—') + ' · старт <span class="num">' + esc(start(m)) + '</span></span>' + who(m) + '</div></div>';
+  }).join('') + add + '</div>');
+
+  var groups = TENANTS.map(function (t, i) { return { head: '<span class="inum">' + (i + 1) + '</span><b>' + esc(t.name) + '</b>', list: METERS.filter(function (m) { return m.who === t.id; }) }; })
+    .concat([{ head: '<b>Общие</b> на всё помещение', list: METERS.filter(function (m) { return !m.who; }) },
+             { head: '<b>Свободные</b> платит собственник', list: METERS.filter(function (m) { return m.who === 'free'; }) }])
+    .filter(function (g) { return g.list.length; });
+  document.getElementById('vd').innerHTML = block(groups.map(function (g) {
+    return '<div class="group"><div class="group-head">' + g.head + '</div><div class="d-tiles">' + g.list.map(function (m) {
+      return '<div class="d k-' + m.kind + '">' + icon(m) + '<span class="name">' + esc(name(m)) + '</span>' + acts +
+        '<span class="sub">№ ' + esc(m.serial || '—') + ' · старт ' + esc(start(m)) + '</span></div>';
+    }).join('') + '</div></div>';
+  }).join('') + '<div style="margin-top:12px">' + add + '</div>');
+})();
+</script>
+</body>
+</html>
