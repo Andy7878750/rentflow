@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Объект: счётчики и арендаторы строками</title>
+<style>
+:root {
+  --color-primary: #34495e;
+  --color-accent: #148f77;
+  --color-accent-soft: #e6f4f1;
+  --color-danger: #c0392b;
+  --color-bg: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-border: #e1e4e8;
+  --color-text: #2c3338;
+  --color-text-muted: #6b7680;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); color: var(--color-text); line-height: 1.5; font-size: 14px; min-height: 100vh; }
+.overlay { padding: 32px 16px; display: flex; justify-content: center; }
+.overlay.top { position: fixed; inset: 0; background: rgba(44, 51, 56, .35); align-items: flex-start; overflow: auto; }
+.overlay.top[hidden] { display: none; }
+.modal { width: 100%; max-width: 760px; background: var(--color-surface); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.modal.small { max-width: 520px; margin-top: 40px; }
+.modal-head { padding: 20px 24px 12px; display: flex; align-items: flex-start; gap: 12px; }
+.modal-head h2 { margin: 0; font-size: 20px; color: var(--color-primary); }
+.modal-head .sub { margin: 2px 0 0; color: var(--color-text-muted); font-size: 13px; }
+.close { margin-left: auto; width: 32px; height: 32px; border: 0; background: none; font-size: 22px; color: var(--color-text-muted); cursor: pointer; border-radius: 8px; }
+.close:hover { background: #f1f2f4; }
+.modal-body { padding: 0 24px 8px; }
+
+/* Blocks (.form-section) */
+.form-section { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.form-section-head { margin: 0; padding: 8px 14px; background: #f7f8f9; border-bottom: 1px solid var(--color-border);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary);
+  display: flex; align-items: center; gap: 8px; }
+.head-badge { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 999px; background: #e3f1f6; color: #1f6280; }
+.head-badge:empty { display: none; }
+.head-badge.warn { background: #fdf3e1; color: #8a5a00; }
+.head-r { margin-left: auto; }
+.form-section-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Fields 38px, label rises above (as in the app now) */
+.grid { display: grid; gap: 10px; }
+.g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: 1fr 1fr 1fr; } .gaddr { grid-template-columns: 1fr 90px 120px; }
+.fl { position: relative; padding-top: 18px; }
+.fl input, .fl select { width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 8px; font: inherit; background: #fff; color: var(--color-text); }
+.fl input:focus, .fl select:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(20,143,119,.15); }
+.fl label { position: absolute; left: 13px; top: 37px; transform: translateY(-50%); color: var(--color-text-muted); pointer-events: none; transition: all .12s; white-space: nowrap; }
+.fl.up label, .fl:focus-within label { top: 0; left: 1px; transform: none; font-size: 11px; }
+.fl:focus-within label { color: var(--color-accent); }
+.fl .unit { position: absolute; right: 12px; top: 37px; transform: translateY(-50%); color: var(--color-text-muted); font-size: 13px; pointer-events: none; }
+.req { color: var(--color-danger); }
+
+.setup-link { color: var(--color-accent); background: none; border: 0; padding: 0; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.setup-link:hover { text-decoration: underline; }
+.add-row { display: flex; justify-content: flex-end; }
+.muted { color: var(--color-text-muted); }
+.note { margin: 0; font-size: 13px; color: var(--color-text-muted); }
+
+/* Info rows: one line, number in a circle, important info, ✎ × on the right */
+.list { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid #eef0f2; cursor: pointer; border-radius: 6px; }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: #f7f8f9; }
+.num { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.row .main { font-weight: 600; white-space: nowrap; }
+.row .info { color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.row .who { flex: none; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #f1f2f4; color: var(--color-text-muted); }
+.row .who.t { background: var(--color-accent-soft); color: #0e6b59; }
+.row .who.free { background: #fdf3e1; color: #8a5a00; }
+.icon-btn { flex: none; width: 28px; height: 28px; border: 0; border-radius: 6px; background: none; color: var(--color-text-muted); cursor: pointer; font-size: 15px; }
+.icon-btn:hover { background: #eceef0; color: var(--color-primary); }
+.icon-btn.del:hover { color: var(--color-danger); }
+.empty { padding: 6px 4px; color: var(--color-text-muted); }
+
+/* Segmented */
+.seg { display: inline-flex; background: #eef0f2; border-radius: 8px; padding: 2px; gap: 2px; }
+.seg button { border: 0; background: none; font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 6px; cursor: pointer; color: var(--color-text-muted); }
+.seg button.on { background: var(--color-accent); color: #fff; }
+.q { display: flex; align-items: center; gap: 12px; }
+.q > span { width: 120px; color: var(--color-text-muted); flex: none; }
+
+/* Checkbox list of meters in tenant window */
+.checks { display: flex; flex-direction: column; gap: 2px; }
+.check { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 6px; cursor: pointer; }
+.check:hover { background: #f7f8f9; }
+.check input { width: 16px; height: 16px; accent-color: var(--color-accent); }
+.check .info { color: var(--color-text-muted); }
+.check.busy { opacity: .55; cursor: default; }
+
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px 20px; align-items: center; }
+.form-actions .left { margin-right: auto; }
+.btn { height: 38px; padding: 0 18px; border-radius: 8px; border: 1px solid var(--color-border); background: #fff; font: inherit; cursor: pointer; color: var(--color-primary); }
+.btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; font-weight: 600; }
+.btn-danger { color: var(--color-danger); border-color: transparent; background: none; padding: 0 6px; }
+.btn-danger:hover { text-decoration: underline; }
+
+.explain { max-width: 760px; margin: 0 auto 16px; background: #fff; border-radius: 12px; padding: 14px 18px; font-size: 13px; }
+.explain b { color: var(--color-primary); }
+.explain ol { margin: 6px 0 0; padding-left: 18px; }
+@media (max-width: 600px) { .g3, .gaddr { grid-template-columns: 1fr; } .row .info { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="overlay" style="flex-direction:column;align-items:center">
+  <div class="explain">
+    <b>Макет 2026-11-12: окно объекта как сводка.</b> Счётчики и арендаторы — строками (номер · главное · чей).
+    Нажмите строку или «+ Добавить…» — откроется маленькое окно на один счётчик или одного арендатора.
+    <ol>
+      <li>Счётчики — помещения. Чей счётчик, решается в окне арендатора: галочки «Его счётчики».</li>
+      <li>Удалите арендатора (×) — его счётчики станут «свободны» (платит собственник), новому их можно отметить.</li>
+      <li>Всё сохраняется вместе с объектом по «Сохранить», «Отмена» отменяет всё.</li>
+    </ol>
+  </div>
+
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2>Изменить объект</h2><p class="sub">Квартира · Пулковская 10</p></div>
+      <button class="close" aria-label="Закрыть">×</button>
+    </div>
+    <div class="modal-body">
+
+      <section class="form-section">
+        <h3 class="form-section-head">Объект</h3>
+        <div class="form-section-body">
+          <div class="grid g2">
+            <div class="fl up"><label>Тип <span class="req">*</span></label><select><option>Квартира</option></select></div>
+            <div class="fl up"><label>Название <span class="req">*</span></label><input value="Пулковская 10"></div>
+          </div>
+          <div class="grid gaddr">
+            <div class="fl up"><label>Адрес</label><input value="СПб, ул. Пулковская, 10, кв. 472"></div>
+            <div class="fl up"><label>Этаж</label><input value="7"></div>
+            <div class="fl up"><label>Площадь</label><input id="area" value="80"><span class="unit">м²</span></div>
+          </div>
+          <div><button class="setup-link" type="button">Информация об УК ▾</button> <span class="muted">ТГК-1</span></div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h3 class="form-section-head">Счётчики <span class="head-badge" id="m-count"></span></h3>
+        <div class="form-section-body">
+          <div class="list" id="meters"></div>
+          <div class="add-row"><button class="setup-link" type="button" onclick="openMeter()">+ Добавить счётчик</button></div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h3 class="form-section-head">Кто пользуется <span class="head-badge" id="t-busy"></span></h3>
+        <div class="form-section-body">
+          <div class="seg"><button class="on">Арендаторы</button><button>Сам пользуюсь</button></div>
+          <div class="list" id="tenants"></div>
+          <div class="add-row"><button class="setup-link" type="button" onclick="openTenant()">+ Добавить арендатора</button></div>
+        </div>
+      </section>
+    </div>
+    <div class="form-actions">
+      <button class="btn">Отмена</button>
+      <button class="btn btn-primary">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Small window: one meter -->
+<div class="overlay top" id="meter-win" hidden>
+  <div class="modal small">
+    <div class="modal-head">
+      <div><h2 id="mw-title">Новый счётчик</h2><p class="sub">Пулковская 10</p></div>
+      <button class="close" onclick="closeWin()">×</button>
+    </div>
+    <div class="modal-body">
+      <section class="form-section">
+        <h3 class="form-section-head">Счётчик</h3>
+        <div class="form-section-body">
+          <div class="grid g2">
+            <div class="fl up"><label>Что меряет <span class="req">*</span></label>
+              <select id="mw-kind" onchange="mwKind()"><option>Электричество</option><option>Вода холодная</option><option>Вода горячая</option><option>Газ</option><option>Отопление</option></select></div>
+            <div class="fl"><label>№ счётчика</label><input id="mw-serial" oninput="lift(this)"></div>
+          </div>
+          <div class="q" id="mw-tariff-q"><span>Тариф</span>
+            <div class="seg" id="mw-dn"><button type="button" class="on" data-v="0">Однотарифный</button><button type="button" data-v="1">День / ночь</button></div></div>
+          <div class="grid g2">
+            <div class="fl"><label id="mw-start-l">Начальное показание <span class="req">*</span></label><input id="mw-start" oninput="lift(this)"><span class="unit mw-unit">кВт·ч</span></div>
+            <div class="fl" id="mw-night-f" hidden><label>Начальное · ночь <span class="req">*</span></label><input id="mw-night" oninput="lift(this)"><span class="unit mw-unit">кВт·ч</span></div>
+          </div>
+          <p class="note">Начальное показание — то, что на счётчике сейчас. С него начнётся первый месяц.</p>
+        </div>
+      </section>
+      <p class="note" id="mw-who" style="margin-bottom:10px"></p>
+    </div>
+    <div class="form-actions">
+      <button class="btn-danger left" id="mw-del" onclick="delMeter()">Удалить счётчик</button>
+      <button class="btn" onclick="closeWin()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveMeter()">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- Small window: one tenant -->
+<div class="overlay top" id="tenant-win" hidden>
+  <div class="modal small">
+    <div class="modal-head">
+      <div><h2 id="tw-title">Новый арендатор</h2><p class="sub">Пулковская 10 · свободно <span id="tw-free"></span></p></div>
+      <button class="close" onclick="closeWin()">×</button>
+    </div>
+    <div class="modal-body">
+      <section class="form-section">
+        <h3 class="form-section-head">Арендатор</h3>
+        <div class="form-section-body">
+          <div class="grid g2">
+            <div class="fl"><label>Имя <span class="req">*</span></label><input id="tw-name" oninput="lift(this)"></div>
+            <div class="fl"><label>Телефон</label><input id="tw-phone" oninput="lift(this)"></div>
+          </div>
+          <div class="grid g2">
+            <div class="fl"><label>Доля <span class="req">*</span></label><input id="tw-share" oninput="lift(this);twHint()"><span class="unit">%</span></div>
+            <div class="fl"><label>Договор до</label><input id="tw-until" oninput="lift(this)" placeholder=""></div>
+          </div>
+          <p class="note" id="tw-hint"></p>
+        </div>
+      </section>
+      <section class="form-section">
+        <h3 class="form-section-head">Его счётчики <span class="head-badge" id="tw-mcount"></span></h3>
+        <div class="form-section-body">
+          <div class="checks" id="tw-meters"></div>
+          <p class="note">По отмеченным счётчикам арендатор платит сам. Остальные — общие или свободные.</p>
+        </div>
+      </section>
+    </div>
+    <div class="form-actions">
+      <button class="btn-danger left" id="tw-del" onclick="delTenant()">Удалить арендатора</button>
+      <button class="btn" onclick="closeWin()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveTenant()">Готово</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const AREA = 80;
+const UNITS = { 'Электричество': 'кВт·ч', 'Вода холодная': 'м³', 'Вода горячая': 'м³', 'Газ': 'м³', 'Отопление': 'Гкал' };
+let meters = [
+  { id: 1, kind: 'Электричество', serial: '01234567', dn: true, start: '12450', night: '6210', owner: null },
+  { id: 2, kind: 'Вода горячая', serial: '556677', dn: false, start: '81', owner: 1 },
+  { id: 3, kind: 'Вода холодная', serial: '556678', dn: false, start: '140', owner: 1 },
+  { id: 4, kind: 'Вода горячая', serial: '', dn: false, start: '35', owner: 2 },
+  { id: 5, kind: 'Вода холодная', serial: '', dn: false, start: '60', owner: 2 },
+];
+let tenants = [
+  { id: 1, name: 'Виктор', phone: '+7 921 555-12-34', share: 45, until: '26.11.2027' },
+  { id: 2, name: 'Владислав', phone: '', share: 55, until: '' },
+];
+let freed = new Set();   // meters whose tenant left: "свободен"
+let nextId = 10, editM = null, editT = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nf = (v) => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+function lift(i) { i.closest('.fl').classList.toggle('up', i.value !== ''); }
+function tName(id) { const t = tenants.find((x) => x.id === id); return t ? t.name : ''; }
+function tNum(id) { return tenants.findIndex((x) => x.id === id) + 1; }
+function meterInfo(m) {
+  const u = UNITS[m.kind];
+  const start = m.dn ? `старт ${nf(m.start)} / ${nf(m.night)} ${u}` : `старт ${nf(m.start)} ${u}`;
+  return [m.serial ? '№ ' + m.serial : 'без №', m.dn ? 'день / ночь' : '', start].filter(Boolean).join(' · ');
+}
+function whoBadge(m) {
+  if (m.owner) return `<span class="who t">${tNum(m.owner)} ${esc(tName(m.owner))}</span>`;
+  if (freed.has(m.id)) return `<span class="who free" title="Арендатор съехал — пока платит собственник">свободен</span>`;
+  return `<span class="who">общий</span>`;
+}
+function render() {
+  $('meters').innerHTML = meters.length ? meters.map((m, i) => `
+    <div class="row" onclick="openMeter(${m.id})">
+      <span class="num">${i + 1}</span><span class="main">${esc(m.kind)}</span>
+      <span class="info">${esc(meterInfo(m))}</span>${whoBadge(m)}
+      <button class="icon-btn" title="Изменить">✎</button>
+      <button class="icon-btn del" title="Удалить" onclick="event.stopPropagation();editM=${m.id};delMeter()">×</button>
+    </div>`).join('') : '<div class="empty">Счётчиков пока нет</div>';
+  $('m-count').textContent = meters.length ? `${meters.length} шт.` : '';
+  $('tenants').innerHTML = tenants.length ? tenants.map((t, i) => {
+    const own = meters.filter((m) => m.owner === t.id).length;
+    const info = [`${t.share}% (~${nf(Math.round(AREA * t.share) / 100)} м²)`, own ? `счётчиков: ${own}` : '', t.until ? 'до ' + t.until : '', t.phone].filter(Boolean).join(' · ');
+    return `<div class="row" onclick="openTenant(${t.id})">
+      <span class="num">${i + 1}</span><span class="main">${esc(t.name)}</span>
+      <span class="info">${esc(info)}</span>
+      <button class="icon-btn" title="Изменить">✎</button>
+      <button class="icon-btn del" title="Удалить" onclick="event.stopPropagation();editT=${t.id};delTenant()">×</button>
+    </div>`;
+  }).join('') : '<div class="empty">Арендаторов пока нет</div>';
+  const busy = tenants.reduce((s, t) => s + t.share, 0);
+  $('t-busy').textContent = busy >= 100 ? 'занято 100%' : `свободно ${100 - busy}%`;
+  $('t-busy').className = 'head-badge' + (busy >= 100 ? '' : ' warn');
+}
+
+/* Meter window */
+function setSeg(seg, v) { seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); mwDn(); }
+$('mw-dn').addEventListener('click', (e) => { if (e.target.dataset.v) setSeg($('mw-dn'), e.target.dataset.v); });
+function mwKind() {
+  const k = $('mw-kind').value;
+  document.querySelectorAll('.mw-unit').forEach((u) => u.textContent = UNITS[k]);
+  $('mw-tariff-q').hidden = k !== 'Электричество';
+  if (k !== 'Электричество') setSeg($('mw-dn'), '0');
+}
+function mwDn() {
+  const dn = $('mw-dn').querySelector('.on').dataset.v === '1';
+  $('mw-night-f').hidden = !dn;
+  $('mw-start-l').innerHTML = (dn ? 'Начальное · день' : 'Начальное показание') + ' <span class="req">*</span>';
+}
+function openMeter(id) {
+  editM = id || null;
+  const m = meters.find((x) => x.id === id) || { kind: 'Электричество', serial: '', dn: false, start: '', night: '' };
+  $('mw-title').textContent = id ? 'Счётчик ' + (meters.indexOf(m) + 1) : 'Новый счётчик';
+  $('mw-kind').value = m.kind; $('mw-serial').value = m.serial; $('mw-start').value = m.start; $('mw-night').value = m.night || '';
+  ['mw-serial', 'mw-start', 'mw-night'].forEach((i) => lift($(i)));
+  mwKind(); setSeg($('mw-dn'), m.dn ? '1' : '0');
+  $('mw-del').hidden = !id;
+  $('mw-who').textContent = m.owner ? `Платит по счётчику: ${tName(m.owner)} (меняется в окне арендатора).`
+    : 'Счётчик общий. Закрепить за арендатором — в окне арендатора, «Его счётчики».';
+  $('meter-win').hidden = false; $('mw-serial').focus();
+}
+function saveMeter() {
+  const start = $('mw-start').value.trim(), dn = $('mw-dn').querySelector('.on').dataset.v === '1';
+  if (!start || (dn && !$('mw-night').value.trim())) { $('mw-start').focus(); $('mw-start').style.borderColor = 'var(--color-danger)'; return; }
+  $('mw-start').style.borderColor = '';
+  const data = { kind: $('mw-kind').value, serial: $('mw-serial').value.trim(), dn, start, night: $('mw-night').value.trim() };
+  if (editM) Object.assign(meters.find((x) => x.id === editM), data);
+  else meters.push({ id: nextId++, owner: null, ...data });
+  closeWin(); render();
+}
+function delMeter() { meters = meters.filter((m) => m.id !== editM); closeWin(); render(); }
+
+/* Tenant window */
+function twHint() {
+  const s = parseFloat($('tw-share').value.replace(',', '.'));
+  $('tw-hint').textContent = s > 0 ? `≈ ${nf(Math.round(AREA * s) / 100)} м² из ${AREA} м²` : '';
+}
+function openTenant(id) {
+  editT = id || null;
+  const t = tenants.find((x) => x.id === id) || { name: '', phone: '', share: '', until: '' };
+  const others = tenants.filter((x) => x.id !== id).reduce((s, x) => s + x.share, 0);
+  $('tw-title').textContent = id ? 'Арендатор ' + tNum(id) : 'Новый арендатор';
+  $('tw-free').textContent = (100 - others) + '%';
+  $('tw-name').value = t.name; $('tw-phone').value = t.phone; $('tw-until').value = t.until;
+  $('tw-share').value = id ? t.share : (100 - others > 0 ? 100 - others : '');
+  ['tw-name', 'tw-phone', 'tw-share', 'tw-until'].forEach((i) => lift($(i))); twHint();
+  // Free meters first (a departed tenant's), then common; another tenant's meters are shown but locked.
+  const order = (m) => (m.owner === id && id ? 0 : freed.has(m.id) ? 1 : !m.owner ? 2 : 3);
+  const list = [...meters].sort((a, b) => order(a) - order(b));
+  $('tw-meters').innerHTML = list.length ? list.map((m) => {
+    const busy = m.owner && m.owner !== id;
+    const mark = m.owner === id && id || (!id && freed.has(m.id));
+    const note = busy ? `платит ${esc(tName(m.owner))}` : freed.has(m.id) ? 'свободен — арендатор съехал' : !m.owner ? 'общий' : '';
+    return `<label class="check${busy ? ' busy' : ''}"><input type="checkbox" value="${m.id}"${mark ? ' checked' : ''}${busy ? ' disabled' : ''} onchange="twCount()">
+      <span class="num">${meters.indexOf(m) + 1}</span><span>${esc(m.kind)}${m.serial ? ' · № ' + m.serial : ''}</span>
+      <span class="info">${note}</span></label>`;
+  }).join('') : '<div class="empty">На объекте пока нет счётчиков — добавьте их в блоке «Счётчики».</div>';
+  twCount();
+  $('tw-del').hidden = !id;
+  $('tenant-win').hidden = false; $('tw-name').focus();
+}
+function twCount() {
+  const n = $('tw-meters').querySelectorAll('input:checked').length;
+  $('tw-mcount').textContent = n ? `отмечено ${n}` : '';
+}
+function saveTenant() {
+  const name = $('tw-name').value.trim(), share = parseFloat($('tw-share').value.replace(',', '.'));
+  if (!name) { $('tw-name').focus(); return; }
+  if (!(share > 0)) { $('tw-share').focus(); return; }
+  const data = { name, phone: $('tw-phone').value.trim(), share, until: $('tw-until').value.trim() };
+  let id = editT;
+  if (id) Object.assign(tenants.find((x) => x.id === id), data);
+  else { id = nextId++; tenants.push({ id, ...data }); }
+  const picked = new Set([...$('tw-meters').querySelectorAll('input:checked')].map((i) => +i.value));
+  meters.forEach((m) => {
+    if (picked.has(m.id)) { m.owner = id; freed.delete(m.id); }
+    else if (m.owner === id) m.owner = null;
+  });
+  closeWin(); render();
+}
+function delTenant() {
+  meters.forEach((m) => { if (m.owner === editT) { m.owner = null; freed.add(m.id); } });
+  tenants = tenants.filter((t) => t.id !== editT);
+  closeWin(); render();
+}
+function closeWin() { $('meter-win').hidden = true; $('tenant-win').hidden = true; }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeWin(); });
+render();
+</script>
+</body>
+</html>
