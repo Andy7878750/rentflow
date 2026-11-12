@@ -1540,3 +1540,77 @@ input.masked {
 .uk-fields[hidden] {
   display: none;
 }
+
+/* ---------- Fields, 2026-11-12: a low 40px box, the label rises ABOVE the box ----------
+   Every field keeps a line on top for its label from the start, so nothing jumps when the
+   label moves up. Empty — the label sits inside the box like a hint; focused or filled — it
+   stands over the box in small type. */
+.field.fl {
+  --fl-top: 18px; /* the label line above the box */
+  --fl-h: 40px;   /* the box */
+  padding-top: var(--fl-top);
+}
+
+.field.fl > label {
+  top: calc(var(--fl-top) + var(--fl-h) / 2);
+}
+
+.fl.is-filled > label,
+.fl:focus-within > label,
+.fl:has(input:not(:placeholder-shown)) > label {
+  top: 0;
+  left: 1px;
+  right: 0;
+  font-size: 11px;
+  transform: none;
+}
+
+.fl input:not([type=radio]):not([type=checkbox]),
+.fl .select-trigger {
+  height: var(--fl-h);
+  padding: 0 12px;
+}
+
+.fl .select-trigger {
+  padding-right: 40px;
+}
+
+.fl-button input:not([type=radio]):not([type=checkbox]) {
+  padding-right: 44px;
+}
+
+.fl .unit-input input:not([type=radio]):not([type=checkbox]) {
+  height: calc(var(--fl-h) - 2px);
+  padding: 0 10px 0 12px;
+}
+
+.fl .unit-input .unit-select,
+.fl .unit-trigger {
+  height: calc(var(--fl-h) - 2px);
+}
+
+.share-hint {
+  top: calc(var(--fl-top) + 13px);
+}
+
+/* Rows of fields: the label line already gives air, so the gap between rows is smaller. */
+.pform .form-section-body,
+.uk-fields {
+  gap: 10px;
+}
+
+.form-grid {
+  row-gap: 10px;
+}
+
+.tenant-line + .tenant-line {
+  margin-top: 10px;
+}
+
+.tenant-row::before {
+  top: calc(var(--row-top) + 26px); /* middle of the first box: 18 + (40 − 24) / 2 */
+}
+
+.tenant-remove {
+  margin-top: 20px; /* 18 + (40 − 36) / 2 */
+}
