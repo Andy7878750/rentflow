@@ -161,7 +161,7 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
     el:    { name: 'Электричество', icon: '⚡', kinds: ['el'], supplier: 'Петроэлектросбыт', src: 'meters', meters: [1], td: '7,50', tn: '3,20' },
     cold:  { name: 'Вода холодная', icon: '💧', kinds: ['cold'], supplier: 'Водоканал', src: 'meters', meters: [3, 5], tariff: '45,50' },
     hot:   { name: 'Вода горячая', icon: '♨', kinds: ['hot'], supplier: 'ТЭК СПб', src: 'meters', meters: [2, 4], tariff: '52,00', extra: '1', norm: '0,06', normTariff: '4 800' },
-    drain: { name: 'Водоотведение', icon: '↧', kinds: ['cold', 'hot'], supplier: 'Водоканал', src: 'meters', meters: [2, 3, 4, 5], tariff: '35,00' },
+    drain: { name: 'Водоотведение', icon: '↧', kinds: ['cold', 'hot'], supplier: 'Водоканал', src: 'meters', meters: [2, 3, 4, 5], tariff: '35,00', oneTariff: true },
     heat:  { name: 'Отопление', icon: '🔥', kinds: ['heat'], supplier: 'ТЭК СПб', src: 'receipt', recMode: 'qty', recUnit: 'Гкал', recTariff: '4 800', sub: '1' },
     maint: { name: 'Содержание и ремонт', icon: '🏠', kinds: [], supplier: 'УК «Дом»', src: 'receipt', recMode: 'sum', div: 'area' },
     net:   { name: 'Интернет', icon: '📶', kinds: [], supplier: 'Ростелеком', src: 'fixed', fixed: '600', div: 'equal' },
@@ -171,7 +171,7 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
   var SRC = { meters: 'По счётчикам × тариф', receipt: 'Из квитанции', fixed: 'Постоянная' };
   var MONTHS = [['2026-09', 'Сентябрь 2026'], ['2026-10', 'Октябрь 2026'], ['2026-11', 'Ноябрь 2026'], ['2026-12', 'Декабрь 2026']];
   var NOW = '2026-11';
-  var TARIFF_KEYS = { tariff: 'Тариф', td: 'Тариф день', tn: 'Тариф ночь', norm: 'Подогрев', normTariff: 'Тариф тепла', recTariff: 'Тариф' };
+  var TARIFF_KEYS = { tariff: 'Тариф', t_el: 'Тариф', t_cold: 'Тариф', t_hot: 'Тариф', t_heat: 'Тариф', td: 'Тариф день', tn: 'Тариф ночь', norm: 'Подогрев', normTariff: 'Тариф тепла', recTariff: 'Тариф' };
 
   var S, orig;
   function applyTpl(id, edit) {
@@ -180,6 +180,9 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
       recTariff: t.recTariff || '', fixed: t.fixed || '', meters: (t.meters || []).slice(), td: t.td || '', tn: t.tn || '',
       tariff: t.tariff || '', extra: t.extra || '0', norm: t.norm || '', normTariff: t.normTariff || '', sub: t.sub || '0',
       div: t.div || 'shares', diff: 'owner', from: NOW };
+    // Each kind of meter has its own tariff; «Водоотведение» — one tariff for all its meters.
+    Object.keys(UNITS).forEach(function (k) { S['t_' + k] = !t.oneTariff && t.kinds.indexOf(k) >= 0 ? (t.tariff || '') : ''; });
+    if (!t.oneTariff) S.tariff = '';
     orig = {}; Object.keys(TARIFF_KEYS).forEach(function (k) { orig[k] = S[k]; });
   }
 
@@ -213,6 +216,7 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
   // ---- what the answers mean ----
   function selected() { return S.meters.map(meter); }
   function unitOf(list) { var u = list.map(function (m) { return UNITS[m.kind]; }); return u.filter(function (x, i) { return u.indexOf(x) === i; }); }
+  function tkey(m) { return TPL[S.tpl].oneTariff ? 'tariff' : 't_' + m.kind; }
   function hasDn() { return selected().some(function (m) { return m.dn; }); }
   function hasHot() { return selected().some(function (m) { return m.kind === 'hot'; }); }
   function canSub() { return S.src === 'receipt' && (S.tpl === 'heat' || S.tpl === 'own') && (S.recMode === 'sum' || S.recUnit === 'Гкал'); }
@@ -265,21 +269,21 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
     } else {
       var list = selected();
       if (!list.length) return { err: 'Отметьте хотя бы один счётчик.' };
-      var u = unitOf(list);
-      if (u.length > 1) return { err: 'Счётчики меряют разное (' + u.join(' и ') + ') — отметьте счётчики одного вида.' };
       var dn = hasDn(), extra = hasHot() && S.extra === '1';
-      var td = num(S.td), tn = num(S.tn), tt = num(S.tariff), nr = num(S.norm), nt = num(S.normTariff);
+      var td = num(S.td), tn = num(S.tn), nr = num(S.norm), nt = num(S.normTariff);
+      var tt = function (m) { return num(S[tkey(m)]); };
       if (dn && (isNaN(td) || isNaN(tn))) return { err: 'Укажите тариф день и ночь.' };
-      if (!dn && isNaN(tt)) return { err: 'Укажите тариф.' };
+      var noT = list.filter(function (m) { return !m.dn && isNaN(tt(m)); })[0];
+      if (noT) return { err: 'Укажите тариф' + (TPL[S.tpl].oneTariff ? '.' : ': ' + KIND_NAMES[noT.kind] + '.') };
       if (extra && (isNaN(nr) || isNaN(nt))) return { err: 'Укажите подогрев: Гкал на 1 м³ и тариф за Гкал.' };
       words = (dn ? 'День × Тариф день + Ночь × Тариф ночь' : 'Расход × Тариф') + (extra ? ' + Расход × Подогрев × Тариф тепла' : '');
       var cost = function (m) {
-        var c = m.dn ? m.use * td + m.useN * tn : m.use * tt;
+        var c = m.dn ? m.use * td + m.useN * tn : m.use * tt(m);
         if (extra && m.kind === 'hot') c += m.use * nr * nt;
         return r2(c);
       };
       var expr = function (m) {
-        var s = m.dn ? n3(m.use) + ' × ' + n3(td) + ' + ' + n3(m.useN) + ' × ' + n3(tn) : n3(m.use) + ' ' + UNITS[m.kind] + ' × ' + n3(tt);
+        var s = m.dn ? n3(m.use) + ' × ' + n3(td) + ' + ' + n3(m.useN) + ' × ' + n3(tn) : n3(m.use) + ' ' + UNITS[m.kind] + ' × ' + n3(tt(m));
         if (extra && m.kind === 'hot') s += ' + ' + n3(m.use) + ' × ' + n3(nr) + ' × ' + n3(nt);
         return s;
       };
@@ -344,12 +348,20 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
           '<span class="muted">пример: ' + (m.dn ? m.use + ' / ' + m.useN : m.use) + ' ' + UNITS[m.kind] + '</span></label>';
       }).join('') : '<span class="note">У объекта нет таких счётчиков.</span>') +
         '<span class="note">Здесь только счётчики этого объекта. Нет нужного? <button type="button" class="link" data-act="add-meter">+ Добавить счётчик объекта</button></span></div>');
-      var u = unitOf(selected());
-      var unit = u.length === 1 ? u[0] : (UNITS[kinds[0]] || '');
-      if (hasDn()) b += q('Тариф', inp('td', '₽ день', 64) + inp('tn', '₽ ночь', 64) + '<span class="note">за ' + unit + '</span>');
-      else b += q('Тариф', inp('tariff', '₽ за ' + unit, 70));
+      // Tariff: one per kind of ticked meter (day/night meter — two); «Водоотведение» — one for all.
+      var sel = selected(), seen = [], tparts = [];
+      if (sel.length && TPL[S.tpl].oneTariff) tparts.push(inp('tariff', '₽ за ' + UNITS[sel[0].kind], 70));
+      else sel.forEach(function (m) {
+        var key = m.dn ? 'dn' : m.kind;
+        if (seen.indexOf(key) >= 0) return; seen.push(key);
+        var name = '<span class="note">' + KIND_NAMES[m.kind] + (m.dn ? ', день / ночь' : '') + '</span>';
+        tparts.push('<span class="ans">' + (sel.length > 1 ? name : '') + (m.dn ? inp('td', '₽ день', 64) + inp('tn', '₽ ночь', 64) + '<span class="note">за ' + UNITS[m.kind] + '</span>'
+          : inp('t_' + m.kind, '₽ за ' + UNITS[m.kind], 70)) + '</span>');
+      });
+      if (tparts.length) b += q('Тариф', tparts.join(''));
+      if (TPL[S.tpl].oneTariff && sel.length) b += q('', '<span class="note">Один тариф на все отмеченные счётчики: водоотведение считают с холодной и горячей воды по одной цене.</span>');
       if (hasHot()) {
-        b += q('Подогрев', seg('extra', [['0', 'В цене м³'], ['1', 'Отдельно, в Гкал']]));
+        b += q('Подогрев горячей воды', seg('extra', [['0', 'В цене м³'], ['1', 'Отдельно, в Гкал']]));
         if (S.extra === '1') {
           var per = num(S.norm) * num(S.normTariff);
           b += q('', inp('norm', 'Гкал на 1 м³', 52) + '<span class="op">×</span>' + inp('normTariff', '₽ за Гкал', 64) +
