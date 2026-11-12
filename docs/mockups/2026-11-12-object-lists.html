@@ -88,7 +88,7 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
 
 /* Segmented, 38px like the fields so a row lines up */
 .seg { display: flex; background: #eef0f2; border-radius: 8px; padding: 3px; gap: 2px; height: 38px; }
-.seg button { flex: 1; border: 0; background: none; font: inherit; font-size: 13px; padding: 0 10px; border-radius: 6px; cursor: pointer; color: var(--color-text-muted); white-space: nowrap; }
+.seg button { flex: 1 1 auto; border: 0; background: none; font: inherit; font-size: 13px; padding: 0 10px; border-radius: 6px; cursor: pointer; color: var(--color-text-muted); white-space: nowrap; }
 .seg button.on { background: var(--color-accent); color: #fff; }
 .seg-cell { padding-top: 18px; }
 .seg-cell > .cap { display: block; margin-top: -18px; height: 18px; font-size: 11px; color: var(--color-text-muted); }
@@ -214,10 +214,10 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
           <div class="grid g3">
             <div class="fl up"><label>Что меряет <span class="req">*</span></label><div class="dd" id="mw-kind"></div></div>
             <div class="fl"><label>№ счётчика</label><input id="mw-serial" oninput="lift(this)" autocomplete="off"></div>
-          </div>
-          <div class="grid g3" id="mw-start-row">
             <div class="seg-cell" id="mw-dn-cell"><span class="cap"></span>
               <div class="seg" id="mw-dn"><button type="button" class="on" data-v="0">Однотарифный</button><button type="button" data-v="1">День / ночь</button></div></div>
+          </div>
+          <div class="grid g3" id="mw-start-row">
             <div class="fl has-unit"><label id="mw-start-l">Начальное <span class="req">*</span></label><input id="mw-start" oninput="lift(this)" autocomplete="off"><span class="unit mw-unit"></span></div>
             <div class="fl has-unit" id="mw-night-f"><label>Начальное · ночь <span class="req">*</span></label><input id="mw-night" oninput="lift(this)" autocomplete="off"><span class="unit mw-unit"></span></div>
           </div>
