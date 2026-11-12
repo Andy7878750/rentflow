@@ -1,0 +1,67 @@
+{% comment %}One meter of the object: its fields live hidden in the object form; app.js shows them in a small
+   window («Счётчик N») and one info row in «Счётчики». Who pays by it (`owner`) is ticked in the tenant window.{% endcomment %}
+<div class="item" data-item="meter"{% if mform.DELETE.value %} hidden{% endif %}>
+  {{ mform.id }}{{ mform.kind }}{{ mform.name }}{{ mform.unit }}{{ mform.owner }}
+  <span class="visually-hidden">{{ mform.DELETE }}</span>
+  <section class="form-section">
+    <h2 class="form-section-head">Счётчик</h2>
+    <div class="form-section-body">
+      <div class="item-grid">
+        <div class="field fl is-filled">
+          <label>Что меряет <span class="req">*</span></label>
+          <div class="select" data-msel>
+            <button type="button" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" data-msel-trigger>
+              <span class="select-value" data-msel-label>{{ mform.name.value }}</span>
+              <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+            </button>
+            <div class="select-menu" data-msel-menu hidden>
+              <ul class="select-list" role="listbox" aria-label="Что меряет">
+                {% for option in meter_kinds %}
+                  <li class="select-row" data-kind="{{ option.kind }}" data-name="{{ option.name }}" data-unit="{{ option.unit }}">
+                    <button type="button" class="select-option" role="option"><span>{{ option.name }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button>
+                  </li>
+                {% endfor %}
+              </ul>
+              <div class="select-add">
+                <svg class="icon"><use href="#i-plus"/></svg>
+                <input type="text" class="select-add-input" placeholder="свой вариант…" maxlength="100" aria-label="Свой вариант счётчика" data-msel-new>
+                <button type="button" class="select-add-btn" data-msel-add hidden>Добавить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% include "properties/_field.html" with field=mform.serial label="№ счётчика" %}
+        <div class="field seg-field">
+          <div class="segmented seg-fill" role="radiogroup" aria-label="Тариф">
+            {% for value, label in mform.fields.day_night.choices %}
+              <label><input type="radio" name="{{ mform.day_night.html_name }}" value="{{ value }}" data-day-night{% if mform.day_night.value|stringformat:'s' == value %} checked{% endif %}><span>{{ label }}</span></label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="item-grid">
+        {% for field in mform %}{% if field.name == 'initial' or field.name == 'initial_night' %}
+          <div class="field fl fl-unit"{% if field.name == 'initial_night' %} data-night-field{% endif %}>
+            <label for="{{ field.id_for_label }}">{% if field.name == 'initial' %}Начальное<span data-day-label> · день</span>{% else %}Начальное · ночь{% endif %} <span class="req">*</span></label>
+            <div class="unit-input">
+              <span class="unit-value">{{ field }}</span>
+              <div class="unit-picker" data-munit>
+                <button type="button" class="unit-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Единица" data-munit-trigger>
+                  <span data-munit-label>{{ mform.unit.value }}</span>
+                  <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+                </button>
+                <ul class="select-menu unit-menu" role="listbox" data-munit-menu hidden>
+                  {% for unit in mform.units %}
+                    <li class="select-row" data-munit-value="{{ unit }}"><button type="button" class="select-option" role="option"><span>{{ unit }}</span><svg class="icon select-check"><use href="#i-check"/></svg></button></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            {% if field.errors %}<ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          </div>
+        {% endif %}{% endfor %}
+      </div>
+      <p class="form-note item-note">Начальное показание — то, что на счётчике сейчас. С него начнётся первый месяц.</p>
+    </div>
+  </section>
+</div>

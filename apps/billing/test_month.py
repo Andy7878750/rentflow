@@ -108,6 +108,21 @@ class MonthBillTests(TestCase):
         self.assertEqual(line.formula, '120 кВт·ч × 6,5 ₽')
         self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('195.00'))
 
+    def test_a_free_meter_is_paid_by_the_owner(self):
+        receipt = self.add('electricity', tariff=Decimal('6.5'))
+        vlad_meter = receipt.meters.get(tenant=self.vlad)
+        vlad_meter.tenant, vlad_meter.vacant = None, True  # Владислав moved out
+        vlad_meter.save()
+        services.save_month_input(self.prop, SEPT, {
+            f'prev-{vlad_meter.pk}': '500', f'cur-{vlad_meter.pk}': '530',
+            f'prev-{receipt.meters.get(tenant=self.viktor).pk}': '0',
+            f'cur-{receipt.meters.get(tenant=self.viktor).pk}': '0',
+        })
+        bill = services.month_bill(self.prop, SEPT)
+        owner = next(line for line in bill.owner.lines if line.receipt.pk == receipt.pk)
+        self.assertEqual(owner.amount, Decimal('195.00'))
+        self.assertIn('свободный счётчик', owner.formula)
+
     def test_previous_reading_comes_from_last_month(self):
         receipt = self.add('water', tariff=Decimal('300'))
         meter = receipt.meters.get(tenant=self.viktor)

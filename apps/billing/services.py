@@ -419,11 +419,18 @@ def delete_receipt(receipt):
 
 
 @transaction.atomic
-def save_receipt(receipt, meters=None, today=None, excluded=None):
+def save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=False):
     """Save the service. meters — the list from the service window (parse_meters); without it
-    (saved from code, the object's tenants changed) the meters follow the service's layout.
+    (saved from code) the meters follow the service's layout.
+    keep_meters — the object's tenants changed: the service keeps the meters it has (they are the
+    premises'; who pays by each is set on the object), only its layout follows them.
     excluded — tenants switched off in «Кто платит» (parse_excluded); None keeps them as they are."""
     old = Receipt.objects.filter(pk=receipt.pk).values('tariff', 'tariff_night').first() if receipt.pk else None
+    linked = list(receipt.meters.all()) if keep_meters and receipt.pk and receipt.metered else []
+    if linked and not meters and not receipt.property.is_owner_used:
+        # A free meter (its tenant moved out) still counts as a tenant's one, not a common one.
+        meters = None
+        receipt.layout = layout_for([{'tenant_id': m.tenant_id or ('free' if m.vacant else None)} for m in linked])
     if meters and receipt.metered and not receipt.property.is_owner_used:
         receipt.layout = layout_for(meters)
     normalize(receipt)
@@ -432,7 +439,7 @@ def save_receipt(receipt, meters=None, today=None, excluded=None):
         keep_past_tariffs(receipt, old['tariff'], old['tariff_night'], today or date.today())
     if meters and receipt.metered:
         save_meter_list(receipt, meters)
-    else:
+    elif not linked:
         sync_meters(receipt)
     if excluded is not None:
         receipt.excluded.set(excluded)
@@ -455,7 +462,7 @@ def split_warning(receipt):
 def resync_property(property_obj):
     """After the object's tenants or occupancy change, keep every receipt consistent."""
     for receipt in property_obj.receipts.all():
-        save_receipt(receipt)
+        save_receipt(receipt, keep_meters=True)
 
 
 # ---------------------------------------------------------------------------
@@ -720,7 +727,12 @@ def month_bill(property_obj, month):
                 billed = Decimal('0')
                 for meter, (exact, formula) in costs:
                     payer = payers.get(meter.tenant_id)
-                    if meter.tenant_id is None and receipt.layout == Receipt.Layout.BOTH:
+                    if meter.vacant and not meter.tenant_id:
+                        # A free meter: its tenant moved out, the owner pays until a new one takes it.
+                        line = Line(receipt, money(exact), f'{formula} · свободный счётчик')
+                        owner.lines.append(line)
+                        billed += line.base
+                    elif meter.tenant_id is None and receipt.layout == Receipt.Layout.BOTH:
                         common = (common or Decimal('0')) + exact
                     elif payer:
                         line = tenant_line(receipt, exact, formula)

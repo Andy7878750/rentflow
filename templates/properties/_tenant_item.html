@@ -1,0 +1,19 @@
+{% comment %}One tenant of the object: the fields live hidden in the object form; app.js shows them in a small
+   window («Арендатор N»), with «Счётчики · Имя» ticks under them, and one info row in «Кто пользуется».{% endcomment %}
+<div class="item" data-item="tenant" data-tenant-row{% if tenant_form.DELETE.value %} hidden{% endif %}>
+  {{ tenant_form.id }}
+  <span class="visually-hidden">{{ tenant_form.DELETE }}</span>
+  <section class="form-section">
+    <h2 class="form-section-head">Арендатор</h2>
+    <div class="form-section-body">
+      <div class="item-grid">
+        {% include "properties/_field.html" with field=tenant_form.name label="Имя или название" required=1 %}
+        {% include "properties/_field.html" with field=tenant_form.share label="Доля" required=1 unit_select=1 tip="Часть объекта, за которую платит арендатор: в процентах или в м². Единица общая для всех арендаторов объекта." %}
+        {% include "properties/_field.html" with field=tenant_form.phone label="Телефон" tip="Чтобы быстро связаться с арендатором. В счёт не попадает." %}
+        {% include "properties/_field.html" with field=tenant_form.email label="Почта (для счёта)" tip="На этот адрес будем отправлять арендатору счета." %}
+        {% include "properties/_field.html" with field=tenant_form.contract label="Договор №" %}
+        {% include "properties/_field.html" with field=tenant_form.contract_until label="Договор до" date=1 %}
+      </div>
+    </div>
+  </section>
+</div>

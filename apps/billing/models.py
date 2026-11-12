@@ -98,7 +98,13 @@ class Meter(models.Model):
     """
 
     property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='meters')
-    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True, related_name='meters')
+    # Who pays by it now. Empty — a common meter, or a free one (see `vacant`). A tenant who moves out
+    # leaves the meter on the object: it is the premises', not the tenant's.
+    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.SET_NULL, null=True, blank=True, related_name='meters')
+    # «Свободен»: its tenant moved out — the owner pays by it until a new tenant takes it.
+    vacant = models.BooleanField(default=False)
+    # Two zones: day and night readings (initial / initial_night, Reading.*_night).
+    day_night = models.BooleanField(default=False)
     # What it measures: a ready-made kind, or «custom» with the landlord's own name.
     kind = models.CharField(max_length=20, choices=Receipt.Kind.choices, blank=True)
     name = models.CharField(max_length=100)  # «Вода холодная», «Электричество» or the own name
@@ -119,8 +125,10 @@ class Meter(models.Model):
 
     @builtins.property  # «property» here is the object field
     def who(self):
-        """Whose meter it is: the tenant, or the object itself."""
-        return self.tenant.name if self.tenant_id else 'Объект (общий)'
+        """Whose meter it is: the tenant, a free one, or the object itself."""
+        if self.tenant_id:
+            return self.tenant.name
+        return 'Свободен' if self.vacant else 'Объект (общий)'
 
 
 class MonthlyAmount(models.Model):

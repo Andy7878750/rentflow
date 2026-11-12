@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.properties.models import Property
-from apps.properties.services import setup_steps
+from apps.properties.services import free_meters, setup_steps
 from apps.tenants.models import Tenant
 
 from . import services
@@ -152,16 +152,21 @@ class ReceiptServiceTests(TestCase):
         self.assertEqual(receipt.amount_mode, Receipt.AmountMode.MONTHLY)
         self.assertIsNone(receipt.fixed_amount)
 
-    def test_meters_follow_tenant_changes(self):
+    def test_a_tenant_moving_out_leaves_the_meter_free(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))
-        kept_meter = receipt.meters.get(tenant=self.viktor)
+        vlad_meter = receipt.meters.get(tenant=self.vlad)
 
+        free_meters(self.vlad)
         self.vlad.delete()
         Tenant.objects.create(property=self.prop, name='Ольга', share_percent=Decimal('55'))
         services.resync_property(self.prop)
 
-        self.assertEqual(sorted(receipt.meters.values_list('tenant__name', flat=True)), ['Виктор', 'Ольга'])
-        self.assertTrue(Meter.objects.filter(pk=kept_meter.pk).exists(), 'existing meter keeps its history')
+        vlad_meter.refresh_from_db()
+        self.assertTrue(vlad_meter.vacant, 'the meter stays on the object, free')
+        self.assertIsNone(vlad_meter.tenant)
+        self.assertEqual(receipt.meters.count(), 2, 'no meter is added or removed behind the owner')
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.layout, Receipt.Layout.TENANTS, 'a free meter is not a common one')
 
     def test_meters_belong_to_the_object(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'electricity'))

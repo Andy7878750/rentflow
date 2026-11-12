@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
+from apps.billing.models import Meter, Receipt
 from apps.tenants.models import Tenant
 
 from . import services
@@ -489,3 +490,86 @@ class CustomKindTests(TestCase):
         self.client.post(reverse('property_create'), form_data(kind='house', custom_kind='Гараж'))
         prop = Property.objects.get()
         self.assertEqual((prop.kind_label, prop.custom_kind), ('Дом', ''))
+
+
+def meter_data(meters, initial_forms=0):
+    """The meters formset part of the object form's POST body."""
+    data = {
+        'meters-TOTAL_FORMS': str(len(meters)),
+        'meters-INITIAL_FORMS': str(initial_forms),
+        'meters-MIN_NUM_FORMS': '0',
+        'meters-MAX_NUM_FORMS': '1000',
+    }
+    for index, meter in enumerate(meters):
+        for key, value in meter.items():
+            data[f'meters-{index}-{key}'] = value
+    return data
+
+
+class ObjectMetersTests(TestCase):
+    """«Счётчики» in the object window: the premises' meters, tied to tenants from the tenant window."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='a@example.ru', email='a@example.ru', password='secret1')
+        self.client.force_login(self.user)
+
+    def test_new_object_with_meters_tied_to_a_new_tenant(self):
+        data = form_data(area='60', tenants=[{'name': 'Виктор', 'share': '45'}])
+        data.update(meter_data([
+            {'kind': 'electricity', 'name': 'Электричество', 'unit': 'кВт·ч', 'serial': '0123',
+             'day_night': '1', 'initial': '12 450', 'initial_night': '6210', 'owner': ''},
+            {'kind': 'hot_water', 'name': 'Вода горячая', 'unit': 'м³', 'day_night': '0',
+             'initial': '81', 'owner': 'new:0'},
+        ]))
+        self.client.post(reverse('property_create'), data)
+
+        prop = Property.objects.get()
+        light, hot = prop.meters.order_by('id')
+        self.assertTrue(light.day_night)
+        self.assertEqual((light.initial, light.initial_night), (Decimal('12450'), Decimal('6210')))
+        self.assertIsNone(light.tenant)
+        self.assertEqual(hot.tenant.name, 'Виктор')
+        self.assertFalse(hot.vacant)
+
+    def test_start_reading_is_required(self):
+        data = form_data()
+        data.update(meter_data([{'kind': 'water', 'name': 'Вода холодная', 'day_night': '0', 'initial': ''}]))
+        response = self.client.post(reverse('property_create'), data)
+        self.assertEqual(Property.objects.count(), 0)
+        self.assertContains(response, 'Укажите начальное показание.')
+
+    def test_own_kind_keeps_its_unit(self):
+        data = form_data()
+        data.update(meter_data([{'kind': 'custom', 'name': 'Скважина', 'unit': 'л', 'day_night': '0', 'initial': '5'}]))
+        self.client.post(reverse('property_create'), data)
+        meter = Meter.objects.get()
+        self.assertEqual((meter.kind, meter.name, meter.unit), ('custom', 'Скважина', 'л'))
+
+    def test_a_tenant_moving_out_leaves_the_meter_free(self):
+        prop = Property.objects.create(owner=self.user, name='Глинки 148', area=Decimal('60'))
+        viktor = Tenant.objects.create(property=prop, name='Виктор', share_percent=Decimal('45'))
+        meter = Meter.objects.create(property=prop, tenant=viktor, kind='water', name='Вода холодная',
+                                     unit='м³', initial=Decimal('10'))
+        data = form_data(area='60', initial_forms=1, tenants=[
+            {'id': str(viktor.pk), 'name': 'Виктор', 'share': '45', 'DELETE': 'on'},
+        ])
+        data.update(meter_data([{'id': str(meter.pk), 'kind': 'water', 'name': 'Вода холодная', 'day_night': '0',
+                                 'initial': '10', 'owner': f'pk:{viktor.pk}'}], initial_forms=1))
+        self.client.post(reverse('property_edit', args=[prop.pk]), data)
+
+        meter.refresh_from_db()
+        self.assertFalse(Tenant.objects.exists())
+        self.assertIsNone(meter.tenant)
+        self.assertTrue(meter.vacant, 'the meter stays with the premises, free')
+
+    def test_a_meter_a_service_uses_is_not_deleted(self):
+        prop = Property.objects.create(owner=self.user, name='Глинки 148')
+        meter = Meter.objects.create(property=prop, kind='water', name='Вода холодная', unit='м³', initial=1)
+        receipt = Receipt.objects.create(property=prop, kind='water', name='Холодная вода')
+        receipt.meters.add(meter)
+        data = form_data()
+        data.update(meter_data([{'id': str(meter.pk), 'kind': 'water', 'name': 'Вода холодная', 'day_night': '0',
+                                 'initial': '1', 'DELETE': 'on'}], initial_forms=1))
+        response = self.client.post(reverse('property_edit', args=[prop.pk]), data)
+        self.assertTrue(Meter.objects.filter(pk=meter.pk).exists())
+        self.assertContains(response, 'сначала уберите его из услуги')

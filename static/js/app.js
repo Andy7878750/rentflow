@@ -727,15 +727,16 @@
   function initPropertyForm(form) {
     var list = form.querySelector('[data-tenant-list]');
     var template = form.querySelector('[data-tenant-template]');
-    var totalForms = form.querySelector('input[name$="-TOTAL_FORMS"]');
+    var totalForms = form.querySelector('input[name="tenants-TOTAL_FORMS"]');
     var areaInput = form.querySelector('[data-total-area]');
     var unitInput = form.querySelector('input[name=share_unit]');
     var occupied = form.querySelector('[data-occupied]');
 
     form.querySelectorAll('[data-kind-select]').forEach(function (select) { initKindSelect(select, form); });
 
+    // The whole form, not only the list: in the object window a row may sit in the small window.
     function visibleRows() {
-      return Array.prototype.filter.call(list.querySelectorAll('[data-tenant-row]'), function (row) {
+      return Array.prototype.filter.call(form.querySelectorAll('[data-tenant-row]'), function (row) {
         return !row.hidden;
       });
     }
@@ -745,7 +746,7 @@
       var totalArea = parseNumber(areaInput && areaInput.value);
       var sum = 0;
 
-      list.querySelectorAll('[data-unit-picker]').forEach(function (picker) {
+      form.querySelectorAll('[data-tenant-row] [data-unit-picker]').forEach(function (picker) {
         picker.querySelector('[data-unit-label]').textContent = isArea ? 'м²' : '%';
         picker.querySelectorAll('[data-unit-value]').forEach(function (row) {
           var selected = row.dataset.unitValue === unitInput.value;
@@ -797,7 +798,7 @@
       var del = row.querySelector('input[name$="-DELETE"]');
       if (del) del.checked = true;
       row.hidden = true;
-      if (!visibleRows().length) addRow();
+      if (!visibleRows().length && !form.querySelector('[data-items]')) addRow();
       update();
     }
 
@@ -819,6 +820,7 @@
     form.addEventListener('input', function (event) {
       if (event.target.matches('[data-share], [data-total-area]')) update();
     });
+    form.propertyUpdate = update;
 
     // Enter moves to the next field instead of saving half-filled data; Ctrl+Enter saves.
     form.addEventListener('keydown', function (event) {
@@ -870,8 +872,580 @@
     update();
   }
 
+  // ---------- Object window: meters and tenants as info rows, each filled in a small window ----------
+  // Every meter / tenant keeps its form fields hidden in the object form (data-item-store) and is
+  // shown as one info row. «+ Добавить …», ✎ or a click on the row moves its fields into the small
+  // window (data-subwin) and back; everything is saved with the object.
+
+  function initItems(form) {
+    var sub = form.querySelector('[data-subwin]');
+    var body = sub.querySelector('[data-subwin-body]');
+    var blocks = {};
+    form.querySelectorAll('[data-items]').forEach(function (block) { blocks[block.dataset.items] = block; });
+    var PREFIX = { meter: 'meters', tenant: 'tenants' };
+    var current = null;  // the item in the small window: {item, kind, holder, isNew, snap, number}
+
+    function el(tag, cls, text) {
+      var node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+    function val(item, suffix) {
+      var input = item.querySelector('input[name$="-' + suffix + '"]');
+      return input ? input.value.trim() : '';
+    }
+    function setVal(item, suffix, value) {
+      var input = item.querySelector('input[name$="-' + suffix + '"]');
+      if (input) input.value = value;
+    }
+    function indexOf(item) {
+      var input = item.querySelector('input[name$="-id"]');
+      var match = input && input.name.match(/-(\d+)-id$/);
+      return match ? match[1] : '';
+    }
+    // How meter rows name their tenant: «pk:12» once saved, «new:3» for a new row of this form.
+    function tenantKey(item) {
+      var id = val(item, 'id');
+      return id ? 'pk:' + id : 'new:' + indexOf(item);
+    }
+    // The store's items in order; the one in the small window stands in for its placeholder.
+    function items(kind) {
+      var store = blocks[kind] && blocks[kind].querySelector('[data-item-store]');
+      if (!store) return [];
+      return Array.prototype.map.call(store.children, function (child) {
+        return current && child === current.holder ? current.item : child;
+      }).filter(function (item) { return item.matches('[data-item]') && !item.hidden; });
+    }
+    function tenantName(key) {
+      var tenant = items('tenant').filter(function (item) { return tenantKey(item) === key; })[0];
+      return tenant ? val(tenant, 'name') || 'арендатор' : null;
+    }
+    function isDayNight(item) {
+      var checked = item.querySelector('[data-day-night]:checked');
+      return Boolean(checked && checked.value === '1');
+    }
+    function meterWho(item) {
+      var owner = val(item, 'owner');
+      if (form.classList.contains('is-owner') || !owner) return { text: 'общий', cls: '' };
+      var name = owner === 'free' ? null : tenantName(owner);
+      return name ? { text: name, cls: 'is-tenant' } : { text: 'свободен', cls: 'is-free' };
+    }
+    function startText(item) {
+      var day = val(item, 'initial');
+      var night = val(item, 'initial_night');
+      if (!day) return '';
+      return (isDayNight(item) ? day + ' / ' + (night || '—') : day) + ' ' + val(item, 'unit');
+    }
+    function shareUnit() {
+      var input = form.querySelector('input[name=share_unit]');
+      return input && input.value === 'area' ? 'м²' : '%';
+    }
+
+    // ---- info rows ----
+
+    function cell(cls, label, value, empty) {
+      var span = el('span', 'info-cell ' + (cls || ''));
+      if (value) {
+        if (label) span.appendChild(el('span', 'info-label', label + ' '));
+        span.appendChild(document.createTextNode(value));
+      } else {
+        span.appendChild(el('span', 'info-none', empty || '—'));
+      }
+      return span;
+    }
+
+    function infoRow(item, number, kind) {
+      var row = el('div', 'info-row info-' + kind);
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.itemRef = item;
+      row.appendChild(el('span', 'inum', String(number)));
+      if (kind === 'meter') {
+        var main = el('span', 'info-cell info-main', val(item, 'name'));
+        if (isDayNight(item)) main.appendChild(el('span', 'info-label', ' день/ночь'));
+        row.appendChild(main);
+        row.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
+        row.appendChild(cell('info-start', 'старт', startText(item), 'старт —'));
+        var who = meterWho(item);
+        row.appendChild(el('span', 'who-badge ' + who.cls, who.text));
+        row.title = 'Изменить счётчик';
+      } else {
+        row.appendChild(el('span', 'info-cell info-main', val(item, 'name')));
+        var share = val(item, 'share');
+        var hint = item.querySelector('[data-share-hint]');
+        var shareCell = cell('info-share', '', share ? share + (shareUnit() === '%' ? '%' : ' м²') : '', 'доля —');
+        if (share && hint && hint.textContent) shareCell.appendChild(el('span', 'info-label', ' · ' + hint.textContent.replace('~', '≈ ')));
+        row.appendChild(shareCell);
+        row.appendChild(cell('info-until', 'до', val(item, 'contract_until'), 'договор —'));
+        row.appendChild(cell('info-phone', '', val(item, 'phone'), 'телефон —'));
+        row.title = 'Изменить арендатора';
+      }
+      if (item.querySelector('.errorlist')) {
+        row.classList.add('has-error');
+        row.title = 'Есть ошибка — откройте и исправьте';
+      }
+      var edit = el('button', 'icon-button info-edit');
+      edit.type = 'button';
+      edit.setAttribute('aria-label', 'Изменить');
+      edit.innerHTML = '<svg class="icon"><use href="#i-edit"/></svg>';
+      var remove = el('button', 'icon-button info-remove');
+      remove.type = 'button';
+      remove.dataset.infoRemove = '';
+      remove.setAttribute('aria-label', 'Удалить');
+      remove.title = 'Удалить';
+      remove.innerHTML = '<svg class="icon"><use href="#i-x"/></svg>';
+      row.appendChild(edit);
+      row.appendChild(remove);
+      return row;
+    }
+
+    function render() {
+      ['meter', 'tenant'].forEach(function (kind) {
+        var block = blocks[kind];
+        if (!block) return;
+        var list = block.querySelector('[data-info-list]');
+        list.innerHTML = '';
+        var all = items(kind);
+        all.forEach(function (item, i) { list.appendChild(infoRow(item, i + 1, kind)); });
+        if (!all.length) {
+          list.appendChild(el('p', 'info-empty', kind === 'meter' ? 'Счётчиков пока нет' : 'Арендаторов пока нет'));
+        }
+        var count = block.querySelector('[data-items-count]');
+        if (count) count.textContent = all.length ? all.length + ' шт.' : '';
+      });
+    }
+
+    // ---- a meter's own controls ----
+
+    function syncMeter(item) {
+      var dn = isDayNight(item);
+      var night = item.querySelector('[data-night-field]');
+      if (night) night.hidden = !dn;
+      var dayLabel = item.querySelector('[data-day-label]');
+      if (dayLabel) dayLabel.hidden = !dn;
+      var name = val(item, 'name');
+      var label = item.querySelector('[data-msel-label]');
+      if (label) label.textContent = name;
+      item.querySelectorAll('[data-msel] .select-row').forEach(function (row) {
+        row.classList.toggle('is-selected', row.dataset.name === name);
+      });
+      var unit = val(item, 'unit');
+      var fixed = val(item, 'kind') !== 'custom';
+      item.querySelectorAll('[data-munit]').forEach(function (picker) {
+        picker.querySelector('[data-munit-label]').textContent = unit;
+        picker.classList.toggle('is-fixed', fixed);
+        picker.querySelector('[data-munit-trigger]').disabled = fixed;
+        picker.querySelectorAll('[data-munit-value]').forEach(function (row) {
+          row.classList.toggle('is-selected', row.dataset.munitValue === unit);
+        });
+      });
+      var badge = item.querySelector('[data-subwin-badge]');
+      if (badge) badge.textContent = name + (dn ? ' · день / ночь' : '');
+    }
+
+    function closeMenus(except) {
+      form.querySelectorAll('[data-msel].is-open, [data-munit].is-open').forEach(function (pick) {
+        if (pick === except) return;
+        pick.classList.remove('is-open');
+        var menu = pick.querySelector('[data-msel-menu], [data-munit-menu]');
+        if (menu) menu.hidden = true;
+      });
+    }
+
+    function toggleMenu(pick) {
+      var menu = pick.querySelector('[data-msel-menu], [data-munit-menu]');
+      var open = menu.hidden;
+      closeMenus(pick);
+      menu.hidden = !open;
+      pick.classList.toggle('is-open', open);
+      if (open) {
+        var first = pick.querySelector('.is-selected .select-option') || pick.querySelector('.select-option');
+        if (first) first.focus();
+      }
+    }
+
+    function chooseKind(item, row) {
+      setVal(item, 'kind', row.dataset.kind);
+      setVal(item, 'name', row.dataset.name);
+      if (row.dataset.unit) setVal(item, 'unit', row.dataset.unit);
+      else if (!val(item, 'unit')) setVal(item, 'unit', 'кВт·ч');
+      closeMenus(null);
+      syncMeter(item);
+      item.querySelector('[data-msel-trigger]').focus();
+    }
+
+    // «свой вариант…»: offered in every meter's menu from now on.
+    function addKind(item) {
+      var input = item.querySelector('[data-msel-new]');
+      var name = input.value.trim();
+      if (!name) return;
+      var lists = Array.prototype.slice.call(form.querySelectorAll('[data-msel] .select-list'));
+      var template = blocks.meter.querySelector('[data-item-template]');
+      if (template) lists = lists.concat(Array.prototype.slice.call(template.content.querySelectorAll('.select-list')));
+      var mine = null;
+      lists.forEach(function (list) {
+        var found = Array.prototype.filter.call(list.querySelectorAll('.select-row'), function (row) {
+          return row.dataset.name.toLowerCase() === name.toLowerCase();
+        })[0];
+        if (!found) {
+          found = el('li', 'select-row');
+          found.dataset.kind = 'custom';
+          found.dataset.name = name;
+          found.dataset.unit = '';
+          found.innerHTML = '<button type="button" class="select-option" role="option"><span></span>' +
+            '<svg class="icon select-check"><use href="#i-check"/></svg></button>';
+          found.querySelector('span').textContent = name;
+          list.appendChild(found);
+        }
+        if (item.contains(list)) mine = found;
+      });
+      input.value = '';
+      item.querySelector('[data-msel-add]').hidden = true;
+      chooseKind(item, mine);
+    }
+
+    // ---- the tenant's meters (ticks under the tenant's fields) ----
+
+    function tenantMeters(item) {
+      var key = tenantKey(item);
+      var section = el('section', 'form-section tenant-meters');
+      var head = el('div', 'form-section-head');
+      var title = el('h2');
+      title.dataset.tmTitle = '';
+      var count = el('span', 'head-badge');
+      count.dataset.tmCount = '';
+      head.appendChild(title);
+      head.appendChild(count);
+      section.appendChild(head);
+      var sectionBody = el('div', 'form-section-body');
+      section.appendChild(sectionBody);
+      var meters = items('meter');
+      if (!meters.length) {
+        sectionBody.appendChild(el('p', 'form-note', 'На объекте пока нет счётчиков — добавьте их в блоке «Счётчики».'));
+        return section;
+      }
+      var list = el('div', 'tm-list');
+      meters.forEach(function (meter, i) {
+        var owner = val(meter, 'owner');
+        var busy = owner && owner !== 'free' && owner !== key ? tenantName(owner) : null;
+        var row = el('label', 'tm-row' + (busy ? ' is-busy' : ''));
+        var box = el('input');
+        box.type = 'checkbox';
+        box.checked = owner === key;
+        box.disabled = Boolean(busy);
+        box.meterRef = meter;
+        row.appendChild(box);
+        row.appendChild(el('span', 'inum', String(i + 1)));
+        row.appendChild(el('span', 'info-cell info-main', val(meter, 'name')));
+        row.appendChild(cell('', '№', val(meter, 'serial'), '№ —'));
+        row.appendChild(cell('', 'старт', startText(meter), 'старт —'));
+        var who;
+        if (busy) who = el('span', 'who-badge is-tenant', busy);
+        else if (owner && owner !== key) who = el('span', 'who-badge is-free', 'свободен');
+        else if (!owner) who = el('span', 'who-badge', 'общий');
+        else who = el('span');
+        row.appendChild(who);
+        list.appendChild(row);
+      });
+      sectionBody.appendChild(list);
+      sectionBody.appendChild(el('p', 'form-note', 'Отметьте счётчики, по которым платит этот арендатор. Неотмеченные — общие: по ним платят по долям.'));
+      return section;
+    }
+
+    function syncTenantMeters() {
+      if (!current || current.kind !== 'tenant') return;
+      var title = sub.querySelector('[data-tm-title]');
+      if (title) title.textContent = 'Счётчики · ' + (val(current.item, 'name') || 'арендатор ' + current.number);
+      var count = sub.querySelector('[data-tm-count]');
+      var ticked = sub.querySelectorAll('.tm-row input:checked').length;
+      if (count) count.textContent = ticked ? 'отмечено ' + ticked : '';
+    }
+
+    function applyTicks() {
+      var key = tenantKey(current.item);
+      sub.querySelectorAll('.tm-row input').forEach(function (box) {
+        if (box.disabled) return;
+        var owner = val(box.meterRef, 'owner');
+        if (box.checked) setVal(box.meterRef, 'owner', key);
+        else if (owner === key) setVal(box.meterRef, 'owner', '');
+      });
+    }
+
+    // ---- the small window ----
+
+    function snapshot(item) {
+      return Array.prototype.map.call(item.querySelectorAll('input'), function (input) {
+        return [input, input.value, input.checked];
+      });
+    }
+
+    function freeShare(except) {
+      var used = items('tenant').reduce(function (sum, item) {
+        return item === except ? sum : sum + (parseNumber(val(item, 'share')) || 0);
+      }, 0);
+      if (shareUnit() === '%') return Math.max(0, 100 - used);
+      var areaInput = form.querySelector('[data-total-area]');
+      var area = areaInput ? parseNumber(areaInput.value) : null;
+      return area ? Math.max(0, area - used) : null;
+    }
+
+    function openItem(item, isNew) {
+      var kind = item.dataset.item;
+      var number = items(kind).indexOf(item) + 1;
+      var holder = el('span');
+      holder.hidden = true;
+      item.parentNode.replaceChild(holder, item);
+      body.innerHTML = '';
+      body.appendChild(item);
+      current = { item: item, kind: kind, holder: holder, isNew: isNew, snap: snapshot(item), number: number };
+      var title = sub.querySelector('[data-subwin-title]');
+      if (kind === 'meter') {
+        title.textContent = isNew ? 'Новый счётчик' : 'Счётчик ' + number;
+        var head = item.querySelector('.form-section-head');
+        if (head && !head.querySelector('[data-subwin-badge]')) {
+          var badge = el('span', 'head-badge');
+          badge.dataset.subwinBadge = '';
+          head.appendChild(badge);
+        }
+        syncMeter(item);
+      } else {
+        title.textContent = isNew ? 'Новый арендатор' : 'Арендатор ' + number;
+        body.appendChild(tenantMeters(item));
+        syncTenantMeters();
+      }
+      var free = kind === 'tenant' ? freeShare(item) : null;
+      var unit = shareUnit() === '%' ? '%' : ' м²';
+      sub.querySelector('[data-subwin-sub]').textContent = free === null ? ''
+        : free > 0 ? ' · можно до ' + formatNumber(free) + unit : ' · объект уже занят полностью';
+      var del = sub.querySelector('[data-subwin-delete]');
+      del.hidden = isNew;
+      del.textContent = kind === 'meter' ? 'Удалить счётчик' : 'Удалить арендатора';
+      sub.hidden = false;
+      if (form.propertyUpdate) form.propertyUpdate();
+      initFades(sub);
+      var error = item.querySelector('.errorlist');
+      var focus = error ? error.closest('.field') && error.closest('.field').querySelector('input:not([type=hidden])') : null;
+      if (!focus) {
+        focus = kind === 'meter' ? item.querySelector('[data-msel-trigger]')
+          : item.querySelector('input:not([type=hidden]):not([type=radio]):not([type=checkbox])');
+      }
+      if (focus) focus.focus();
+    }
+
+    function closeSub() {
+      body.innerHTML = '';
+      sub.hidden = true;
+      current = null;
+      closeMenus(null);
+      hideTip();
+      closeDate();
+    }
+
+    function putBack() {
+      current.holder.parentNode.replaceChild(current.item, current.holder);
+      closeSub();
+    }
+
+    function clientError(field, text) {
+      if (!field || field.querySelector('[data-client-error]')) return;
+      var list = el('ul', 'errorlist');
+      list.dataset.clientError = '';
+      list.appendChild(el('li', '', text));
+      field.appendChild(list);
+    }
+
+    function check(item) {
+      var empty = [];
+      var need = item.dataset.item === 'meter'
+        ? ['initial'].concat(isDayNight(item) ? ['initial_night'] : [])
+        : ['name', 'share'];
+      need.forEach(function (suffix) {
+        var input = item.querySelector('input[name$="-' + suffix + '"]');
+        if (input && !input.value.trim()) {
+          clientError(input.closest('.field'), 'Заполните поле.');
+          empty.push(input);
+        }
+      });
+      if (empty.length) empty[0].focus();
+      return !empty.length;
+    }
+
+    function done() {
+      if (!check(current.item)) return;
+      if (current.kind === 'tenant') applyTicks();
+      putBack();
+      render();
+    }
+
+    function cancel() {
+      if (current.isNew) {
+        var total = form.querySelector('input[name="' + PREFIX[current.kind] + '-TOTAL_FORMS"]');
+        current.holder.parentNode.removeChild(current.holder);
+        total.value = Number(total.value) - 1;
+        closeSub();
+      } else {
+        current.snap.forEach(function (entry) { entry[0].value = entry[1]; entry[0].checked = entry[2]; });
+        current.item.querySelectorAll('[data-client-error]').forEach(function (node) { node.parentNode.removeChild(node); });
+        if (current.kind === 'meter') syncMeter(current.item);
+        putBack();
+      }
+      if (form.propertyUpdate) form.propertyUpdate();
+      render();
+    }
+
+    function removeItem(item) {
+      var del = item.querySelector('input[name$="-DELETE"]');
+      if (del) del.checked = true;
+      item.hidden = true;
+      if (item.dataset.item === 'tenant') {
+        // A tenant moves out: their meters stay with the premises as free ones.
+        var key = tenantKey(item);
+        items('meter').forEach(function (meter) {
+          if (val(meter, 'owner') === key) setVal(meter, 'owner', key.indexOf('pk:') === 0 ? 'free' : '');
+        });
+      }
+      if (form.propertyUpdate) form.propertyUpdate();
+    }
+
+    function addItem(kind) {
+      var block = blocks[kind];
+      var total = form.querySelector('input[name="' + PREFIX[kind] + '-TOTAL_FORMS"]');
+      var index = Number(total.value);
+      var html = block.querySelector('[data-item-template]').innerHTML.replace(/__prefix__/g, index);
+      var store = block.querySelector('[data-item-store]');
+      store.insertAdjacentHTML('beforeend', html);
+      total.value = index + 1;
+      var item = store.lastElementChild;
+      if (kind === 'tenant' && shareUnit() === '%') {
+        var free = freeShare(null);
+        if (free > 0) setVal(item, 'share', formatNumber(free));
+      }
+      openItem(item, true);
+    }
+
+    // ---- events ----
+
+    form.addEventListener('click', function (event) {
+      var target = event.target;
+      var add = target.closest('[data-item-add]');
+      if (add) { addItem(add.closest('[data-items]').dataset.items); return; }
+
+      var infoRemove = target.closest('[data-info-remove]');
+      if (infoRemove) {
+        removeItem(infoRemove.closest('.info-row').itemRef);
+        render();
+        return;
+      }
+      var info = target.closest('.info-row');
+      if (info) { openItem(info.itemRef, false); return; }
+
+      if (!current) return;
+      if (target.closest('[data-subwin-done]')) { done(); return; }
+      if (target.closest('[data-subwin-cancel]')) { event.preventDefault(); cancel(); return; }
+      if (target.closest('[data-subwin-delete]')) {
+        var gone = current.item;
+        putBack();
+        removeItem(gone);
+        render();
+        return;
+      }
+
+      var item = current.item;
+      var msel = target.closest('[data-msel]');
+      var munit = target.closest('[data-munit]');
+      if (msel) {
+        if (target.closest('[data-msel-trigger]')) toggleMenu(msel);
+        else if (target.closest('[data-msel-add]')) addKind(item);
+        else if (target.closest('.select-row')) chooseKind(item, target.closest('.select-row'));
+        return;
+      }
+      if (munit) {
+        var unitRow = target.closest('[data-munit-value]');
+        if (unitRow) {
+          setVal(item, 'unit', unitRow.dataset.munitValue);
+          closeMenus(null);
+          syncMeter(item);
+          munit.querySelector('[data-munit-trigger]').focus();
+        } else if (target.closest('[data-munit-trigger]')) {
+          toggleMenu(munit);
+        }
+        return;
+      }
+      closeMenus(null);
+    });
+
+    form.addEventListener('keydown', function (event) {
+      var target = event.target;
+      var info = target.closest && target.closest('.info-row');
+      if (info && target === info && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        openItem(info.itemRef, false);
+        return;
+      }
+      if (!current || !sub.contains(target)) return;
+      if (event.key === 'Escape') {
+        if (form.querySelector('[data-msel].is-open, [data-munit].is-open')) {
+          event.preventDefault();
+          closeMenus(null);
+        }
+        return;
+      }
+      if (event.key !== 'Enter') return;
+      if (target.matches('[data-msel-new]')) {
+        event.preventDefault();
+        addKind(current.item);
+        return;
+      }
+      if (!target.matches('input:not([type=hidden]):not([type=checkbox]):not([type=radio])')) return;
+      // Enter: the next field of the small window; after the last one — «Готово».
+      event.preventDefault();
+      var fields = Array.prototype.filter.call(
+        body.querySelectorAll('input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([data-msel-new])'),
+        function (input) { return !input.disabled && input.offsetParent !== null; });
+      var next = fields[fields.indexOf(target) + 1];
+      if (next) next.focus();
+      else done();
+    }, true);
+
+    form.addEventListener('input', function (event) {
+      var field = event.target.closest && event.target.closest('.field');
+      if (field) field.querySelectorAll('[data-client-error]').forEach(function (node) { node.parentNode.removeChild(node); });
+      if (event.target.matches('[data-msel-new]')) {
+        event.target.closest('.select-add').querySelector('[data-msel-add]').hidden = !event.target.value.trim();
+      }
+      if (current && current.kind === 'tenant' && event.target.matches('input[name$="-name"]')) syncTenantMeters();
+    });
+
+    form.addEventListener('change', function (event) {
+      if (!current) {
+        if (event.target.name === 'occupancy') render();
+        return;
+      }
+      if (event.target.matches('[data-day-night]')) syncMeter(current.item);
+      if (event.target.closest('.tm-row')) syncTenantMeters();
+    });
+
+    // The object can't be sent while a small window is open: «Готово» first.
+    form.addEventListener('submit', function (event) {
+      if (current) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
+
+    form.querySelectorAll('[data-item="meter"]').forEach(syncMeter);
+    render();
+    // The server found a mistake: open the first item that has it.
+    var broken = Array.prototype.filter.call(form.querySelectorAll('[data-item-store] [data-item]'), function (item) {
+      return !item.hidden && item.querySelector('.errorlist');
+    })[0];
+    if (broken) openItem(broken, false);
+  }
+
   function initForms(root) {
     root.querySelectorAll('[data-property-form]').forEach(initPropertyForm);
+    root.querySelectorAll('[data-subwin]').forEach(function (sub) { initItems(sub.closest('form')); });
     initFades(root);
     initMeters(root);
   }

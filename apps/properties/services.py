@@ -82,8 +82,8 @@ def setup_steps(property_obj):
 
 
 @transaction.atomic
-def save_property(form, tenant_formset, owner):
-    """Save the object and its tenants, deriving each tenant's share in the other unit."""
+def save_property(form, tenant_formset, owner, meter_formset=None):
+    """Save the object, its tenants (deriving each share in the other unit) and its meters."""
     property_obj = form.save(commit=False)
     if property_obj.owner_id is None:
         property_obj.owner = owner
@@ -95,10 +95,12 @@ def save_property(form, tenant_formset, owner):
     if property_obj.is_owner_used:
         # The landlord uses the object themselves: nobody else shares the bills.
         property_obj.tenants.all().delete()
-        resync_property(property_obj)
-        return property_obj
-
-    _save_tenant_rows(property_obj, tenant_formset)
+        tenant_keys = {}
+    else:
+        tenant_keys = _save_tenant_rows(property_obj, tenant_formset, resync=False)
+    if meter_formset is not None:
+        _save_meter_rows(property_obj, meter_formset, tenant_keys)
+    resync_property(property_obj)
     return property_obj
 
 
@@ -113,11 +115,20 @@ def save_tenants(property_obj, tenant_formset, share_unit):
     return property_obj
 
 
-def _save_tenant_rows(property_obj, tenant_formset):
-    for tenant_form in tenant_formset.forms:
+def free_meters(tenant):
+    """A tenant moves out: their meters stay on the object as free ones (the owner pays by them)."""
+    tenant.meters.update(tenant=None, vacant=True)
+
+
+def _save_tenant_rows(property_obj, tenant_formset, resync=True):
+    """Save the tenant rows. Returns {key: tenant id}: «pk:<id>» of every kept tenant and
+    «new:<form index>» of every row — the keys the meter rows name their tenant by."""
+    keys = {}
+    for index, tenant_form in enumerate(tenant_formset.forms):
         tenant = tenant_form.instance
         if tenant_form in tenant_formset.deleted_forms:
             if tenant.pk:
+                free_meters(tenant)
                 tenant.delete()
             continue
         if not (tenant.pk or tenant_form.has_changed()):
@@ -126,4 +137,25 @@ def _save_tenant_rows(property_obj, tenant_formset):
         tenant.property = property_obj
         apply_share(tenant, tenant_form.cleaned_data['share'], property_obj.share_unit, property_obj.area)
         tenant.save()
-    resync_property(property_obj)  # tenants changed: per-tenant meters follow
+        keys[f'new:{index}'] = keys[f'pk:{tenant.pk}'] = tenant.pk
+    if resync:
+        resync_property(property_obj)  # tenants changed: the services' layouts follow
+    return keys
+
+
+def _save_meter_rows(property_obj, meter_formset, tenant_keys):
+    """Save the object's meters. Who pays by each comes from the tenant windows (`owner`):
+    a kept tenant; a tenant who moved out — the meter is free; nobody — a common meter."""
+    for meter_form in meter_formset.forms:
+        meter = meter_form.instance
+        if meter_form in meter_formset.deleted_forms:
+            if meter.pk:
+                meter.delete()
+            continue
+        meter = meter_form.save(commit=False)
+        meter.property = property_obj
+        owner = meter_form.cleaned_data.get('owner') or ''
+        meter.tenant_id = None if property_obj.is_owner_used else tenant_keys.get(owner)
+        meter.vacant = (not property_obj.is_owner_used and meter.tenant_id is None
+                        and (owner == 'free' or owner.startswith(('pk:', 'new:'))))
+        meter.save()

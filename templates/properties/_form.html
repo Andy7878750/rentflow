@@ -77,10 +77,29 @@
       </div>
     </section>
 
-    <section class="form-section">
+    <section class="form-section" data-items="meter">
+      <div class="form-section-head">
+        <h2>Счётчики <span class="help" tabindex="0" role="button" aria-label="Подсказка: Счётчики" data-tip-title="Счётчики" data-tip="Счётчики помещения: свет, вода и свои. Кто платит по счётчику, отмечается в окне арендатора.">?</span></h2>
+        <span class="head-badge" data-items-count></span>
+      </div>
+      <div class="form-section-body">
+        {{ meter_formset.management_form }}
+        {% if meter_formset.non_form_errors %}<ul class="errorlist">{% for error in meter_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+        <div class="info-list" data-info-list></div>
+        <div class="item-store" data-item-store hidden>
+          {% for mform in meter_formset %}{% include "properties/_meter_item.html" %}{% endfor %}
+        </div>
+        <template data-item-template>{% include "properties/_meter_item.html" with mform=meter_formset.empty_form %}</template>
+        <div class="tenant-add-row">
+          <button type="button" class="setup-link tenant-add" data-item-add><svg class="icon"><use href="#i-plus"/></svg>Добавить счётчик</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" data-items="tenant">
       <div class="form-section-head">
         <h2>Кто пользуется объектом <span class="help" tabindex="0" role="button" aria-label="Подсказка: Кто пользуется объектом" data-tip-title="Кто пользуется объектом" data-tip="Доли нужны, чтобы делить расходы между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
-        <span class="occupied tenants-only" data-occupied></span>
+        <span class="head-badge occupied tenants-only" data-occupied></span>
       </div>
       <div class="form-section-body">
         {{ form.share_unit }}
@@ -93,12 +112,40 @@
         <p class="owner-note owner-only">Объектом пользуетесь вы сами — все расходы по услугам остаются на вас.</p>
 
         <div class="tenants-only">
-          {% include "properties/_tenant_rows.html" %}
+          {{ formset.management_form }}
+          {% if formset.non_form_errors %}<ul class="errorlist">{% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          <div class="info-list" data-info-list></div>
+          <div class="item-store" data-item-store data-tenant-list hidden>
+            {% for tenant_form in formset %}{% include "properties/_tenant_item.html" %}{% endfor %}
+          </div>
+          <template data-item-template data-tenant-template>{% include "properties/_tenant_item.html" with tenant_form=formset.empty_form %}</template>
+          <div class="tenant-add-row">
+            <button type="button" class="setup-link tenant-add" data-item-add><svg class="icon"><use href="#i-plus"/></svg>Добавить арендатора</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <p class="form-note">После сохранения добавьте на странице объекта услуги и счётчики — для каждой услуги один раз выбираете, как делить её между арендаторами.</p>
+    <p class="form-note">После сохранения добавьте на странице объекта услуги — для каждой один раз выбираете, как делить её между арендаторами.</p>
+
+    {# The small window for one meter or one tenant: app.js moves the item's fields in and back. #}
+    <div class="subwin" data-subwin hidden>
+      <div class="subwin-panel" role="dialog" aria-modal="true" aria-labelledby="subwin-title">
+        <header class="modal-head">
+          <div>
+            <h1 id="subwin-title" data-subwin-title></h1>
+            <p class="subwin-sub">{{ form.name.value|default:"Новый объект" }}<span data-subwin-sub></span></p>
+          </div>
+          <button type="button" class="icon-button modal-close" data-subwin-cancel aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
+        </header>
+        <div class="subwin-body" data-subwin-body></div>
+        <div class="form-actions">
+          <button type="button" class="subwin-delete" data-subwin-delete></button>
+          <button type="button" class="btn btn-ghost btn-auto" data-subwin-cancel>Отмена</button>
+          <button type="button" class="btn btn-primary btn-auto" data-subwin-done>Готово</button>
+        </div>
+      </div>
+    </div>
 
     <div class="form-actions">
       <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>

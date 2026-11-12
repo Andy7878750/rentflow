@@ -10,6 +10,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.billing import services as billing_services
+from apps.billing.forms import MeterFormSet
 from apps.tenants.forms import TenantFormSet
 
 from . import services
@@ -55,7 +56,10 @@ def property_list(request):
 
 
 def _property_form(request, property_obj=None):
-    """Create or edit an object with its tenants. Renders bare content when opened in the modal."""
+    """Create or edit an object with its meters and tenants. Renders bare content when opened in the modal.
+
+    Meters and tenants are shown as one-line rows; each is filled in its own small window (app.js),
+    and everything is saved together with the object."""
     is_modal = request.headers.get('X-Modal') == '1'
     data = request.POST if request.method == 'POST' else None
 
@@ -69,17 +73,20 @@ def _property_form(request, property_obj=None):
         prefix='tenants',
         form_kwargs={'share_unit': unit},
     )
-    if property_obj and property_obj.tenants.exists():
-        formset.extra = 0
+    formset.extra = 0  # «+ Добавить арендатора» adds a row in its own small window
+    # A post without the meters (an old page, a script) leaves them as they are.
+    with_meters = data is None or 'meters-TOTAL_FORMS' in data
+    meter_formset = MeterFormSet(data if with_meters else None, instance=property_obj or Property(), prefix='meters')
 
     if data is not None:
         form_ok = form.is_valid()
+        meters_ok = meter_formset.is_valid() if with_meters else True
         formset.share_unit = unit
         formset.total_area = form.cleaned_data.get('area')
         owner_used = data.get('occupancy') == Property.Occupancy.OWNER
         tenants_ok = owner_used or formset.is_valid()
-        if form_ok and tenants_ok:
-            saved = services.save_property(form, formset, request.user)
+        if form_ok and tenants_ok and meters_ok:
+            saved = services.save_property(form, formset, request.user, meter_formset if with_meters else None)
             if not property_obj and is_modal:
                 # A new object: say what is left to do (receipts and meters) right away.
                 return render(request, 'properties/_created.html', {'property': saved})
@@ -97,6 +104,8 @@ def _property_form(request, property_obj=None):
     return render(request, template, {
         'form': form,
         'formset': formset,
+        'meter_formset': meter_formset,
+        'meter_kinds': billing_services.meter_kind_options(property_obj or Property(owner=request.user)),
         'property': property_obj,
         'share_unit': unit,
         'kind_choices': [
