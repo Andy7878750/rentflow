@@ -47,10 +47,17 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
 .badge.warn { background: var(--color-warn-soft); color: var(--color-warn); }
 .form-section-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
 
-/* Template tiles: icon + name, 34px */
-.tiles { display: flex; flex-wrap: wrap; gap: 6px; }
-.tile { height: 34px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; color: var(--color-text); cursor: pointer; }
+/* Template tiles: all in one line, a plain grey icon over the name (colour is only for meters). */
+.tiles { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.tile { min-width: 0; height: 64px; padding: 6px 2px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font: inherit; font-size: 11px; line-height: 1.15; text-align: center;  color: var(--color-text); cursor: pointer; }
+.tile svg { width: 18px; height: 18px; flex: none; color: var(--color-text-muted); }
+.tile span { max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.tile:hover { border-color: #c9cfd5; }
 .tile.on { border-color: var(--color-accent); background: var(--color-accent-soft); color: #0e6b59; font-weight: 600; }
+.tile.on svg { color: var(--color-accent); }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* Floating labels, 52px (.fl in forms.css) */
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -156,16 +163,28 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
   var HEAT = { norm: 0.06, tariff: 4800 };
   var SAMPLE = { sum: 4200, qty: { 'Гкал': 0.42, 'кВт·ч': 300, 'м³': 10 } };
 
+  // Plain line icons for the template tiles (one colour; only meters are coloured).
+  var SV = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };
+  var IC = {
+    el: SV('<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>'),
+    drop: SV('<path d="M12 3c-2 2.7-6 7.6-6 11.5a6 6 0 0 0 12 0C18 10.6 14 5.7 12 3z"/>'),
+    hot: SV('<path d="M12 3c-2 2.7-6 7.6-6 11.5a6 6 0 0 0 12 0C18 10.6 14 5.7 12 3z"/><path d="M12 11v6M9.5 14.5 12 17l2.5-2.5"/>'),
+    drain: SV('<path d="M4 6h16M7 10h10M10 14h4M12 14v7"/>'),
+    heat: SV('<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v12M12 6v12M16 6v12"/>'),
+    home: SV('<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>'),
+    net: SV('<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/>'),
+    plus: SV('<path d="M12 5v14M5 12h14"/>')
+  };
   // ---- Templates: a tile sets all answers ----
   var TPL = {
-    el:    { name: 'Электричество', icon: '⚡', kinds: ['el'], supplier: 'Петроэлектросбыт', src: 'meters', meters: [1], td: '7,50', tn: '3,20' },
-    cold:  { name: 'Вода холодная', icon: '💧', kinds: ['cold'], supplier: 'Водоканал', src: 'meters', meters: [3, 5], tariff: '45,50' },
-    hot:   { name: 'Вода горячая', icon: '♨', kinds: ['hot'], supplier: 'ТЭК СПб', src: 'meters', meters: [2, 4], tariff: '52,00', extra: '1', norm: '0,06', normTariff: '4 800' },
-    drain: { name: 'Водоотведение', icon: '↧', kinds: ['cold', 'hot'], supplier: 'Водоканал', src: 'meters', meters: [2, 3, 4, 5], tariff: '35,00', oneTariff: true },
-    heat:  { name: 'Отопление', icon: '🔥', kinds: ['heat'], supplier: 'ТЭК СПб', src: 'receipt', recMode: 'qty', recUnit: 'Гкал', recTariff: '4 800', sub: '1' },
-    maint: { name: 'Содержание и ремонт', icon: '🏠', kinds: [], supplier: 'УК «Дом»', src: 'receipt', recMode: 'sum', div: 'area' },
-    net:   { name: 'Интернет', icon: '📶', kinds: [], supplier: 'Ростелеком', src: 'fixed', fixed: '600', div: 'equal' },
-    own:   { name: 'Своя услуга', icon: '＋', kinds: ['el', 'cold', 'hot', 'heat'], supplier: '', src: 'receipt', recMode: 'sum' }
+    el:    { name: 'Электричество', icon: IC.el, kinds: ['el'], supplier: 'Петроэлектросбыт', src: 'meters', meters: [1], td: '7,50', tn: '3,20' },
+    cold:  { name: 'Вода холодная', icon: IC.drop, kinds: ['cold'], supplier: 'Водоканал', src: 'meters', meters: [3, 5], tariff: '45,50' },
+    hot:   { name: 'Вода горячая', icon: IC.hot, kinds: ['hot'], supplier: 'ТЭК СПб', src: 'meters', meters: [2, 4], tariff: '52,00', extra: '1', norm: '0,06', normTariff: '4 800' },
+    drain: { name: 'Водоотведение', icon: IC.drain, kinds: ['cold', 'hot'], supplier: 'Водоканал', src: 'meters', meters: [2, 3, 4, 5], tariff: '35,00', oneTariff: true },
+    heat:  { name: 'Отопление', icon: IC.heat, kinds: ['heat'], supplier: 'ТЭК СПб', src: 'receipt', recMode: 'qty', recUnit: 'Гкал', recTariff: '4 800', sub: '1' },
+    maint: { name: 'Содержание и ремонт', icon: IC.home, kinds: [], supplier: 'УК «Дом»', src: 'receipt', recMode: 'sum', div: 'area' },
+    net:   { name: 'Интернет', icon: IC.net, kinds: [], supplier: 'Ростелеком', src: 'fixed', fixed: '600', div: 'equal' },
+    own:   { name: 'Своя услуга', icon: IC.plus, kinds: ['el', 'cold', 'hot', 'heat'], supplier: '', src: 'receipt', recMode: 'sum' }
   };
   var DIV = { shares: 'По долям', equal: 'Поровну', area: 'По м²', self: 'Плачу сам' };
   var SRC = { meters: 'По счётчикам × тариф', receipt: 'Из квитанции', fixed: 'Постоянная' };
@@ -314,7 +333,7 @@ body { margin: 0; font-family: var(--font); background: rgba(44, 51, 56, .45); c
 
     if (!S.edit) {
       h += section('Что за услуга', [], '<div class="tiles">' + Object.keys(TPL).map(function (id) {
-        return '<button type="button" class="tile' + (S.tpl === id ? ' on' : '') + '" data-tpl="' + id + '"><span>' + TPL[id].icon + '</span>' + TPL[id].name + '</button>';
+        return '<button type="button" class="tile' + (S.tpl === id ? ' on' : '') + '" data-tpl="' + id + '" title="' + TPL[id].name + '">' + TPL[id].icon + '<span>' + TPL[id].name.replace('Электричество', 'Электри­чество').replace('Водоотведение', 'Водо­отведение') + '</span></button>';
       }).join('') + '</div>');
     }
 
