@@ -1498,3 +1498,45 @@ input.masked {
     flex: 1 1 auto;
   }
 }
+
+/* Object window: «Информация об УК ▾» — the management company fields are folded away by default. */
+.uk-toggle {
+  align-self: flex-start;
+  max-width: 100%;
+  min-width: 0;
+  margin: -4px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.uk-toggle .icon {
+  transition: transform .15s ease;
+}
+
+.uk-toggle[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
+}
+
+.uk-toggle[aria-expanded="true"] .uk-summary {
+  display: none;
+}
+
+.uk-summary {
+  min-width: 0;
+  max-width: 280px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.uk-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.uk-fields[hidden] {
+  display: none;
+}

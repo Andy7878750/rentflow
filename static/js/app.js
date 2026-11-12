@@ -1020,6 +1020,21 @@
   }
   initFades(document);
 
+  // Object window: «Информация об УК ▾» opens and closes the management company fields.
+  document.addEventListener('click', function (event) {
+    var toggle = event.target.closest && event.target.closest('[data-uk-toggle]');
+    if (!toggle) return;
+    var box = document.getElementById(toggle.getAttribute('aria-controls'));
+    if (!box) return;
+    var open = box.hidden;
+    box.hidden = !open;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      var first = box.querySelector('input:not([type=hidden])');
+      if (first) first.focus();
+    }
+  });
+
   // Object cards: a click anywhere opens the object, except on links, buttons and menus.
   document.addEventListener('click', function (event) {
     var card = event.target.closest && event.target.closest('[data-card-href]');
