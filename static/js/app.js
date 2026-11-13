@@ -970,6 +970,16 @@
       return METER_ICONS[kind] ? kind : 'custom';
     }
 
+    // The start reading: a «play» icon instead of the word «старт».
+    function startCell(item) {
+      var start = el('span', 'info-cell info-start');
+      start.title = 'Начальное показание';
+      start.innerHTML = '<svg class="mt-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>';
+      var startValue = startText(item);
+      start.appendChild(startValue ? document.createTextNode(startValue) : el('span', 'info-none', '—'));
+      return start;
+    }
+
     function meterTile(item, row) {
       var kind = meterKind(item);
       row.className = 'info-row meter-tile mk-' + kind;
@@ -983,13 +993,7 @@
       row.appendChild(acts);
       var line = el('span', 'mt-line');
       line.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
-      // The start reading: a «play» icon instead of the word «старт».
-      var start = el('span', 'info-cell info-start');
-      start.title = 'Начальное показание';
-      start.innerHTML = '<svg class="mt-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/></svg>';
-      var startValue = startText(item);
-      start.appendChild(startValue ? document.createTextNode(startValue) : el('span', 'info-none', '—'));
-      line.appendChild(start);
+      line.appendChild(startCell(item));
       row.appendChild(line);
       var who = meterWho(item);
       var badge = el('span', 'who-badge mt-who ' + who.cls, who.text);
@@ -1208,9 +1212,13 @@
         box.meterRef = meter;
         row.appendChild(box);
         row.appendChild(el('span', 'inum', String(i + 1)));
+        var kind = meterKind(meter);
+        var icon = el('span', 'tm-icon mk-' + kind);
+        icon.innerHTML = METER_ICONS[kind];
+        row.appendChild(icon);
         row.appendChild(el('span', 'info-cell info-main', val(meter, 'name')));
         row.appendChild(cell('', '№', val(meter, 'serial'), '№ —'));
-        row.appendChild(cell('', 'старт', startText(meter), 'старт —'));
+        row.appendChild(startCell(meter));
         var who;
         if (busy) who = el('span', 'who-badge is-tenant', busy);
         else if (owner && owner !== key) who = el('span', 'who-badge is-free', 'свободен');
@@ -1616,7 +1624,7 @@
   // «Как делим» shows up (no meter, or one common meter) with nothing picked → «По долям».
   document.addEventListener('change', function (event) {
     var input = event.target;
-    if (!input.matches || !input.matches('.rform input[name=metered], .rform input[name=layout]')) return;
+    if (!input.matches || !input.matches('.rform input[name=charge], .rform input[name=layout]')) return;
     var form = input.form;
     if (form.querySelector('input[name=split]:checked')) return;
     var first = form.querySelector('input[name=split]');

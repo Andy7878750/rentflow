@@ -59,36 +59,33 @@
     {# ---------- 2. Начисление ---------- #}
     <section class="form-section rows">
       <h2 class="form-section-head">Начисление
-        <span class="badge metered-only">по счётчику</span>
-        <span class="badge unmetered-only fixed-only">фиксированная</span><span class="badge unmetered-only monthly-only">каждый месяц разная</span>
+        <span class="badge metered-only">по счётчикам</span>
+        <span class="badge fixed-only">фиксированная</span><span class="badge monthly-only">по квитанции</span>
       </h2>
       <div class="form-section-body">
-        {# Day / night is not asked here: each meter of the object knows it. #}
-        <div class="calc-row">
-          <span class="calc-label">Счётчик</span>
-          <div class="calc-ctrl">
-            <div class="seg-track" role="radiogroup" aria-label="Счётчик">
-              <label><input type="radio" name="metered" value="1"{% if metered == '1' or metered == 'True' %} checked{% endif %}><span>Да</span></label>
-              <label><input type="radio" name="metered" value="0"{% if metered == '0' or metered == 'False' %} checked{% endif %}><span>Нет</span></label>
-            </div>
-          </div>
+        {% comment %}Four tiles: по квитанции / фиксированная сумма / по счётчикам / своя формула (not ready — disabled).
+           The radio `charge` sets metered and amount_mode on the server. Day / night: each meter knows it.{% endcomment %}
+        <div class="charge-tiles" role="radiogroup" aria-label="Как начисляем">
+          {% for value, label, hint, icon in form.CHARGES %}
+            <label class="charge-tile{% if value == 'formula' %} is-soon{% endif %}">
+              <input type="radio" name="charge" value="{{ value }}"{% if form.charge.value == value %} checked{% endif %}{% if value == 'formula' %} disabled{% endif %}>
+              <svg class="icon"><use href="#{{ icon }}"/></svg>
+              <span class="charge-name">{{ label }}</span>
+              <span class="charge-hint">{{ hint }}</span>
+            </label>
+          {% endfor %}
         </div>
+        {% if form.charge.errors %}<p class="calc-error">{{ form.charge.errors.0 }}</p>{% endif %}
 
-        {% comment %}No meter: «Квитанция — каждый месяц разная / фиксированная» and the sum. Fixed — typed here;
-           different every month — the same field, inactive.{% endcomment %}
-        <div class="calc-row unmetered-only">
-          <span class="calc-label">Квитанция</span>
-          <div class="calc-ctrl halves">
-            <div class="seg-track" role="radiogroup" aria-label="Квитанция">
-              {% for value, label in form.fields.amount_mode.choices %}
-                <label><input type="radio" name="amount_mode" value="{{ value }}"{% if form.amount_mode.value == value %} checked{% endif %}><span>{% if value == 'fixed' %}Фиксированная{% else %}Каждый месяц разная{% endif %}</span></label>
-              {% endfor %}
-            </div>
-            <label class="ifield fixed-only{% if form.fixed_amount.errors %} has-error{% endif %}">{{ form.fixed_amount }}<span class="ifield-fix">{{ receipt.currency_symbol }} в месяц</span></label>
-            <span class="ifield is-disabled monthly-only"><input type="text" disabled placeholder="вводится каждый месяц" aria-label="Сумма вводится каждый месяц на странице объекта"><span class="ifield-fix">{{ receipt.currency_symbol }}</span></span>
+        {# Fixed: the sum is typed here. By the receipt: it is typed every month on the object page. #}
+        <div class="calc-row fixed-only">
+          <span class="calc-label">Сумма</span>
+          <div class="calc-ctrl">
+            <label class="ifield{% if form.fixed_amount.errors %} has-error{% endif %}">{{ form.fixed_amount }}<span class="ifield-fix">{{ receipt.currency_symbol }} в месяц</span></label>
             {% if form.fixed_amount.errors %}<p class="calc-error">{{ form.fixed_amount.errors.0 }}</p>{% endif %}
           </div>
         </div>
+        <p class="charge-note monthly-only">Сумму из квитанции вводите каждый месяц на странице объекта.</p>
 
         {# Meter: what is typed every month. The tariff and unit live with each meter («Счётчики»). #}
         <div class="calc-row metered-only">
@@ -129,7 +126,7 @@
                 <span class="pick-box" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span>
                 <span class="mt-line">
                   <span class="info-cell info-serial"><span class="info-label">№ </span>{{ pick.meter.serial|default:'—' }}</span>
-                  <span class="info-cell info-start" title="Начальное показание"><svg class="mt-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/></svg>{{ pick.start|default:'—' }}</span>
+                  <span class="info-cell info-start" title="Начальное показание"><svg class="mt-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>{{ pick.start|default:'—' }}</span>
                 </span>
                 <span class="who-badge mt-who {{ pick.who_cls }}" title="{{ pick.who }}">{{ pick.who }}</span>
               </label>
@@ -180,10 +177,11 @@
                   <label><input type="radio" name="split" value="{{ value }}"{% if form.split.value == value %} checked{% endif %}><span>{{ label }}</span></label>
                 {% endfor %}
               </div>
-              <p class="calc-badges split-hint" data-for="shares"><span class="badge badge-info">доля из карточки объекта</span></p>
-              <p class="calc-badges split-hint" data-for="equal"><span class="badge badge-info">поровну на тех, кто платит</span></p>
-              <p class="calc-badges split-hint" data-for="area"><span class="badge badge-info">по площади каждого</span></p>
-              <p class="calc-badges split-hint" data-for="owner"><span class="badge badge-info">арендаторам не выставляется</span></p>
+              {# What the choice means: quiet grey text right next to the switch, no badge. #}
+              <p class="split-hint" data-for="shares">доли из карточки объекта</p>
+              <p class="split-hint" data-for="equal">поровну на тех, кто платит</p>
+              <p class="split-hint" data-for="area">по площади каждого</p>
+              <p class="split-hint" data-for="owner">арендаторам не выставляется</p>
               <p class="calc-note layout-hint" data-for="tenants"><span class="badge badge-info">каждый платит по своему счётчику</span></p>
               <p class="calc-note layout-hint" data-for="both"><span class="badge badge-info">арендаторы — по своим</span><span class="badge badge-warn">разница с общим — на вас</span></p>
             </div>

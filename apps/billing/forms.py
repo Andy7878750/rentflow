@@ -11,11 +11,19 @@ UNITS = ['кВт·ч', 'м³', 'Гкал', 'ед.']
 class ReceiptForm(forms.ModelForm):
     # Radio choices rendered by hand in the template (segmented controls).
     metered = forms.TypedChoiceField(
-        choices=[('1', 'Да'), ('0', 'Нет')], coerce=lambda value: value == '1', initial='0',
+        choices=[('1', 'Да'), ('0', 'Нет')], coerce=lambda value: value == '1', initial='0', empty_value=None,
     )
     zones = forms.TypedChoiceField(
         choices=[('1', 'Однотарифный'), ('2', 'День / ночь')], coerce=int, initial='1', required=False, empty_value=1,
     )
+    # «Начисление» as four tiles; it sets `metered` and `amount_mode` (see clean). «Своя формула» is not ready yet.
+    CHARGES = [
+        ('receipt', 'По квитанции', 'разная каждый месяц', 'i-file'),
+        ('fixed', 'Фиксированная сумма', 'не меняется', 'i-lock'),
+        ('meters', 'По счётчикам', 'расход × тариф', 'i-gauge'),
+        ('formula', 'Своя формула', 'скоро', 'i-blocks'),
+    ]
+    charge = forms.ChoiceField(choices=[(value, label) for value, label, _, _ in CHARGES], required=False)
 
     class Meta:
         model = Receipt
@@ -36,6 +44,13 @@ class ReceiptForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initial['metered'] = '1' if self.instance.metered else '0'
+        if self.instance.metered:
+            self.initial['charge'] = 'meters'
+        else:
+            self.initial['charge'] = 'fixed' if self.instance.amount_mode == Receipt.AmountMode.FIXED else 'receipt'
+        # The window posts `charge` instead of these two.
+        self.fields['metered'].required = False
+        self.fields['amount_mode'].required = False
         self.initial['zones'] = str(self.instance.zones or 1)
         for name in ('tariff', 'tariff_night', 'fixed_amount'):
             self.fields[name].localize = True
@@ -58,6 +73,17 @@ class ReceiptForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        charge = cleaned.get('charge')
+        if charge == 'formula':
+            self.add_error('charge', '«Своя формула» пока не готова — выберите один из трёх вариантов.')
+        elif charge:
+            cleaned['metered'] = charge == 'meters'
+            if charge != 'meters':
+                cleaned['amount_mode'] = Receipt.AmountMode.FIXED if charge == 'fixed' else Receipt.AmountMode.MONTHLY
+        if cleaned.get('metered') is None:
+            cleaned['metered'] = False
+        if not cleaned.get('amount_mode'):
+            cleaned['amount_mode'] = self.instance.amount_mode or Receipt.AmountMode.MONTHLY
         if not cleaned.get('input_mode'):
             cleaned['input_mode'] = Receipt.InputMode.READINGS
         if not cleaned.get('layout'):

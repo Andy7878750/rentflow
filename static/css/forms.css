@@ -2208,10 +2208,10 @@ input.masked {
 }
 
 .mt-start {
-  width: 13px;
-  height: 13px;
-  margin-right: 4px;
-  vertical-align: -2px;
+  width: 11px;
+  height: 11px;
+  margin-right: 3px;
+  vertical-align: -1px;
 }
 
 .mt-line .info-start {
@@ -2261,4 +2261,30 @@ input.masked {
 .meter-add-tile .icon {
   width: 14px;
   height: 14px;
+}
+
+/* The tenant's meters: the kind icon in its colour, without a circle (the number next to it is already in one). */
+.tm-row {
+  grid-template-columns: 18px 24px 16px minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 1fr);
+}
+
+.tm-icon {
+  display: grid;
+  place-items: center;
+  color: var(--mk);
+}
+
+.tm-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Next to green ticks the number is grey and dark, not accent. */
+.tm-row .inum {
+  background: #edf0f2;
+  color: #34495e;
+}
+
+.tm-row.is-busy > .tm-icon {
+  opacity: 0.5;
 }

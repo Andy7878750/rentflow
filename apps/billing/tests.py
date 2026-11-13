@@ -311,7 +311,7 @@ class ReceiptViewTests(TestCase):
     def test_meter_question_is_rendered_yes_for_a_metered_preset(self):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
         response = self.client.get(url, HTTP_X_MODAL='1')
-        self.assertContains(response, 'name="metered" value="1" checked')
+        self.assertContains(response, 'name="charge" value="meters" checked')
         self.assertNotContains(response, 'name="split" value="meters"')
 
     def test_meters_block_without_object_meters_points_to_the_object(self):
@@ -348,6 +348,23 @@ class ReceiptViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Укажите сумму')
         self.assertFalse(self.prop.receipts.exists())
+
+    def test_charge_tiles_set_meter_and_amount(self):
+        receipt = services.save_receipt(services.new_receipt(self.prop, 'management'))
+        url = reverse('receipt_edit', args=[receipt.pk])
+        self.client.post(url, {'name': 'Охрана', 'charge': 'fixed', 'fixed_amount': '900', 'split': 'equal'})
+        receipt.refresh_from_db()
+        self.assertFalse(receipt.metered)
+        self.assertEqual(receipt.amount_mode, Receipt.AmountMode.FIXED)
+        self.client.post(url, {'name': 'Охрана', 'charge': 'receipt', 'split': 'equal'})
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.amount_mode, Receipt.AmountMode.MONTHLY)
+
+    def test_constructor_tile_is_not_saved(self):
+        receipt = services.save_receipt(services.new_receipt(self.prop, 'management'))
+        response = self.client.post(reverse('receipt_edit', args=[receipt.pk]),
+                                    {'name': 'Охрана', 'charge': 'formula', 'split': 'equal'}, HTTP_X_MODAL='1')
+        self.assertContains(response, '«Своя формула» пока не готова')
 
     def test_edit_and_delete(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'management'))

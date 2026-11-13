@@ -11,17 +11,17 @@
           <li class="payer{% if not row.pays %} is-off{% endif %}">
             <span class="payer-num">{{ forloop.counter }}</span>
             <span class="payer-name fade">{{ row.tenant.name }}</span>
+            {% if row.pays %}
+              <span class="payer-share">{{ row.basis }}</span><span class="payer-amount">{{ row.amount_text }}</span>
+            {% else %}
+              <span class="payer-off">не платит</span>
+            {% endif %}
             {% if payers_switchable %}
               <label class="payer-pays" title="{% if row.pays %}Платит за эту услугу{% else %}Не платит — его часть на вас{% endif %}">
                 <input type="checkbox" class="switch-input" name="pays" value="{{ row.tenant.pk }}"{% if row.pays %} checked{% endif %}>
                 <span class="switch" aria-hidden="true"></span>
                 <span class="visually-hidden">{{ row.tenant.name }} платит</span>
               </label>
-            {% endif %}
-            {% if row.pays %}
-              <span class="payer-share">{{ row.basis }}</span><span class="payer-amount">{{ row.amount_text }}</span>
-            {% else %}
-              <span class="payer-off">не платит</span>
             {% endif %}
           </li>
         {% endfor %}
