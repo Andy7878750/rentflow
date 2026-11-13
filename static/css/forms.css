@@ -2288,3 +2288,18 @@ input.masked {
 .tm-row.is-busy > .tm-icon {
   opacity: 0.5;
 }
+
+/* The tenant's meters — read-only (2026-11-13): no tick column, no hover; a tenant is seated on a meter in the service. */
+.tm-row.is-readonly {
+  grid-template-columns: 24px 16px minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.3fr);
+  cursor: default;
+}
+
+.tm-row.is-readonly:hover {
+  background: none;
+}
+
+.tm-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}

@@ -38,7 +38,9 @@ class ReceiptForm(forms.ModelForm):
             # Compact fields of «Как считаем»: the unit and currency are written inside the frame.
             'tariff': forms.TextInput(attrs={'placeholder': '0,00', 'inputmode': 'decimal', 'aria-label': 'Тариф'}),
             'tariff_night': forms.TextInput(attrs={'placeholder': '0,00', 'inputmode': 'decimal', 'aria-label': 'Тариф ночь'}),
-            'fixed_amount': forms.TextInput(attrs={'placeholder': '0,00', 'inputmode': 'decimal', 'aria-label': 'Сумма в месяц'}),
+            # No browser autofill: it paints the field blue.
+            'fixed_amount': forms.TextInput(attrs={'placeholder': '0,00', 'inputmode': 'decimal', 'aria-label': 'Сумма в месяц',
+                                                   'autocomplete': 'off'}),
         }
 
     def __init__(self, *args, **kwargs):

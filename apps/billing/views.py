@@ -60,10 +60,16 @@ def _receipt_form(request, property_obj, receipt):
                 meters_error = 'Укажите тариф — по нему считается сумма.'
     if posted is not None and not meters_error and form.is_valid():
         is_new = receipt.pk is None
+        if form.instance.metered:
+            services.apply_meter_owners(property_obj, posted)  # «чей» of each meter row
         services.save_receipt(form.save(commit=False), meter_ids=[m.pk for m in ticked], tariffs=tariffs, excluded=excluded)
         verb = 'добавлена' if is_new else 'сохранена'
         return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
 
+    shown = [pick for pick in picks if pick['shown']]
+    rows = {row['key']: row for row in services.tariff_rows(form.instance, shown, tariffs, missing)}
+    for pick in shown:
+        pick['tariff'] = rows.get(pick['key'])
     template = 'billing/_receipt_form.html' if request.headers.get('X-Modal') else 'billing/receipt_form.html'
     return render(request, template, {
         'form': form,
@@ -76,8 +82,9 @@ def _receipt_form(request, property_obj, receipt):
         'payers': services.payer_preview(services.normalize(form.instance), excluded),
         'payers_switchable': _payers_switchable(form.instance, property_obj),
         'tenants': property_obj.tenants.all(),
-        'meter_picks': picks,
-        'tariff_rows': services.tariff_rows(form.instance, picks, tariffs, missing),
+        # Only the template's kind of meters (and the ticked ones) are listed; each row with its own tariff.
+        'meter_picks': shown,
+        'meter_tenants': list(property_obj.tenants.all()),
         'meter_layout': meter_layout,
         'meters_label': services.meters_label(len(ticked)),
         'layout_choices': Receipt.Layout.choices,

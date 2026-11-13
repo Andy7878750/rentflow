@@ -1,0 +1,31 @@
+{% comment %}How the sum is split and between whom: «Делим» + the tenants. One copy in the form; it stands under the grey
+   panel of «Начисление» (по квитанции / фиксированная) or in «Кто платит» (по счётчикам) — app.js moves it when
+   the tile changes (data-split-block / data-split-home).{% endcomment %}
+<div class="split-block" data-split-block>
+  {% if property.is_owner_used %}
+    <p class="rform-note">Объектом пользуетесь вы сами — расходы остаются на вас.</p>
+    <input type="hidden" name="split" value="owner">
+  {% else %}
+    {# The split buttons (no meter / one common meter), or what the tenants' own meters mean. #}
+    <div class="calc-row split-row">
+      <span class="calc-label">Делим</span>
+      <div class="calc-ctrl">
+        <div class="seg-track split-track" role="radiogroup" aria-label="Как делим">
+          {% for value, label in split_choices %}
+            <label><input type="radio" name="split" value="{{ value }}"{% if form.split.value == value %} checked{% endif %}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+        {# What the choice means: quiet grey text right next to the switch, no badge. #}
+        <p class="split-hint" data-for="shares">доли из карточки объекта</p>
+        <p class="split-hint" data-for="equal">поровну на тех, кто платит</p>
+        <p class="split-hint" data-for="area">по площади каждого</p>
+        <p class="split-hint" data-for="owner">всё на вас</p>
+        <p class="calc-note layout-hint" data-for="tenants"><span class="badge badge-info">каждый платит по своему счётчику</span></p>
+        <p class="calc-note layout-hint" data-for="both"><span class="badge badge-info">арендаторы — по своим</span><span class="badge badge-warn">разница с общим — на вас</span></p>
+      </div>
+    </div>
+
+    {% include "billing/_payers.html" %}
+  {% endif %}
+  {% if warning %}<p class="rform-warning">{{ warning }}</p>{% endif %}
+</div>

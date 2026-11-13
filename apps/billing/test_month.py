@@ -387,5 +387,8 @@ class ObjectMetersTariffTests(TestCase):
         self.assertEqual(services.default_meter_ids(services.new_receipt(self.prop, 'electricity')), [light.pk])
         self.assertEqual(services.default_meter_ids(services.new_receipt(self.prop, 'sewage')), [cold.pk, hot.pk])
         receipt = services.new_receipt(self.prop, 'electricity')
-        self.assertEqual(services.missing_tariffs(receipt, [light], {'electricity': (Decimal('7'), None)}), ['electricity'])
+        # A tariff per meter (2026-11-13); one typed for its kind (older forms) still counts.
+        key = f'm:{light.pk}'
+        self.assertEqual(services.missing_tariffs(receipt, [light], {key: (Decimal('7'), None)}), [key])
+        self.assertEqual(services.missing_tariffs(receipt, [light], {key: (Decimal('7'), Decimal('3'))}), [])
         self.assertEqual(services.missing_tariffs(receipt, [light], {'electricity': (Decimal('7'), Decimal('3'))}), [])

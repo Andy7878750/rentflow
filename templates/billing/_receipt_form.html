@@ -59,8 +59,10 @@
     {# ---------- 2. Начисление ---------- #}
     <section class="form-section rows">
       <h2 class="form-section-head">Начисление
-        <span class="badge metered-only">по счётчикам</span>
+        <span class="badge metered-only">по счётчикам</span><span class="badge metered-only" data-meter-count>{{ meters_label }}</span>
         <span class="badge fixed-only">фиксированная</span><span class="badge monthly-only">по квитанции</span>
+        {% if property.is_owner_used %}<span class="badge unmetered-only">на вас</span>
+        {% else %}{% for value, label in split_choices %}<span class="badge head-badge unmetered-only" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
       </h2>
       <div class="form-section-body">
         {% comment %}Four tiles: по квитанции / фиксированная сумма / по счётчикам / своя формула (not ready — disabled).
@@ -77,21 +79,23 @@
         </div>
         {% if form.charge.errors %}<p class="calc-error">{{ form.charge.errors.0 }}</p>{% endif %}
 
-        {# Fixed: the sum is typed here. By the receipt: it is typed every month on the object page. #}
-        <div class="calc-row fixed-only">
-          <span class="calc-label">Сумма</span>
-          <div class="calc-ctrl">
-            <label class="ifield{% if form.fixed_amount.errors %} has-error{% endif %}">{{ form.fixed_amount }}<span class="ifield-fix">{{ receipt.currency_symbol }} в месяц</span></label>
+        {% comment %}The answer to the picked tile — a grey panel with a small arrow pointing at that tile, so the field
+           and the note don't get lost under the tiles. Fixed: the sum. By the receipt: where the sum is typed.
+           By meters: what is typed every month (the tariffs are in «Счётчики»).{% endcomment %}
+        <div class="charge-panel">
+          <div class="cp-row fixed-only">
+            <svg class="icon"><use href="#i-lock"/></svg>
+            <label class="cp-label" for="{{ form.fixed_amount.id_for_label }}">Сумма в месяц</label>
+            <label class="ifield cp-field{% if form.fixed_amount.errors %} has-error{% endif %}">{{ form.fixed_amount }}<span class="ifield-fix">{{ receipt.currency_symbol }}</span></label>
             {% if form.fixed_amount.errors %}<p class="calc-error">{{ form.fixed_amount.errors.0 }}</p>{% endif %}
           </div>
-        </div>
-        <p class="charge-note monthly-only">Сумму из квитанции вводите каждый месяц на странице объекта.</p>
-
-        {# Meter: what is typed every month. The tariff and unit live with each meter («Счётчики»). #}
-        <div class="calc-row metered-only">
-          <span class="calc-label">Ввод показаний</span>
-          <div class="calc-ctrl">
-            {# Readings: «было» and «стало» each month; usage: one number. #}
+          <p class="cp-row monthly-only">
+            <svg class="icon"><use href="#i-calendar"/></svg>
+            <span>Сумму из квитанции вводите <b>каждый месяц</b> на странице объекта.</span>
+          </p>
+          <div class="cp-row metered-only">
+            <svg class="icon"><use href="#i-gauge"/></svg>
+            <span class="cp-label">Каждый месяц вводим</span>
             <div class="seg-track" role="radiogroup" aria-label="Каждый месяц вводим">
               {% for value, label in form.fields.input_mode.choices %}{% if value %}
                 <label><input type="radio" name="input_mode" value="{{ value }}"{% if form.input_mode.value == value %} checked{% endif %}><span>{% if value == 'usage' %}Расход{% else %}Было / стало{% endif %}</span></label>
@@ -99,98 +103,88 @@
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    {% comment %}3. Счётчики: only with a meter. The object's meters as tiles (as in the object window) with a tick;
-       the template ticks its kind. Below — a tariff per kind of the ticked meters (sewage: one for all).
-       The layout radios are hidden: app.js keeps them in step with the ticks, so «Делим» follows.{% endcomment %}
-    <section class="form-section rows metered-only meters-block" data-meter-picks>
-      <h2 class="form-section-head">Счётчики <span class="badge" data-meter-count>{{ meters_label }}</span></h2>
-      <div class="form-section-body">
-        <input type="hidden" name="meters_shown" value="1">
-        {% if property.is_owner_used or not tenants %}
-          <input type="hidden" name="layout" value="common">
-        {% else %}
-          <div class="layout-radios" hidden>
-            {% for value, label in layout_choices %}<input type="radio" name="layout" value="{{ value }}" aria-label="{{ label }}"{% if meter_layout == value %} checked{% endif %}>{% endfor %}
-          </div>
-        {% endif %}
-        {% if meter_picks %}
-          <div class="meter-tiles pick-tiles">
-            {% for pick in meter_picks %}
-              <label class="meter-pick mk-{{ pick.kind }}" data-key="{{ pick.key }}" data-dn="{{ pick.meter.day_night|yesno:'1,0' }}" data-owner="{{ pick.owner_key }}">
-                <input type="checkbox" name="meter_ids" value="{{ pick.meter.pk }}"{% if pick.checked %} checked{% endif %}>
-                <span class="mt-icon">{% include "billing/_meter_icon.html" with kind=pick.kind %}</span>
-                <span class="info-cell info-main">{{ pick.meter.name }}{% if pick.meter.day_night %}<span class="info-label"> день / ночь</span>{% endif %}</span>
-                <span class="pick-box" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span>
-                <span class="mt-line">
-                  <span class="info-cell info-serial"><span class="info-label">№ </span>{{ pick.meter.serial|default:'—' }}</span>
-                  <span class="info-cell info-start" title="Начальное показание"><svg class="mt-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>{{ pick.start|default:'—' }}</span>
-                </span>
-                <span class="who-badge mt-who {{ pick.who_cls }}" title="{{ pick.who }}">{{ pick.who }}</span>
-              </label>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="rform-note">У объекта пока нет счётчиков — добавьте их в окне объекта.</p>
-        {% endif %}
-        <a href="{% url 'property_edit' property.pk %}" data-modal class="setup-link meter-object-link">+ Добавить счётчик объекта</a>
+        {# «Делим» and the tenants right under the panel — по квитанции / фиксированная (no «Кто платит» head). #}
+        <div class="split-home" data-split-home="charge">{% if form.charge.value != 'meters' %}{% include "billing/_split_block.html" %}{% endif %}</div>
 
-        <div class="tariff-rows">
-          {% for row in tariff_rows %}
-            <div class="calc-row tariff-row" data-tkey="{{ row.key }}"{% if not row.used %} hidden{% endif %}>
-              <span class="calc-label fade">Тариф · {{ row.label|lower }}</span>
-              <div class="calc-ctrl">
-                <input type="hidden" name="tariff_key" value="{{ row.key }}">
-                <label class="ifield{% if row.missing and not row.day %} has-error{% endif %}"><input type="text" name="tariff_day" value="{{ row.day }}" placeholder="0,00" inputmode="decimal" autocomplete="off" aria-label="Тариф: {{ row.label }}"><span class="ifield-fix" data-day-fix>{{ receipt.currency_symbol }}{% if row.night %} день{% endif %}</span></label>
-                <label class="ifield{% if row.missing and row.night and not row.night_value %} has-error{% endif %}" data-night-field{% if not row.night %} hidden{% endif %}><input type="text" name="tariff_nightv" value="{{ row.night_value }}" placeholder="0,00" inputmode="decimal" autocomplete="off" aria-label="Тариф ночью: {{ row.label }}"><span class="ifield-fix">{{ receipt.currency_symbol }} ночь</span></label>
-                <span class="tariff-unit">за {{ row.unit|default:'ед.' }}</span>
-              </div>
+        {% comment %}По счётчикам (2026-11-13, пробуем): instead of the tenants — the meters, one per row, as the tenants are
+           listed under «По квитанции»: number · icon · what it is · № · a switch «в услуге». A template lists only its
+           own kind (cold water — cold-water meters); below — a tariff per kind of the switched-on meters.
+           The layout radios are hidden: app.js keeps them in step with the switches.{% endcomment %}
+        <div class="meter-rows metered-only" data-meter-picks>
+          <input type="hidden" name="meters_shown" value="1">
+          {% if property.is_owner_used or not tenants %}
+            <input type="hidden" name="layout" value="common">
+          {% else %}
+            <div class="layout-radios" hidden>
+              {% for value, label in layout_choices %}<input type="radio" name="layout" value="{{ value }}" aria-label="{{ label }}"{% if meter_layout == value %} checked{% endif %}>{% endfor %}
             </div>
-          {% endfor %}
+          {% endif %}
+          {% if meter_picks %}
+            <ol class="mrow-list">
+              {% for pick in meter_picks %}
+                <li class="mrow" data-pick data-key="{{ pick.key }}" data-dn="{{ pick.meter.day_night|yesno:'1,0' }}" data-owner="{{ pick.owner_key }}">
+                  <span class="payer-num">{{ forloop.counter }}</span>
+                  <span class="tm-icon mk-{{ pick.kind }}">{% include "billing/_meter_icon.html" with kind=pick.kind %}</span>
+                  <span class="mrow-name fade" title="{{ pick.meter.name }}{% if pick.meter.day_night %} · день / ночь{% endif %}">{{ pick.short }}</span>
+                  <span class="mrow-serial" title="№ {{ pick.meter.serial|default:'—' }}">№ {{ pick.meter.serial|default:'—' }}</span>
+                  {# Its own tariff: one field, or day + night for a day / night meter. #}
+                  <span class="mrow-tariff">
+                    <input type="hidden" name="tariff_key" value="{{ pick.key }}">
+                    {% with row=pick.tariff %}
+                      {% if pick.meter.day_night %}
+                        <label class="ifield mfield{% if row.missing and not row.day %} has-error{% endif %}"><input type="text" name="tariff_day" value="{{ row.day }}" placeholder="день" inputmode="decimal" autocomplete="off" aria-label="Тариф днём, № {{ pick.meter.serial }}"><span class="ifield-fix">₽</span></label>
+                        <label class="ifield mfield{% if row.missing and not row.night_value %} has-error{% endif %}"><input type="text" name="tariff_nightv" value="{{ row.night_value }}" placeholder="ночь" inputmode="decimal" autocomplete="off" aria-label="Тариф ночью, № {{ pick.meter.serial }}"><span class="ifield-fix">₽</span></label>
+                      {% else %}
+                        <label class="ifield mfield mfield-one{% if row.missing and not row.day %} has-error{% endif %}"><input type="text" name="tariff_day" value="{{ row.day }}" placeholder="тариф" inputmode="decimal" autocomplete="off" aria-label="Тариф, № {{ pick.meter.serial }}"><span class="ifield-fix">₽/{{ row.unit|default:'ед.' }}</span></label>
+                        <input type="hidden" name="tariff_nightv" value="">
+                      {% endif %}
+                    {% endwith %}
+                  </span>
+                  {# «Чей»: the tenant seated on this meter, common, or the owner. #}
+                  {% if meter_tenants and not property.is_owner_used %}
+                    <div class="pick pick-radio mrow-who" data-drop>
+                      <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Кто платит по счётчику № {{ pick.meter.serial }}">
+                        <span class="fade" data-drop-label>{% if not pick.who_value %}Общий{% elif pick.who_value == 'free' %}Собственник{% else %}{% for tenant in meter_tenants %}{% if pick.who_value == tenant.pk|stringformat:'s' %}{{ tenant.name }}{% endif %}{% endfor %}{% endif %}</span>
+                        <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+                      </button>
+                      <ul class="select-menu pick-menu" role="radiogroup" aria-label="Кто платит" data-drop-menu hidden>
+                        <li class="select-row"><label class="select-option"><input type="radio" name="who_{{ pick.meter.pk }}" value=""{% if not pick.who_value %} checked{% endif %}><span>Общий</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                        {% for tenant in meter_tenants %}
+                          <li class="select-row"><label class="select-option"><input type="radio" name="who_{{ pick.meter.pk }}" value="{{ tenant.pk }}"{% if pick.who_value == tenant.pk|stringformat:'s' %} checked{% endif %}><span>{{ tenant.name }}</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                        {% endfor %}
+                        <li class="select-row"><label class="select-option"><input type="radio" name="who_{{ pick.meter.pk }}" value="free"{% if pick.who_value == 'free' %} checked{% endif %}><span>Собственник</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                      </ul>
+                    </div>
+                  {% else %}
+                    <span class="mrow-who-none">на вас</span>
+                  {% endif %}
+                  <label class="payer-pays" title="Считать по этому счётчику">
+                    <input type="checkbox" class="switch-input" name="meter_ids" value="{{ pick.meter.pk }}"{% if pick.checked %} checked{% endif %}>
+                    <span class="switch" aria-hidden="true"></span>
+                    <span class="visually-hidden">{{ pick.meter.name }} № {{ pick.meter.serial }} в услуге</span>
+                  </label>
+                </li>
+              {% endfor %}
+            </ol>
+          {% else %}
+            <p class="mrow-empty">У объекта нет таких счётчиков.</p>
+          {% endif %}
+
+          {% if meters_error %}<p class="calc-error">{{ meters_error }}</p>{% endif %}
+          <a href="{% url 'property_edit' property.pk %}" data-modal class="setup-link mrow-add">+ Добавить счётчик объекта</a>
         </div>
-        {% if meters_error %}<p class="calc-error">{{ meters_error }}</p>{% endif %}
       </div>
     </section>
 
-    {# ---------- 4. Кто платит: how the sum is split ---------- #}
-    <section class="form-section rows">
+    {# ---------- 4. Кто платит for «По счётчикам»: hidden while we try meters as rows (inputs still posted) ---------- #}
+    <section class="form-section rows is-parked">
       <h2 class="form-section-head">Кто платит
         {% if property.is_owner_used %}<span class="badge">на вас</span>
         {% else %}{% for value, label in layout_choices %}{% if value != 'common' %}<span class="badge head-badge" data-layout="{{ value }}">{{ label|lower }}</span>{% endif %}{% endfor %}
         {% for value, label in split_choices %}<span class="badge head-badge" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
       </h2>
-      <div class="form-section-body">
-        {% if property.is_owner_used %}
-          <p class="rform-note">Объектом пользуетесь вы сами — расходы остаются на вас.</p>
-          <input type="hidden" name="split" value="owner">
-        {% endif %}
-
-        {% if not property.is_owner_used %}
-          {# Always here: the split buttons (no meter / one common meter), or what the tenants' own meters mean. #}
-          <div class="calc-row split-row">
-            <span class="calc-label">Делим</span>
-            <div class="calc-ctrl">
-              <div class="seg-track split-track" role="radiogroup" aria-label="Как делим">
-                {% for value, label in split_choices %}
-                  <label><input type="radio" name="split" value="{{ value }}"{% if form.split.value == value %} checked{% endif %}><span>{{ label }}</span></label>
-                {% endfor %}
-              </div>
-              {# What the choice means: quiet grey text right next to the switch, no badge. #}
-              <p class="split-hint" data-for="shares">доли из карточки объекта</p>
-              <p class="split-hint" data-for="equal">поровну на тех, кто платит</p>
-              <p class="split-hint" data-for="area">по площади каждого</p>
-              <p class="split-hint" data-for="owner">арендаторам не выставляется</p>
-              <p class="calc-note layout-hint" data-for="tenants"><span class="badge badge-info">каждый платит по своему счётчику</span></p>
-              <p class="calc-note layout-hint" data-for="both"><span class="badge badge-info">арендаторы — по своим</span><span class="badge badge-warn">разница с общим — на вас</span></p>
-            </div>
-          </div>
-
-          {% include "billing/_payers.html" %}
-        {% endif %}
-        {% if warning %}<p class="rform-warning">{{ warning }}</p>{% endif %}
-      </div>
+      <div class="form-section-body split-home" data-split-home="meters">{% if form.charge.value == 'meters' %}{% include "billing/_split_block.html" %}{% endif %}</div>
     </section>
     {% endwith %}
 

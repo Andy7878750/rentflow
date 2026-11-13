@@ -1180,7 +1180,9 @@
       }
     }
 
-    // ---- the tenant's meters (ticks under the tenant's fields) ----
+    // ---- the tenant's meters: read-only (2026-11-13) ----
+    // A tenant is seated on a meter in the service window, not here. This block only shows the meters
+    // the tenant pays by — no ticks, nothing to change; empty — a note where they will show up.
 
     function tenantMeters(item) {
       var key = tenantKey(item);
@@ -1195,23 +1197,20 @@
       section.appendChild(head);
       var sectionBody = el('div', 'form-section-body');
       section.appendChild(sectionBody);
-      var meters = items('meter');
-      if (!meters.length) {
-        sectionBody.appendChild(el('p', 'form-note', 'На объекте пока нет счётчиков — добавьте их в блоке «Счётчики».'));
+      var mine = [];
+      items('meter').forEach(function (meter, i) {
+        if (key && val(meter, 'owner') === key) mine.push([meter, i]);
+      });
+      count.textContent = mine.length ? mine.length + ' шт.' : '';
+      if (!mine.length) {
+        sectionBody.appendChild(el('p', 'form-note tm-empty', 'Здесь будут счётчики, привязанные к этому арендатору.'));
         return section;
       }
       var list = el('div', 'tm-list');
-      meters.forEach(function (meter, i) {
-        var owner = val(meter, 'owner');
-        var busy = owner && owner !== 'free' && owner !== key ? tenantName(owner) : null;
-        var row = el('label', 'tm-row' + (busy ? ' is-busy' : ''));
-        var box = el('input');
-        box.type = 'checkbox';
-        box.checked = owner === key;
-        box.disabled = Boolean(busy);
-        box.meterRef = meter;
-        row.appendChild(box);
-        row.appendChild(el('span', 'inum', String(i + 1)));
+      mine.forEach(function (pair) {
+        var meter = pair[0];
+        var row = el('div', 'tm-row is-readonly');
+        row.appendChild(el('span', 'inum', String(pair[1] + 1)));
         var kind = meterKind(meter);
         var icon = el('span', 'tm-icon mk-' + kind);
         icon.innerHTML = METER_ICONS[kind];
@@ -1219,16 +1218,9 @@
         row.appendChild(el('span', 'info-cell info-main', val(meter, 'name')));
         row.appendChild(cell('', '№', val(meter, 'serial'), '№ —'));
         row.appendChild(startCell(meter));
-        var who;
-        if (busy) who = el('span', 'who-badge is-tenant', busy);
-        else if (owner && owner !== key) who = el('span', 'who-badge is-free', 'свободен');
-        else if (!owner) who = el('span', 'who-badge', 'общий');
-        else who = el('span');
-        row.appendChild(who);
         list.appendChild(row);
       });
       sectionBody.appendChild(list);
-      sectionBody.appendChild(el('p', 'form-note', 'Отметьте счётчики, по которым платит этот арендатор. Неотмеченные — общие: по ним платят по долям.'));
       return section;
     }
 
@@ -1236,9 +1228,6 @@
       if (!current || current.kind !== 'tenant') return;
       var title = sub.querySelector('[data-tm-title]');
       if (title) title.textContent = 'Счётчики · ' + (val(current.item, 'name') || 'арендатор ' + current.number);
-      var count = sub.querySelector('[data-tm-count]');
-      var ticked = sub.querySelectorAll('.tm-row input:checked').length;
-      if (count) count.textContent = ticked ? 'отмечено ' + ticked : '';
     }
 
     function applyTicks() {
@@ -1621,6 +1610,17 @@
     if (serial && event.target.matches('input') && serial.dataset.state === 'edit') setSerialState(serial, 'locked');
   });
 
+  // «Делим» + tenants: under the grey panel of «Начисление» (по квитанции / фиксированная) or in «Кто платит»
+  // (по счётчикам). One copy of the inputs — it is moved, not duplicated.
+  document.addEventListener('change', function (event) {
+    var input = event.target;
+    if (!input.matches || !input.matches('.rform input[name=charge]')) return;
+    var form = input.form;
+    var block = form.querySelector('[data-split-block]');
+    var home = form.querySelector('[data-split-home="' + (input.value === 'meters' ? 'meters' : 'charge') + '"]');
+    if (block && home && block.parentNode !== home) home.appendChild(block);
+  });
+
   // «Как делим» shows up (no meter, or one common meter) with nothing picked → «По долям».
   document.addEventListener('change', function (event) {
     var input = event.target;
@@ -1875,9 +1875,10 @@
   function updatePicks(form) {
     var block = form.querySelector('[data-meter-picks]');
     if (!block) return;
-    var picks = Array.prototype.slice.call(block.querySelectorAll('.meter-pick'));
+    var picks = Array.prototype.slice.call(block.querySelectorAll('[data-pick]'));
     var ticked = picks.filter(function (pick) { return pick.querySelector('input[name=meter_ids]').checked; });
-    block.querySelector('[data-meter-count]').textContent = metersLabel(ticked.length);
+    var count = form.querySelector('[data-meter-count]');
+    if (count) count.textContent = metersLabel(ticked.length);
     var own = ticked.some(function (pick) { return pick.dataset.owner === 'tenant'; });
     var common = ticked.some(function (pick) { return pick.dataset.owner === 'common'; });
     var radio = form.querySelector('input[name=layout][value=' + (own && common ? 'both' : own ? 'tenants' : 'common') + ']');
@@ -1896,7 +1897,12 @@
   }
 
   document.addEventListener('change', function (event) {
-    if (event.target.matches && event.target.matches('.meter-pick input[name=meter_ids]')) updatePicks(event.target.form);
+    if (event.target.matches && event.target.matches('[data-pick] input[name=meter_ids]')) updatePicks(event.target.form);
+    // «Чей» of a meter row: a tenant (or the owner) — the meter is no longer common.
+    if (event.target.matches && event.target.matches('[data-pick] input[name^="who_"]')) {
+      event.target.closest('[data-pick]').dataset.owner = event.target.value ? 'tenant' : 'common';
+      updatePicks(event.target.form);
+    }
   });
 
   // The night tariff repeats the meter's unit: «₽/м³».

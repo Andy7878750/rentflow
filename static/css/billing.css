@@ -3316,13 +3316,6 @@
   border-color: var(--color-border);
 }
 
-.rform .rows .charge-note {
-  margin: 0;
-  padding: 0 0 10px;
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
-
 .rform .rows .charge-tiles + .calc-error {
   margin: -4px 0 10px;
 }
@@ -3333,10 +3326,6 @@
   }
 }
 
-/* A row right under the tiles: 10px from them, not 10 + 10. */
-.rform .rows .charge-tiles ~ .calc-row {
-  padding-top: 0;
-}
 
 /* «Кто платит», tidied (2026-11-13): «Делим» — the switch and its meaning as grey text on the same line;
    «Арендаторы» — a small table over the whole width: number (grey: green is for switches) · name · share ·
@@ -3433,4 +3422,287 @@
 
 .rform .payer-pays {
   justify-content: flex-end;
+}
+
+/* «Начисление»: the answer to the picked tile (2026-11-13) — a grey panel under the tiles with a small arrow
+   pointing at the picked one. Inside: a label above (12px, as in every form) and a white 38px field, or a note
+   with an icon in dark text. The tiles stay pretty, the field is no longer lost next to them. */
+.rform .rows .charge-tiles {
+  padding-bottom: 0;
+}
+
+.rform .rows .charge-panel {
+  --caret: calc((100% - 24px) / 8);
+  position: relative;
+  margin: 12px 0 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f1f3f5;
+}
+
+.rform:has(input[name=charge][value=fixed]:checked) .charge-panel {
+  --caret: calc((100% - 24px) / 8 * 3 + 8px);
+}
+
+.rform:has(input[name=charge][value=meters]:checked) .charge-panel {
+  --caret: calc((100% - 24px) / 8 * 5 + 16px);
+}
+
+.rform .rows .charge-panel::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: calc(var(--caret) - 7px);
+  width: 14px;
+  height: 14px;
+  background: #f1f3f5;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+/* One look for every answer (2026-11-13): one row — accent icon · dark text · the control, the same height
+   (38px) whatever the tile. */
+.rform .rows .cp-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  min-height: 38px;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--color-text);
+}
+
+.rform .cp-row > .icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--color-accent);
+}
+
+.rform .cp-label {
+  font-size: 13.5px;
+  color: var(--color-text);
+}
+
+.rform .cp-row b {
+  font-weight: 600;
+}
+
+.rform .cp-field {
+  box-sizing: border-box;
+  width: 180px;
+  height: 38px;
+  margin-left: 4px;
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.rform .cp-field input {
+  flex: 1 1 auto;
+  width: auto;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.rform .cp-row .calc-error {
+  flex-basis: 100%;
+  margin: 0 0 0 28px;
+}
+
+.rform .charge-panel .seg-track {
+  margin-left: 4px;
+  background: var(--color-surface);
+}
+
+@media (max-width: 560px) {
+  .rform .rows .charge-panel::before {
+    display: none;
+  }
+}
+
+/* «Делим» + tenants right under the grey panel (по квитанции / фиксированная, 2026-11-13): no «Кто платит» head,
+   no word «Делим» (the buttons say it). One left edge for the whole block: tiles, panel, switch, tenant numbers.
+   «Плачу сам» — the tenants stay, grey, without switches. */
+.rform .charge-panel .cp-row > .icon {
+  width: 24px;
+}
+
+.rform .rows [data-split-home=charge] .split-block {
+  padding: 0 0 9px;
+}
+
+.rform .rows [data-split-home=charge] .split-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 0;
+}
+
+.rform .rows [data-split-home=charge] .split-row .calc-label {
+  display: none;
+}
+
+.rform .rows [data-split-home=charge] .split-row .calc-ctrl {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rform .rows [data-split-home=charge] .payers-row {
+  display: block;
+  margin-top: 10px;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.rform .rows [data-split-home=charge] .payers-row .calc-label {
+  display: none;
+}
+
+.rform .rows [data-split-home=charge] .rform-note {
+  padding: 0 0 6px;
+  border: 0;
+  font-size: 13.5px;
+}
+
+.rform:has(input[name=split][value=owner]:checked) [data-split-home=charge] .payer {
+  opacity: 0.45;
+}
+
+.rform:has(input[name=split][value=owner]:checked) [data-split-home=charge] .payer-pays {
+  visibility: hidden;
+}
+
+/* «По счётчикам» — meters as rows under the grey panel (2026-11-13, trying it): the same look as the tenants under
+   «По квитанции»: number (grey) · icon in its colour · what it is · № · switch «в услуге» at the end; rows 36px with
+   thin lines, one left and one right edge with the tiles and the panel. Switched off — pale. Below: tariffs, the link. */
+.rform .form-section.is-parked {
+  display: none !important;
+}
+
+.rform .rows .meter-rows {
+  padding: 0 0 10px;
+}
+
+.rform .mrow-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rform .mrow {
+  display: grid;
+  /* number · icon · name · № · tariff · чей · switch — fixed columns, so every row lines up */
+  grid-template-columns: 24px 16px minmax(0, 1fr) 120px 190px 140px 32px;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  border-top: 1px solid var(--color-border);
+  font-size: 13.5px;
+}
+
+.rform .mrow:first-child {
+  border-top: 0;
+}
+
+.rform .mrow-dn {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.rform .mrow-serial {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rform .mrow:has(input[name=meter_ids]:not(:checked)) > :not(.payer-pays) {
+  opacity: 0.45;
+}
+
+.rform .mrow-empty {
+  margin: 0;
+  padding: 8px 0;
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+}
+
+.rform .mrow-add {
+  display: block;
+  width: max-content;
+  margin: 10px 0 0 auto;
+  font-size: 13px;
+}
+
+/* A meter row's own tariff and «чей» (2026-11-13): compact 30px fields inside the 36px row. */
+.rform .mrow-tariff {
+  display: flex;
+  gap: 10px;
+}
+
+.rform .mfield {
+  box-sizing: border-box;
+  width: 90px;
+  height: 30px;
+  padding: 0 8px;
+  gap: 4px;
+  border-radius: 7px;
+}
+
+.rform .mfield-one {
+  width: 100%;
+}
+
+.rform .mfield input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  font-size: 13.5px;
+  text-align: right;
+}
+
+.rform .mfield .ifield-fix {
+  font-size: 12px;
+}
+
+.rform .mrow-who {
+  position: relative;
+  min-width: 0;
+}
+
+.rform .mrow-who .pick-trigger {
+  box-sizing: border-box;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  font-size: 13px;
+}
+
+.rform .mrow-who .pick-trigger > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.rform .mrow-who .pick-menu {
+  right: 0;
+  left: auto;
+  min-width: 180px;
+}
+
+.rform .mrow-who-none {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* «Уже есть» on the picked template: its check stays white (the picked tile paints icons in the accent). */
+.kind-tile.is-selected .kind-tile-mark .icon {
+  color: #fff;
 }
