@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
+from django.forms.utils import ErrorDict
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -29,12 +30,16 @@ def _payers_switchable(receipt, property_obj):
     return not property_obj.is_owner_used and receipt.split in services.SWITCHABLE_SPLITS
 
 
-def _receipt_form(request, property_obj, receipt):
+def _receipt_form(request, property_obj, receipt, own_tpl=None):
     posted = request.POST if request.method == 'POST' else None
+    # Back from «+ Добавить счётчик объекта»: the window is drawn again with what was typed, nothing is saved.
+    redraw = posted is not None and posted.get('_redraw') == '1'
     # «Счётчик: Да» → the object's meters with a tick: what was posted, else the service's, else the template's kind.
-    meter_ids = services.parse_meter_ids(property_obj, posted)
+    meter_ids = services.parse_meter_ids(property_obj, posted, receipt)
     if meter_ids is not None:
         checked = set(meter_ids)
+        if redraw:
+            checked |= set(services.new_meter_ids(property_obj, posted, receipt))
     elif receipt.pk:
         checked = set(receipt.meters.values_list('pk', flat=True))
     else:
@@ -51,20 +56,34 @@ def _receipt_form(request, property_obj, receipt):
     tariffs = services.parse_tariffs(posted) if posted is not None else None
     excluded = services.parse_excluded(property_obj, posted)
     meters_error, missing = '', []
-    if posted is not None and form.is_valid() and form.instance.metered:
+    if redraw:
+        form.is_valid()
+        form._errors = ErrorDict()  # half-typed is fine here: no red fields on the way back
+    elif posted is not None and form.is_valid() and form.instance.metered:
         if not ticked:
             meters_error = 'Отметьте счётчики, по которым считается услуга.'
         else:
             missing = services.missing_tariffs(form.instance, ticked, tariffs)
             if missing:
                 meters_error = 'Укажите тариф — по нему считается сумма.'
-    if posted is not None and not meters_error and form.is_valid():
+    if posted is not None and not redraw and not meters_error and form.is_valid():
         is_new = receipt.pk is None
+        # The form has already written the new name into the receipt: the tile is found by the stored one.
+        old_name = Receipt.objects.filter(pk=receipt.pk).values_list('name', flat=True).first() if receipt.pk else None
+        old_tile = request.user.service_templates.filter(name=old_name).first() if old_name else None
         if form.instance.metered:
             services.apply_meter_owners(property_obj, posted)  # «чей» of each meter row
         services.save_receipt(form.save(commit=False), meter_ids=[m.pk for m in ticked], tariffs=tariffs, excluded=excluded)
         verb = 'добавлена' if is_new else 'сохранена'
-        return _done(request, property_obj, f'Услуга «{receipt.name}» {verb}.')
+        message = f'Услуга «{receipt.name}» {verb}.'
+        if 'tile_shown' in posted:
+            as_tile = posted.get('as_tile') == '1'
+            if old_tile and old_tile.name != receipt.name and as_tile:
+                old_tile.delete()  # renamed: the tile follows the service
+            services.save_as_tile(receipt, as_tile)
+            if as_tile:
+                message = f'Услуга «{receipt.name}» {verb} и стала плашкой в «Новой услуге».'
+        return _done(request, property_obj, message)
 
     shown = [pick for pick in picks if pick['shown']]
     rows = {row['key']: row for row in services.tariff_rows(form.instance, shown, tariffs, missing)}
@@ -77,7 +96,14 @@ def _receipt_form(request, property_obj, receipt):
         'property': property_obj,
         'warning': services.split_warning(form.instance),
         # New service: the templates on top of the same window; picking one refills the fields below.
-        'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, receipt.kind),
+        'kind_tiles': None if receipt.pk else services.template_tiles(property_obj, None if own_tpl else receipt.kind),
+        'own_tiles': None if receipt.pk else services.own_tiles(property_obj, own_tpl),
+        'own_tpl': own_tpl,
+        # «Своя»: save it as a tile too? On when a tile with its name is there already.
+        'tile_shown': receipt.kind == Receipt.Kind.CUSTOM,
+        'tile_on': (posted.get('as_tile') == '1') if posted is not None and 'tile_shown' in posted
+                   else bool(own_tpl or services.tile_of(receipt)),
+        'known_meters': ','.join(str(pick['meter'].pk) for pick in picks),
         'meters_error': meters_error,
         'payers': services.payer_preview(services.normalize(form.instance), excluded),
         'payers_switchable': _payers_switchable(form.instance, property_obj),
@@ -101,8 +127,9 @@ def _receipt_form(request, property_obj, receipt):
 def receipt_create(request, property_pk):
     """«+ Добавить услугу»: templates on top, settings below; ?kind=water opens with «Вода» picked."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
-    receipt = services.new_receipt(property_obj, request.GET.get('kind') or request.POST.get('kind'))
-    return _receipt_form(request, property_obj, receipt)
+    template = services.owner_template(request.user, request.GET.get('tpl') or request.POST.get('tpl'))
+    receipt = services.new_receipt(property_obj, request.GET.get('kind') or request.POST.get('kind'), template)
+    return _receipt_form(request, property_obj, receipt, template)
 
 
 def _own_receipt(request, pk):

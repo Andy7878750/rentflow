@@ -54,6 +54,24 @@
       .catch(function () { window.location.href = url; });
   }
 
+  // «+ Добавить счётчик объекта» in the service window: the object window opens instead, and after its
+  // «Сохранить» or «Отмена» the service window comes back with everything typed (the server draws it
+  // again from the remembered fields, `_redraw`; the new meters come ticked).
+  var serviceReturn = null;
+
+  function returnToService() {
+    var back = serviceReturn;
+    serviceReturn = null;
+    back.data.set('_redraw', '1');
+    fetch(back.url, { method: 'POST', body: back.data, headers: { 'X-Modal': '1' }, credentials: 'same-origin' })
+      .then(function (response) {
+        if (!response.ok) throw new Error(response.status);
+        return response.text();
+      })
+      .then(showInModal)
+      .catch(function () { window.location.reload(); });
+  }
+
   if (dialog) {
     document.addEventListener('click', function (event) {
       var link = event.target.closest('a[data-modal]');
@@ -61,6 +79,13 @@
       event.preventDefault();
       var dropdown = link.closest('[data-dropdown]');
       if (dropdown) dropdown.removeAttribute('open');
+      if (link.hasAttribute('data-service-return')) {
+        var form = link.closest('form');
+        var kind = form.querySelector('input[name=kind]');
+        serviceReturn = { url: form.action + (kind ? '?kind=' + encodeURIComponent(kind.value) : ''), data: new FormData(form) };
+      } else if (!dialog.contains(link)) {
+        serviceReturn = null;
+      }
       openModal(link.href);
     });
 
@@ -68,7 +93,8 @@
     dialog.addEventListener('click', function (event) {
       if (event.target.closest('[data-modal-close]')) {
         event.preventDefault();
-        dialog.close();
+        if (serviceReturn && !dialog.querySelector('.rform')) returnToService();
+        else { serviceReturn = null; dialog.close(); }
       }
     });
 
@@ -101,6 +127,10 @@
       })
         .then(function (response) {
           var redirect = response.headers.get('X-Modal-Redirect');
+          if (redirect && serviceReturn && !form.classList.contains('rform')) {
+            returnToService();  // the object is saved: back to the service window being filled in
+            return null;
+          }
           if (redirect) {
             window.location.href = redirect;
             return null;

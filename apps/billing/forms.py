@@ -65,8 +65,10 @@ class ReceiptForm(forms.ModelForm):
         self.fields['name'].required = False
 
     def clean_name(self):
+        from . import services
+
         name = (self.cleaned_data.get('name') or '').strip()
-        return name or Receipt.Kind(self.instance.kind or Receipt.Kind.CUSTOM).label
+        return name or services.template_name(self.instance.kind or Receipt.Kind.CUSTOM)
 
     @property
     def units(self):

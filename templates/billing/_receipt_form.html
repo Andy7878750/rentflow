@@ -20,6 +20,7 @@
         class="rform{% if property.is_owner_used %} is-owner{% endif %}" data-modal-form novalidate>
     {% csrf_token %}
     <input type="hidden" name="kind" value="{{ receipt.kind }}">
+    {% if own_tpl %}<input type="hidden" name="tpl" value="{{ own_tpl.pk }}">{% endif %}
     {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 
     {% if kind_tiles is not None %}
@@ -34,8 +35,18 @@
             {% if tile.added %}<span class="kind-tile-mark" aria-label="уже есть"><svg class="icon"><use href="#i-check"/></svg></span>{% endif %}
           </a>
         {% endfor %}
+        {# The owner's own tiles: a «Своя» service saved «как плашка». #}
+        {% for tile in own_tiles %}
+          <a href="{% url 'receipt_create' property.pk %}?tpl={{ tile.template.pk }}" data-modal
+             class="kind-tile kind-tile-mine{% if tile.selected %} is-selected{% endif %}"{% if tile.selected %} aria-current="true"{% endif %}
+             title="{{ tile.name }} — ваша плашка{% if tile.added %}; уже есть у объекта{% endif %}">
+            <svg class="icon"><use href="#i-r-custom"/></svg>
+            <span>{{ tile.label }}</span>
+            {% if tile.added %}<span class="kind-tile-mark" aria-label="уже есть"><svg class="icon"><use href="#i-check"/></svg></span>{% endif %}
+          </a>
+        {% endfor %}
         <a href="{% url 'receipt_create' property.pk %}?kind=custom" data-modal
-           class="kind-tile kind-tile-own{% if receipt.kind == 'custom' %} is-selected{% endif %}"{% if receipt.kind == 'custom' %} aria-current="true"{% endif %}>
+           class="kind-tile kind-tile-own{% if receipt.kind == 'custom' and not own_tpl %} is-selected{% endif %}"{% if receipt.kind == 'custom' and not own_tpl %} aria-current="true"{% endif %}>
           <svg class="icon"><use href="#i-plus"/></svg>
           <span>Своя</span>
         </a>
@@ -47,8 +58,8 @@
       <h2 class="form-section-head">Услуга</h2>
       <div class="form-section-body">
         <div class="form-grid grid-2">
+          {% include "properties/_field.html" with field=form.name label="Название в счёте" tip="Так услуга называется в счетах арендаторам и на своей плашке. Если оставить пустым — название шаблона." %}
           {% include "properties/_field.html" with field=form.provider label="Поставщик" tip="Кто присылает квитанцию: УК, ТСЖ, «Петроэлектросбыт», провайдер. Для вашей памяти." %}
-          {% include "properties/_field.html" with field=form.name label="Название в счёте" tip="Так услуга называется в счетах арендаторам. Если оставить пустым — название шаблона." %}
         </div>
       </div>
     </section>
@@ -123,6 +134,19 @@
           {% if meter_picks %}
             <ol class="mrow-list">
               {% for pick in meter_picks %}
+                {% if pick.busy %}
+                  {% ifchanged pick.busy.pk|yesno:'1,1' %}<li class="mrow-caption">Уже в других услугах — тариф и «чей» меняются там</li>{% endifchanged %}
+                  {# Locked: the meter counts in another service, by its tariff. Nothing of this row is posted. #}
+                  <li class="mrow is-busy" title="Счётчик в услуге «{{ pick.busy.name }}»">
+                    <span class="payer-num">{{ forloop.counter }}</span>
+                    <span class="tm-icon mk-{{ pick.kind }}">{% include "billing/_meter_icon.html" with kind=pick.kind %}</span>
+                    <span class="mrow-name fade" title="{{ pick.meter.name }}{% if pick.meter.day_night %} · день / ночь{% endif %}">{{ pick.short }}</span>
+                    <span class="mrow-serial" title="№ {{ pick.meter.serial|default:'—' }}">№ {{ pick.meter.serial|default:'—' }}</span>
+                    <span class="mrow-tariff"><span class="ifield mfield mfield-one is-locked"><span class="mrow-locked-text fade">{{ pick.busy_tariff|default:'тариф не задан' }}</span></span></span>
+                    <span class="mrow-who-busy fade">{% if pick.who_value == 'free' %}Собственник{% elif pick.who_value %}{{ pick.meter.tenant.name }}{% else %}Общий{% endif %}</span>
+                    <span class="mrow-lock" title="В услуге «{{ pick.busy.name }}»"><svg class="icon"><use href="#i-lock"/></svg><span class="visually-hidden">в услуге «{{ pick.busy.name }}»</span></span>
+                  </li>
+                {% else %}
                 <li class="mrow" data-pick data-key="{{ pick.key }}" data-dn="{{ pick.meter.day_night|yesno:'1,0' }}" data-owner="{{ pick.owner_key }}">
                   <span class="payer-num">{{ forloop.counter }}</span>
                   <span class="tm-icon mk-{{ pick.kind }}">{% include "billing/_meter_icon.html" with kind=pick.kind %}</span>
@@ -165,6 +189,7 @@
                     <span class="visually-hidden">{{ pick.meter.name }} № {{ pick.meter.serial }} в услуге</span>
                   </label>
                 </li>
+                {% endif %}
               {% endfor %}
             </ol>
           {% else %}
@@ -172,7 +197,9 @@
           {% endif %}
 
           {% if meters_error %}<p class="calc-error">{{ meters_error }}</p>{% endif %}
-          <a href="{% url 'property_edit' property.pk %}" data-modal class="setup-link mrow-add">+ Добавить счётчик объекта</a>
+          {# Opens the object window; after «Сохранить» or «Отмена» this window comes back with what was typed (app.js). #}
+          <input type="hidden" name="known_meters" value="{{ known_meters }}">
+          <a href="{% url 'property_edit' property.pk %}" data-modal data-service-return class="setup-link mrow-add">+ Добавить счётчик объекта</a>
         </div>
       </div>
     </section>
@@ -189,6 +216,15 @@
     {% endwith %}
 
     <div class="form-actions">
+      {% if tile_shown %}
+        {# «Своя»: just save, or save and keep it as a tile among the templates of «Новая услуга». #}
+        <label class="as-tile">
+          <input type="hidden" name="tile_shown" value="1">
+          <input type="checkbox" class="switch-input" name="as_tile" value="1"{% if tile_on %} checked{% endif %}>
+          <span class="switch" aria-hidden="true"></span>
+          <span class="as-tile-text"><b>Сохранить как плашку</b><small>появится среди шаблонов в «Новой услуге»</small></span>
+        </label>
+      {% endif %}
       <a href="{% url 'property_detail' property.pk %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
       <button type="submit" class="btn btn-primary btn-auto">{% if receipt.pk %}Сохранить{% else %}Добавить услугу{% endif %}</button>
     </div>

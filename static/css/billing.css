@@ -3702,6 +3702,94 @@
   font-size: 13px;
 }
 
+/* A meter of another service (2026-11-15): one meter — one service — one tariff. The row stays on the same
+   grid, at the end of the list, greyed; its tariff and «чей» as plain text, a lock instead of the switch. */
+.rform .mrow-caption {
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rform .mrow-list > .mrow-caption:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.rform .mrow-caption + .mrow {
+  border-top: 0;
+}
+
+.rform .mrow.is-busy > * {
+  opacity: 0.55;
+}
+
+.rform .mfield.is-locked {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  background: var(--color-surface-muted, #f4f6f8);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.rform .mrow-locked-text {
+  min-width: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rform .mrow-who-busy {
+  min-width: 0;
+  padding: 0 10px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.rform .mrow-lock {
+  display: inline-flex;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.rform .mrow-lock .icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* «Сохранить как плашку» (2026-11-15): a switch on the left of the window's buttons, only for «Своя». */
+.rform .as-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+  cursor: pointer;
+}
+
+.rform .as-tile-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.rform .as-tile-text b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.rform .as-tile-text small {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+/* The owner's own tiles: like the ready-made ones, a dashed frame tells them apart. */
+.kind-tile.kind-tile-mine:not(.is-selected) {
+  border-style: dashed;
+}
+
 /* «Уже есть» on the picked template: its check stays white (the picked tile paints icons in the accent). */
 .kind-tile.is-selected .kind-tile-mark .icon {
   color: #fff;

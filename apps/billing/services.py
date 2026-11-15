@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
-from .models import Meter, MonthlyAmount, Reading, Receipt, ReceiptTariff
+from .models import Meter, MonthlyAmount, Reading, Receipt, ReceiptTariff, ServiceTemplate
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
 _BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
@@ -31,16 +31,36 @@ PRESETS = {
     Receipt.Kind.CUSTOM: {'split': Receipt.Split.SHARES},
 }
 
-# Kinds offered as one-click buttons («Какие квитанции приходят?»), in this order.
-OFFERED_KINDS = [kind for kind in Receipt.Kind if kind != Receipt.Kind.CUSTOM]
+# Template tiles of «Новая услуга», in this order (2026-11-15: only these five + «Своя» and the owner's own tiles).
+# The other kinds stay in the model for services made before.
+OFFERED_KINDS = [
+    Receipt.Kind.MANAGEMENT, Receipt.Kind.ELECTRICITY, Receipt.Kind.HOT_WATER, Receipt.Kind.WATER, Receipt.Kind.INTERNET,
+]
+# A template's name on its tile and as the service's name, where it differs from the kind's label.
+TEMPLATE_NAMES = {Receipt.Kind.MANAGEMENT: 'Коммунальные услуги'}
+TILE_NAMES = {Receipt.Kind.MANAGEMENT: 'Ком. услуги'}
 
 
-def new_receipt(property_obj, kind):
-    """An unsaved receipt of the given kind with its defaults filled in."""
+def template_name(kind):
+    """The name a new service of this template gets: «Коммунальные услуги», «Электричество»…"""
+    kind = kind if kind in Receipt.Kind.values else Receipt.Kind.CUSTOM
+    return TEMPLATE_NAMES.get(kind, Receipt.Kind(kind).label)
+
+
+def new_receipt(property_obj, kind, template=None):
+    """An unsaved receipt of the given kind with its defaults filled in; `template` — the owner's own tile."""
     if kind not in Receipt.Kind.values:
         kind = Receipt.Kind.CUSTOM
+    if template is not None:
+        kind = Receipt.Kind.CUSTOM
     receipt = Receipt(property=property_obj, kind=kind)
-    receipt.name = '' if kind == Receipt.Kind.CUSTOM else Receipt.Kind(kind).label
+    receipt.name = '' if kind == Receipt.Kind.CUSTOM else template_name(kind)
+    if template is not None:
+        apply_template(receipt, template)
+        if property_obj.is_owner_used:
+            receipt.layout = Receipt.Layout.COMMON
+            receipt.split = Receipt.Split.OWNER
+        return receipt
     for field, value in PRESETS[kind].items():
         setattr(receipt, field, value)
     if property_obj.is_owner_used:
@@ -68,9 +88,72 @@ def template_tiles(property_obj, selected):
     """Template tiles of «Новая услуга»: every ready-made kind, the picked one and the ones already added marked."""
     have = set(property_obj.receipts.values_list('kind', flat=True))
     return [
-        {'kind': kind, 'label': tile_label(kind.label), 'name': kind.label, 'selected': kind == selected, 'added': kind in have}
+        {'kind': kind, 'label': tile_label(TILE_NAMES.get(kind, kind.label)), 'name': template_name(kind),
+         'selected': kind == selected, 'added': kind in have}
         for kind in OFFERED_KINDS
     ]
+
+
+# ---------------------------------------------------------------------------
+# The owner's own tiles: a «Своя» service saved «как плашка»
+# ---------------------------------------------------------------------------
+
+def own_tiles(property_obj, selected=None):
+    """The owner's own template tiles (all objects), the picked one and the ones this object has marked."""
+    have = set(property_obj.receipts.filter(kind=Receipt.Kind.CUSTOM).values_list('name', flat=True))
+    return [
+        {'template': template, 'label': tile_label(template.name), 'name': template.name,
+         'selected': selected is not None and template.pk == selected.pk, 'added': template.name in have}
+        for template in ServiceTemplate.objects.filter(owner=property_obj.owner)
+    ]
+
+
+def owner_template(owner, pk):
+    """The owner's own tile by its id (from ?tpl=…); None if it is not theirs or gone."""
+    if not str(pk or '').isdigit():
+        return None
+    return ServiceTemplate.objects.filter(owner=owner, pk=int(pk)).first()
+
+
+def apply_template(receipt, template):
+    """A new service from the owner's own tile: its name, supplier and how it is charged and split."""
+    receipt.name = template.name
+    receipt.provider = template.provider
+    receipt.metered = template.metered
+    receipt.amount_mode = template.amount_mode
+    receipt.fixed_amount = template.fixed_amount
+    receipt.split = template.split
+    receipt.input_mode = template.input_mode
+    receipt.layout = Receipt.Layout.COMMON
+    if receipt.metered and receipt.split == Receipt.Split.METERS:
+        receipt.layout = Receipt.Layout.TENANTS
+
+
+def tile_of(receipt):
+    """The owner's own tile with this service's name, if there is one (the switch «Сохранить как плашку»)."""
+    if receipt.kind != Receipt.Kind.CUSTOM or not receipt.name:
+        return None
+    return ServiceTemplate.objects.filter(owner=receipt.property.owner, name=receipt.name).first()
+
+
+def save_as_tile(receipt, keep):
+    """«Сохранить как плашку» on: the tile with the service's name gets its settings (made if new);
+    off: the tile with that name goes. Meters and tariffs are the object's — not kept in a tile."""
+    if receipt.kind != Receipt.Kind.CUSTOM:
+        return None
+    owner = receipt.property.owner
+    if not keep:
+        ServiceTemplate.objects.filter(owner=owner, name=receipt.name).delete()
+        return None
+    template, _ = ServiceTemplate.objects.update_or_create(
+        owner=owner, name=receipt.name,
+        defaults={
+            'provider': receipt.provider, 'metered': receipt.metered, 'amount_mode': receipt.amount_mode,
+            'fixed_amount': receipt.fixed_amount if receipt.amount_mode == Receipt.AmountMode.FIXED else None,
+            'split': receipt.split, 'input_mode': receipt.input_mode,
+        },
+    )
+    return template
 
 
 def services_label(count):
@@ -471,18 +554,57 @@ def kind_tariffs(receipt, month):
     return {key: row for key, row in found.items() if row is not None}
 
 
+def busy_meters(receipt):
+    """{meter id: the other service that counts by it} — one meter, one service, one tariff (2026-11-15).
+    A meter this service already has is never busy for it (services made before could share one)."""
+    mine = set(receipt.meters.values_list('pk', flat=True)) if receipt.pk else set()
+    busy = {}
+    others = Receipt.objects.filter(property=receipt.property).exclude(pk=receipt.pk).prefetch_related('meters', 'tariffs')
+    for other in others:
+        for meter in other.meters.all():
+            if meter.pk not in mine:
+                busy.setdefault(meter.pk, other)
+    return busy
+
+
 def default_meter_ids(receipt):
-    """A new service ticks the object's meters its template is about (light — all the light meters)."""
+    """A new service ticks the free meters of the object its template is about (light — all the free light meters)."""
     kinds = TEMPLATE_METERS.get(receipt.kind, set())
-    return [meter.pk for meter in receipt.property.meters.all() if meter.kind in kinds]
+    busy = busy_meters(receipt)
+    return [meter.pk for meter in receipt.property.meters.all() if meter.kind in kinds and meter.pk not in busy]
 
 
-def parse_meter_ids(property_obj, posted):
-    """The ticked meters of the service window; None when the window sent no list."""
+def parse_meter_ids(property_obj, posted, receipt=None):
+    """The ticked meters of the service window; None when the window sent no list. A meter of another service
+    can't be ticked (its row is locked)."""
     if posted is None or 'meters_shown' not in posted:
         return None
     own = set(property_obj.meters.values_list('pk', flat=True))
-    return [int(pk) for pk in posted.getlist('meter_ids') if pk.isdigit() and int(pk) in own]
+    busy = busy_meters(receipt) if receipt is not None else {}
+    return [int(pk) for pk in posted.getlist('meter_ids') if pk.isdigit() and int(pk) in own and int(pk) not in busy]
+
+
+def new_meter_ids(property_obj, posted, receipt):
+    """Back in the service window after «+ Добавить счётчик объекта»: the meters added meanwhile (not in the
+    posted `known_meters`) and free come ticked."""
+    if posted is None or 'known_meters' not in posted:
+        return []
+    known = {int(pk) for pk in posted.get('known_meters', '').split(',') if pk.isdigit()}
+    busy = busy_meters(receipt)
+    return [pk for pk in property_obj.meters.values_list('pk', flat=True) if pk not in known and pk not in busy]
+
+
+def busy_tariff_text(other, meter):
+    """The tariff a locked meter counts by in its service: «45,50 ₽/кВт·ч», day / night «5,50 / 2,10 ₽»."""
+    found = for_meter(kind_tariffs(other, first_of_month(date.today())), other, meter)
+    day, night = (found.tariff, found.tariff_night) if found else (meter.tariff or other.tariff, meter.tariff_night or other.tariff_night)
+    if day is None:
+        return ''
+    symbol = other.currency_symbol
+    if meter.day_night:
+        return f'{fmt_number(day)} / {fmt_number(night) if night is not None else "—"} {symbol}'
+    unit = meter_unit(meter)
+    return f'{fmt_number(day)} {symbol}' + (f'/{unit}' if unit else '')
 
 
 # Short names of the meter rows in the service window: the row also holds a tariff and «чей».
@@ -533,10 +655,16 @@ def _meter_who(meter):
 def meter_picks(receipt, checked):
     """The object's meters with a tick: kind (for the colour), name, №, start, whose. `shown` — the meters
     the window lists: a template's own kind (cold water — only cold-water meters) plus the ticked ones;
-    a template without meters of its own (Своя, Интернет…) — all of them."""
+    a template without meters of its own (Своя, Интернет…), or whose kind has no free meter — all of them.
+    `busy` — the other service that counts by the meter: its row is locked, shows that service's tariff
+    and goes to the end of the list; free meters come first."""
     kinds = TEMPLATE_METERS.get(receipt.kind)
+    meters = list(receipt.property.meters.select_related('tenant'))
+    busy = busy_meters(receipt)
+    if kinds and not any(meter.kind in kinds and meter.pk not in busy for meter in meters):
+        kinds = None  # no free meter of the template's kind (gas, say) — offer all the free ones
     picks = []
-    for meter in receipt.property.meters.select_related('tenant'):
+    for meter in meters:
         who, who_cls = _meter_who(meter)
         start = ''
         if meter.initial is not None:
@@ -552,7 +680,12 @@ def meter_picks(receipt, checked):
             'shown': not kinds or meter.kind in kinds or meter.pk in checked,
             'short': short_meter_name(meter.name),
             'who_value': str(meter.tenant_id) if meter.tenant_id else ('free' if meter.vacant else ''),
+            'busy': busy.get(meter.pk),
+            'busy_tariff': busy_tariff_text(busy[meter.pk], meter) if meter.pk in busy else '',
         })
+        if meter.pk in busy:
+            picks[-1]['checked'] = False
+    picks.sort(key=lambda pick: pick['busy'] is not None)  # stable: free first, then the locked ones
     return picks
 
 

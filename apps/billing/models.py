@@ -154,6 +154,31 @@ class ReceiptTariff(models.Model):
         return f'{self.receipt} · {self.key} · с {self.valid_from:%m.%Y}'
 
 
+class ServiceTemplate(models.Model):
+    """The owner's own tile in «Новая услуга»: a «Своя» service saved «как плашка».
+
+    Keeps only what does not depend on an object: the name, the supplier, how it is charged and split.
+    Meters and tariffs are each object's own — picked in the window every time.
+    """
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='service_templates')
+    name = models.CharField(max_length=100)
+    provider = models.CharField(max_length=150, blank=True)
+    metered = models.BooleanField(default=False)
+    amount_mode = models.CharField(max_length=10, choices=Receipt.AmountMode.choices, default=Receipt.AmountMode.MONTHLY)
+    fixed_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    split = models.CharField(max_length=10, choices=Receipt.Split.choices, default=Receipt.Split.SHARES)
+    input_mode = models.CharField(max_length=10, choices=Receipt.InputMode.choices, default=Receipt.InputMode.READINGS)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        constraints = [models.UniqueConstraint(fields=['owner', 'name'], name='unique_template_name_per_owner')]
+
+    def __str__(self):
+        return self.name
+
+
 class MonthlyAmount(models.Model):
     """What a receipt says for one month: the sum to pay, or (for metered ones) the tariff."""
 
