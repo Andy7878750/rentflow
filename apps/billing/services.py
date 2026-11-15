@@ -646,6 +646,8 @@ def meter_table(owner):
                 who, who_cls = 'Общий', ''
             value, when = _last_reading_text(meter)
             rows.append({
+                # Not in a service yet: «Новая услуга» opens with the matching tile and this meter switched on.
+                'new_kind': meter.kind if meter.kind in OFFERED_KINDS else Receipt.Kind.CUSTOM,
                 'meter': meter, 'kind': meter.kind if meter.kind in READY_METER_KINDS else 'custom',
                 'who': who, 'who_cls': who_cls, 'service': service,
                 'tariff': busy_tariff_text(service, meter) if service else '',

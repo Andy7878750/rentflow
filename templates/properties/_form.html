@@ -1,6 +1,6 @@
 <div class="modal-panel">
   <header class="modal-head">
-    <h1>{% if property %}Изменить объект{% else %}Новый объект{% endif %}</h1>
+    <h1 class="fade">{% if property %}Изменить объект · {{ property.name }}{% else %}Новый объект{% endif %}</h1>
     <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
       <svg class="icon"><use href="#i-x"/></svg>
     </a>

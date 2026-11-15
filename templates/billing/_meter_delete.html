@@ -1,0 +1,23 @@
+{% comment %}«Удалить» in «Все счётчики» (2026-11-16): a meter a service counts by can't go — say which service and lead there;
+   otherwise a confirmation that its readings go too.{% endcomment %}
+<div class="modal-panel modal-panel-confirm">
+  <div class="confirm-icon" aria-hidden="true"><svg class="icon"><use href="#i-{% if in_services %}lock{% else %}trash{% endif %}"/></svg></div>
+  {% if in_services %}
+    <h1 class="confirm-title">Счётчик привязан к услуге</h1>
+    <p class="confirm-text">По счётчику «{{ meter.name }}»{% if meter.serial %} № {{ meter.serial }}{% endif %} считается услуга
+      {% for service in in_services %}«{{ service.name }}»{% if not forloop.last %}, {% endif %}{% endfor %}.
+      Зайдите в услугу и выключите в ней этот счётчик — после этого его можно удалить.</p>
+    <div class="confirm-actions">
+      <a href="{% url 'meter_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Понятно</a>
+      <a href="{% url 'receipt_edit' in_services.0.pk %}" data-modal class="btn btn-primary btn-auto">Открыть услугу</a>
+    </div>
+  {% else %}
+    <h1 class="confirm-title">Удалить счётчик «{{ meter.name }}»{% if meter.serial %} № {{ meter.serial }}{% endif %}?</h1>
+    <p class="confirm-text">{{ meter.property.name }}.{% if readings %} Вместе с ним удалятся его показания.{% endif %} Отменить это действие нельзя.</p>
+    <form method="post" action="{% url 'meter_remove' meter.pk %}" data-modal-form class="confirm-actions">
+      {% csrf_token %}
+      <a href="{% url 'meter_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+      <button type="submit" class="btn btn-danger btn-auto">Удалить</button>
+    </form>
+  {% endif %}
+</div>

@@ -30,7 +30,7 @@ def _payers_switchable(receipt, property_obj):
     return not property_obj.is_owner_used and receipt.split in services.SWITCHABLE_SPLITS
 
 
-def _receipt_form(request, property_obj, receipt, own_tpl=None):
+def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None):
     posted = request.POST if request.method == 'POST' else None
     # Back from «+ Добавить счётчик объекта»: the window is drawn again with what was typed, nothing is saved.
     redraw = posted is not None and posted.get('_redraw') == '1'
@@ -42,6 +42,8 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None):
             checked |= set(services.new_meter_ids(property_obj, posted, receipt))
     elif receipt.pk:
         checked = set(receipt.meters.values_list('pk', flat=True))
+    elif start_meter is not None and start_meter.pk not in services.busy_meters(receipt):
+        checked = {start_meter.pk}  # opened from «Все счётчики»: just this meter switched on
     else:
         checked = set(services.default_meter_ids(receipt))
     picks = services.meter_picks(receipt, checked)
@@ -140,7 +142,11 @@ def receipt_create(request, property_pk):
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
     template = services.owner_template(request.user, request.GET.get('tpl') or request.POST.get('tpl'))
     receipt = services.new_receipt(property_obj, request.GET.get('kind') or request.POST.get('kind'), template)
-    return _receipt_form(request, property_obj, receipt, template)
+    meter_pk = request.GET.get('meter', '')
+    start_meter = property_obj.meters.filter(pk=meter_pk).first() if meter_pk.isdigit() else None
+    if start_meter is not None and not receipt.metered:
+        receipt.metered = True  # «Своя» from a meter: by meters straight away
+    return _receipt_form(request, property_obj, receipt, template, start_meter)
 
 
 def _own_receipt(request, pk):
@@ -226,6 +232,25 @@ def meter_list(request):
     groups = services.meter_table(request.user)
     return render(request, 'billing/meter_list.html', {
         'groups': groups, 'has_meters': any(group['rows'] for group in groups),
+    })
+
+
+@login_required
+def meter_remove(request, pk):
+    """«Удалить» in «Все счётчики»: a confirmation; a meter a service counts by is not deleted — say where it is."""
+    meter = get_object_or_404(Meter.objects.select_related('property'), pk=pk, property__owner=request.user)
+    in_services = list(meter.receipts.all())
+    if request.method == 'POST' and not in_services:
+        name = f'{meter.name} № {meter.serial}' if meter.serial else meter.name
+        meter.delete()
+        messages.success(request, f'Счётчик «{name}» удалён.')
+        url = reverse('meter_list')
+        if request.headers.get('X-Modal'):
+            return HttpResponse(status=204, headers={'X-Modal-Redirect': modal_back_url(request) or url})
+        return redirect(url)
+    template = 'billing/_meter_delete.html' if request.headers.get('X-Modal') else 'billing/meter_delete.html'
+    return render(request, template, {
+        'meter': meter, 'in_services': in_services, 'readings': meter.readings.count(),
     })
 
 

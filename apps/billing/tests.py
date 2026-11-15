@@ -465,9 +465,34 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'ноябрь 2026')
         self.assertContains(response, 'не в услуге')  # the water meter
         self.assertContains(response, f'data-row-modal="{reverse("receipt_edit", args=[receipt.pk])}"')
-        self.assertContains(response, f'data-row-modal="{reverse("property_edit", args=[self.prop.pk])}"')
+        # Not in a service: «Новая услуга» with the cold-water tile and this meter switched on.
+        new_url = reverse('receipt_create', args=[self.prop.pk]) + f'?kind=water&amp;meter={water.pk}'
+        self.assertContains(response, f'data-row-modal="{new_url}"')
+        self.assertContains(response, reverse('meter_remove', args=[water.pk]))
+        window = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + f'?kind=water&meter={water.pk}',
+                                 HTTP_X_MODAL='1')
+        self.assertContains(window, f'name="meter_ids" value="{water.pk}" checked')
+        self.assertContains(window, 'kind-tile is-selected')
         self.assertNotContains(response, 'Чужой газ')
         self.assertEqual(response.context['sidebar_meter_count'](), 2)
+
+    def test_remove_meter_from_the_list(self):
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        water = Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
+        self._light_service(light)
+        url = reverse('meter_remove', args=[light.pk])
+        self.assertContains(self.client.get(url, HTTP_X_MODAL='1'), 'Счётчик привязан к услуге')
+        self.client.post(url, HTTP_X_MODAL='1')
+        self.assertTrue(Meter.objects.filter(pk=light.pk).exists(), 'a meter in a service is not deleted')
+
+        url = reverse('meter_remove', args=[water.pk])
+        self.assertContains(self.client.get(url, HTTP_X_MODAL='1'), 'Удалить счётчик')
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.post(url).status_code, 404)
+        self.client.force_login(self.user)
+        response = self.client.post(url, HTTP_X_MODAL='1')
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Meter.objects.filter(pk=water.pk).exists())
 
     def test_add_meter_from_the_menu_opens_the_object_window(self):
         response = self.client.get(reverse('meter_add'), HTTP_X_MODAL='1')

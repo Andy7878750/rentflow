@@ -76,7 +76,7 @@
     // «Все счётчики»: a click anywhere on a row opens its window (the service, or the object).
     document.addEventListener('click', function (event) {
       var row = event.target.closest && event.target.closest('tr[data-row-modal]');
-      if (!row || event.target.closest('a, button, summary, input, label')) return;
+      if (!row || event.target.closest('a, button, summary, details, input, label')) return;
       if (window.getSelection && String(window.getSelection())) return;
       openModal(row.getAttribute('data-row-modal'));
     });

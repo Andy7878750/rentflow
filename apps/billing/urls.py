@@ -7,6 +7,7 @@ urlpatterns = [
     path('services/add/', views.receipt_add, name='receipt_add'),
     path('meters/', views.meter_list, name='meter_list'),
     path('meters/add/', views.meter_add, name='meter_add'),
+    path('meters/<int:pk>/remove/', views.meter_remove, name='meter_remove'),
     path('properties/<int:property_pk>/receipts/new/', views.receipt_create, name='receipt_create'),
     path('properties/<int:property_pk>/receipts/formula/', views.receipt_formula, name='receipt_formula'),
     path('properties/<int:property_pk>/meters/save/', views.meter_save, name='meter_save'),
