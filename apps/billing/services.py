@@ -872,10 +872,19 @@ def drop_if_unused(meter):
         meter.delete()
 
 
+def release_free_meters(property_obj):
+    """A meter no service counts by is the premises' common one (2026-11-16, the user's rule): the tenant is seated on
+    a meter in a service, so when the service goes or switches the meter off, «чей» goes back to «Общий»."""
+    Meter.objects.filter(property=property_obj, receipts__isnull=True).exclude(tenant=None, vacant=False).update(
+        tenant=None, vacant=False)
+
+
 @transaction.atomic
 def delete_receipt(receipt):
-    """The service goes; the object's meters stay (they are the premises', set in the object window)."""
+    """The service goes; the object's meters stay (they are the premises'), and those it alone counted by become common."""
+    property_obj = receipt.property
     receipt.delete()
+    release_free_meters(property_obj)
 
 
 def _layout_of(meters):
@@ -884,7 +893,14 @@ def _layout_of(meters):
 
 
 @transaction.atomic
-def save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=False, meter_ids=None, tariffs=None):
+def save_receipt(receipt, **options):
+    """Save the service (_save_receipt), then the meters no service counts by any more become common."""
+    receipt = _save_receipt(receipt, **options)
+    release_free_meters(receipt.property)
+    return receipt
+
+
+def _save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=False, meter_ids=None, tariffs=None):
     """Save the service. meters — the list from the service window (parse_meters); without it
     (saved from code) the meters follow the service's layout.
     meter_ids / tariffs — the window of «Счётчик: Да»: the object's meters ticked and a tariff per kind of them.
@@ -959,6 +975,7 @@ def resync_property(property_obj):
     """After the object's tenants or occupancy change, keep every receipt consistent."""
     for receipt in property_obj.receipts.all():
         save_receipt(receipt, keep_meters=True)
+    release_free_meters(property_obj)  # also with no services at all
 
 
 # ---------------------------------------------------------------------------

@@ -528,7 +528,8 @@ class ObjectMetersTests(TestCase):
         self.assertTrue(light.day_night)
         self.assertEqual((light.initial, light.initial_night), (Decimal('12450'), Decimal('6210')))
         self.assertIsNone(light.tenant)
-        self.assertEqual(hot.tenant.name, 'Виктор')
+        # 2026-11-16: a tenant is seated on a meter only in a service; out of every service the meter is common.
+        self.assertIsNone(hot.tenant)
         self.assertFalse(hot.vacant)
 
     def test_start_reading_is_required(self):
@@ -550,6 +551,8 @@ class ObjectMetersTests(TestCase):
         viktor = Tenant.objects.create(property=prop, name='Виктор', share_percent=Decimal('45'))
         meter = Meter.objects.create(property=prop, tenant=viktor, kind='water', name='Вода холодная',
                                      unit='м³', initial=Decimal('10'))
+        # The tenant sits on the meter in a service (outside services a meter is common anyway).
+        Receipt.objects.create(property=prop, kind='water', name='Вода', metered=True).meters.add(meter)
         data = form_data(area='60', initial_forms=1, tenants=[
             {'id': str(viktor.pk), 'name': 'Виктор', 'share': '45', 'DELETE': 'on'},
         ])

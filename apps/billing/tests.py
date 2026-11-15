@@ -476,6 +476,30 @@ class ReceiptViewTests(TestCase):
         self.assertNotContains(response, 'Чужой газ')
         self.assertEqual(response.context['sidebar_meter_count'](), 2)
 
+    def test_a_meter_out_of_every_service_becomes_common(self):
+        # 2026-11-16: the meter is the premises'; a tenant is seated on it in a service and leaves it with the service.
+        viktor = self.prop.tenants.get()
+        one = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        two = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        url = reverse('receipt_create', args=[self.prop.pk])
+        self.client.post(url, {
+            'kind': 'electricity', 'name': '', 'charge': 'meters', 'meters_shown': '1', 'meter_ids': [one.pk, two.pk],
+            'tariff_key': [f'm:{one.pk}', f'm:{two.pk}'], 'tariff_day': ['5', '5'], 'tariff_nightv': ['', ''],
+            f'who_{one.pk}': str(viktor.pk), f'who_{two.pk}': str(viktor.pk),
+        }, HTTP_X_MODAL='1')
+        receipt = self.prop.receipts.get()
+        self.assertEqual(set(viktor.meters.all()), {one, two})
+        # The second meter switched off in the service: it is common again.
+        self.client.post(reverse('receipt_edit', args=[receipt.pk]), {
+            'kind': 'electricity', 'name': 'Электричество', 'charge': 'meters', 'meters_shown': '1',
+            'meter_ids': [one.pk], 'tariff_key': [f'm:{one.pk}', f'm:{two.pk}'], 'tariff_day': ['5', '5'],
+            'tariff_nightv': ['', ''], f'who_{one.pk}': str(viktor.pk), f'who_{two.pk}': str(viktor.pk),
+        }, HTTP_X_MODAL='1')
+        self.assertEqual(list(viktor.meters.all()), [one])
+        # The service deleted: no meter stays the tenant's.
+        self.client.post(reverse('receipt_delete', args=[receipt.pk]), HTTP_X_MODAL='1')
+        self.assertFalse(viktor.meters.exists())
+
     def test_receipt_split_by_usage(self):
         # ПЕСК: one bill for two meters, divided as their usage (2026-11-16).
         viktor = self.prop.tenants.get()
