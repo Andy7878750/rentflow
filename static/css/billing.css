@@ -3895,6 +3895,29 @@
 .rform:has(input[name=split][value=usage]:checked) .mrow .mrow-tariff,
 .rform:has(input[name=split][value=usage]:checked) .mrow-head > :nth-child(5) { visibility: hidden; }
 
+/* «Ночь дешевле дня» — only for «По расходу» with a day / night meter switched on. */
+.rform .night-weight {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-bg);
+  font-size: 13.5px;
+}
+
+.rform:has(input[name=split][value=usage]:checked):not(:has(input[name=charge][value=meters]:checked)):has(.mrow[data-dn="1"] input[name=meter_ids]:checked) .night-weight {
+  display: flex;
+}
+
+.rform .night-weight > .icon { width: 16px; height: 16px; color: var(--color-accent); }
+.rform .night-weight .nw-field { width: 72px; height: 30px; padding: 0 8px; }
+.rform .night-weight .nw-field input { width: 100%; text-align: right; font-size: 13.5px; }
+.rform .night-weight .hint { color: var(--color-text-muted); font-size: 12px; }
+.rform .night-weight .calc-error { flex-basis: 100%; margin: 0; }
+
 /* «По расходу» only for a sum from the receipt: by meters × tariff it makes no sense. */
 .rform:has(input[name=charge][value=meters]:checked) .split-track label:has(input[value=usage]) { display: none; }
 

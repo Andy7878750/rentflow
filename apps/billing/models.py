@@ -66,6 +66,9 @@ class Receipt(models.Model):
     layout = models.CharField('Какие счётчики', max_length=10, choices=Layout.choices, default=Layout.COMMON)
 
     split = models.CharField('Как делить', max_length=10, choices=Split.choices, default=Split.SHARES)
+    # «По расходу» with a day / night meter: a night kWh weighs this much of a day one (0,6 — night is cheaper).
+    # Empty — the same as a day one (day + night).
+    night_weight = models.DecimalField('Ночь к дню', max_digits=5, decimal_places=3, null=True, blank=True)
     amount_mode = models.CharField('Сумма', max_length=10, choices=AmountMode.choices, default=AmountMode.MONTHLY)
     fixed_amount = models.DecimalField('Сумма в месяц', max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, default=settings.CURRENCY)

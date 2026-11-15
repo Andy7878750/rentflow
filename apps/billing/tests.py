@@ -533,6 +533,27 @@ class ReceiptViewTests(TestCase):
         self.assertContains(page, f'name="amount-{receipt.pk}"')
         self.assertContains(page, f'name="cur-{one.pk}"')
 
+    def test_split_by_usage_with_a_cheaper_night(self):
+        viktor = self.prop.tenants.get()
+        vlad = Tenant.objects.create(property=self.prop, name='Владислав', share_percent=Decimal('0'))
+        one = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        two = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                   day_night=True)
+        data = {'kind': 'custom', 'name': 'ПЕСК', 'charge': 'receipt', 'split': 'usage', 'meters_shown': '1',
+                'meter_ids': [one.pk, two.pk], f'who_{one.pk}': str(vlad.pk), f'who_{two.pk}': str(viktor.pk),
+                'input_mode': 'usage', 'night_weight': '0,5'}
+        self.assertEqual(self.client.post(reverse('receipt_create', args=[self.prop.pk]), data, HTTP_X_MODAL='1').status_code, 204)
+        receipt = self.prop.receipts.get()
+        self.assertEqual(receipt.night_weight, Decimal('0.5'))
+        month = date(2026, 11, 1)
+        MonthlyAmount.objects.create(receipt=receipt, month=month, amount=Decimal('10000'))
+        Reading.objects.create(meter=one, month=month, usage=Decimal('100'))
+        Reading.objects.create(meter=two, month=month, usage=Decimal('200'), usage_night=Decimal('100'))
+        bill = services.month_bill(self.prop, month)  # 100 + (200 + 100 × 0,5) = 350
+        totals = {payer.tenant.name: payer.total for payer in bill.payers}
+        self.assertEqual(totals, {'Виктор': Decimal('7142.86'), 'Владислав': Decimal('2857.14')})
+        self.assertIn('(200 + 100 × 0,5)', bill.payers[0].lines[0].formula)
+
     def test_objects_page_shows_the_months_numbers(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
                                      initial=Decimal('100'))

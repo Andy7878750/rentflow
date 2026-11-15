@@ -195,6 +195,14 @@
             <p class="mrow-empty">У объекта нет таких счётчиков.</p>
           {% endif %}
 
+          {% comment %}«По расходу» with a day / night meter switched on (CSS shows it): how much a night kWh weighs. Empty — like a day one.{% endcomment %}
+          <div class="night-weight">
+            <svg class="icon"><use href="#i-gauge"/></svg>
+            <label for="{{ form.night_weight.id_for_label }}">Ночь дешевле дня: ночной кВт·ч =</label>
+            <span class="ifield nw-field{% if form.night_weight.errors %} has-error{% endif %}">{{ form.night_weight }}</span>
+            <span class="nw-tail">дневного <span class="hint">· пусто — как дневной; например, 0,6</span></span>
+            {% if form.night_weight.errors %}<p class="calc-error">{{ form.night_weight.errors.0 }}</p>{% endif %}
+          </div>
           {% if meters_error %}<p class="calc-error">{{ meters_error }}</p>{% endif %}
           {# Shown by CSS when common meters and the tenants' ones are switched on together; red after a refused save. #}
           <p class="mix-note{% if mixed %} is-error{% endif %}">Общие счётчики и счётчики арендаторов — в разных услугах. Выключите лишние или создайте для общих отдельную услугу.</p>

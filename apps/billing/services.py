@@ -203,6 +203,8 @@ def normalize(receipt):
             receipt.split = Receipt.Split.SHARES  # «по расходу» is for a sum from the receipt, not for meters × tariff
     if receipt.amount_mode != Receipt.AmountMode.FIXED:
         receipt.fixed_amount = None
+    if receipt.split != Receipt.Split.USAGE or receipt.night_weight == 1:
+        receipt.night_weight = None  # only «по расходу» weighs the night; 1 is the same as empty
     if receipt.property.is_owner_used:
         receipt.split = Receipt.Split.OWNER
     return receipt
@@ -1135,24 +1137,31 @@ def _usage_split(receipt, entry, payers, owner):
     """«По расходу»: the receipt's sum in proportion to each meter's usage this month (day + night).
     A tenant's meter → the tenant; a common or free one → the owner; the kopecks of rounding → the owner.
     Returns False while a reading is missing (the month isn't complete)."""
+    # A night kWh weighs night_weight of a day one (night is cheaper); empty — the same (2026-11-16).
+    weight = receipt.night_weight or Decimal('1')
     uses = []
     for meter, reading in entry.readings:
         day, night = used(receipt, reading)
         if day is None or (meter.two_zones and night is None):
             return False
-        uses.append((meter, day + (night or Decimal('0')) if meter.two_zones else day))
+        if not meter.two_zones:
+            uses.append((meter, day, fmt_number(day)))
+        elif weight == 1:
+            uses.append((meter, day + night, f'({fmt_number(day)} + {fmt_number(night)})'))
+        else:
+            uses.append((meter, day + night * weight, f'({fmt_number(day)} + {fmt_number(night)} × {fmt_number(weight)})'))
     total = entry.total
-    whole = sum((use for _, use in uses), Decimal('0'))
+    whole = sum((use for _, use, _ in uses), Decimal('0'))
     currency = receipt.currency_symbol
     if not whole:
         owner.lines.append(Line(receipt, total, 'по счётчикам нет расхода'))
         return True
     unit = meter_unit(uses[0][0]) or 'ед.'
-    head = f'{fmt_number(total, 2)}{NBSP}{currency} ÷ {fmt_number(whole)}{NBSP}{unit}'
+    head = f'{fmt_number(total, 2)}{NBSP}{currency} ÷ {fmt_number(whole.normalize())}{NBSP}{unit}'
     billed = Decimal('0')
-    for meter, use in uses:
+    for meter, use, use_text in uses:
         exact = total * use / whole
-        formula = f'{head} × {fmt_number(use)}{NBSP}{unit}'
+        formula = f'{head} × {use_text}{NBSP}{unit}'
         payer = payers.get(meter.tenant_id) if meter.tenant_id else None
         if payer:
             line = tenant_line(receipt, exact, formula)
