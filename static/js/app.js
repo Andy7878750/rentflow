@@ -1837,6 +1837,73 @@
       clearTimeout(timer);
       save();
     });
+
+    // «н×0,6» in a night field of «По расходу»: a small window «Ночь дешевле дня» — type the weight, «Сохранить»
+    // stores it on the service and the bills recount (2026-11-16).
+    var nwCard = null;
+    function closeNightWeight() { if (nwCard) nwCard.remove(); nwCard = null; }
+
+    monthForm.addEventListener('click', function (event) {
+      var btn = event.target.closest('[data-night-weight]');
+      if (!btn) return;
+      event.preventDefault();
+      closeNightWeight();
+      nwCard = document.createElement('div');
+      nwCard.className = 'nw-card';
+      nwCard.setAttribute('role', 'dialog');
+      nwCard.innerHTML =
+        '<h3>Ночь дешевле дня</h3>' +
+        '<p>Сумма делится по расходу. Сколько «весит» ночной кВт·ч по сравнению с дневным: 1 — так же, ' +
+        '0,6 — ночью тариф примерно на 40% дешевле. Действует для всех счётчиков день / ночь этой услуги.</p>' +
+        '<div class="nw-row"><span>Ночной кВт·ч =</span><input class="num-input" inputmode="decimal" placeholder="1"><span>дневного</span></div>' +
+        '<p class="nw-error" hidden></p>' +
+        '<div class="nw-acts"><button type="button" class="btn btn-ghost btn-auto" data-nw-cancel>Отмена</button>' +
+        '<button type="button" class="btn btn-primary btn-auto" data-nw-save>Сохранить</button></div>';
+      document.body.appendChild(nwCard);
+      var input = nwCard.querySelector('input');
+      input.value = btn.dataset.value || '';
+      var r = btn.getBoundingClientRect();
+      var h = nwCard.offsetHeight;
+      nwCard.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 310)) + 'px';
+      nwCard.style.top = (r.bottom + 8 + h > window.innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
+      input.focus();
+      input.select();
+
+      function store() {
+        var body = new FormData();
+        body.append('value', input.value);
+        fetch(btn.dataset.nightWeight, {
+          method: 'POST', body: body, credentials: 'same-origin',
+          headers: { 'X-CSRFToken': csrfToken(monthForm) }
+        })
+          .then(function (response) { return response.json().then(function (data) { return { ok: response.ok, data: data }; }); })
+          .then(function (result) {
+            if (!result.ok) {
+              var error = nwCard.querySelector('.nw-error');
+              error.textContent = result.data.error;
+              error.hidden = false;
+              return;
+            }
+            // Every night field of this service shows the new weight; then the bills recount.
+            monthForm.querySelectorAll('[data-night-weight="' + btn.dataset.nightWeight + '"]').forEach(function (other) {
+              other.textContent = result.data.label;
+              other.dataset.value = result.data.value;
+            });
+            closeNightWeight();
+            monthForm.dispatchEvent(new Event('input'));
+          });
+      }
+      nwCard.querySelector('[data-nw-save]').addEventListener('click', store);
+      nwCard.querySelector('[data-nw-cancel]').addEventListener('click', closeNightWeight);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); store(); }
+        if (e.key === 'Escape') closeNightWeight();
+      });
+    });
+
+    document.addEventListener('mousedown', function (event) {
+      if (nwCard && !nwCard.contains(event.target) && !event.target.closest('[data-night-weight]')) closeNightWeight();
+    });
     // Enter moves to the next number instead of submitting.
     monthForm.addEventListener('keydown', function (event) {
       if (event.key !== 'Enter' || !event.target.matches('.num-input')) return;

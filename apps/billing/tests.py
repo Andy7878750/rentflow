@@ -541,10 +541,19 @@ class ReceiptViewTests(TestCase):
                                    day_night=True)
         data = {'kind': 'custom', 'name': 'ПЕСК', 'charge': 'receipt', 'split': 'usage', 'meters_shown': '1',
                 'meter_ids': [one.pk, two.pk], f'who_{one.pk}': str(vlad.pk), f'who_{two.pk}': str(viktor.pk),
-                'input_mode': 'usage', 'night_weight': '0,5'}
+                'input_mode': 'usage'}
         self.assertEqual(self.client.post(reverse('receipt_create', args=[self.prop.pk]), data, HTTP_X_MODAL='1').status_code, 204)
         receipt = self.prop.receipts.get()
+        self.assertIsNone(receipt.night_weight)
+        # «н×1» on the object page → the small window → «Сохранить» (2026-11-16: no line in the service window).
+        url = reverse('receipt_night_weight', args=[receipt.pk])
+        self.assertEqual(self.client.post(url, {'value': '-1'}).status_code, 400)
+        self.assertEqual(self.client.post(url, {'value': '0,5'}).json(), {'value': '0,5', 'label': 'н×0,5'})
+        receipt.refresh_from_db()
         self.assertEqual(receipt.night_weight, Decimal('0.5'))
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.post(url, {'value': '0,7'}).status_code, 404)
+        self.client.force_login(self.user)
         month = date(2026, 11, 1)
         MonthlyAmount.objects.create(receipt=receipt, month=month, amount=Decimal('10000'))
         Reading.objects.create(meter=one, month=month, usage=Decimal('100'))
@@ -554,8 +563,8 @@ class ReceiptViewTests(TestCase):
         self.assertEqual(totals, {'Виктор': Decimal('7142.86'), 'Владислав': Decimal('2857.14')})
         self.assertIn('(200 + 100 × 0,5)', bill.payers[0].lines[0].formula)
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11')
-        self.assertContains(page, 'data-zone="н×0,5"')  # inside the night field, only there
-        self.assertContains(page, 'has-weight', count=1)
+        self.assertContains(page, '>н×0,5</button>')  # a button inside the night field, only there
+        self.assertContains(page, 'data-night-weight=', count=1)
 
     def test_objects_page_shows_the_months_numbers(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',

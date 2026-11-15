@@ -29,7 +29,7 @@ class ReceiptForm(forms.ModelForm):
         model = Receipt
         fields = [
             'name', 'provider', 'metered', 'zones', 'unit', 'tariff', 'tariff_night', 'input_mode', 'layout',
-            'split', 'amount_mode', 'fixed_amount', 'night_weight',
+            'split', 'amount_mode', 'fixed_amount',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': ' ', 'maxlength': 100}),
@@ -41,8 +41,6 @@ class ReceiptForm(forms.ModelForm):
             # No browser autofill: it paints the field blue.
             'fixed_amount': forms.TextInput(attrs={'placeholder': '0,00', 'inputmode': 'decimal', 'aria-label': 'Сумма в месяц',
                                                    'autocomplete': 'off'}),
-            'night_weight': forms.TextInput(attrs={'placeholder': '1', 'inputmode': 'decimal', 'autocomplete': 'off',
-                                                   'aria-label': 'Ночной кВт·ч к дневному'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -56,7 +54,7 @@ class ReceiptForm(forms.ModelForm):
         self.fields['metered'].required = False
         self.fields['amount_mode'].required = False
         self.initial['zones'] = str(self.instance.zones or 1)
-        for name in ('tariff', 'tariff_night', 'fixed_amount', 'night_weight'):
+        for name in ('tariff', 'tariff_night', 'fixed_amount'):
             self.fields[name].localize = True
         # Hidden sections still post their radios, but a service without a meter has no layout.
         self.fields['layout'].required = False
@@ -65,12 +63,6 @@ class ReceiptForm(forms.ModelForm):
         self.fields['split'].required = False
         # Left empty — the template's name («Электричество»); no error for that.
         self.fields['name'].required = False
-
-    def clean_night_weight(self):
-        weight = self.cleaned_data.get('night_weight')
-        if weight is not None and not (0 < weight <= 10):
-            raise forms.ValidationError('Число больше нуля, обычно меньше 1: ночь дешевле дня.')
-        return weight
 
     def clean_name(self):
         from . import services

@@ -238,6 +238,22 @@ def meter_list(request):
 
 
 @login_required
+@require_POST
+def receipt_night_weight(request, pk):
+    """«н×0,6» on the object page: how much a night kWh weighs in «По расходу». Empty or 1 — like a day one."""
+    receipt = _own_receipt(request, pk)
+    text = request.POST.get('value', '').strip()
+    weight = services.parse_decimal(text) if text else None
+    if text and (weight is None or not (0 < weight <= 10)):
+        return JsonResponse({'error': 'Введите число больше нуля — например, 0,6.'}, status=400)
+    receipt.night_weight = None if weight is None or weight == 1 else weight
+    receipt.save(update_fields=['night_weight'])
+    shown = services.fmt_number(receipt.night_weight) if receipt.night_weight is not None else '1'
+    return JsonResponse({'value': services.fmt_number(receipt.night_weight) if receipt.night_weight is not None else '',
+                         'label': f'н×{shown}'})
+
+
+@login_required
 def meter_remove(request, pk):
     """«Удалить» in «Все счётчики»: a confirmation; a meter a service counts by is not deleted — say where it is."""
     meter = get_object_or_404(Meter.objects.select_related('property'), pk=pk, property__owner=request.user)

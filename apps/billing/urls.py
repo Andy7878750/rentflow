@@ -15,4 +15,5 @@ urlpatterns = [
     path('properties/<int:property_pk>/month/', views.month_save, name='month_save'),
     path('receipts/<int:pk>/edit/', views.receipt_edit, name='receipt_edit'),
     path('receipts/<int:pk>/delete/', views.receipt_delete, name='receipt_delete'),
+    path('receipts/<int:pk>/night-weight/', views.receipt_night_weight, name='receipt_night_weight'),
 ]
