@@ -600,6 +600,19 @@ def new_meter_ids(property_obj, posted, receipt):
     return [pk for pk in property_obj.meters.values_list('pk', flat=True) if pk not in known and pk not in busy]
 
 
+def mixed_owners(meters, posted):
+    """Both common meters and the tenants' own (or free) ones among the switched-on meters, by the «чей» just posted
+    (who_<pk>; the meter's own when not posted). They go in separate services (2026-11-15): one service would
+    take «the common minus the tenants'» across different things (water minus light)."""
+    kinds = set()
+    for meter in meters:
+        name = f'who_{meter.pk}'
+        value = posted.get(name, '') if posted is not None and name in posted else (
+            str(meter.tenant_id) if meter.tenant_id else ('free' if meter.vacant else ''))
+        kinds.add('common' if value == '' else 'own')
+    return len(kinds) > 1
+
+
 def busy_tariff_text(other, meter):
     """The tariff a locked meter counts by in its service: «45,50 ₽/кВт·ч», day / night «5,50 / 2,10 ₽»."""
     found = for_meter(kind_tariffs(other, first_of_month(date.today())), other, meter)

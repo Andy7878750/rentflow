@@ -45,9 +45,17 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None):
     else:
         checked = set(services.default_meter_ids(receipt))
     picks = services.meter_picks(receipt, checked)
+    for pick in picks:
+        # Drawn again after a refused save or on the way back: «чей» as it was just chosen, not as it is stored.
+        name = f'who_{pick["meter"].pk}'
+        if posted is not None and name in posted and not pick['busy']:
+            pick['who_value'] = posted.get(name, '')
+            pick['owner_key'] = 'tenant' if pick['who_value'] else 'common'
     ticked = [pick['meter'] for pick in picks if pick['checked']]
-    # The layout follows the ticks (hidden radios kept in step by app.js), so «Делим» is right from the start.
-    meter_layout = services._layout_of(ticked) if ticked else Receipt.Layout.COMMON
+    # The layout follows the ticks and their «чей» (hidden radios kept in step by app.js), so «Делим» is right from the start.
+    owners = {pick['owner_key'] for pick in picks if pick['checked']}
+    meter_layout = (Receipt.Layout.BOTH if len(owners) > 1 else Receipt.Layout.TENANTS if owners == {'tenant'}
+                    else Receipt.Layout.COMMON)
     if posted is None and receipt.metered and not property_obj.is_owner_used:
         receipt.layout = meter_layout
         services.normalize(receipt)
@@ -55,7 +63,7 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None):
     form = ReceiptForm(posted, instance=receipt)
     tariffs = services.parse_tariffs(posted) if posted is not None else None
     excluded = services.parse_excluded(property_obj, posted)
-    meters_error, missing = '', []
+    meters_error, missing, mixed = '', [], False
     if redraw:
         form.is_valid()
         form._errors = ErrorDict()  # half-typed is fine here: no red fields on the way back
@@ -66,7 +74,9 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None):
             missing = services.missing_tariffs(form.instance, ticked, tariffs)
             if missing:
                 meters_error = 'Укажите тариф — по нему считается сумма.'
-    if posted is not None and not redraw and not meters_error and form.is_valid():
+        # Common meters and the tenants' own ones don't go in one service: the hint under the meters turns red.
+        mixed = not property_obj.is_owner_used and services.mixed_owners(ticked, posted)
+    if posted is not None and not redraw and not meters_error and not mixed and form.is_valid():
         is_new = receipt.pk is None
         # The form has already written the new name into the receipt: the tile is found by the stored one.
         old_name = Receipt.objects.filter(pk=receipt.pk).values_list('name', flat=True).first() if receipt.pk else None
@@ -105,6 +115,7 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None):
                    else bool(own_tpl or services.tile_of(receipt)),
         'known_meters': ','.join(str(pick['meter'].pk) for pick in picks),
         'meters_error': meters_error,
+        'mixed': mixed,
         'payers': services.payer_preview(services.normalize(form.instance), excluded),
         'payers_switchable': _payers_switchable(form.instance, property_obj),
         'tenants': property_obj.tenants.all(),

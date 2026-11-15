@@ -323,7 +323,7 @@ class ReceiptViewTests(TestCase):
         response = self.client.post(url, {
             'kind': 'electricity', 'name': '', 'charge': 'meters', 'meters_shown': '1',
             'meter_ids': [one.pk, two.pk], 'tariff_key': [f'm:{one.pk}', f'm:{two.pk}'],
-            'tariff_day': ['5', '6'], 'tariff_nightv': ['', ''], f'who_{one.pk}': str(tenant.pk), f'who_{two.pk}': '',
+            'tariff_day': ['5', '6'], 'tariff_nightv': ['', ''], f'who_{one.pk}': str(tenant.pk), f'who_{two.pk}': 'free',
         }, HTTP_X_MODAL='1')
         self.assertEqual(response.status_code, 204)
         receipt = self.prop.receipts.get()
@@ -425,6 +425,26 @@ class ReceiptViewTests(TestCase):
             'tile_shown': '1',
         }, HTTP_X_MODAL='1')
         self.assertFalse(self.user.service_templates.exists())
+
+    def test_common_and_tenant_meters_are_not_saved_in_one_service(self):
+        tenant = self.prop.tenants.get()
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        water = Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
+        data = {
+            'kind': 'custom', 'name': 'Всё', 'charge': 'meters', 'meters_shown': '1', 'meter_ids': [light.pk, water.pk],
+            'tariff_key': [f'm:{light.pk}', f'm:{water.pk}'], 'tariff_day': ['5', '40'], 'tariff_nightv': ['', ''],
+            f'who_{light.pk}': str(tenant.pk), f'who_{water.pk}': '',
+        }
+        response = self.client.post(reverse('receipt_create', args=[self.prop.pk]), data, HTTP_X_MODAL='1')
+        self.assertContains(response, 'mix-note is-error')
+        self.assertContains(response, f'name="who_{light.pk}" value="{tenant.pk}" checked')  # the choice is kept
+        self.assertFalse(self.prop.receipts.exists())
+        light.refresh_from_db()
+        self.assertIsNone(light.tenant, 'nothing is stored on a refused save')
+
+        data[f'who_{water.pk}'] = str(tenant.pk)  # both are the tenant's now — fine
+        response = self.client.post(reverse('receipt_create', args=[self.prop.pk]), data, HTTP_X_MODAL='1')
+        self.assertEqual(response.status_code, 204)
 
     def test_object_window_marks_meters_a_service_counts_by(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
