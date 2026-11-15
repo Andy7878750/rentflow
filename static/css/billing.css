@@ -3856,6 +3856,10 @@
 .rform .mrow-head > :nth-child(5) { text-align: right; padding-right: 8px; }
 .rform .mrow-head + .mrow { border-top: 1px solid var(--color-border); }
 .rform .mrow-name { min-width: 0; white-space: nowrap; overflow: hidden; }
+
+/* Day / night: the two price fields share the tariff column (they used to spill into «Кто платит»). */
+.rform .mrow-tariff { gap: 6px; min-width: 0; }
+.rform .mrow-tariff .mfield { flex: 1 1 0; width: auto; min-width: 0; }
 .rform .mrow-who-busy { padding: 0 10px; }
 
 @container mrows (max-width: 640px) {
