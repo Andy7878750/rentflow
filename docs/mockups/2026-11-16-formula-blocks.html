@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Своя формула — макет</title>
+<style>
+  :root {
+    --text: #34495e; --muted: #7b8a97; --border: #e3e8ec; --bg: #f4f6f8; --surface: #fff;
+    --accent: #148f77; --accent-soft: #e3f3ef; --danger: #c0392b; --info-bg: #e3f1f6; --info: #1f6280;
+    --el: #0e9aa7; --cold: #2f80d1; --hot: #d9534f; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .stage { max-width: 860px; margin: 24px auto; padding: 0 16px; }
+  .note { margin: 0 0 14px; padding: 10px 14px; border-radius: var(--radius); background: #fff8e6; color: #7a5a00; font-size: 13px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; font-size: 13px; color: var(--muted); }
+  .examples button { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 5px 12px; font: inherit; color: var(--text); cursor: pointer; }
+  .examples button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .win { background: var(--surface); border-radius: 16px; padding: 20px 22px; box-shadow: 0 20px 60px rgba(0,0,0,.12); }
+  .win h1 { margin: 0 0 2px; font-size: 20px; }
+  .win .sub { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+
+  .section { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: visible; }
+  .section-head { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; background: #f7f9fa; border-bottom: 1px solid var(--border); border-radius: 12px 12px 0 0;
+    font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .badge { padding: 2px 8px; border-radius: 999px; background: var(--info-bg); color: var(--info); font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  .badge.bad { background: #fbe9e7; color: var(--danger); }
+  .badge.ok { background: var(--accent-soft); color: var(--accent); }
+  .section-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+
+  .charges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .charge { border: 1px solid var(--border); border-radius: 10px; padding: 8px; text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .charge small { display: block; font-weight: 400; font-size: 11px; }
+  .charge.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .label { color: var(--muted); font-size: 13px; min-width: 110px; }
+  .seg { display: inline-flex; background: #eef2f4; border-radius: 8px; padding: 2px; }
+  .seg button { border: 0; background: none; font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 6px; color: var(--text); cursor: pointer; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .hint { color: var(--muted); font-size: 12px; }
+
+  /* Palette */
+  .palette { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .group h3 { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .group .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* Chips — the blocks */
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); font-size: 13px; white-space: nowrap; cursor: grab; user-select: none; touch-action: none; }
+  .chip:hover { border-color: #b9c4cc; }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .chip.k-receipt { --c: #b07d2b; background: #fdf6ea; border-color: #f0dfbf; }
+  .chip.k-const { --c: var(--accent); background: #f1f9f7; border-color: #cfe9e2; }
+  .chip.k-meter { background: #f3f8fc; border-color: #d6e6f3; }
+  .chip.k-op { min-width: 30px; justify-content: center; padding: 0 8px; font-weight: 700; background: #f4f6f8; }
+  .chip .val { color: var(--muted); font-size: 12px; }
+  .chip.m-el { --c: var(--el); } .chip.m-cold { --c: var(--cold); } .chip.m-hot { --c: var(--hot); }
+  .chip.is-ghost { position: fixed; z-index: 100; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: grabbing; }
+  .chip.is-dragging { opacity: .3; }
+
+  /* The formula line */
+  .strip { min-height: 52px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+  .strip.is-over { border-color: var(--accent); background: var(--accent-soft); }
+  .strip .empty { color: var(--muted); font-size: 13px; }
+  .strip .chip { cursor: grab; }
+  .caret { width: 2px; height: 26px; background: var(--accent); border-radius: 1px; }
+  .trash-hint { font-size: 12px; color: var(--muted); }
+
+  /* Check */
+  .check { display: flex; flex-direction: column; gap: 6px; }
+  .check .line { display: grid; grid-template-columns: 130px minmax(0, 1fr) 110px; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .check .line:last-child { border-bottom: 0; }
+  .check .who { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .check .calc { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .check .sum { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .err { color: var(--danger); font-size: 13px; }
+
+  /* Small editor window over a chip */
+  .pop { position: fixed; z-index: 90; width: 300px; padding: 14px; border-radius: 12px; background: var(--surface); box-shadow: 0 12px 40px rgba(0,0,0,.2); }
+  .pop h4 { margin: 0 0 10px; font-size: 14px; }
+  .pop .f { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+  .pop input, .pop select { height: 34px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; color: var(--text); background: #fff; }
+  .pop input:focus, .pop select:focus { outline: none; border-color: var(--accent); }
+  .pop .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pop .acts { display: flex; justify-content: flex-end; gap: 8px; }
+  .btn { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font: inherit; cursor: pointer; }
+  .btn.primary { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .btn.danger { margin-right: auto; border: 0; color: var(--danger); padding: 0; }
+
+  @media (max-width: 640px) {
+    .palette { grid-template-columns: 1fr 1fr; }
+    .charges { grid-template-columns: 1fr 1fr; }
+    .check .line { grid-template-columns: 1fr auto; }
+    .check .calc { grid-column: 1 / -1; order: 3; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="note">Макет 2026-11-16, ничего не сохраняется. Блоки перетаскиваются в строку формулы (или нажмите блок — встанет в конец).
+    Внутри строки блоки двигаются; вытащили наружу — удалён. Нажмите на тариф, число из квитанции или счётчик в строке — откроется окошко.
+    Проверка внизу — на числах «прошлого месяца» (Виктор и Владислав, Королёва 61).</p>
+  <div class="examples">Примеры:
+    <button data-example="sewage">Водоотведение</button>
+    <button data-example="pesk">ПЕСК (сумма по расходу)</button>
+    <button data-example="heat">Отопление (Гкал − подогрев)</button>
+    <button data-example="clear">Очистить</button>
+  </div>
+
+  <div class="win">
+    <h1>Новая услуга</h1>
+    <p class="sub">Королева 61 · Виктор "Эгоист" 55%, Владислав -Кофе 45%</p>
+
+    <section class="section">
+      <div class="section-head">Начисление <span class="badge">своя формула</span><span class="badge" id="mode-badge">каждому по его счётчикам</span><span class="badge" id="state-badge"></span></div>
+      <div class="section-body">
+        <div class="charges">
+          <div class="charge">По квитанции<small>разная каждый месяц</small></div>
+          <div class="charge">Фиксированная сумма<small>не меняется</small></div>
+          <div class="charge">По счётчикам<small>расход × тариф</small></div>
+          <div class="charge on">Своя формула<small>собираю из блоков</small></div>
+        </div>
+
+        <div class="row">
+          <span class="label">Как считаем</span>
+          <div class="seg" id="mode">
+            <button data-mode="each" class="on">Каждому по его счётчикам</button>
+            <button data-mode="total">Общая сумма → делим</button>
+          </div>
+        </div>
+        <div class="row" id="split-row" hidden>
+          <span class="label">Делим</span>
+          <div class="seg" id="split">
+            <button data-split="shares" class="on">По долям</button>
+            <button data-split="equal">Поровну</button>
+            <button data-split="area">По м²</button>
+          </div>
+        </div>
+
+        <div class="palette" id="palette">
+          <div class="group"><h3>Из квитанции</h3><div class="chips">
+            <span class="chip k-receipt" data-new="receipt-sum"><span class="dot"></span>Сумма из квитанции</span>
+            <span class="chip k-receipt" data-new="receipt-num"><span class="dot"></span>Число из квитанции</span>
+          </div></div>
+          <div class="group"><h3>Постоянные</h3><div class="chips">
+            <span class="chip k-const" data-new="tariff"><span class="dot"></span>Тариф / норматив</span>
+            <span class="chip k-const" data-new="fixed"><span class="dot"></span>Фикс. сумма</span>
+          </div></div>
+          <div class="group"><h3>Счётчики</h3><div class="chips">
+            <span class="chip k-meter m-el" data-new="meter:el"><span class="dot"></span>Электричество</span>
+            <span class="chip k-meter m-cold" data-new="meter:cold"><span class="dot"></span>Вода хол.</span>
+            <span class="chip k-meter m-hot" data-new="meter:hot"><span class="dot"></span>Вода гор.</span>
+          </div></div>
+          <div class="group"><h3>Знаки</h3><div class="chips">
+            <span class="chip k-op" data-new="op:+">+</span><span class="chip k-op" data-new="op:−">−</span>
+            <span class="chip k-op" data-new="op:×">×</span><span class="chip k-op" data-new="op:÷">÷</span>
+            <span class="chip k-op" data-new="op:(">(</span><span class="chip k-op" data-new="op:)">)</span>
+          </div></div>
+        </div>
+
+        <div>
+          <div class="strip" id="strip"></div>
+          <p class="trash-hint">Перетащите блок сюда · вытащите из строки, чтобы удалить</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">Проверка <span class="badge" id="check-badge">на числах прошлого месяца</span></div>
+      <div class="section-body"><div class="check" id="check"></div></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Sample data: the object, last month ----------
+  const TENANTS = [
+    { id: 'v', name: 'Виктор "Эгоист"', share: 55, area: 60.5 },
+    { id: 'l', name: 'Владислав -Кофе', share: 45, area: 49.5 },
+  ];
+  const METER_KINDS = {
+    el:   { name: 'Электричество', short: 'Электричество', unit: 'кВт·ч', cls: 'm-el' },
+    cold: { name: 'Вода холодная', short: 'Вода хол.', unit: 'м³', cls: 'm-cold' },
+    hot:  { name: 'Вода горячая', short: 'Вода гор.', unit: 'м³', cls: 'm-hot' },
+  };
+  // Last month's usage of each tenant's meters, by kind.
+  const USAGE = { el: { v: 800, l: 500 }, cold: { v: 3, l: 2 }, hot: { v: 1, l: 4 } };
+  const UNITS = ['₽', 'Гкал', 'м³', 'кВт·ч', 'м²'];
+
+  let mode = 'each';
+  let split = 'shares';
+  let blocks = [];  // the formula: [{type, ...}]
+  let uid = 0;
+
+  function make(kind) {
+    const id = ++uid;
+    if (kind === 'receipt-sum') return { id, type: 'receipt', unit: '₽', label: 'Сумма из квитанции', sample: 8450 };
+    if (kind === 'receipt-num') return { id, type: 'receipt', unit: 'Гкал', label: 'Гкал из квитанции', sample: 0.42 };
+    if (kind === 'tariff') return { id, type: 'const', label: 'Тариф', value: 45, unit: '₽', per: 'м³' };
+    if (kind === 'fixed') return { id, type: 'const', label: 'Фикс. сумма', value: 500, unit: '₽', per: '' };
+    if (kind.startsWith('meter:')) return { id, type: 'meter', kind: kind.slice(6), whose: 'own' };
+    if (kind.startsWith('op:')) return { id, type: 'op', op: kind.slice(3) };
+  }
+
+  // ---------- Drawing ----------
+  const strip = document.getElementById('strip');
+  const fmt = (n, d) => Number(n).toLocaleString('ru-RU', { maximumFractionDigits: d === undefined ? 4 : d, minimumFractionDigits: d === undefined ? 0 : d });
+
+  function chipText(b) {
+    if (b.type === 'op') return b.op;
+    if (b.type === 'meter') {
+      const k = METER_KINDS[b.kind];
+      return k.short + (mode === 'each' && b.whose === 'all' ? ' · все' : '');
+    }
+    if (b.type === 'receipt') return b.label;
+    return b.label;
+  }
+  function chipValue(b) {
+    if (b.type === 'const') return fmt(b.value) + ' ' + b.unit + (b.per ? '/' + b.per : '');
+    if (b.type === 'receipt') return b.unit;
+    if (b.type === 'meter') return METER_KINDS[b.kind].unit;
+    return '';
+  }
+  function chipEl(b) {
+    const el = document.createElement('span');
+    el.className = 'chip ' + (b.type === 'op' ? 'k-op' : b.type === 'const' ? 'k-const' : b.type === 'receipt' ? 'k-receipt' : 'k-meter ' + METER_KINDS[b.kind].cls);
+    el.dataset.id = b.id;
+    if (b.type !== 'op') el.innerHTML = '<span class="dot"></span>';
+    el.appendChild(document.createTextNode(chipText(b)));
+    const v = chipValue(b);
+    if (v) { const s = document.createElement('span'); s.className = 'val'; s.textContent = v; el.appendChild(s); }
+    return el;
+  }
+
+  function render() {
+    strip.innerHTML = '';
+    if (!blocks.length) {
+      const e = document.createElement('span'); e.className = 'empty';
+      e.textContent = 'Перетащите сюда блоки — например, Вода гор. + Вода хол. × Тариф';
+      strip.appendChild(e);
+    }
+    blocks.forEach(b => strip.appendChild(chipEl(b)));
+    document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
+    document.getElementById('split-row').hidden = mode !== 'total';
+    renderCheck();
+  }
+
+  // ---------- Arithmetic with units ----------
+  // A value carries its units as powers: 45 ₽/м³ → { '₽': 1, 'м³': -1 }.
+  function unitsOf(unit, per) { const u = {}; if (unit) u[unit] = 1; if (per) u[per] = (u[per] || 0) - 1; return u; }
+  function mul(a, b, sign) {
+    const u = Object.assign({}, a.u);
+    for (const k in b.u) { u[k] = (u[k] || 0) + sign * b.u[k]; if (!u[k]) delete u[k]; }
+    return u;
+  }
+  function sameUnits(a, b) { const ka = Object.keys(a), kb = Object.keys(b); return ka.length === kb.length && ka.every(k => a[k] === b[k]); }
+  function unitText(u) {
+    const up = Object.keys(u).filter(k => u[k] > 0), down = Object.keys(u).filter(k => u[k] < 0);
+    if (!up.length && !down.length) return 'число';
+    return (up.join('·') || '1') + (down.length ? '/' + down.join('·') : '');
+  }
+
+  // Evaluate the blocks for one tenant (or for the whole object): returns {v, u, text} or {error}.
+  function evaluate(tenant) {
+    let i = 0;
+    const toks = blocks;
+    function value(b) {
+      if (b.type === 'const') return { v: b.value, u: unitsOf(b.unit, b.per), text: fmt(b.value) + ' ' + b.unit + (b.per ? '/' + b.per : '') };
+      if (b.type === 'receipt') return { v: b.sample, u: unitsOf(b.unit), text: fmt(b.sample) + ' ' + b.unit };
+      const k = METER_KINDS[b.kind];
+      const all = !tenant || b.whose === 'all';
+      const v = all ? Object.values(USAGE[b.kind]).reduce((s, x) => s + x, 0) : USAGE[b.kind][tenant.id];
+      return { v, u: unitsOf(k.unit), text: fmt(v) + ' ' + k.unit };
+    }
+    function primary() {
+      const b = toks[i];
+      if (!b) throw 'Формула обрывается — добавьте число или счётчик в конце.';
+      if (b.type === 'op' && b.op === '(') {
+        i++; const r = sum();
+        if (!toks[i] || toks[i].op !== ')') throw 'Не хватает закрывающей скобки «)».';
+        i++; return { v: r.v, u: r.u, text: '(' + r.text + ')' };
+      }
+      if (b.type === 'op') throw 'Знак «' + b.op + '» стоит не на месте.';
+      i++; return value(b);
+    }
+    function product() {
+      let a = primary();
+      while (toks[i] && toks[i].type === 'op' && (toks[i].op === '×' || toks[i].op === '÷')) {
+        const op = toks[i++].op, b = primary();
+        if (op === '÷' && !b.v) throw 'Делим на ноль: ' + b.text + '.';
+        a = { v: op === '×' ? a.v * b.v : a.v / b.v, u: mul(a, b, op === '×' ? 1 : -1), text: a.text + ' ' + op + ' ' + b.text };
+      }
+      return a;
+    }
+    function sum() {
+      let a = product();
+      while (toks[i] && toks[i].type === 'op' && (toks[i].op === '+' || toks[i].op === '−')) {
+        const op = toks[i++].op, b = product();
+        if (!sameUnits(a.u, b.u)) throw 'Нельзя ' + (op === '+' ? 'складывать' : 'вычитать') + ' ' + unitText(a.u) + ' и ' + unitText(b.u) + '.';
+        a = { v: op === '+' ? a.v + b.v : a.v - b.v, u: a.u, text: a.text + ' ' + op + ' ' + b.text };
+      }
+      return a;
+    }
+    try {
+      if (!toks.length) return { error: '' };
+      const r = sum();
+      if (i < toks.length) throw toks[i].op === ')' ? 'Лишняя закрывающая скобка «)».' : 'Между блоками не хватает знака.';
+      if (!sameUnits(r.u, { '₽': 1 })) return Object.assign(r, { error: 'В итоге получается ' + unitText(r.u) + ', а нужны рубли.' });
+      return r;
+    } catch (msg) { return { error: msg }; }
+  }
+
+  const rub = v => fmt(Math.round(v * 100) / 100, 2) + ' ₽';
+
+  function renderCheck() {
+    const box = document.getElementById('check');
+    const badge = document.getElementById('state-badge');
+    box.innerHTML = '';
+    if (!blocks.length) { badge.textContent = ''; badge.className = 'badge'; box.innerHTML = '<span class="hint">Соберите формулу — здесь появится расчёт для каждого арендатора.</span>'; return; }
+    const line = (who, calc, sum, bad) => {
+      const d = document.createElement('div'); d.className = 'line';
+      d.innerHTML = '<span class="who"></span><span class="calc"></span><span class="sum"></span>';
+      d.children[0].textContent = who; d.children[1].textContent = calc; d.children[2].textContent = sum;
+      if (bad) d.children[1].className = 'calc err';
+      box.appendChild(d);
+    };
+    let ok = true;
+    if (mode === 'each') {
+      TENANTS.forEach(t => {
+        const r = evaluate(t);
+        if (r.error) { ok = false; line(t.name, r.error, '—', true); }
+        else line(t.name, r.text + ' =', rub(r.v));
+      });
+      const hasOwn = blocks.some(b => b.type === 'meter' && b.whose !== 'all');
+      if (ok && !hasOwn) { const h = document.createElement('p'); h.className = 'hint';
+        h.textContent = 'В формуле нет «своих» счётчиков — у всех арендаторов выйдет одинаково. Может быть, нужен режим «Общая сумма → делим»?'; box.appendChild(h); }
+    } else {
+      const r = evaluate(null);
+      if (r.error) { ok = false; line('Объект', r.error, '—', true); }
+      else {
+        line('Объект', r.text + ' =', rub(r.v));
+        const totalArea = TENANTS.reduce((s, t) => s + t.area, 0);
+        TENANTS.forEach(t => {
+          const part = split === 'shares' ? r.v * t.share / 100 : split === 'equal' ? r.v / TENANTS.length : r.v * t.area / totalArea;
+          const how = split === 'shares' ? '× ' + t.share + '%' : split === 'equal' ? '÷ ' + TENANTS.length : '× ' + fmt(t.area) + ' из ' + fmt(totalArea) + ' м²';
+          line(t.name, rub(r.v) + ' ' + how + ' =', rub(part));
+        });
+      }
+    }
+    badge.textContent = ok ? 'считается' : 'есть ошибка';
+    badge.className = 'badge ' + (ok ? 'ok' : 'bad');
+  }
+
+  // ---------- Drag and drop (mouse and finger), click to add ----------
+  let drag = null;  // {block, fromStrip, ghost, startX, startY, moved, src}
+  let caret = document.createElement('span'); caret.className = 'caret';
+
+  function insertIndex(x, y) {
+    const chips = [...strip.querySelectorAll('.chip:not(.is-dragging)')];
+    for (let n = 0; n < chips.length; n++) {
+      const r = chips[n].getBoundingClientRect();
+      if (y < r.top - 4) return n;
+      if (y <= r.bottom + 4 && x < r.left + r.width / 2) return n;
+    }
+    return chips.length;
+  }
+  function overStrip(x, y) { const r = strip.getBoundingClientRect(); return x >= r.left - 12 && x <= r.right + 12 && y >= r.top - 12 && y <= r.bottom + 12; }
+
+  document.addEventListener('pointerdown', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip || e.button > 0) return;
+    const inStrip = strip.contains(chip);
+    if (!inStrip && !chip.dataset.new) return;
+    e.preventDefault();
+    closePop();
+    drag = { chip, fromStrip: inStrip, startX: e.clientX, startY: e.clientY, moved: false };
+  });
+
+  document.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 5) return;
+    if (!drag.moved) {
+      drag.moved = true;
+      drag.block = drag.fromStrip ? blocks.find(b => b.id == drag.chip.dataset.id) : make(drag.chip.dataset.new);
+      drag.ghost = chipEl(drag.block); drag.ghost.classList.add('is-ghost'); document.body.appendChild(drag.ghost);
+      if (drag.fromStrip) drag.chip.classList.add('is-dragging');
+    }
+    drag.ghost.style.left = (e.clientX - 20) + 'px'; drag.ghost.style.top = (e.clientY - 15) + 'px';
+    const over = overStrip(e.clientX, e.clientY);
+    strip.classList.toggle('is-over', over);
+    caret.remove();
+    if (over) {
+      const chips = [...strip.querySelectorAll('.chip:not(.is-dragging)')];
+      const at = insertIndex(e.clientX, e.clientY);
+      if (at < chips.length) strip.insertBefore(caret, chips[at]); else strip.appendChild(caret);
+    }
+  });
+
+  document.addEventListener('pointerup', e => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    caret.remove(); strip.classList.remove('is-over');
+    if (!d.moved) {
+      // A click: a palette block goes to the end; a block in the line opens its editor.
+      if (!d.fromStrip) { blocks.push(make(d.chip.dataset.new)); render(); }
+      else openPop(blocks.find(b => b.id == d.chip.dataset.id), d.chip);
+      return;
+    }
+    d.ghost.remove();
+    const over = overStrip(e.clientX, e.clientY);
+    const at = over ? insertIndex(e.clientX, e.clientY) : -1;
+    if (d.fromStrip) blocks = blocks.filter(b => b !== d.block);   // moved or dragged out (= deleted)
+    if (over) blocks.splice(Math.min(at, blocks.length), 0, d.block);
+    render();
+  });
+
+  // ---------- The small editor of a block ----------
+  let pop = null;
+  function closePop() { if (pop) pop.remove(); pop = null; }
+  function openPop(b, anchor) {
+    closePop();
+    if (b.type === 'op') return;
+    pop = document.createElement('div'); pop.className = 'pop';
+    const opts = (list, cur, none) => (none ? '<option value="">' + none + '</option>' : '') + list.map(u => '<option' + (u === cur ? ' selected' : '') + '>' + u + '</option>').join('');
+    if (b.type === 'const') {
+      pop.innerHTML = '<h4>' + (b.per ? 'Тариф / норматив' : 'Постоянное число') + '</h4>' +
+        '<label class="f">Название (в счёте)<input data-k="label" value="' + b.label + '"></label>' +
+        '<div class="two"><label class="f">Число<input data-k="value" inputmode="decimal" value="' + String(b.value).replace('.', ',') + '"></label>' +
+        '<label class="f">Чего<select data-k="unit">' + opts(UNITS, b.unit, 'без единиц') + '</select></label></div>' +
+        '<label class="f">За что<select data-k="per">' + opts(UNITS.filter(u => u !== '₽').concat(['мес']), b.per, '— ни за что (просто сумма)') + '</select></label>';
+    } else if (b.type === 'receipt') {
+      pop.innerHTML = '<h4>Из квитанции — вводится каждый месяц</h4>' +
+        '<label class="f">Название<input data-k="label" value="' + b.label + '"></label>' +
+        '<div class="two"><label class="f">Единица<select data-k="unit">' + opts(UNITS, b.unit) + '</select></label>' +
+        '<label class="f">Для проверки<input data-k="sample" inputmode="decimal" value="' + String(b.sample).replace('.', ',') + '"></label></div>';
+    } else {
+      const k = METER_KINDS[b.kind];
+      pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4>' +
+        (mode === 'each'
+          ? '<label class="f">Чьи счётчики<select data-k="whose"><option value="own"' + (b.whose !== 'all' ? ' selected' : '') + '>этого арендатора</option>' +
+            '<option value="all"' + (b.whose === 'all' ? ' selected' : '') + '>все на объекте</option></select></label>'
+          : '<p class="hint">В режиме «Общая сумма» — все счётчики этого вида на объекте вместе.</p>');
+    }
+    pop.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn danger" data-del>Убрать</button><button class="btn primary" data-ok>Готово</button></div>');
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(r.left, innerWidth - 310)) + 'px';
+    const h = pop.offsetHeight;
+    pop.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
+    pop.addEventListener('input', ev => {
+      const key = ev.target.dataset.k; if (!key) return;
+      let v = ev.target.value;
+      if (key === 'value' || key === 'sample') v = Number(String(v).replace(/\s/g, '').replace(',', '.')) || 0;
+      b[key] = v; render();
+    });
+    pop.querySelector('[data-ok]').onclick = closePop;
+    pop.querySelector('[data-del]').onclick = () => { blocks = blocks.filter(x => x !== b); closePop(); render(); };
+  }
+  document.addEventListener('pointerdown', e => { if (pop && !pop.contains(e.target) && !e.target.closest('#strip .chip')) closePop(); }, true);
+
+  // ---------- Mode, split, examples ----------
+  document.getElementById('mode').addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    mode = btn.dataset.mode;
+    [...e.currentTarget.children].forEach(b => b.classList.toggle('on', b === btn));
+    render();
+  });
+  document.getElementById('split').addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    split = btn.dataset.split;
+    [...e.currentTarget.children].forEach(b => b.classList.toggle('on', b === btn));
+    render();
+  });
+
+  const EXAMPLES = {
+    sewage: () => { setMode('each'); return [make('op:('), make('meter:hot'), make('op:+'), make('meter:cold'), make('op:)'), make('op:×'),
+      Object.assign(make('tariff'), { label: 'Тариф водоотведения', value: 45 })]; },
+    pesk: () => { setMode('each'); return [make('receipt-sum'), make('op:÷'), Object.assign(make('meter:el'), { whose: 'all' }), make('op:×'), make('meter:el')]; },
+    heat: () => { setMode('total'); return [make('op:('), make('receipt-num'), make('op:−'), make('op:('), make('meter:hot'), make('op:×'),
+      Object.assign(make('tariff'), { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' }), make('op:)'), make('op:)'), make('op:×'),
+      Object.assign(make('tariff'), { label: 'Тариф тепла', value: 4800, unit: '₽', per: 'Гкал' })]; },
+    clear: () => [],
+  };
+  function setMode(m) { mode = m; document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); }
+  document.querySelector('.examples').addEventListener('click', e => {
+    const btn = e.target.closest('[data-example]'); if (!btn) return;
+    closePop(); blocks = EXAMPLES[btn.dataset.example](); render();
+  });
+
+  blocks = EXAMPLES.sewage();
+  render();
+})();
+</script>
+</body>
+</html>
