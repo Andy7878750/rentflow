@@ -487,6 +487,21 @@ class ReceiptViewTests(TestCase):
         self.assertContains(page, 'mread-meta')
         self.assertNotContains(page, 'mreceipt-tariff')  # the tariff is next to the meter's № now (2026-11-15)
 
+    def test_only_a_day_night_meter_has_a_night_row(self):
+        one = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        two = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                   day_night=True)
+        self.client.post(reverse('receipt_create', args=[self.prop.pk]), {
+            'kind': 'electricity', 'name': 'Свет', 'charge': 'meters', 'meters_shown': '1',
+            'meter_ids': [one.pk, two.pk], 'tariff_key': [f'm:{one.pk}', f'm:{two.pk}'],
+            'tariff_day': ['5', '6'], 'tariff_nightv': ['', '3'], f'who_{one.pk}': '', f'who_{two.pk}': '',
+        }, HTTP_X_MODAL='1')
+        page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
+        self.assertContains(page, f'name="curn-{two.pk}"')
+        self.assertNotContains(page, f'name="curn-{one.pk}"')
+        self.assertContains(page, '/ 5 ₽/кВт·ч')  # a single-rate meter: one price
+        self.assertContains(page, '/ 6 / 3 ₽/кВт·ч')
+
     def test_usage_row_shows_last_months_usage_until_this_ones_is_typed(self):
         meter = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
         self.client.post(reverse('receipt_create', args=[self.prop.pk]), {

@@ -1042,8 +1042,11 @@ def used(receipt, reading):
 
 
 def two_zones(receipt, meter):
-    """Day and night: the meter is set so in the object window (or the old service was)."""
-    return meter.day_night or receipt.zones == 2
+    """Day and night: the meter is set so in the object window. The service's own «день / ночь» counts only for
+    old services none of whose meters says it (2026-11-15: one day / night meter used to make all of them so)."""
+    if meter.day_night:
+        return True
+    return receipt.zones == 2 and not any(m.day_night for m in receipt.meters.all())
 
 
 def _meter_cost(receipt, entry, reading):
