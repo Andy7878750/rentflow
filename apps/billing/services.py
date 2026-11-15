@@ -568,10 +568,16 @@ def busy_meters(receipt):
 
 
 def default_meter_ids(receipt):
-    """A new service ticks the free meters of the object its template is about (light — all the free light meters)."""
-    kinds = TEMPLATE_METERS.get(receipt.kind, set())
+    """Which free meters a new service has switched on (2026-11-15, the user's rule): a template — the meters of its
+    kind (Электричество — every free light meter); the owner's own tile — the meters with its name, if there are;
+    «Своя» and the rest — every free meter. All the others are listed too, switched off."""
     busy = busy_meters(receipt)
-    return [meter.pk for meter in receipt.property.meters.all() if meter.kind in kinds and meter.pk not in busy]
+    free = [meter for meter in receipt.property.meters.all() if meter.pk not in busy]
+    kinds = TEMPLATE_METERS.get(receipt.kind)
+    if kinds:
+        return [meter.pk for meter in free if meter.kind in kinds]
+    named = [meter.pk for meter in free if receipt.name and meter.name == receipt.name]
+    return named or [meter.pk for meter in free]
 
 
 def parse_meter_ids(property_obj, posted, receipt=None):
@@ -605,14 +611,6 @@ def busy_tariff_text(other, meter):
         return f'{fmt_number(day)} / {fmt_number(night) if night is not None else "—"} {symbol}'
     unit = meter_unit(meter)
     return f'{fmt_number(day)} {symbol}' + (f'/{unit}' if unit else '')
-
-
-# Short names of the meter rows in the service window: the row also holds a tariff and «чей».
-SHORT_METER_NAMES = {'Электричество': 'Эл-во', 'Вода холодная': 'Вода хол.', 'Вода горячая': 'Вода гор.'}
-
-
-def short_meter_name(name):
-    return SHORT_METER_NAMES.get(name, name)
 
 
 def apply_meter_owners(property_obj, posted):
@@ -653,16 +651,12 @@ def _meter_who(meter):
 
 
 def meter_picks(receipt, checked):
-    """The object's meters with a tick: kind (for the colour), name, №, start, whose. `shown` — the meters
-    the window lists: a template's own kind (cold water — only cold-water meters) plus the ticked ones;
-    a template without meters of its own (Своя, Интернет…), or whose kind has no free meter — all of them.
+    """All the object's meters with a tick: kind (for the colour), name, №, start, whose. Every meter is listed
+    (2026-11-15); which are switched on decides `checked` (default_meter_ids for a new service).
     `busy` — the other service that counts by the meter: its row is locked, shows that service's tariff
     and goes to the end of the list; free meters come first."""
-    kinds = TEMPLATE_METERS.get(receipt.kind)
     meters = list(receipt.property.meters.select_related('tenant'))
     busy = busy_meters(receipt)
-    if kinds and not any(meter.kind in kinds and meter.pk not in busy for meter in meters):
-        kinds = None  # no free meter of the template's kind (gas, say) — offer all the free ones
     picks = []
     for meter in meters:
         who, who_cls = _meter_who(meter)
@@ -677,8 +671,7 @@ def meter_picks(receipt, checked):
             'kind': meter.kind if meter.kind in READY_METER_KINDS else 'custom',
             'who': who, 'who_cls': who_cls, 'start': start,
             'owner_key': 'common' if not meter.tenant_id and not meter.vacant else 'tenant',
-            'shown': not kinds or meter.kind in kinds or meter.pk in checked,
-            'short': short_meter_name(meter.name),
+            'shown': True,
             'who_value': str(meter.tenant_id) if meter.tenant_id else ('free' if meter.vacant else ''),
             'busy': busy.get(meter.pk),
             'busy_tariff': busy_tariff_text(busy[meter.pk], meter) if meter.pk in busy else '',

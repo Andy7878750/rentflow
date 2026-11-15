@@ -140,7 +140,7 @@
                   <li class="mrow is-busy" title="Счётчик в услуге «{{ pick.busy.name }}»">
                     <span class="payer-num">{{ forloop.counter }}</span>
                     <span class="tm-icon mk-{{ pick.kind }}">{% include "billing/_meter_icon.html" with kind=pick.kind %}</span>
-                    <span class="mrow-name fade" title="{{ pick.meter.name }}{% if pick.meter.day_night %} · день / ночь{% endif %}">{{ pick.short }}</span>
+                    <span class="mrow-name fade" title="{{ pick.meter.name }}{% if pick.meter.day_night %} · день / ночь{% endif %}">{{ pick.meter.name }}</span>
                     <span class="mrow-serial" title="№ {{ pick.meter.serial|default:'—' }}">№ {{ pick.meter.serial|default:'—' }}</span>
                     <span class="mrow-tariff"><span class="ifield mfield mfield-one is-locked"><span class="mrow-locked-text fade">{{ pick.busy_tariff|default:'тариф не задан' }}</span></span></span>
                     <span class="mrow-who-busy fade">{% if pick.who_value == 'free' %}Собственник{% elif pick.who_value %}{{ pick.meter.tenant.name }}{% else %}Общий{% endif %}</span>
@@ -150,7 +150,7 @@
                 <li class="mrow" data-pick data-key="{{ pick.key }}" data-dn="{{ pick.meter.day_night|yesno:'1,0' }}" data-owner="{{ pick.owner_key }}">
                   <span class="payer-num">{{ forloop.counter }}</span>
                   <span class="tm-icon mk-{{ pick.kind }}">{% include "billing/_meter_icon.html" with kind=pick.kind %}</span>
-                  <span class="mrow-name fade" title="{{ pick.meter.name }}{% if pick.meter.day_night %} · день / ночь{% endif %}">{{ pick.short }}</span>
+                  <span class="mrow-name fade" title="{{ pick.meter.name }}{% if pick.meter.day_night %} · день / ночь{% endif %}">{{ pick.meter.name }}</span>
                   <span class="mrow-serial" title="№ {{ pick.meter.serial|default:'—' }}">№ {{ pick.meter.serial|default:'—' }}</span>
                   {# Its own tariff: one field, or day + night for a day / night meter. #}
                   <span class="mrow-tariff">

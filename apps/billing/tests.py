@@ -235,13 +235,14 @@ class ReceiptViewTests(TestCase):
 
     def test_create_form_is_prefilled_from_preset(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
-        Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
+        water = Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity'
         response = self.client.get(url, HTTP_X_MODAL='1')
         self.assertContains(response, 'value="Электричество"')
-        # The template lists and ticks only its own kind of meters (the water meter is not shown).
+        # Every meter is listed; only the template's own kind is switched on (the water meter is there, off).
         self.assertContains(response, f'name="meter_ids" value="{light.pk}" checked')
-        self.assertContains(response, 'name="meter_ids" value="', count=1)
+        self.assertContains(response, f'name="meter_ids" value="{water.pk}">')
+        self.assertContains(response, '>Вода холодная<')  # the full name, not «Вода хол.»
         self.assertContains(response, 'value="common" aria-label="Общий на объект" checked', msg_prefix='a common meter')
         self.assertContains(response, 'data-meter-count>1 счётчик<')
 
@@ -337,6 +338,8 @@ class ReceiptViewTests(TestCase):
         url = reverse('receipt_create', args=[self.prop.pk]) + '?kind=custom'
         response = self.client.get(url, HTTP_X_MODAL='1')
         self.assertContains(response, 'name="meter_ids" value="', count=2)
+        for meter in self.prop.meters.all():  # «Своя»: every free meter is switched on
+            self.assertContains(response, f'name="meter_ids" value="{meter.pk}" checked')
 
     def _light_service(self, *meters):
         """«Электричество» by the given meters, 5 ₽ each, saved through the window."""
