@@ -115,8 +115,6 @@
           </div>
         </div>
 
-        {# «Делим» and the tenants right under the panel — по квитанции / фиксированная (no «Кто платит» head). #}
-        <div class="split-home" data-split-home="charge">{% if form.charge.value != 'meters' %}{% include "billing/_split_block.html" %}{% endif %}</div>
 
         {% comment %}По счётчикам (2026-11-13, пробуем): instead of the tenants — the meters, one per row, as the tenants are
            listed under «По квитанции»: number · icon · what it is · № · a switch «в услуге». A template lists only its
@@ -201,17 +199,12 @@
           <input type="hidden" name="known_meters" value="{{ known_meters }}">
           <a href="{% url 'property_edit' property.pk %}" data-modal data-service-return class="setup-link mrow-add">+ Добавить счётчик объекта</a>
         </div>
-      </div>
-    </section>
 
-    {# ---------- 4. Кто платит for «По счётчикам»: hidden while we try meters as rows (inputs still posted) ---------- #}
-    <section class="form-section rows is-parked">
-      <h2 class="form-section-head">Кто платит
-        {% if property.is_owner_used %}<span class="badge">на вас</span>
-        {% else %}{% for value, label in layout_choices %}{% if value != 'common' %}<span class="badge head-badge" data-layout="{{ value }}">{{ label|lower }}</span>{% endif %}{% endfor %}
-        {% for value, label in split_choices %}<span class="badge head-badge" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
-      </h2>
-      <div class="form-section-body split-home" data-split-home="meters">{% if form.charge.value == 'meters' %}{% include "billing/_split_block.html" %}{% endif %}</div>
+        {% comment %}«Делим» and the tenants: right under the grey panel for по квитанции / фиксированная; for по счётчикам —
+           under the meter rows, and only when the switched-on meters are all common (2026-11-15): with the tenants' own
+           meters each pays by theirs. Hidden by CSS otherwise (its inputs are still posted).{% endcomment %}
+        <div class="split-home" data-split-home="charge">{% include "billing/_split_block.html" %}</div>
+      </div>
     </section>
     {% endwith %}
 

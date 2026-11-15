@@ -486,14 +486,15 @@ class ReceiptViewTests(TestCase):
         receipt.refresh_from_db()
         self.assertEqual(receipt.amount_mode, Receipt.AmountMode.MONTHLY)
 
-    def test_split_block_sits_under_the_charge_or_in_who_pays(self):
+    def test_split_block_is_one_and_comes_after_the_meter_rows(self):
+        # One copy in «Начисление», under the meter rows (CSS shows it for по квитанции / фиксированная, and for по
+        # счётчикам only when the switched-on meters are all common).
         url = reverse('receipt_create', args=[self.prop.pk])
-        page = self.client.get(url + '?kind=internet', HTTP_X_MODAL='1').content.decode()
-        self.assertEqual(page.count('data-split-block'), 1)
-        self.assertLess(page.index('data-split-block'), page.index('data-split-home="meters"'))
-        page = self.client.get(url + '?kind=electricity', HTTP_X_MODAL='1').content.decode()
-        self.assertEqual(page.count('data-split-block'), 1)
-        self.assertGreater(page.index('data-split-block'), page.index('data-split-home="meters"'))
+        for kind in ('internet', 'electricity'):
+            page = self.client.get(url + f'?kind={kind}', HTTP_X_MODAL='1').content.decode()
+            self.assertEqual(page.count('data-split-block'), 1)
+            self.assertGreater(page.index('data-split-block'), page.index('data-meter-picks'))
+            self.assertNotIn('Кто платит', page)
 
     def test_constructor_tile_is_not_saved(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'management'))

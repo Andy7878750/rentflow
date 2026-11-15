@@ -3702,6 +3702,18 @@
   font-size: 13px;
 }
 
+/* По счётчикам (2026-11-15): «Делим» + tenants under the meter rows only when every switched-on meter is common —
+   a thin line, nothing more. With the tenants' own meters each pays by theirs: no block. */
+.rform:has(input[name=charge][value=meters]:checked):not(:has(input[name=layout][value=common]:checked)) [data-split-home=charge] {
+  display: none;
+}
+
+.rform:has(input[name=charge][value=meters]:checked) [data-split-home=charge] .split-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
 /* A meter of another service (2026-11-15): one meter — one service — one tariff. The row stays on the same
    grid, at the end of the list, greyed; its tariff and «чей» as plain text, a lock instead of the switch. */
 .rform .mrow-caption {

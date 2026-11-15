@@ -1666,17 +1666,6 @@
     if (serial && event.target.matches('input') && serial.dataset.state === 'edit') setSerialState(serial, 'locked');
   });
 
-  // «Делим» + tenants: under the grey panel of «Начисление» (по квитанции / фиксированная) or in «Кто платит»
-  // (по счётчикам). One copy of the inputs — it is moved, not duplicated.
-  document.addEventListener('change', function (event) {
-    var input = event.target;
-    if (!input.matches || !input.matches('.rform input[name=charge]')) return;
-    var form = input.form;
-    var block = form.querySelector('[data-split-block]');
-    var home = form.querySelector('[data-split-home="' + (input.value === 'meters' ? 'meters' : 'charge') + '"]');
-    if (block && home && block.parentNode !== home) home.appendChild(block);
-  });
-
   // «Как делим» shows up (no meter, or one common meter) with nothing picked → «По долям».
   document.addEventListener('change', function (event) {
     var input = event.target;
