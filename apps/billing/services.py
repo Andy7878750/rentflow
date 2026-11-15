@@ -600,6 +600,61 @@ def new_meter_ids(property_obj, posted, receipt):
     return [pk for pk in property_obj.meters.values_list('pk', flat=True) if pk not in known and pk not in busy]
 
 
+_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь',
+           'ноябрь', 'декабрь']
+
+
+def _last_reading_text(meter):
+    """«339 / 228 · ноябрь 2026», «расход 50 · ноябрь 2026», or the start reading «старт 222» before any month."""
+    for reading in sorted(meter.readings.all(), key=lambda r: r.month, reverse=True):
+        when = f'{_MONTHS[reading.month.month - 1]} {reading.month.year}'
+        if reading.current is not None:
+            value = fmt_number(reading.current)
+            if meter.day_night:
+                value += ' / ' + (fmt_number(reading.current_night) if reading.current_night is not None else '—')
+            return value, when
+        if reading.usage is not None:
+            value = 'расход ' + fmt_number(reading.usage)
+            if meter.day_night and reading.usage_night is not None:
+                value += ' / ' + fmt_number(reading.usage_night)
+            return value, when
+    if meter.initial is not None:
+        value = fmt_number(meter.initial)
+        if meter.day_night and meter.initial_night is not None:
+            value += ' / ' + fmt_number(meter.initial_night)
+        return value, 'старт'
+    return '', ''
+
+
+def meter_table(owner):
+    """«Все счётчики»: every meter of the owner's objects, grouped by object. Read-only — a row leads to the window
+    where the meter is changed: its service (tariff, who pays) or, outside services, the object window."""
+    from apps.properties.models import Property
+
+    groups = []
+    properties = (Property.objects.filter(owner=owner).order_by('name')
+                  .prefetch_related('meters__tenant', 'meters__readings', 'meters__receipts__tariffs'))
+    for property_obj in properties:
+        rows = []
+        for meter in property_obj.meters.all():
+            service = next(iter(meter.receipts.all()), None)
+            if meter.tenant_id:
+                who, who_cls = meter.tenant.name, 'is-tenant'
+            elif meter.vacant:
+                who, who_cls = 'Собственник', 'is-free'
+            else:
+                who, who_cls = 'Общий', ''
+            value, when = _last_reading_text(meter)
+            rows.append({
+                'meter': meter, 'kind': meter.kind if meter.kind in READY_METER_KINDS else 'custom',
+                'who': who, 'who_cls': who_cls, 'service': service,
+                'tariff': busy_tariff_text(service, meter) if service else '',
+                'last': value, 'last_when': when, 'unit': meter_unit(meter),
+            })
+        groups.append({'property': property_obj, 'rows': rows})
+    return groups
+
+
 def mixed_owners(meters, posted):
     """Both common meters and the tenants' own (or free) ones among the switched-on meters, by the «чей» just posted
     (who_<pk>; the meter's own when not posted). They go in separate services (2026-11-15): one service would

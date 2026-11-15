@@ -1,4 +1,4 @@
-from apps.billing.models import Receipt
+from apps.billing.models import Meter, Receipt
 
 from .models import Property
 
@@ -10,4 +10,5 @@ def sidebar(request):
     return {
         'sidebar_properties': Property.objects.filter(owner=request.user).only('id', 'name'),
         'sidebar_receipt_count': Receipt.objects.filter(property__owner=request.user).count,
+        'sidebar_meter_count': Meter.objects.filter(property__owner=request.user).count,
     }

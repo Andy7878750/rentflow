@@ -3876,6 +3876,33 @@
   .rform .mrow-head + .mrow { border-top: 0; }
 }
 
+/* ---------- «Все счётчики» (2026-11-16): the same table as «Все услуги», one per object ---------- */
+.mtr-group + .mtr-group { margin-top: 24px; }
+
+.mtr-object {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.mtr-object a { color: inherit; text-decoration: none; }
+.mtr-object a:hover { color: var(--color-accent); }
+
+.mtr-table tbody tr[data-row-modal] { cursor: pointer; }
+
+.mtr-table .tm-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--mk, var(--color-text-muted));
+}
+
+.mtr-table .tm-icon svg { width: 18px; height: 18px; }
+.mtr-table td > .svc-meta { display: block; }
+.mtr-table td a { color: inherit; text-decoration: none; }
+.mtr-table td a:hover { color: var(--color-accent); }
+.mtr-name { font-weight: 600; }
+
 /* ---------- Object page, the month's input (2026-11-15, feature/month-input) ---------- */
 
 /* Service icons in colour, the same as the meters: light turquoise, cold water blue, hot red… */

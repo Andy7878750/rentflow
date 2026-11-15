@@ -447,6 +447,36 @@ class ReceiptViewTests(TestCase):
         response = self.client.post(reverse('receipt_create', args=[self.prop.pk]), data, HTTP_X_MODAL='1')
         self.assertEqual(response.status_code, 204)
 
+    def test_all_meters_page(self):
+        tenant = self.prop.tenants.get()
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     serial='222', tenant=tenant, initial=Decimal('100'))
+        water = Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³', serial='444')
+        self._light_service(light)
+        receipt = self.prop.receipts.get()
+        Reading.objects.create(meter=light, month=date(2026, 11, 1), current=Decimal('339'))
+        Meter.objects.create(property=make_property(self.other), kind='gas', name='Чужой газ')
+
+        response = self.client.get(reverse('meter_list'))
+        self.assertContains(response, '№ 222')
+        self.assertContains(response, tenant.name)
+        self.assertContains(response, '5,5 ₽/кВт·ч')  # the service's tariff for this meter
+        self.assertContains(response, '339 кВт·ч')
+        self.assertContains(response, 'ноябрь 2026')
+        self.assertContains(response, 'не в услуге')  # the water meter
+        self.assertContains(response, f'data-row-modal="{reverse("receipt_edit", args=[receipt.pk])}"')
+        self.assertContains(response, f'data-row-modal="{reverse("property_edit", args=[self.prop.pk])}"')
+        self.assertNotContains(response, 'Чужой газ')
+        self.assertEqual(response.context['sidebar_meter_count'](), 2)
+
+    def test_add_meter_from_the_menu_opens_the_object_window(self):
+        response = self.client.get(reverse('meter_add'), HTTP_X_MODAL='1')
+        self.assertContains(response, 'data-property-form')  # one object: straight into its window
+        Property.objects.create(owner=self.user, name='Второй', kind='commercial')
+        response = self.client.get(reverse('meter_add'), HTTP_X_MODAL='1')
+        self.assertContains(response, 'К какому объекту?')
+        self.assertContains(response, reverse('property_edit', args=[self.prop.pk]))
+
     def test_object_window_marks_meters_a_service_counts_by(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
         Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
@@ -704,10 +734,11 @@ class ServicesSectionTests(TestCase):
         response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
         self.assertContains(response, reverse('property_create'))
 
-    def test_card_menu_has_add_service(self):
+    def test_card_menu_has_no_add_items(self):
+        # 2026-11-16: «Добавить арендатора / услугу» are on the card itself, not in its «…» menu.
         prop = make_property(self.user)
         response = self.client.get(reverse('property_list'))
-        self.assertContains(response, f'href="{reverse("receipt_create", args=[prop.pk])}" data-modal class="dropdown-item')
+        self.assertNotContains(response, f'href="{reverse("receipt_create", args=[prop.pk])}" data-modal class="dropdown-item')
 
     def test_saving_from_the_table_returns_to_the_table(self):
         receipt = Receipt.objects.create(property=make_property(self.user), name='Свет')

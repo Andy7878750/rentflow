@@ -73,6 +73,14 @@
   }
 
   if (dialog) {
+    // «Все счётчики»: a click anywhere on a row opens its window (the service, or the object).
+    document.addEventListener('click', function (event) {
+      var row = event.target.closest && event.target.closest('tr[data-row-modal]');
+      if (!row || event.target.closest('a, button, summary, input, label')) return;
+      if (window.getSelection && String(window.getSelection())) return;
+      openModal(row.getAttribute('data-row-modal'));
+    });
+
     document.addEventListener('click', function (event) {
       var link = event.target.closest('a[data-modal]');
       if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;

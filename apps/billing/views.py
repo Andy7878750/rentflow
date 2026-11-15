@@ -221,6 +221,32 @@ def receipt_add(request):
 
 
 @login_required
+def meter_list(request):
+    """«Счётчики → Все счётчики»: every meter of every object, read-only; a row opens where it is changed."""
+    groups = services.meter_table(request.user)
+    return render(request, 'billing/meter_list.html', {
+        'groups': groups, 'has_meters': any(group['rows'] for group in groups),
+    })
+
+
+@login_required
+def meter_add(request):
+    """«+ Добавить счётчик» in the menu: meters are added in the object window — «К какому объекту?» first."""
+    properties = list(
+        Property.objects.filter(owner=request.user).annotate(meter_count=Count('meters')).order_by('name')
+    )
+    for property_obj in properties:
+        property_obj.pick_meta = services.meters_label(property_obj.meter_count) if property_obj.meter_count else 'нет счётчиков'
+    if len(properties) == 1:
+        from apps.properties.views import property_edit
+        return property_edit(request, properties[0].pk)
+    template = 'billing/_receipt_add.html' if request.headers.get('X-Modal') else 'billing/receipt_add.html'
+    return render(request, template, {
+        'properties': properties, 'pick_url': 'property_edit', 'close_url': 'meter_list',
+    })
+
+
+@login_required
 def receipt_list(request):
     """«Услуги»: every service of every object in one table."""
     receipts = (
