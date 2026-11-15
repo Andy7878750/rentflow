@@ -33,18 +33,23 @@ def modal_back_url(request):
 def property_list(request):
     month = services.parse_month(request.GET.get('month'))
     properties = list(Property.objects.filter(owner=request.user).prefetch_related('tenants', 'receipts'))
+    summary = {
+        'to_invoice': Decimal('0.00'), 'tenants': 0, 'tenants_ready': 0,
+        'readings_done': 0, 'readings_total': 0, 'owner_share': Decimal('0.00'),
+    }
     for property_obj in properties:
         property_obj.setup = services.setup_steps(property_obj)
-
-    # Readings and invoices don't exist yet: zero placeholders until billing lands.
-    summary = {
-        'to_invoice': Decimal('0.00'),
-        'tenants': sum(len(p.tenants.all()) for p in properties),
-        'tenants_ready': 0,
-        'readings_done': 0,
-        'readings_total': len(properties),
-        'owner_share': Decimal('0.00'),
-    }
+        # The card's numbers and the summary on top: the same month bill as the object page (2026-11-16).
+        bill = billing_services.month_bill(property_obj, month)
+        property_obj.bill = bill
+        summary['to_invoice'] += bill.to_invoice
+        summary['owner_share'] += bill.owner.total
+        summary['readings_done'] += bill.readings_done
+        summary['readings_total'] += bill.readings_total
+        summary['tenants'] += len(bill.payers)
+        # A tenant is ready when the object's month has everything entered: their bill is final.
+        if not bill.missing:
+            summary['tenants_ready'] += len(bill.payers)
 
     return render(request, 'properties/list.html', {
         'properties': properties,

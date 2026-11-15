@@ -476,6 +476,22 @@ class ReceiptViewTests(TestCase):
         self.assertNotContains(response, 'Чужой газ')
         self.assertEqual(response.context['sidebar_meter_count'](), 2)
 
+    def test_objects_page_shows_the_months_numbers(self):
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     initial=Decimal('100'))
+        self._light_service(light)
+        Reading.objects.create(meter=light, month=date(2026, 11, 1), current=Decimal('110'))  # 10 × 5,50 = 55
+        response = self.client.get(reverse('property_list') + '?month=2026-11')
+        prop = response.context['properties'][0]
+        self.assertEqual((prop.bill.readings_done, prop.bill.readings_total), (1, 1))
+        self.assertEqual(prop.bill.to_invoice, Decimal('55.00'))
+        summary = response.context['summary']
+        self.assertEqual((summary['to_invoice'], summary['readings_done'], summary['readings_total']),
+                         (Decimal('55.00'), 1, 1))
+        self.assertEqual((summary['tenants'], summary['tenants_ready']), (1, 1))
+        self.assertContains(response, '1 из 1')
+        self.assertNotContains(response, '0,00&nbsp;₽</span><span class="stat-cap">начисления')  # no placeholder
+
     def test_remove_meter_from_the_list(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
         water = Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')

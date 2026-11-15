@@ -67,9 +67,10 @@
 
         {% if property.setup.complete %}
           <div class="stat-cols">
-            <div><span class="stat-num">{{ property.receipts.all|length }}</span><span class="stat-cap">услуги</span></div>
-            <div><span class="stat-num">—</span><span class="stat-cap">показания</span></div>
-            <div><span class="stat-num">0,00&nbsp;₽</span><span class="stat-cap">начисления</span></div>
+            {# The same numbers as on the object page, for the month picked on top. #}
+            <div><span class="stat-num">{{ property.bill.entries|length }}</span><span class="stat-cap">услуги</span></div>
+            <div><span class="stat-num">{% if property.bill.readings_total %}{{ property.bill.readings_done }} из {{ property.bill.readings_total }}{% else %}—{% endif %}</span><span class="stat-cap">показания</span></div>
+            <div><span class="stat-num">{{ property.bill.to_invoice|floatformat:"2g" }}&nbsp;₽</span><span class="stat-cap">начисления</span></div>
           </div>
         {% else %}
           {# Until the one-time setup is done, numbers would be zeros: say so instead. #}
