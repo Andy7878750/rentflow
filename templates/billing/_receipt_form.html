@@ -131,6 +131,7 @@
           {% endif %}
           {% if meter_picks %}
             <ol class="mrow-list">
+              <li class="mrow mrow-head" aria-hidden="true"><span></span><span></span><span>Счётчик</span><span>Номер</span><span>Тариф</span><span>Кто платит</span><span>Вкл.</span></li>
               {% for pick in meter_picks %}
                 {% if pick.busy %}
                   {% ifchanged pick.busy.pk|yesno:'1,1' %}<li class="mrow-caption">Уже в других услугах — тариф и «чей» меняются там</li>{% endifchanged %}

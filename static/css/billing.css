@@ -3825,6 +3825,53 @@
   color: #fff;
 }
 
+/* Meter rows of the service window, tidied (2026-11-15): a quiet header, the name only as wide as it needs,
+   «Кто платит» wider so the tenants' names fit. Narrow window: number · name · № · switch, then tariff · who. */
+.rform .meter-rows { container: mrows / inline-size; }
+
+.rform .mrow {
+  grid-template-columns: 24px 16px minmax(110px, 0.8fr) 104px 170px minmax(150px, 1.2fr) 44px;
+  grid-template-areas: "num icon name serial tariff who sw";
+  column-gap: 12px;
+}
+
+.rform .mrow > :nth-child(1) { grid-area: num; }
+.rform .mrow > :nth-child(2) { grid-area: icon; }
+.rform .mrow > :nth-child(3) { grid-area: name; }
+.rform .mrow > :nth-child(4) { grid-area: serial; }
+.rform .mrow > :nth-child(5) { grid-area: tariff; }
+.rform .mrow > :nth-child(6) { grid-area: who; }
+.rform .mrow > :nth-child(7) { grid-area: sw; justify-self: end; }
+
+.rform .mrow-head {
+  min-height: 0;
+  padding-bottom: 6px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rform .mrow-head > :nth-child(5) { text-align: right; padding-right: 8px; }
+.rform .mrow-head + .mrow { border-top: 1px solid var(--color-border); }
+.rform .mrow-name { min-width: 0; white-space: nowrap; overflow: hidden; }
+.rform .mrow-who-busy { padding: 0 10px; }
+
+@container mrows (max-width: 640px) {
+  .rform .mrow {
+    grid-template-columns: 24px 16px minmax(0, 1fr) minmax(0, 1fr) 44px;
+    grid-template-areas:
+      "num icon name serial sw"
+      ".   .    tariff who  .";
+    row-gap: 6px;
+    padding: 6px 0;
+  }
+
+  .rform .mrow-head { display: none; }
+  .rform .mrow-head + .mrow { border-top: 0; }
+}
+
 /* ---------- Object page, the month's input (2026-11-15, feature/month-input) ---------- */
 
 /* Service icons in colour, the same as the meters: light turquoise, cold water blue, hot red… */
