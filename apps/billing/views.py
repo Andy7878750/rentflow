@@ -78,12 +78,14 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None
                 meters_error = 'Укажите тариф — по нему считается сумма.'
         # Common meters and the tenants' own ones don't go in one service: the hint under the meters turns red.
         mixed = not property_obj.is_owner_used and services.mixed_owners(ticked, posted)
+    elif posted is not None and form.is_valid() and services.by_usage(form.instance) and not ticked:
+        meters_error = 'Отметьте счётчики, по расходу которых делится сумма.'
     if posted is not None and not redraw and not meters_error and not mixed and form.is_valid():
         is_new = receipt.pk is None
         # The form has already written the new name into the receipt: the tile is found by the stored one.
         old_name = Receipt.objects.filter(pk=receipt.pk).values_list('name', flat=True).first() if receipt.pk else None
         old_tile = request.user.service_templates.filter(name=old_name).first() if old_name else None
-        if form.instance.metered:
+        if form.instance.metered or services.by_usage(form.instance):
             services.apply_meter_owners(property_obj, posted)  # «чей» of each meter row
         services.save_receipt(form.save(commit=False), meter_ids=[m.pk for m in ticked], tariffs=tariffs, excluded=excluded)
         verb = 'добавлена' if is_new else 'сохранена'

@@ -184,7 +184,8 @@ def normalize(receipt):
         receipt.tariff = receipt.tariff_night = None
         receipt.zones = 1
         receipt.layout = Receipt.Layout.COMMON
-        receipt.input_mode = Receipt.InputMode.READINGS
+        if receipt.split != Receipt.Split.USAGE:  # «По расходу» keeps «было / стало» or «расход»
+            receipt.input_mode = Receipt.InputMode.READINGS
         if receipt.split == Receipt.Split.METERS:
             receipt.split = Receipt.Split.SHARES
     else:
@@ -198,8 +199,8 @@ def normalize(receipt):
         # The tenants' own meters decide what each pays; one common meter is split like a sum.
         if receipt.layout != Receipt.Layout.COMMON:
             receipt.split = Receipt.Split.METERS
-        elif receipt.split == Receipt.Split.METERS:
-            receipt.split = Receipt.Split.SHARES
+        elif receipt.split in (Receipt.Split.METERS, Receipt.Split.USAGE):
+            receipt.split = Receipt.Split.SHARES  # «по расходу» is for a sum from the receipt, not for meters × tariff
     if receipt.amount_mode != Receipt.AmountMode.FIXED:
         receipt.fixed_amount = None
     if receipt.property.is_owner_used:
@@ -672,6 +673,8 @@ def mixed_owners(meters, posted):
 
 def busy_tariff_text(other, meter):
     """The tariff a locked meter counts by in its service: «45,50 ₽/кВт·ч», day / night «5,50 / 2,10 ₽»."""
+    if by_usage(other):
+        return 'делит по расходу'
     found = for_meter(kind_tariffs(other, first_of_month(date.today())), other, meter)
     day, night = (found.tariff, found.tariff_night) if found else (meter.tariff or other.tariff, meter.tariff_night or other.tariff_night)
     if day is None:
@@ -889,6 +892,14 @@ def save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=Fa
     premises'; who pays by each is set on the object), only its layout follows them.
     excluded — tenants switched off in «Кто платит» (parse_excluded); None keeps them as they are."""
     today = today or date.today()
+    if meter_ids is not None and by_usage(receipt):
+        # «Делим по расходу»: the sum comes from the receipt; the ticked meters only give the proportion (no tariff).
+        normalize(receipt)
+        receipt.save()
+        receipt.meters.set(receipt.property.meters.filter(pk__in=meter_ids))
+        if excluded is not None:
+            receipt.excluded.set(excluded)
+        return receipt
     if meter_ids is not None:
         ticked = list(receipt.property.meters.filter(pk__in=meter_ids)) if receipt.metered else []
         if ticked and not receipt.property.is_owner_used:
@@ -1098,6 +1109,46 @@ def used(receipt, reading):
     return reading.consumption, reading.consumption_night
 
 
+def by_usage(receipt):
+    """«По квитанции / фиксированная» divided «По расходу» of the ticked meters."""
+    return not receipt.metered and receipt.split == Receipt.Split.USAGE
+
+
+def _usage_split(receipt, entry, payers, owner):
+    """«По расходу»: the receipt's sum in proportion to each meter's usage this month (day + night).
+    A tenant's meter → the tenant; a common or free one → the owner; the kopecks of rounding → the owner.
+    Returns False while a reading is missing (the month isn't complete)."""
+    uses = []
+    for meter, reading in entry.readings:
+        day, night = used(receipt, reading)
+        if day is None or (meter.two_zones and night is None):
+            return False
+        uses.append((meter, day + (night or Decimal('0')) if meter.two_zones else day))
+    total = entry.total
+    whole = sum((use for _, use in uses), Decimal('0'))
+    currency = receipt.currency_symbol
+    if not whole:
+        owner.lines.append(Line(receipt, total, 'по счётчикам нет расхода'))
+        return True
+    unit = meter_unit(uses[0][0]) or 'ед.'
+    head = f'{fmt_number(total, 2)}{NBSP}{currency} ÷ {fmt_number(whole)}{NBSP}{unit}'
+    billed = Decimal('0')
+    for meter, use in uses:
+        exact = total * use / whole
+        formula = f'{head} × {fmt_number(use)}{NBSP}{unit}'
+        payer = payers.get(meter.tenant_id) if meter.tenant_id else None
+        if payer:
+            line = tenant_line(receipt, exact, formula)
+            payer.lines.append(line)
+        else:
+            line = Line(receipt, money(exact), formula + (' · свободный счётчик' if meter.vacant else ' · общий счётчик'))
+            owner.lines.append(line)
+        billed += line.base
+    if total != billed:
+        owner.lines.append(Line(receipt, total - billed, 'округление'))
+    return True
+
+
 def two_zones(receipt, meter):
     """Day and night: the meter is set so in the object window. The service's own «день / ночь» counts only for
     old services none of whose meters says it (2026-11-15: one day / night meter used to make all of them so)."""
@@ -1204,6 +1255,8 @@ def payer_preview(receipt, excluded=None):
             basis = f'{fmt_number(tenant.area)}{NBSP}м²' if tenant.area is not None else '— м²'
         elif receipt.split == Receipt.Split.SHARES:
             basis = f'{fmt_number(tenant.share_percent or Decimal("0"))}%'
+        elif receipt.split == Receipt.Split.USAGE:
+            basis = 'по расходу'
         else:
             basis = ''
         line = lines.get(tenant.pk)
@@ -1310,6 +1363,16 @@ def month_bill(property_obj, month):
         else:
             entry.total = amount.amount if amount else None
 
+        if by_usage(receipt):
+            entry.readings = _readings_for(receipt.meters.all(), month)
+            for meter, _ in entry.readings:
+                meter.two_zones = two_zones(receipt, meter)
+                meter.tariff_text = ''
+            readings_total += len(entry.readings)
+            readings_done += sum(1 for _, reading in entry.readings if used(receipt, reading)[0] is not None)
+            if entry.total is None or not entry.readings or not _usage_split(receipt, entry, payers, owner):
+                entry.total = None  # the sum or a reading is still missing: the red dot stays
+            continue
         if entry.total is None:
             continue
         # Tenants switched off in «Кто платит» don't pay: their part stays with the owner.

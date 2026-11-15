@@ -30,6 +30,8 @@ class Receipt(models.Model):
         EQUAL = 'equal', 'Поровну'
         AREA = 'area', 'По м²'
         METERS = 'meters', 'По показаниям'
+        # A sum from the receipt divided in proportion to the chosen meters' usage (one bill for two meters, 2026-11-16).
+        USAGE = 'usage', 'По расходу'
         OWNER = 'owner', 'Плачу сам'
 
     class AmountMode(models.TextChoices):

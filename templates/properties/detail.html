@@ -127,7 +127,8 @@
               </details>
             </header>
 
-            {% if receipt.metered %}
+            {% if receipt.metered or receipt.split == 'usage' %}
+              {% if receipt.split == 'usage' %}{% include "properties/_month_sum.html" %}{% endif %}
               {% comment %}One row per meter (2026-11-15): who pays · «№ 222 / 9,6 ₽/кВт·ч» under it · «было» as plain text
                  (last month's «стало», or the start reading) · the field for today's reading · the usage.
                  «Расход» services: the field is the month's usage; the last column shows last month's until it is typed.
@@ -173,18 +174,8 @@
                 {% endfor %}
               </div>
               {% endwith %}
-            {% elif receipt.amount_mode == 'fixed' %}
-              <p class="mreceipt-fixed">
-                Каждый месяц вводить ничего не нужно — начислится само:
-                <strong>{{ receipt.fixed_amount|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>
-                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить сумму"><svg class="icon"><use href="#i-edit"/></svg></a>
-              </p>
             {% else %}
-              <div class="mreceipt-row">
-                <label for="amount-{{ receipt.pk }}">Сумма за {{ month_name }}, {{ receipt.currency_symbol }}</label>
-                <span><input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
-                       value="{{ entry.amount.amount|num }}" placeholder="0,00"></span>
-              </div>
+              {% include "properties/_month_sum.html" %}
             {% endif %}
           </article>
           {% endwith %}

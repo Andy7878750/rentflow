@@ -737,6 +737,7 @@
 .rform:has(input[name=split][value=shares]:checked) .split-hint[data-for=shares],
 .rform:has(input[name=split][value=equal]:checked) .split-hint[data-for=equal],
 .rform:has(input[name=split][value=area]:checked) .split-hint[data-for=area],
+.rform:has(input[name=split][value=usage]:checked) .split-hint[data-for=usage],
 .rform:has(input[name=split][value=owner]:checked) .split-hint[data-for=owner],
 .rform:has(input[name=charge][value=receipt]:checked) .amount-hint[data-for=monthly],
 .rform:has(input[name=charge][value=fixed]:checked) .amount-hint[data-for=fixed],
@@ -1823,6 +1824,7 @@
 .rform:has(input[name=split][value=shares]:checked) .head-badge[data-split=shares],
 .rform:has(input[name=split][value=equal]:checked) .head-badge[data-split=equal],
 .rform:has(input[name=split][value=area]:checked) .head-badge[data-split=area],
+.rform:has(input[name=split][value=usage]:checked) .head-badge[data-split=usage],
 .rform:has(input[name=split][value=owner]:checked) .head-badge[data-split=owner],
 .rform:has(input[name=charge][value=meters]:checked):has(input[name=layout][value=tenants]:checked) .head-badge[data-layout=tenants],
 .rform:has(input[name=charge][value=meters]:checked):has(input[name=layout][value=both]:checked) .head-badge[data-layout=both] {
@@ -3875,6 +3877,26 @@
   .rform .mrow-head { display: none; }
   .rform .mrow-head + .mrow { border-top: 0; }
 }
+
+/* ---------- «Делим: По расходу» (2026-11-16): the receipt's sum in proportion to the ticked meters' usage ----------
+   Order: tiles · grey panel (+ «Каждый месяц вводим») · «Делим» · the meters (who pays by each, no tariff). */
+.rform:has(input[name=split][value=usage]:checked):not(:has(input[name=charge][value=meters]:checked)) .meter-rows.metered-only {
+  display: block;
+  order: 2;
+  margin-top: 10px;
+}
+
+.rform:has(input[name=split][value=usage]:checked):not(:has(input[name=charge][value=meters]:checked)) .cp-row.metered-only {
+  display: flex;
+}
+
+.rform:has(input[name=split][value=usage]:checked) [data-split-home=charge] { order: 1; }
+.rform:has(input[name=split][value=usage]:checked) [data-split-home=charge] .payers-row { display: none; }
+.rform:has(input[name=split][value=usage]:checked) .mrow .mrow-tariff,
+.rform:has(input[name=split][value=usage]:checked) .mrow-head > :nth-child(5) { visibility: hidden; }
+
+/* «По расходу» only for a sum from the receipt: by meters × tariff it makes no sense. */
+.rform:has(input[name=charge][value=meters]:checked) .split-track label:has(input[value=usage]) { display: none; }
 
 /* ---------- «Все счётчики» (2026-11-16): the same table as «Все услуги», one per object ---------- */
 .mtr-group + .mtr-group { margin-top: 24px; }

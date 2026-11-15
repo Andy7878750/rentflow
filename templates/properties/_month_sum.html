@@ -1,0 +1,16 @@
+{% load billing %}
+{% comment %}The month's sum of a service without meters × tariff: a fixed one is just shown, a receipt's is typed in.
+   Also above the meter rows of «Делим по расходу» (2026-11-16).{% endcomment %}
+{% if receipt.amount_mode == 'fixed' %}
+              <p class="mreceipt-fixed">
+                Каждый месяц вводить ничего не нужно — начислится само:
+                <strong>{{ receipt.fixed_amount|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>
+                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить сумму"><svg class="icon"><use href="#i-edit"/></svg></a>
+              </p>
+{% else %}
+              <div class="mreceipt-row">
+                <label for="amount-{{ receipt.pk }}">Сумма за {{ month_name }}, {{ receipt.currency_symbol }}</label>
+                <span><input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
+                       value="{{ entry.amount.amount|num }}" placeholder="0,00"></span>
+              </div>
+{% endif %}

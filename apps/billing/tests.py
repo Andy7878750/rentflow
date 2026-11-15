@@ -10,7 +10,7 @@ from apps.properties.services import free_meters, setup_steps
 from apps.tenants.models import Tenant
 
 from . import services
-from .models import Meter, Reading, Receipt
+from .models import Meter, MonthlyAmount, Reading, Receipt
 
 User = get_user_model()
 
@@ -475,6 +475,39 @@ class ReceiptViewTests(TestCase):
         self.assertContains(window, 'kind-tile is-selected')
         self.assertNotContains(response, 'Чужой газ')
         self.assertEqual(response.context['sidebar_meter_count'](), 2)
+
+    def test_receipt_split_by_usage(self):
+        # ПЕСК: one bill for two meters, divided as their usage (2026-11-16).
+        viktor = self.prop.tenants.get()
+        vlad = Tenant.objects.create(property=self.prop, name='Владислав', share_percent=Decimal('0'))
+        one = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                   initial=Decimal('1000'))
+        two = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                   initial=Decimal('2000'))
+        url = reverse('receipt_create', args=[self.prop.pk])
+        data = {'kind': 'custom', 'name': 'ПЕСК', 'charge': 'receipt', 'split': 'usage', 'meters_shown': '1',
+                f'who_{one.pk}': str(viktor.pk), f'who_{two.pk}': str(vlad.pk)}
+        self.assertContains(self.client.post(url, data, HTTP_X_MODAL='1'), 'по расходу которых делится сумма')
+        data['meter_ids'] = [one.pk, two.pk]
+        self.assertEqual(self.client.post(url, data, HTTP_X_MODAL='1').status_code, 204)
+        receipt = self.prop.receipts.get()
+        self.assertEqual((receipt.metered, receipt.split), (False, 'usage'))
+        self.assertEqual(set(receipt.meters.all()), {one, two})
+
+        month = date(2026, 11, 1)
+        MonthlyAmount.objects.create(receipt=receipt, month=month, amount=Decimal('8450'))
+        Reading.objects.create(meter=one, month=month, current=Decimal('1800'))   # 800
+        bill = services.month_bill(self.prop, month)
+        self.assertIsNone(bill.entries[0].total, 'a reading is missing')
+        Reading.objects.create(meter=two, month=month, current=Decimal('2500'))   # 500
+        bill = services.month_bill(self.prop, month)
+        totals = {payer.tenant.name: payer.total for payer in bill.payers}
+        self.assertEqual(totals, {'Виктор': Decimal('5200.00'), 'Владислав': Decimal('3250.00')})
+        self.assertEqual(bill.owner.total, Decimal('0'))
+        self.assertIn('8 450,00 ₽ ÷ 1 300 кВт·ч × 800 кВт·ч', bill.payers[0].lines[0].formula)
+        page = self.client.get(reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11')
+        self.assertContains(page, f'name="amount-{receipt.pk}"')
+        self.assertContains(page, f'name="cur-{one.pk}"')
 
     def test_objects_page_shows_the_months_numbers(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
