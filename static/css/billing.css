@@ -4093,6 +4093,10 @@
 
 .mread-in[data-zone] .num-input { padding-left: 20px; }
 
+/* «По расходу»: the night field says how much a night kWh weighs — «н × 0,6» right inside it (2026-11-16). */
+.mread-in.has-weight::before { left: 7px; color: var(--color-accent); font-size: 10.5px; font-weight: 600; }
+.mread-in.has-weight .num-input { padding-left: 38px; padding-right: 8px; font-size: 14px; }
+
 .mread-prev,
 .mread-use {
   display: flex;

@@ -144,19 +144,19 @@
                   <div class="mread{% if dn %} is-dn{% endif %}">
                     <div class="mread-who">
                       <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}</span>
-                      <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}{% if dn and receipt.split == 'usage' %} · ночь × {{ receipt.night_weight|num|default:'1' }}{% endif %}</span>
+                      <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}</span>
                     </div>
                     <span class="mread-prev">{% if mode != 'usage' %}<span>{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}</span>{% endif %}{% endif %}</span>
                     <span class="mread-ins">
                       {% if mode == 'usage' %}
                         <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}"
                                value="{{ reading.usage|num }}" aria-label="{{ meter.who }}: расход{% if dn %} днём{% endif %} за {{ month_name }}"></label>
-                        {% if dn %}<label class="mread-in" data-zone="н"><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}"
+                        {% if dn %}<label class="mread-in{% if receipt.split == 'usage' %} has-weight{% endif %}" data-zone="н{% if receipt.split == 'usage' %}×{{ receipt.night_weight|num|default:'1' }}{% endif %}"{% if receipt.split == 'usage' %} title="Ночной кВт·ч считается как {{ receipt.night_weight|num|default:'1' }} дневного (меняется в окне услуги)"{% endif %}><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}"
                                value="{{ reading.usage_night|num }}" aria-label="{{ meter.who }}: расход ночью за {{ month_name }}"></label>{% endif %}
                       {% else %}
                         <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}"
                                value="{{ reading.current|num }}" aria-label="{{ meter.who }}: показание{% if dn %} днём{% endif %} сейчас"></label>
-                        {% if dn %}<label class="mread-in" data-zone="н"><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}"
+                        {% if dn %}<label class="mread-in{% if receipt.split == 'usage' %} has-weight{% endif %}" data-zone="н{% if receipt.split == 'usage' %}×{{ receipt.night_weight|num|default:'1' }}{% endif %}"{% if receipt.split == 'usage' %} title="Ночной кВт·ч считается как {{ receipt.night_weight|num|default:'1' }} дневного (меняется в окне услуги)"{% endif %}><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}"
                                value="{{ reading.current_night|num }}" aria-label="{{ meter.who }}: показание ночью сейчас"></label>{% endif %}
                       {% endif %}
                     </span>

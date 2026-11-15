@@ -554,8 +554,8 @@ class ReceiptViewTests(TestCase):
         self.assertEqual(totals, {'Виктор': Decimal('7142.86'), 'Владислав': Decimal('2857.14')})
         self.assertIn('(200 + 100 × 0,5)', bill.payers[0].lines[0].formula)
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11')
-        self.assertContains(page, '· ночь × 0,5')  # next to the day / night meter's №, only there
-        self.assertContains(page, '· ночь ×', count=1)
+        self.assertContains(page, 'data-zone="н×0,5"')  # inside the night field, only there
+        self.assertContains(page, 'has-weight', count=1)
 
     def test_objects_page_shows_the_months_numbers(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
