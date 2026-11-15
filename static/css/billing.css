@@ -3911,31 +3911,53 @@
 
 .mread-last { opacity: 0.7; }
 
-/* An empty field: a small red dot on its left. */
+/* The field(s) of a row. A day / night meter: two fields side by side, «д» / «н» inside them; its «было» and
+   usage — day over night. A red dot only at the service's name (.missing-dot), not at the fields. */
+.mread-ins {
+  display: flex;
+  gap: 6px;
+}
+
 .mread-in {
   position: relative;
   display: block;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .mread .mread-in .num-input { width: 100%; max-width: none; }
 
-.mread-in:has(input:placeholder-shown)::before {
-  content: '';
+.mread-in[data-zone]::before {
+  content: attr(data-zone);
   position: absolute;
   top: 50%;
-  left: 9px;  /* inside the field, so it never touches «было» */
-  width: 7px;
-  height: 7px;
-  margin-top: -3.5px;
-  border-radius: 50%;
-  background: var(--color-danger);
+  left: 8px;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  pointer-events: none;
 }
 
-.mreceipt-row .mread-in { flex-shrink: 0; }
+.mread-in[data-zone] .num-input { padding-left: 20px; }
 
-/* A narrow card: slimmer number columns, the coefficient as just «× [1]». */
+.mread-prev,
+.mread-use {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.mread.is-dn .mread-prev,
+.mread.is-dn .mread-use { font-size: 12px; line-height: 1.35; }
+
+.mread { grid-template-columns: minmax(0, 1fr) 72px 200px 80px; }
+
+/* A narrow card: slimmer number columns, day and night fields one above the other, the coefficient as «× [1]». */
 @container month (max-width: 560px) {
   .mread { grid-template-columns: minmax(0, 1fr) 52px 88px 58px; column-gap: 8px; }
+  .mread.is-dn .mread-ins { flex-direction: column; }
+  .mread.is-dn .mread-prev,
+  .mread.is-dn .mread-use { gap: 22px; }
   .mreceipt-head .coef > span { font-size: 0; }
   .mreceipt-head .coef > span::before { content: '×'; font-size: 13px; }
 }

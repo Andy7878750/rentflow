@@ -131,45 +131,44 @@
               {% comment %}One row per meter (2026-11-15): who pays · «№ 222 / 9,6 ₽/кВт·ч» under it · «было» as plain text
                  (last month's «стало», or the start reading) · the field for today's reading · the usage.
                  «Расход» services: the field is the month's usage; the last column shows last month's until it is typed.
-                 An empty field has a red dot. The tariff is changed only in the service window.{% endcomment %}
+                 A red dot only at the service's name while something is missing. The tariff is changed only in the service window.{% endcomment %}
               {% with mode=receipt.input_mode %}
               <div class="mreads{% if mode == 'usage' %} is-usage{% endif %}">
                 <div class="mread mread-head" aria-hidden="true">
                   <span></span><span>{% if mode != 'usage' %}Было{% endif %}</span><span>{% if mode == 'usage' %}Расход{% else %}Стало{% endif %}</span><span>{% if mode == 'usage' %}Прошлый{% else %}Расход{% endif %}</span>
                 </div>
                 {% for meter, reading in entry.readings %}
-                  {% with unit=meter.unit|default:receipt.unit %}
-                  <div class="mread">
+                  {% with unit=meter.unit|default:receipt.unit dn=meter.two_zones %}
+                  {# A day / night meter: day and night in the same row, «д» / «н» inside the fields (stacked on a narrow card). #}
+                  <div class="mread{% if dn %} is-dn{% endif %}">
                     <div class="mread-who">
-                      <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}{% if meter.two_zones %} · день{% endif %}</span>
+                      <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}</span>
                       <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}</span>
                     </div>
-                    <span class="mread-prev">{% if mode != 'usage' %}{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}{% endif %}</span>
-                    {% if mode == 'usage' %}
-                      <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}" placeholder=" "
-                             value="{{ reading.usage|num }}" aria-label="{{ meter.who }}: расход за {{ month_name }}"></label>
-                      <span class="mread-use" id="use-live-{{ meter.pk }}" data-live>{% if reading.usage is not None %}{{ reading.usage|num }} {{ unit }}{% elif reading.last_usage is not None %}<span class="mread-last">{{ reading.last_usage|num }} {{ unit }}</span>{% else %}—{% endif %}</span>
-                    {% else %}
-                      <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}" placeholder=" "
-                             value="{{ reading.current|num }}" aria-label="{{ meter.who }}: показание сейчас"></label>
-                      <span class="mread-use" id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ unit }}{% else %}—{% endif %}</span>
-                    {% endif %}
-                  </div>
-                  {% if meter.two_zones %}
-                    <div class="mread mread-night">
-                      <div class="mread-who"><span class="fade">ночь</span></div>
-                      <span class="mread-prev">{% if mode != 'usage' %}{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}{% endif %}</span>
+                    <span class="mread-prev">{% if mode != 'usage' %}<span>{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}</span>{% endif %}{% endif %}</span>
+                    <span class="mread-ins">
                       {% if mode == 'usage' %}
-                        <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}" placeholder=" "
-                               value="{{ reading.usage_night|num }}" aria-label="{{ meter.who }}: расход ночью"></label>
-                        <span class="mread-use" id="usen-live-{{ meter.pk }}" data-live>{% if reading.usage_night is not None %}{{ reading.usage_night|num }} {{ unit }}{% elif reading.last_usage_night is not None %}<span class="mread-last">{{ reading.last_usage_night|num }} {{ unit }}</span>{% else %}—{% endif %}</span>
+                        <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}"
+                               value="{{ reading.usage|num }}" aria-label="{{ meter.who }}: расход{% if dn %} днём{% endif %} за {{ month_name }}"></label>
+                        {% if dn %}<label class="mread-in" data-zone="н"><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}"
+                               value="{{ reading.usage_night|num }}" aria-label="{{ meter.who }}: расход ночью за {{ month_name }}"></label>{% endif %}
                       {% else %}
-                        <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}" placeholder=" "
-                               value="{{ reading.current_night|num }}" aria-label="{{ meter.who }}: показание ночью"></label>
-                        <span class="mread-use" id="consn-{{ meter.pk }}" data-live>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ unit }}{% else %}—{% endif %}</span>
+                        <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}"
+                               value="{{ reading.current|num }}" aria-label="{{ meter.who }}: показание{% if dn %} днём{% endif %} сейчас"></label>
+                        {% if dn %}<label class="mread-in" data-zone="н"><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}"
+                               value="{{ reading.current_night|num }}" aria-label="{{ meter.who }}: показание ночью сейчас"></label>{% endif %}
                       {% endif %}
-                    </div>
-                  {% endif %}
+                    </span>
+                    <span class="mread-use">
+                      {% if mode == 'usage' %}
+                        <span id="use-live-{{ meter.pk }}" data-live>{% if reading.usage is not None %}{{ reading.usage|num }} {{ unit }}{% elif reading.last_usage is not None %}<span class="mread-last">{{ reading.last_usage|num }} {{ unit }}</span>{% else %}—{% endif %}</span>
+                        {% if dn %}<span id="usen-live-{{ meter.pk }}" data-live>{% if reading.usage_night is not None %}{{ reading.usage_night|num }} {{ unit }}{% elif reading.last_usage_night is not None %}<span class="mread-last">{{ reading.last_usage_night|num }} {{ unit }}</span>{% else %}—{% endif %}</span>{% endif %}
+                      {% else %}
+                        <span id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ unit }}{% else %}—{% endif %}</span>
+                        {% if dn %}<span id="consn-{{ meter.pk }}" data-live>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
+                      {% endif %}
+                    </span>
+                  </div>
                   {% endwith %}
                 {% endfor %}
               </div>
@@ -183,7 +182,7 @@
             {% else %}
               <div class="mreceipt-row">
                 <label for="amount-{{ receipt.pk }}">Сумма за {{ month_name }}, {{ receipt.currency_symbol }}</label>
-                <span class="mread-in"><input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
+                <span><input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
                        value="{{ entry.amount.amount|num }}" placeholder="0,00"></span>
               </div>
             {% endif %}
