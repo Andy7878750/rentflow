@@ -1009,8 +1009,29 @@ def _readings_for(meters, month):
                 continue
             earlier = [r for r in readings if r.month < month and getattr(r, cur) is not None]
             setattr(reading, prev, getattr(earlier[-1], cur) if earlier else getattr(meter, initial))
+        # «Расход» services: last month's usage, shown at the end of the row until this month's is typed.
+        for use, last in (('usage', 'last_usage'), ('usage_night', 'last_usage_night')):
+            earlier = [r for r in readings if r.month < month and getattr(r, use) is not None]
+            setattr(reading, last, getattr(earlier[-1], use) if earlier else None)
         result.append((meter, reading))
     return result
+
+
+def meter_tariff_text(receipt, entry, meter):
+    """The meter's tariff in the month, next to its №: «9,6 ₽/кВт·ч», day / night «5,5 / 2,1 ₽/кВт·ч», or ''."""
+    row = for_meter(entry.kind_tariffs, receipt, meter)
+    if row is not None:
+        day, night = row.tariff, row.tariff_night
+    else:
+        day = meter.tariff if meter.tariff is not None else entry.tariff
+        night = meter.tariff_night if meter.tariff_night is not None else entry.tariff_night
+    if day is None:
+        return ''
+    unit = meter_unit(meter) or receipt.unit
+    price = fmt_number(day)
+    if two_zones(receipt, meter):
+        price += ' / ' + (fmt_number(night) if night is not None else '—')
+    return f'{price}{NBSP}{receipt.currency_symbol}' + (f'/{unit}' if unit else '')
 
 
 def used(receipt, reading):
@@ -1187,6 +1208,7 @@ def month_bill(property_obj, month):
             entry.readings = _readings_for(receipt.meters.all(), month)
             for meter, _ in entry.readings:
                 meter.two_zones = two_zones(receipt, meter)
+                meter.tariff_text = meter_tariff_text(receipt, entry, meter)
             entry.tariff_lines = _tariff_lines(receipt, entry)
             costs = [(meter, _meter_cost(receipt, entry, reading)) for meter, reading in entry.readings]
             readings_total += len(costs)

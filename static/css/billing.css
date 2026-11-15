@@ -3824,3 +3824,118 @@
 .kind-tile.is-selected .kind-tile-mark .icon {
   color: #fff;
 }
+
+/* ---------- Object page, the month's input (2026-11-15, feature/month-input) ---------- */
+
+/* Service icons in colour, the same as the meters: light turquoise, cold water blue, hot red… */
+.mreceipt .receipt-icon { color: var(--rk, var(--color-text-muted)); }
+.rk-electricity { --rk: #0e9aa7; }
+.rk-water { --rk: #2f80d1; }
+.rk-hot_water, .rk-hot_water_heating { --rk: #d9534f; }
+.rk-heating { --rk: #e8870e; }
+.rk-gas { --rk: #8e5cc8; }
+.rk-sewage { --rk: #8a6d4b; }
+.rk-management { --rk: #148f77; }
+.rk-internet { --rk: #5b6bd5; }
+.rk-capital_repair { --rk: #b07d2b; }
+.rk-garbage { --rk: #6b8e23; }
+.rk-custom { --rk: #34495e; }
+
+/* The coefficient stays in the header line, next to «…», at any width (it used to drop under the name). */
+@container month (max-width: 440px) {
+  .mreceipt-head { flex-wrap: nowrap; }
+  .mreceipt-head .receipt-body { flex: 1 1 auto; flex-basis: auto; min-width: 0; }
+  .mreceipt-head .coef { order: 0; margin: -6px 0 0; }
+}
+
+.mreceipt-head .coef { flex-shrink: 0; }
+.mreceipt-head .num-input-coef { width: 48px; padding: 6px 4px; }
+
+/* Meter rows: who · «было» as text · today's field · usage. The same columns in every row. */
+.mreads {
+  margin: 12px 0 0 var(--mreceipt-indent);
+  font-size: 14px;
+}
+
+.mread {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px 110px 76px;
+  align-items: center;
+  column-gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mread:last-child { border-bottom: 0; }
+
+.mread-head {
+  padding: 0 0 6px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mread-head > span:not(:first-child),
+.mread-prev,
+.mread-use { text-align: right; }
+
+.mread-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.mread-who > span { white-space: nowrap; overflow: hidden; }
+
+.mread-meta {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.mread-night { padding-top: 0; }
+.mread-night .mread-who { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
+.mread:has(+ .mread-night) { border-bottom: 0; }
+
+.mread-prev {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.mread-use {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.mread-last { opacity: 0.7; }
+
+/* An empty field: a small red dot on its left. */
+.mread-in {
+  position: relative;
+  display: block;
+}
+
+.mread .mread-in .num-input { width: 100%; max-width: none; }
+
+.mread-in:has(input:placeholder-shown)::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -12px;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: var(--color-danger);
+}
+
+.mreceipt-row .mread-in { flex-shrink: 0; }
+
+/* A narrow card: slimmer number columns, the coefficient as just «× [1]». */
+@container month (max-width: 560px) {
+  .mread { grid-template-columns: minmax(0, 1fr) 52px 88px 58px; column-gap: 8px; }
+  .mreceipt-head .coef > span { font-size: 0; }
+  .mreceipt-head .coef > span::before { content: '×'; font-size: 13px; }
+}

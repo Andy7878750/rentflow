@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -9,7 +10,7 @@ from apps.properties.services import free_meters, setup_steps
 from apps.tenants.models import Tenant
 
 from . import services
-from .models import Meter, Receipt
+from .models import Meter, Reading, Receipt
 
 User = get_user_model()
 
@@ -483,7 +484,22 @@ class ReceiptViewTests(TestCase):
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
         self.assertContains(page, f'name="use-{meter.pk}"')
         self.assertNotContains(page, f'name="cur-{meter.pk}"')
-        self.assertContains(page, 'Тариф 5 ₽ за кВт·ч')
+        self.assertContains(page, 'mread-meta')
+        self.assertNotContains(page, 'mreceipt-tariff')  # the tariff is next to the meter's № now (2026-11-15)
+
+    def test_usage_row_shows_last_months_usage_until_this_ones_is_typed(self):
+        meter = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        self.client.post(reverse('receipt_create', args=[self.prop.pk]), {
+            'kind': 'electricity', 'name': 'Свет', 'charge': 'meters', 'input_mode': 'usage', 'meters_shown': '1',
+            'meter_ids': str(meter.pk), 'tariff_key': f'm:{meter.pk}', 'tariff_day': '5', 'tariff_nightv': '',
+        }, HTTP_X_MODAL='1')
+        Reading.objects.create(meter=meter, month=date(2026, 10, 1), usage=Decimal('42'))
+        url = reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11'
+        self.assertContains(self.client.get(url), '<span class="mread-last">42 кВт·ч</span>')
+        Reading.objects.create(meter=meter, month=date(2026, 11, 1), usage=Decimal('50'))
+        page = self.client.get(url)
+        self.assertNotContains(page, 'mread-last')
+        self.assertContains(page, '>50 кВт·ч<')
 
     def test_fixed_amount_is_required(self):
         response = self.client.post(

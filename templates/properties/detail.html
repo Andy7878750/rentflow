@@ -96,7 +96,7 @@
           {% with receipt=entry.receipt %}
           <article class="mreceipt{% if entry.total is None %} is-missing{% endif %}" id="mreceipt-{{ receipt.pk }}">
             <header class="mreceipt-head">
-              <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
+              <span class="receipt-icon rk-{{ receipt.kind }}"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
               <div class="receipt-body">
                 <div class="receipt-title">
                   <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="fade">{{ receipt.name }}</a>
@@ -128,59 +128,52 @@
             </header>
 
             {% if receipt.metered %}
-              {# The tariff is set in the service window only; here it is just shown. #}
-              <p class="mreceipt-tariff">
-                Тариф {% for line in entry.tariff_lines %}{{ line }}{% if not forloop.last %} · {% endif %}{% empty %}—{% endfor %}
-                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить тариф"><svg class="icon"><use href="#i-edit"/></svg></a>
-              </p>
-              {% if receipt.input_mode == 'usage' %}
-                {# «Вводим расход»: one field per meter (and per night part), no «было / стало». #}
-                <table class="readings readings-usage">
-                  <thead><tr><th>Счётчик</th><th>Расход, {{ receipt.unit }}</th></tr></thead>
-                  <tbody>
-                    {% for meter, reading in entry.readings %}
-                      <tr>
-                        <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}{% if meter.two_zones %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
-                        <td><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}" aria-label="{{ meter.who }}: расход"
-                                   value="{{ reading.usage|num }}"></td>
-                      </tr>
-                      {% if meter.two_zones %}
-                        <tr>
-                          <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %} · ночь</td>
-                          <td><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}" aria-label="{{ meter.who }}: расход ночью"
-                                     value="{{ reading.usage_night|num }}"></td>
-                        </tr>
-                      {% endif %}
-                    {% endfor %}
-                  </tbody>
-                </table>
-              {% else %}
-              <table class="readings">
-                <thead><tr><th>Счётчик</th><th>Было</th><th>Стало</th><th>Расход</th></tr></thead>
-                <tbody>
-                  {% for meter, reading in entry.readings %}
-                    <tr>
-                      <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}{% if meter.two_zones %} · день{% endif %}{% if meter.serial %}<span class="meter-serial">№ {{ meter.serial }}</span>{% endif %}</td>
-                      <td><input type="text" inputmode="decimal" class="num-input" name="prev-{{ meter.pk }}" aria-label="{{ meter.who }}: было"
-                                 value="{{ reading.previous|num }}"></td>
-                      <td><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}" aria-label="{{ meter.who }}: стало"
-                                 value="{{ reading.current|num }}"></td>
-                      <td class="consumption" id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ meter.unit|default:receipt.unit }}{% else %}—{% endif %}</td>
-                    </tr>
-                    {% if meter.two_zones %}
-                      <tr>
-                        <td>{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %} · ночь</td>
-                        <td><input type="text" inputmode="decimal" class="num-input" name="prevn-{{ meter.pk }}" aria-label="{{ meter.who }}: было ночью"
-                                   value="{{ reading.previous_night|num }}"></td>
-                        <td><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}" aria-label="{{ meter.who }}: стало ночью"
-                                   value="{{ reading.current_night|num }}"></td>
-                        <td class="consumption" id="consn-{{ meter.pk }}" data-live>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ meter.unit|default:receipt.unit }}{% else %}—{% endif %}</td>
-                      </tr>
+              {% comment %}One row per meter (2026-11-15): who pays · «№ 222 / 9,6 ₽/кВт·ч» under it · «было» as plain text
+                 (last month's «стало», or the start reading) · the field for today's reading · the usage.
+                 «Расход» services: the field is the month's usage; the last column shows last month's until it is typed.
+                 An empty field has a red dot. The tariff is changed only in the service window.{% endcomment %}
+              {% with mode=receipt.input_mode %}
+              <div class="mreads{% if mode == 'usage' %} is-usage{% endif %}">
+                <div class="mread mread-head" aria-hidden="true">
+                  <span></span><span>{% if mode != 'usage' %}Было{% endif %}</span><span>{% if mode == 'usage' %}Расход{% else %}Стало{% endif %}</span><span>{% if mode == 'usage' %}Прошлый{% else %}Расход{% endif %}</span>
+                </div>
+                {% for meter, reading in entry.readings %}
+                  {% with unit=meter.unit|default:receipt.unit %}
+                  <div class="mread">
+                    <div class="mread-who">
+                      <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}{% if meter.two_zones %} · день{% endif %}</span>
+                      <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}</span>
+                    </div>
+                    <span class="mread-prev">{% if mode != 'usage' %}{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}{% endif %}</span>
+                    {% if mode == 'usage' %}
+                      <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="use-{{ meter.pk }}" placeholder=" "
+                             value="{{ reading.usage|num }}" aria-label="{{ meter.who }}: расход за {{ month_name }}"></label>
+                      <span class="mread-use" id="use-live-{{ meter.pk }}" data-live>{% if reading.usage is not None %}{{ reading.usage|num }} {{ unit }}{% elif reading.last_usage is not None %}<span class="mread-last">{{ reading.last_usage|num }} {{ unit }}</span>{% else %}—{% endif %}</span>
+                    {% else %}
+                      <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="cur-{{ meter.pk }}" placeholder=" "
+                             value="{{ reading.current|num }}" aria-label="{{ meter.who }}: показание сейчас"></label>
+                      <span class="mread-use" id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ unit }}{% else %}—{% endif %}</span>
                     {% endif %}
-                  {% endfor %}
-                </tbody>
-              </table>
-              {% endif %}
+                  </div>
+                  {% if meter.two_zones %}
+                    <div class="mread mread-night">
+                      <div class="mread-who"><span class="fade">ночь</span></div>
+                      <span class="mread-prev">{% if mode != 'usage' %}{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}{% endif %}</span>
+                      {% if mode == 'usage' %}
+                        <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="usen-{{ meter.pk }}" placeholder=" "
+                               value="{{ reading.usage_night|num }}" aria-label="{{ meter.who }}: расход ночью"></label>
+                        <span class="mread-use" id="usen-live-{{ meter.pk }}" data-live>{% if reading.usage_night is not None %}{{ reading.usage_night|num }} {{ unit }}{% elif reading.last_usage_night is not None %}<span class="mread-last">{{ reading.last_usage_night|num }} {{ unit }}</span>{% else %}—{% endif %}</span>
+                      {% else %}
+                        <label class="mread-in"><input type="text" inputmode="decimal" class="num-input" name="curn-{{ meter.pk }}" placeholder=" "
+                               value="{{ reading.current_night|num }}" aria-label="{{ meter.who }}: показание ночью"></label>
+                        <span class="mread-use" id="consn-{{ meter.pk }}" data-live>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ unit }}{% else %}—{% endif %}</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                  {% endwith %}
+                {% endfor %}
+              </div>
+              {% endwith %}
             {% elif receipt.amount_mode == 'fixed' %}
               <p class="mreceipt-fixed">
                 Каждый месяц вводить ничего не нужно — начислится само:
@@ -190,8 +183,8 @@
             {% else %}
               <div class="mreceipt-row">
                 <label for="amount-{{ receipt.pk }}">Сумма за {{ month_name }}, {{ receipt.currency_symbol }}</label>
-                <input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
-                       value="{{ entry.amount.amount|num }}" placeholder="0,00">
+                <span class="mread-in"><input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
+                       value="{{ entry.amount.amount|num }}" placeholder="0,00"></span>
               </div>
             {% endif %}
           </article>
