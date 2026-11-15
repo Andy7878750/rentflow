@@ -144,7 +144,7 @@
                   <div class="mread{% if dn %} is-dn{% endif %}">
                     <div class="mread-who">
                       <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}</span>
-                      <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}</span>
+                      <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}{% if dn and receipt.split == 'usage' %} · ночь × {{ receipt.night_weight|num|default:'1' }}{% endif %}</span>
                     </div>
                     <span class="mread-prev">{% if mode != 'usage' %}<span>{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}</span>{% endif %}{% endif %}</span>
                     <span class="mread-ins">
