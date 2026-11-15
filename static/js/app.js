@@ -1392,6 +1392,30 @@
       render();
     }
 
+    // A meter a service counts by can't be deleted: say so in a small window, with the way to the service.
+    // («Общий» / a tenant is only who pays by it; the tie to a service is the switch in that service.)
+    function meterInService(item) {
+      if (item.dataset.item !== 'meter' || !item.dataset.services) return false;
+      var many = item.dataset.services.indexOf('», «') !== -1;
+      var note = el('div', 'subwin subwin-note');
+      note.innerHTML =
+        '<div class="subwin-panel" role="alertdialog" aria-modal="true" aria-labelledby="note-title">' +
+        '<header class="modal-head"><div><h1 id="note-title">Счётчик привязан к услуге</h1></div>' +
+        '<button type="button" class="icon-button modal-close" data-note-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></header>' +
+        '<p class="note-text"></p>' +
+        '<div class="form-actions"><button type="button" class="btn btn-ghost btn-auto" data-note-close>Понятно</button>' +
+        '<a class="btn btn-primary btn-auto" data-modal>Открыть услугу</a></div></div>';
+      note.querySelector('.note-text').textContent = 'По этому счётчику ' + (many ? 'считаются услуги ' : 'считается услуга ') +
+        item.dataset.services + '. Зайдите в услугу и выключите в ней этот счётчик — после этого его можно удалить.';
+      note.querySelector('a[data-modal]').href = item.dataset.serviceUrl;
+      note.addEventListener('click', function (event) {
+        if (event.target.closest('[data-note-close]') || event.target.closest('a[data-modal]') || event.target === note) note.remove();
+      });
+      (form.closest('dialog') || document.body).appendChild(note);
+      note.querySelector('[data-note-close]').focus();
+      return true;
+    }
+
     function removeItem(item) {
       var del = item.querySelector('input[name$="-DELETE"]');
       if (del) del.checked = true;
@@ -1431,6 +1455,7 @@
 
       var infoRemove = target.closest('[data-info-remove]');
       if (infoRemove) {
+        if (meterInService(infoRemove.closest('.info-row').itemRef)) return;
         removeItem(infoRemove.closest('.info-row').itemRef);
         render();
         return;
@@ -1442,6 +1467,7 @@
       if (target.closest('[data-subwin-done]')) { done(); return; }
       if (target.closest('[data-subwin-cancel]')) { event.preventDefault(); cancel(); return; }
       if (target.closest('[data-subwin-delete]')) {
+        if (meterInService(current.item)) return;
         var gone = current.item;
         putBack();
         removeItem(gone);

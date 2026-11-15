@@ -426,6 +426,16 @@ class ReceiptViewTests(TestCase):
         }, HTTP_X_MODAL='1')
         self.assertFalse(self.user.service_templates.exists())
 
+    def test_object_window_marks_meters_a_service_counts_by(self):
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
+        self._light_service(light)
+        receipt = self.prop.receipts.get()
+        response = self.client.get(reverse('property_edit', args=[self.prop.pk]), HTTP_X_MODAL='1')
+        # × on this meter shows «Счётчик привязан к услуге» instead of deleting it (app.js); the free one has no mark.
+        self.assertContains(response, 'data-services="«Электричество»"', count=1)
+        self.assertContains(response, f'data-service-url="{reverse("receipt_edit", args=[receipt.pk])}"')
+
     def test_ready_made_service_has_no_tile_switch(self):
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=internet', HTTP_X_MODAL='1')
         self.assertNotContains(response, 'name="as_tile"')

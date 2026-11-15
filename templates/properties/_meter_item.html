@@ -1,6 +1,6 @@
 {% comment %}One meter of the object: its fields live hidden in the object form; app.js shows them in a small
    window («Счётчик N») and one info row in «Счётчики». Who pays by it (`owner`) is ticked in the tenant window.{% endcomment %}
-<div class="item" data-item="meter"{% if mform.DELETE.value %} hidden{% endif %}>
+<div class="item" data-item="meter"{% if mform.DELETE.value %} hidden{% endif %}{% if mform.instance.pk %}{% with in_services=mform.instance.receipts.all %}{% if in_services %} data-services="{% for service in in_services %}«{{ service.name }}»{% if not forloop.last %}, {% endif %}{% endfor %}" data-service-url="{% url 'receipt_edit' in_services.0.pk %}"{% endif %}{% endwith %}{% endif %}>
   {{ mform.id }}{{ mform.kind }}{{ mform.name }}{{ mform.unit }}{{ mform.owner }}
   <span class="visually-hidden">{{ mform.DELETE }}</span>
   <section class="form-section">

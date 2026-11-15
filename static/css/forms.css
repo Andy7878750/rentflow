@@ -2103,6 +2103,22 @@ input.masked {
   font-size: 14px;
 }
 
+/* «Счётчик привязан к услуге» (2026-11-15): a small window over the object window, above its own small windows. */
+.subwin-note {
+  z-index: 60;
+  align-items: center;
+}
+
+.subwin-note .subwin-panel {
+  max-width: 440px;
+}
+
+.subwin-note .note-text {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 /* Meters as tiles (variant А, 2026-11-12): an icon in a circle coloured by kind, name, then № · start · whose.
    Light is turquoise, cold water blue, hot water red, heating orange, gas violet, own kinds grey. */
 .meter-tiles {
