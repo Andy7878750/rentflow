@@ -3903,6 +3903,36 @@
 .mtr-table td a:hover { color: var(--color-accent); }
 .mtr-name { font-weight: 600; }
 
+/* Narrow: each meter a tidy card — name · «№ 222 · Виктор» · service with its tariff on the left, the reading on the right.
+   No «Номер:» labels: the words speak for themselves. */
+@container (max-width: 720px) {
+  .svc-table.mtr-table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name name name"
+      "serial who who"
+      "svc svc last";
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 12px 56px 12px 16px;
+  }
+
+  .svc-table.mtr-table td { display: block; margin: 0; padding: 0; min-width: 0; }
+  .svc-table.mtr-table td[data-label]::before { content: none; }
+  .mtr-table td:nth-child(1) { grid-area: name; }
+  .mtr-table td:nth-child(2) { grid-area: serial; color: var(--color-text-muted); white-space: nowrap; }
+  .mtr-table td:nth-child(3) { grid-area: who; color: var(--color-text-muted); overflow: hidden; }
+  .mtr-table td:nth-child(3) .fade { display: block; white-space: nowrap; }
+  .mtr-table td:nth-child(2)::after { content: '·'; margin-left: 10px; }
+  .mtr-table td:nth-child(4) { grid-area: svc; align-self: end; overflow: hidden; }
+  .mtr-table td:nth-child(5) { grid-area: last; align-self: end; text-align: right; white-space: nowrap; }
+  .mtr-table td:nth-child(4) > a,
+  .mtr-table td:nth-child(4) > .svc-meta { display: inline; }
+  .mtr-table td:nth-child(4) > .svc-meta::before { content: ' · '; }
+  .mtr-table .svc-name-body { flex-direction: row; align-items: baseline; gap: 8px; }
+}
+
 /* ---------- Object page, the month's input (2026-11-15, feature/month-input) ---------- */
 
 /* Service icons in colour, the same as the meters: light turquoise, cold water blue, hot red… */
