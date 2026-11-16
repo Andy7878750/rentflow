@@ -187,6 +187,9 @@ class ServiceTemplate(models.Model):
     """
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='service_templates')
+    # The object it was saved on: the tile shows only there; other objects keep the standard tiles (2026-11-16).
+    property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='service_templates',
+                                 null=True, blank=True)
     name = models.CharField(max_length=100)
     provider = models.CharField(max_length=150, blank=True)
     metered = models.BooleanField(default=False)
@@ -198,7 +201,7 @@ class ServiceTemplate(models.Model):
 
     class Meta:
         ordering = ['created_at', 'id']
-        constraints = [models.UniqueConstraint(fields=['owner', 'name'], name='unique_template_name_per_owner')]
+        constraints = [models.UniqueConstraint(fields=['property', 'name'], name='unique_template_name_per_property')]
 
     def __str__(self):
         return self.name

@@ -95,7 +95,7 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None
         is_new = receipt.pk is None
         # The form has already written the new name into the receipt: the tile is found by the stored one.
         old_name = Receipt.objects.filter(pk=receipt.pk).values_list('name', flat=True).first() if receipt.pk else None
-        old_tile = request.user.service_templates.filter(name=old_name).first() if old_name else None
+        old_tile = property_obj.service_templates.filter(name=old_name).first() if old_name else None
         if form.instance.metered or services.by_usage(form.instance):
             services.apply_meter_owners(property_obj, posted)  # «чей» of each meter row
         services.save_receipt(form.save(commit=False), meter_ids=[m.pk for m in ticked], tariffs=tariffs, excluded=excluded,
@@ -156,7 +156,7 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None
 def receipt_create(request, property_pk):
     """«+ Добавить услугу»: templates on top, settings below; ?kind=water opens with «Вода» picked."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
-    template = services.owner_template(request.user, request.GET.get('tpl') or request.POST.get('tpl'))
+    template = services.owner_template(property_obj, request.GET.get('tpl') or request.POST.get('tpl'))
     receipt = services.new_receipt(property_obj, request.GET.get('kind') or request.POST.get('kind'), template)
     meter_pk = request.GET.get('meter', '')
     start_meter = property_obj.meters.filter(pk=meter_pk).first() if meter_pk.isdigit() else None

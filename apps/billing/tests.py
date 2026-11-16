@@ -413,6 +413,14 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, 'name="charge" value="fixed" checked')
         self.assertContains(response, 'kind-tile kind-tile-mine is-selected')
         self.assertContains(response, 'name="as_tile" value="1" checked')
+        self.assertEqual(tile.property, self.prop)
+
+        # Only this object has the tile: another object of the same owner keeps the standard ones (2026-11-16).
+        second = make_property(self.user)
+        response = self.client.get(reverse('receipt_create', args=[second.pk]), HTTP_X_MODAL='1')
+        self.assertNotContains(response, f'?tpl={tile.pk}')
+        response = self.client.get(reverse('receipt_create', args=[second.pk]) + f'?tpl={tile.pk}', HTTP_X_MODAL='1')
+        self.assertNotContains(response, 'value="Парковка"')
 
         # Another owner's tile can't be opened; switching it off on the service removes the tile.
         self.client.force_login(self.other)

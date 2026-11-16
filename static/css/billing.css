@@ -4278,3 +4278,7 @@
   border-radius: 50%;
   background: var(--color-danger);
 }
+
+/* The supplier under a service's name on the object page starts at the icon's edge, not under the name
+   (2026-11-16, the user: «придвинь название поставщика на уровень иконки»). Icon 20px + gap 12px. */
+.mreceipt-head .receipt-meta { margin-left: -32px; }

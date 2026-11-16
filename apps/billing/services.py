@@ -99,20 +99,21 @@ def template_tiles(property_obj, selected):
 # ---------------------------------------------------------------------------
 
 def own_tiles(property_obj, selected=None):
-    """The owner's own template tiles (all objects), the picked one and the ones this object has marked."""
+    """The own tiles of THIS object (2026-11-16: a tile saved on one object isn't offered on the others — they keep the
+    standard ones), the picked one and the ones this object has marked."""
     have = set(property_obj.receipts.filter(kind=Receipt.Kind.CUSTOM).values_list('name', flat=True))
     return [
         {'template': template, 'label': tile_label(template.name), 'name': template.name,
          'selected': selected is not None and template.pk == selected.pk, 'added': template.name in have}
-        for template in ServiceTemplate.objects.filter(owner=property_obj.owner)
+        for template in ServiceTemplate.objects.filter(property=property_obj)
     ]
 
 
-def owner_template(owner, pk):
-    """The owner's own tile by its id (from ?tpl=…); None if it is not theirs or gone."""
+def owner_template(property_obj, pk):
+    """The object's own tile by its id (from ?tpl=…); None if it is another object's or gone."""
     if not str(pk or '').isdigit():
         return None
-    return ServiceTemplate.objects.filter(owner=owner, pk=int(pk)).first()
+    return ServiceTemplate.objects.filter(property=property_obj, pk=int(pk)).first()
 
 
 def apply_template(receipt, template):
@@ -133,21 +134,21 @@ def tile_of(receipt):
     """The owner's own tile with this service's name, if there is one (the switch «Сохранить как плашку»)."""
     if receipt.kind != Receipt.Kind.CUSTOM or not receipt.name:
         return None
-    return ServiceTemplate.objects.filter(owner=receipt.property.owner, name=receipt.name).first()
+    return ServiceTemplate.objects.filter(property=receipt.property, name=receipt.name).first()
 
 
 def save_as_tile(receipt, keep):
-    """«Сохранить как плашку» on: the tile with the service's name gets its settings (made if new);
-    off: the tile with that name goes. Meters and tariffs are the object's — not kept in a tile."""
+    """«Сохранить как плашку» on: the object's tile with the service's name gets its settings (made if new);
+    off: that tile goes. Only this object gets it. Meters and tariffs are the object's — not kept in a tile."""
     if receipt.kind != Receipt.Kind.CUSTOM:
         return None
-    owner = receipt.property.owner
     if not keep:
-        ServiceTemplate.objects.filter(owner=owner, name=receipt.name).delete()
+        ServiceTemplate.objects.filter(property=receipt.property, name=receipt.name).delete()
         return None
     template, _ = ServiceTemplate.objects.update_or_create(
-        owner=owner, name=receipt.name,
+        property=receipt.property, name=receipt.name,
         defaults={
+            'owner': receipt.property.owner,
             'provider': receipt.provider, 'metered': receipt.metered, 'amount_mode': receipt.amount_mode,
             'fixed_amount': receipt.fixed_amount if receipt.amount_mode == Receipt.AmountMode.FIXED else None,
             'split': receipt.split, 'input_mode': receipt.input_mode,
@@ -1967,7 +1968,10 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
     entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
     entry.some_usage = Receipt.InputMode.USAGE in entry.modes
     numbers = {number.pk: number for number in receipt.numbers.all()}
-    entry.month_numbers = [(number, number_at(number, month)) for number in numbers.values() if number.monthly]
+    # A field only for the «Каждый месяц» numbers that stand in the formula (one kept in the palette only asks nothing).
+    used_numbers = {block.get('id') for block in receipt.formula or [] if block.get('t') == 'num'}
+    entry.month_numbers = [(number, number_at(number, month)) for number in numbers.values()
+                           if number.monthly and number.pk in used_numbers]
     entry.formula_error = ''
 
     meters = {meter.pk: meter for meter, _ in entry.readings}
