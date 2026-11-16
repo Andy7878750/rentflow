@@ -234,6 +234,11 @@
   .check .calc .n { min-width: 96px; }
   .check .calc .n i { width: 0; min-width: 100%; margin: 0; line-height: 1.2; -webkit-line-clamp: 3; overflow-wrap: normal; }
   .check .calc .op.paren { margin: 0; }
+  /* Round 25: the × on a block in the formula — like an attachment's: a small white circle with a thin border and shadow
+     on the block's top-right corner (half outside), grey ×, red on hover; shown on hover (on a phone — always). */
+  .strip .chip .del { top: -7px; right: -7px; width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--muted); font-size: 13px; line-height: 1; z-index: 2; }
+  .strip .chip .del:hover { color: var(--danger); border-color: #f1c4bf; }
   /* Round 24: our own unit menu (no browser list) — a quiet button with ▾, a white card with options, the chosen one in
      accent, «свой вариант…» — a field with ✓ at the bottom. */
   .pop .usel { display: inline-flex; align-items: center; justify-content: space-between; gap: 4px; height: 34px; padding: 0 8px 0 10px;
