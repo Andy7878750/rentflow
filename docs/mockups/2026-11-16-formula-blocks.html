@@ -182,6 +182,23 @@
   .chip.tile .ico, .chip.tile.k-new .ico { width: 18px; height: auto; background: transparent; border-radius: 0; }
   .chip.k-new, .chip.tile.k-new { background: #fff; border-color: #cfd8de; color: var(--muted); }
   .chip.tile.k-new .t1 { color: var(--text); }
+  /* Round 12: the formula line — numbers and meters are white «words» (32px), signs are round with ▾ and a menu,
+     brackets are just thin symbols; after a number — a dashed «?» slot with the sign menu open. */
+  .strip .chip.k-receipt, .strip .chip.k-const, .strip .chip.k-meter { height: 32px; background: #fff; border-color: #dbe2e7; box-shadow: 0 1px 0 rgba(0,0,0,.03); }
+  .strip .chip.op-sign { min-width: 0; height: 28px; padding: 0 6px 0 9px; gap: 2px; border-radius: 14px; border-color: transparent; background: transparent; font-size: 16px; font-weight: 600; color: var(--text); cursor: pointer; }
+  .strip .chip.op-sign:hover { background: #eef2f4; }
+  .strip .chip.op-sign .dd { font-size: 9px; font-weight: 400; color: var(--muted); }
+  .strip .chip.op-paren { min-width: 0; height: 32px; padding: 0 1px; border: 0; background: transparent; font-size: 24px; font-weight: 300; color: var(--muted); }
+  .sign-slot { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1.5px dashed var(--accent); border-radius: 50%; color: var(--accent); font-size: 13px; font-weight: 700; background: #fff; }
+  .pop.signmenu { width: 180px; padding: 6px; }
+  .signmenu button { display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px; color: var(--text); text-align: left; cursor: pointer; }
+  .signmenu button:hover { background: #f1f4f6; }
+  .signmenu button.on { background: #e8f4f1; }
+  .signmenu button b { width: 14px; font-size: 16px; text-align: center; }
+  .signmenu button.danger { color: #c0392b; }
+  .signmenu hr { margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
+  .signmenu .sm-head { padding: 4px 10px 6px; font-size: 11px; color: var(--muted); }
+  .signmenu .sm-foot { padding: 6px 10px 2px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 4px; }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -314,6 +331,7 @@
   let values = [];
   let uid = 0, vid = 0;
   let cursor = null;  // where the next block goes: an index in blocks, or null — the end
+  let pendingAt = null, pendingCursor = null;  // round 12: where the «?» sign slot stands (after a just-placed number), or null
 
   function newValue(type, props) {
     const v = Object.assign({ id: ++vid, type, label: '', unit: '', per: '', value: 0, sample: 0 }, props || {});
@@ -355,7 +373,7 @@
     return unitLabel(v);
   }
   function kindClass(b) {
-    if (b.type === 'op') return 'k-op';
+    if (b.type === 'op') return 'k-op ' + ('()'.includes(b.op) ? 'op-paren' : 'op-sign');
     if (b.type === 'meter') return 'k-meter ' + METER_KINDS[b.kind].cls;
     return valueOf(b).type === 'const' ? 'k-const' : 'k-receipt';
   }
@@ -365,6 +383,7 @@
     el.dataset.id = b.id;
     if (b.type !== 'op') el.innerHTML = '<span class="ico">' + iconOf(b) + '</span>';
     el.appendChild(document.createTextNode(chipText(b)));
+    if (b.type === 'op' && !'()'.includes(b.op)) el.insertAdjacentHTML('beforeend', '<span class="dd">▾</span>');
     const v = chipValue(b);
     if (v) { const s = document.createElement('span'); s.className = 'val'; s.textContent = v; el.appendChild(s); }
     return el;
@@ -386,6 +405,11 @@
     const mark = document.createElement('span'); mark.className = 'cursor';
     const chips = strip.querySelectorAll('.chip');
     if (cursor === null || cursor >= chips.length) strip.appendChild(mark); else strip.insertBefore(mark, chips[cursor]);
+    // Round 12: after a number or a meter — a «?» sign slot with its menu already open.
+    if (pendingAt !== null) {
+      const slot = document.createElement('span'); slot.className = 'sign-slot'; slot.textContent = '?';
+      if (pendingAt >= chips.length) strip.insertBefore(slot, mark); else strip.insertBefore(slot, chips[pendingAt]);
+    }
     renderPalette();
     document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
     document.getElementById('split-row').hidden = mode !== 'total' || !blocks.length;
@@ -565,13 +589,54 @@
   // ---------- Where the next block goes ----------
   function insertBlock(b, at) {
     const pos = at !== undefined ? at : cursor === null ? blocks.length : cursor;
+    pendingAt = null; closePop();
     blocks.splice(pos, 0, b);
     if (cursor !== null || at !== undefined) cursor = pos + 1 >= blocks.length ? null : pos + 1;
+    afterPlaced(b, pos);
+  }
+  // A number or a meter just placed: if no sign follows it yet, the «?» slot appears with the sign menu open.
+  function afterPlaced(b, pos) {
+    // Right after a number (or «)») — the slot goes between them; otherwise after the new block, if no sign follows.
+    const prev = blocks[pos - 1], next = blocks[pos + 1];
+    const isOperand = x => x && (x.type !== 'op' || x.op === ')');
+    let at = null;
+    if (b.type !== 'op' && isOperand(prev)) at = pos;
+    else if (b.type !== 'op' && !(next && next.type === 'op' && next.op !== '(')) at = pos + 1;
+    const needs = at !== null;
+    pendingAt = at;
+    pendingCursor = pos + 2;  // after the sign is chosen, the cursor stands right after the new block
     render();
+    if (needs) openSignMenu(strip.querySelector('.sign-slot'), null);
+  }
+  // The sign menu — for the «?» slot (choose) and for a sign already in the line (change or remove).
+  const SIGNS = [['+', 'Плюс'], ['−', 'Минус'], ['×', 'Умножить'], ['÷', 'Разделить']];
+  function openSignMenu(anchor, b) {
+    closePop(true);
+    if (!anchor) return;
+    pop = document.createElement('div'); pop.className = 'pop signmenu';
+    pop.innerHTML = (b ? '' : '<div class="sm-head">Какой знак дальше?</div>') +
+      SIGNS.map(([op, t]) => '<button type="button" data-op="' + op + '"' + (b && b.op === op ? ' class="on"' : '') + '><b>' + op + '</b>' + t + '</button>').join('') +
+      (b ? '<hr><button type="button" class="danger" data-op="">Убрать знак</button>' : '<div class="sm-foot">или клавишей + − * /</div>');
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(r.left - 6, innerWidth - 190)) + 'px';
+    const h = pop.offsetHeight;
+    pop.style.top = (r.bottom + 6 + h > innerHeight ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+    pop.addEventListener('click', ev => {
+      const btn = ev.target.closest('[data-op]'); if (!btn) return;
+      const op = btn.dataset.op;
+      if (b) { if (op) b.op = op; else blocks = blocks.filter(x => x !== b); closePop(); render(); return; }
+      const at = pendingAt; pendingAt = null; closePop();
+      blocks.splice(at, 0, make('op:' + op));
+      cursor = pendingCursor >= blocks.length ? null : pendingCursor;
+      render();
+    });
   }
   let justDragged = false;
   strip.addEventListener('click', e => {
     if (justDragged || e.target.closest('.chip, .strip-clear')) return;
+    if (e.target.closest('.sign-slot')) return;
+    closePop();
     const at = insertIndex(e.clientX, e.clientY);
     cursor = at >= blocks.length ? null : at;
     render();
@@ -635,7 +700,12 @@
       // a ready block goes where the cursor is; a block in the line opens its editor.
       if (kind.startsWith('new:')) openDraft(kind.slice(4), d.chip);
       else if (!d.fromStrip) insertBlock(make(kind));
-      else openPop(blocks.find(b => b.id == d.chip.dataset.id), d.chip);
+      else {
+        const b = blocks.find(x => x.id == d.chip.dataset.id);
+        const anchor = strip.querySelector('.chip[data-id="' + b.id + '"]') || d.chip;
+        if (b.type === 'op') { if (!'()'.includes(b.op)) openSignMenu(anchor, b); }
+        else openPop(b, anchor);
+      }
       return;
     }
     d.ghost.remove();
@@ -644,13 +714,20 @@
     const at = over ? insertIndex(e.clientX, e.clientY) : -1;
     if (d.block.type === 'new') { if (over) openDraft(d.block.kind, d.chip, at); return; }  // set up first, then it goes there
     if (d.fromStrip) blocks = blocks.filter(b => b !== d.block);   // moved or dragged out (= deleted)
-    if (over) blocks.splice(Math.min(at, blocks.length), 0, d.block);
+    if (over) {
+      const pos = Math.min(at, blocks.length);
+      blocks.splice(pos, 0, d.block);
+      if (!d.fromStrip) { afterPlaced(d.block, pos); return; }
+    }
     render();
   });
 
   // ---------- The small editor of a block ----------
   let pop = null;
-  function closePop() { if (pop) pop.remove(); pop = null; }
+  function closePop(keepSlot) {
+    if (pop) pop.remove(); pop = null;
+    if (!keepSlot && pendingAt !== null) { pendingAt = null; const sl = strip.querySelector('.sign-slot'); if (sl) sl.remove(); }
+  }
   // The meter's window: a tick per tenant, then — with two or more — «у каждого свой | складываем», and an example
   // on last month's numbers. Always the same height (nothing jumps): the switch is there, just greyed, with one tick.
   function meterPopBody(b) {
@@ -855,7 +932,10 @@
   const KEYS = { '+': '+', '-': '−', '*': '×', '/': '÷', '(': '(', ')': ')' };
   document.addEventListener('keydown', e => {
     if (!overlay.classList.contains('is-open') || e.target.closest('input, select, textarea')) return;
-    if (KEYS[e.key]) { e.preventDefault(); insertBlock(make('op:' + KEYS[e.key])); }
+    if (KEYS[e.key] && pendingAt !== null && !'()'.includes(KEYS[e.key])) {
+      e.preventDefault(); const btn = pop && pop.querySelector('[data-op="' + KEYS[e.key] + '"]'); if (btn) btn.click();
+    }
+    else if (KEYS[e.key]) { e.preventDefault(); insertBlock(make('op:' + KEYS[e.key])); }
     else if (e.key === 'Backspace') {
       // The block before the cursor goes.
       const at = cursor === null ? blocks.length : cursor;
