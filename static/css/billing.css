@@ -3832,8 +3832,8 @@
 .rform .meter-rows { container: mrows / inline-size; }
 
 .rform .mrow {
-  grid-template-columns: 24px 16px minmax(110px, 0.8fr) 104px 170px minmax(150px, 1.2fr) 44px;
-  grid-template-areas: "num icon name serial tariff who sw";
+  grid-template-columns: 24px 16px minmax(100px, 0.8fr) 104px 170px 128px minmax(130px, 1.2fr) 44px;
+  grid-template-areas: "num icon name serial tariff mode who sw";
   column-gap: 12px;
 }
 
@@ -3842,8 +3842,9 @@
 .rform .mrow > :nth-child(3) { grid-area: name; }
 .rform .mrow > :nth-child(4) { grid-area: serial; }
 .rform .mrow > :nth-child(5) { grid-area: tariff; }
-.rform .mrow > :nth-child(6) { grid-area: who; }
-.rform .mrow > :nth-child(7) { grid-area: sw; justify-self: end; }
+.rform .mrow > :nth-child(6) { grid-area: mode; }
+.rform .mrow > :nth-child(7) { grid-area: who; }
+.rform .mrow > :nth-child(8) { grid-area: sw; justify-self: end; }
 
 .rform .mrow-head {
   min-height: 0;
@@ -3864,12 +3865,13 @@
 .rform .mrow-tariff .mfield { flex: 1 1 0; width: auto; min-width: 0; }
 .rform .mrow-who-busy { padding: 0 10px; }
 
-@container mrows (max-width: 640px) {
+@container mrows (max-width: 720px) {
   .rform .mrow {
     grid-template-columns: 24px 16px minmax(0, 1fr) minmax(0, 1fr) 44px;
     grid-template-areas:
-      "num icon name serial sw"
-      ".   .    tariff who  .";
+      "num icon name   serial sw"
+      ".   .    tariff mode   ."
+      ".   .    who    who    .";
     row-gap: 6px;
     padding: 6px 0;
   }
@@ -3892,8 +3894,22 @@
 
 .rform:has(input[name=split][value=usage]:checked) [data-split-home=charge] { order: 1; }
 .rform:has(input[name=split][value=usage]:checked) [data-split-home=charge] .payers-row { display: none; }
+/* No tariff here: its column goes, «Ввод» takes its place (2026-11-16). */
 .rform:has(input[name=split][value=usage]:checked) .mrow .mrow-tariff,
-.rform:has(input[name=split][value=usage]:checked) .mrow-head > :nth-child(5) { visibility: hidden; }
+.rform:has(input[name=split][value=usage]:checked) .mrow-head > :nth-child(5) { display: none; }
+.rform:has(input[name=split][value=usage]:checked) .mrow {
+  grid-template-columns: 24px 16px minmax(100px, 1fr) 120px 140px minmax(150px, 1fr) 44px;
+  grid-template-areas: "num icon name serial mode who sw";
+}
+
+@container mrows (max-width: 720px) {
+  .rform:has(input[name=split][value=usage]:checked) .mrow {
+    grid-template-columns: 24px 16px minmax(0, 1fr) minmax(0, 1fr) 44px;
+    grid-template-areas:
+      "num icon name serial sw"
+      ".   .    mode who    .";
+  }
+}
 
 /* «По расходу» only for a sum from the receipt: by meters × tariff it makes no sense. */
 .rform:has(input[name=charge][value=meters]:checked) .split-track label:has(input[value=usage]) { display: none; }
@@ -3983,7 +3999,7 @@
 
 /* Meter rows: who · «было» as text · today's field · usage. The same columns in every row. */
 .mreads {
-  margin: 12px 0 0 var(--mreceipt-indent);
+  margin: 16px 0 0;  /* from the icon, not under the name (2026-11-16) */
   font-size: 14px;
 }
 
@@ -4133,3 +4149,43 @@
   .mreceipt-head .coef > span { font-size: 0; }
   .mreceipt-head .coef > span::before { content: '×'; font-size: 13px; }
 }
+
+/* Usage in the month's rows — a grey badge (2026-11-16, the user's wish): «4 кВт·ч» stands out from «было». */
+.mread-use .badge { padding: 0 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.mread-use .badge.mread-last { opacity: 0.6; }
+.mread.is-dn .mread-use { gap: 4px; }
+
+@container month (max-width: 560px) {
+  .mread-use .badge { padding: 0 6px; font-size: 11px; }
+  .mread.is-dn .mread-use { gap: 24px; }
+}
+
+/* «Ввод» of a meter row (2026-11-16): «Было / стало ▾ | Расход» — the same small menu as «Кто платит». */
+.rform .mrow-mode .pick-menu { left: 0; right: auto; min-width: 150px; }
+
+/* What the meter measures, after the payer — small and quiet, only when it differs from the service's name (2026-11-16). */
+.mread-kind {
+  margin-left: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* The month's rows, tuned by the user in DevTools (2026-11-16): a slimmer field; «было» and the usage badge 11px. */
+.mread .num-input { padding: 6px 10px; font-size: 14px; }
+.mread-prev,
+.mread.is-dn .mread-prev,
+.mread-use .badge { font-size: 11px; }
+
+/* Meter rows of the service window, tuned by the user in DevTools (2026-11-16): rows 46px, 13px everywhere —
+   the text, the tariff fields and the «Ввод» / «Кто платит» menus. */
+.rform .mrow:not(.mrow-head) { min-height: 46px; font-size: 13px; }
+.rform .mrow .mfield input,
+.rform .mrow .ifield-fix,
+.rform .mrow .pick-trigger,
+.rform .mrow .pick-menu,
+.rform .mrow-who-busy,
+.rform .mrow-locked-text { font-size: 13px; }
+
+/* The column titles of the meter rows, tuned by the user in DevTools (2026-11-16): darker, bolder, 10px. */
+.rform .mrow-head { padding-bottom: 2px; color: #333; font-size: 10px; font-weight: 700; }

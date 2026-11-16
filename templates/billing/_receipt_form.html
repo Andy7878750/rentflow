@@ -104,15 +104,11 @@
             <svg class="icon"><use href="#i-calendar"/></svg>
             <span>Сумму из квитанции вводите <b>каждый месяц</b> на странице объекта.</span>
           </p>
-          <div class="cp-row metered-only">
+          {# What is typed every month — «Было / стало» or «Расход» — is chosen at each meter below (2026-11-16). #}
+          <p class="cp-row metered-only">
             <svg class="icon"><use href="#i-gauge"/></svg>
-            <span class="cp-label">Каждый месяц вводим</span>
-            <div class="seg-track" role="radiogroup" aria-label="Каждый месяц вводим">
-              {% for value, label in form.fields.input_mode.choices %}{% if value %}
-                <label><input type="radio" name="input_mode" value="{{ value }}"{% if form.input_mode.value == value %} checked{% endif %}><span>{% if value == 'usage' %}Расход{% else %}Было / стало{% endif %}</span></label>
-              {% endif %}{% endfor %}
-            </div>
-          </div>
+            <span>Показания вводите <b>каждый месяц</b> на странице объекта — у каждого счётчика свой способ.</span>
+          </p>
         </div>
 
 
@@ -131,7 +127,7 @@
           {% endif %}
           {% if meter_picks %}
             <ol class="mrow-list">
-              <li class="mrow mrow-head" aria-hidden="true"><span></span><span></span><span>Счётчик</span><span>Номер</span><span>Тариф</span><span>Кто платит</span><span>Вкл.</span></li>
+              <li class="mrow mrow-head" aria-hidden="true"><span></span><span></span><span>Счётчик</span><span>Номер</span><span>Тариф</span><span>Ввод</span><span>Кто платит</span><span>Вкл.</span></li>
               {% for pick in meter_picks %}
                 {% if pick.busy %}
                   {% ifchanged pick.busy.pk|yesno:'1,1' %}<li class="mrow-caption">Уже в других услугах — тариф и «чей» меняются там</li>{% endifchanged %}
@@ -142,6 +138,7 @@
                     <span class="mrow-name fade" title="{{ pick.meter.name }}{% if pick.meter.day_night %} · день / ночь{% endif %}">{{ pick.meter.name }}</span>
                     <span class="mrow-serial" title="№ {{ pick.meter.serial|default:'—' }}">№ {{ pick.meter.serial|default:'—' }}</span>
                     <span class="mrow-tariff"><span class="ifield mfield mfield-one is-locked"><span class="mrow-locked-text fade">{{ pick.busy_tariff|default:'тариф не задан' }}</span></span></span>
+                    <span class="mrow-who-busy fade">{% if pick.mode == 'usage' %}Расход{% else %}Было / стало{% endif %}</span>
                     <span class="mrow-who-busy fade">{% if pick.who_value == 'free' %}Собственник{% elif pick.who_value %}{{ pick.meter.tenant.name }}{% else %}Общий{% endif %}</span>
                     <span class="mrow-lock" title="В услуге «{{ pick.busy.name }}»"><svg class="icon"><use href="#i-lock"/></svg><span class="visually-hidden">в услуге «{{ pick.busy.name }}»</span></span>
                   </li>
@@ -164,6 +161,17 @@
                       {% endif %}
                     {% endwith %}
                   </span>
+                  {# How its month is typed: «Было / стало» (readings) or «Расход» (the usage itself). #}
+                  <div class="pick pick-radio mrow-who mrow-mode" data-drop>
+                    <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="Как вводим счётчик № {{ pick.meter.serial }}">
+                      <span class="fade" data-drop-label>{% if pick.mode == 'usage' %}Расход{% else %}Было / стало{% endif %}</span>
+                      <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+                    </button>
+                    <ul class="select-menu pick-menu" role="radiogroup" aria-label="Каждый месяц вводим" data-drop-menu hidden>
+                      <li class="select-row"><label class="select-option"><input type="radio" name="mode_{{ pick.meter.pk }}" value="readings"{% if pick.mode != 'usage' %} checked{% endif %}><span>Было / стало</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                      <li class="select-row"><label class="select-option"><input type="radio" name="mode_{{ pick.meter.pk }}" value="usage"{% if pick.mode == 'usage' %} checked{% endif %}><span>Расход</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                    </ul>
+                  </div>
                   {# «Чей»: the tenant seated on this meter, common, or the owner. #}
                   {% if meter_tenants and not property.is_owner_used %}
                     <div class="pick pick-radio mrow-who" data-drop>

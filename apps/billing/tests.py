@@ -671,11 +671,36 @@ class ReceiptViewTests(TestCase):
         }, HTTP_X_MODAL='1')
         Reading.objects.create(meter=meter, month=date(2026, 10, 1), usage=Decimal('42'))
         url = reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11'
-        self.assertContains(self.client.get(url), '<span class="mread-last">42 кВт·ч</span>')
+        self.assertContains(self.client.get(url), 'class="badge mread-last">42 кВт·ч</span>')
         Reading.objects.create(meter=meter, month=date(2026, 11, 1), usage=Decimal('50'))
         page = self.client.get(url)
         self.assertNotContains(page, 'mread-last')
         self.assertContains(page, '>50 кВт·ч<')
+
+    def test_each_meter_has_its_own_input_mode(self):
+        """«Было / стало | Расход» at each meter (2026-11-16): one service, one meter by readings, one by usage."""
+        one = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч', initial=Decimal('100'))
+        two = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
+        self.client.post(reverse('receipt_create', args=[self.prop.pk]), {
+            'kind': 'electricity', 'name': 'Свет', 'charge': 'meters', 'meters_shown': '1',
+            'meter_ids': [one.pk, two.pk], 'tariff_key': [f'm:{one.pk}', f'm:{two.pk}'], 'tariff_day': ['5', '5'],
+            'tariff_nightv': ['', ''], f'mode_{one.pk}': 'readings', f'mode_{two.pk}': 'usage',
+        }, HTTP_X_MODAL='1')
+        one.refresh_from_db()
+        two.refresh_from_db()
+        self.assertEqual((one.input_mode, two.input_mode), ('readings', 'usage'))
+        Reading.objects.create(meter=one, month=date(2026, 11, 1), previous=Decimal('100'), current=Decimal('110'))
+        Reading.objects.create(meter=two, month=date(2026, 11, 1), usage=Decimal('7'))
+        page = self.client.get(reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11')
+        self.assertContains(page, f'name="cur-{one.pk}"')
+        self.assertContains(page, f'name="use-{two.pk}"')
+        self.assertContains(page, 'Стало / расход')
+        receipt = Receipt.objects.get(name='Свет')
+        self.assertEqual(services.used(receipt, Reading.objects.get(meter=one)), (Decimal('10'), None))
+        self.assertEqual(services.used(receipt, Reading.objects.get(meter=two))[0], Decimal('7'))
+        # The window shows each meter's choice.
+        window = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
+        self.assertContains(window, f'name="mode_{two.pk}" value="usage" checked')
 
     def test_fixed_amount_is_required(self):
         response = self.client.post(

@@ -133,17 +133,19 @@
                  (last month's «стало», or the start reading) · the field for today's reading · the usage.
                  «Расход» services: the field is the month's usage; the last column shows last month's until it is typed.
                  A red dot only at the service's name while something is missing. The tariff is changed only in the service window.{% endcomment %}
-              {% with mode=receipt.input_mode %}
-              <div class="mreads{% if mode == 'usage' %} is-usage{% endif %}">
+              {% comment %}«Было / стало» or «Расход» is each meter's own (2026-11-16). The head: all by usage — Расход · Прошлый;
+                 mixed — «Стало / расход» over the fields.{% endcomment %}
+              {% with all_usage=entry.all_usage %}
+              <div class="mreads{% if all_usage %} is-usage{% endif %}">
                 <div class="mread mread-head" aria-hidden="true">
-                  <span></span><span>{% if mode != 'usage' %}Было{% endif %}</span><span>{% if mode == 'usage' %}Расход{% else %}Стало{% endif %}</span><span>{% if mode == 'usage' %}Прошлый{% else %}Расход{% endif %}</span>
+                  <span></span><span>{% if not all_usage %}Было{% endif %}</span><span>{% if all_usage %}Расход{% elif entry.some_usage %}Стало / расход{% else %}Стало{% endif %}</span><span>{% if all_usage %}Прошлый{% else %}Расход{% endif %}</span>
                 </div>
                 {% for meter, reading in entry.readings %}
-                  {% with unit=meter.unit|default:receipt.unit dn=meter.two_zones %}
+                  {% with unit=meter.unit|default:receipt.unit dn=meter.two_zones mode=meter.mode %}
                   {# A day / night meter: day and night in the same row, «д» / «н» inside the fields (stacked on a narrow card). #}
                   <div class="mread{% if dn %} is-dn{% endif %}">
                     <div class="mread-who">
-                      <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %} · {{ meter.name }}{% endif %}</span>
+                      <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %}<span class="mread-kind">·&nbsp;{{ meter.name }}</span>{% endif %}</span>
                       <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}</span>
                     </div>
                     <span class="mread-prev">{% if mode != 'usage' %}<span>{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}</span>{% endif %}{% endif %}</span>
@@ -162,11 +164,11 @@
                     </span>
                     <span class="mread-use">
                       {% if mode == 'usage' %}
-                        <span id="use-live-{{ meter.pk }}" data-live>{% if reading.usage is not None %}{{ reading.usage|num }} {{ unit }}{% elif reading.last_usage is not None %}<span class="mread-last">{{ reading.last_usage|num }} {{ unit }}</span>{% else %}—{% endif %}</span>
-                        {% if dn %}<span id="usen-live-{{ meter.pk }}" data-live>{% if reading.usage_night is not None %}{{ reading.usage_night|num }} {{ unit }}{% elif reading.last_usage_night is not None %}<span class="mread-last">{{ reading.last_usage_night|num }} {{ unit }}</span>{% else %}—{% endif %}</span>{% endif %}
+                        <span id="use-live-{{ meter.pk }}" data-live{% if reading.usage is not None or reading.last_usage is not None %} class="badge{% if reading.usage is None %} mread-last{% endif %}"{% endif %}>{% if reading.usage is not None %}{{ reading.usage|num }} {{ unit }}{% elif reading.last_usage is not None %}{{ reading.last_usage|num }} {{ unit }}{% else %}—{% endif %}</span>
+                        {% if dn %}<span id="usen-live-{{ meter.pk }}" data-live{% if reading.usage_night is not None or reading.last_usage_night is not None %} class="badge{% if reading.usage_night is None %} mread-last{% endif %}"{% endif %}>{% if reading.usage_night is not None %}{{ reading.usage_night|num }} {{ unit }}{% elif reading.last_usage_night is not None %}{{ reading.last_usage_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
                       {% else %}
-                        <span id="cons-{{ meter.pk }}" data-live>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ unit }}{% else %}—{% endif %}</span>
-                        {% if dn %}<span id="consn-{{ meter.pk }}" data-live>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
+                        <span id="cons-{{ meter.pk }}" data-live{% if reading.consumption is not None %} class="badge"{% endif %}>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ unit }}{% else %}—{% endif %}</span>
+                        {% if dn %}<span id="consn-{{ meter.pk }}" data-live{% if reading.consumption_night is not None %} class="badge"{% endif %}>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
                       {% endif %}
                     </span>
                   </div>

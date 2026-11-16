@@ -53,6 +53,9 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None
         if posted is not None and name in posted and not pick['busy']:
             pick['who_value'] = posted.get(name, '')
             pick['owner_key'] = 'tenant' if pick['who_value'] else 'common'
+        mode = posted.get(f'mode_{pick["meter"].pk}') if posted is not None else None
+        if mode in Receipt.InputMode.values and not pick['busy']:
+            pick['mode'] = mode
     ticked = [pick['meter'] for pick in picks if pick['checked']]
     # The layout follows the ticks and their «чей» (hidden radios kept in step by app.js), so «Делим» is right from the start.
     owners = {pick['owner_key'] for pick in picks if pick['checked']}

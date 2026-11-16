@@ -110,6 +110,8 @@ class Meter(models.Model):
     vacant = models.BooleanField(default=False)
     # Two zones: day and night readings (initial / initial_night, Reading.*_night).
     day_night = models.BooleanField(default=False)
+    # What is typed every month (2026-11-16, per meter): «Было / стало» or «Расход». Empty — as its service says.
+    input_mode = models.CharField(max_length=10, choices=Receipt.InputMode.choices, blank=True)
     # What it measures: a ready-made kind, or «custom» with the landlord's own name.
     kind = models.CharField(max_length=20, choices=Receipt.Kind.choices, blank=True)
     name = models.CharField(max_length=100)  # «Вода холодная», «Электричество» or the own name

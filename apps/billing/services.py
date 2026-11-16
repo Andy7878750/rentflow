@@ -690,11 +690,17 @@ def busy_tariff_text(other, meter):
 
 def apply_meter_owners(property_obj, posted):
     """«Чей» of each meter row of the service window: '' — common, 'free' — the owner pays, a tenant's id —
-    that tenant pays by it. Stored on the meter itself, so another service with the same meter sees it."""
+    that tenant pays by it. Stored on the meter itself, so another service with the same meter sees it.
+    Also «Было / стало | Расход» of each row (mode_<pk>) — how the meter's month is typed."""
     if posted is None:
         return
     tenants = {str(pk) for pk in property_obj.tenants.values_list('pk', flat=True)}
+    modes = set(Receipt.InputMode.values)
     for meter in property_obj.meters.all():
+        mode = posted.get(f'mode_{meter.pk}')
+        if mode in modes and mode != meter.input_mode:
+            meter.input_mode = mode
+            meter.save(update_fields=['input_mode'])
         name = f'who_{meter.pk}'
         if name not in posted:
             continue
@@ -748,6 +754,7 @@ def meter_picks(receipt, checked):
             'owner_key': 'common' if not meter.tenant_id and not meter.vacant else 'tenant',
             'shown': True,
             'who_value': str(meter.tenant_id) if meter.tenant_id else ('free' if meter.vacant else ''),
+            'mode': meter_mode(receipt, meter),
             'busy': busy.get(meter.pk),
             'busy_tariff': busy_tariff_text(busy[meter.pk], meter) if meter.pk in busy else '',
         })
@@ -1121,9 +1128,14 @@ def meter_tariff_text(receipt, entry, meter):
     return f'{price}{NBSP}{receipt.currency_symbol}' + (f'/{unit}' if unit else '')
 
 
+def meter_mode(receipt, meter):
+    """How the meter's month is typed: its own choice («Было / стало» / «Расход»), else the service's (old data)."""
+    return meter.input_mode or receipt.input_mode
+
+
 def used(receipt, reading):
     """(day, night) usage of one meter's month: typed as is («Расход») or «стало − было» («Показания»)."""
-    if receipt.input_mode == Receipt.InputMode.USAGE:
+    if meter_mode(receipt, reading.meter) == Receipt.InputMode.USAGE:
         return reading.usage, reading.usage_night
     return reading.consumption, reading.consumption_night
 
@@ -1347,7 +1359,11 @@ def month_bill(property_obj, month):
             entry.readings = _readings_for(receipt.meters.all(), month)
             for meter, _ in entry.readings:
                 meter.two_zones = two_zones(receipt, meter)
+                meter.mode = meter_mode(receipt, meter)
                 meter.tariff_text = meter_tariff_text(receipt, entry, meter)
+            entry.modes = {meter.mode for meter, _ in entry.readings}
+            entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
+            entry.some_usage = Receipt.InputMode.USAGE in entry.modes
             entry.tariff_lines = _tariff_lines(receipt, entry)
             costs = [(meter, _meter_cost(receipt, entry, reading)) for meter, reading in entry.readings]
             readings_total += len(costs)
@@ -1393,7 +1409,11 @@ def month_bill(property_obj, month):
             entry.readings = _readings_for(receipt.meters.all(), month)
             for meter, _ in entry.readings:
                 meter.two_zones = two_zones(receipt, meter)
+                meter.mode = meter_mode(receipt, meter)
                 meter.tariff_text = ''
+            entry.modes = {meter.mode for meter, _ in entry.readings}
+            entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
+            entry.some_usage = Receipt.InputMode.USAGE in entry.modes
             readings_total += len(entry.readings)
             readings_done += sum(1 for _, reading in entry.readings if used(receipt, reading)[0] is not None)
             if entry.total is None or not entry.readings or not _usage_split(receipt, entry, payers, owner):
