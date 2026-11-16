@@ -156,6 +156,11 @@
   .pop .acts .btn:disabled { opacity: .45; cursor: default; }
   .pop .vrow-one { grid-template-columns: minmax(0, 1fr); }
   .pop .vrow-one .vfield select { width: 90px; }
+  /* Round 8: «Название» right above its field, the explanation under it; the example for the check — not typed;
+     the draft's three buttons — a third each. */
+  .pop .f .hint { font-size: 11px; color: var(--muted); }
+  .pop .vfield input.sample:disabled { text-align: right; font-size: 14px; color: var(--muted); }
+  .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
     .palette { grid-template-columns: 1fr 1fr; }
@@ -265,6 +270,9 @@
   // Last month's usage of each tenant's meters, by kind.
   const USAGE = { el: { v: 800, l: 500 }, cold: { v: 3, l: 2 }, hot: { v: 1, l: 4 } };
   const UNITS = ['₽', 'кВт·ч', 'м³', 'Гкал', 'м²', 'чел.'];
+  // A monthly number's example for the check is not typed: it follows the unit (the user's wish, round 8).
+  const SAMPLES = { '₽': 6400, 'кВт·ч': 270, 'м³': 5, 'Гкал': 0.42, 'м²': 60, 'чел.': 3 };
+  const sampleFor = unit => SAMPLES[unit] || 10;
   const CUSTOM = '__custom';
 
   let mode = 'each';
@@ -640,12 +648,13 @@
   // The number's fields — the same in the setup of a new one and in the editor of one already in the formula.
   function valueFields(v) {
     const num = n => String(n).replace('.', ',');
-    const name = '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') +
-      '" placeholder="' + (v.type === 'const' ? 'Например, Тариф тепло' : 'Например, Тепло по квитанции') + '"></label>';
+    const name = '<label class="f">Название<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') +
+      '" placeholder="' + (v.type === 'const' ? 'Например, Тариф тепло' : 'Например, Тепло по квитанции') + '">' +
+      '<small class="hint">Так подписано на странице объекта и в счёте</small></label>';
     if (v.type === 'month') {
       // «Каждый месяц» is just a number with its unit (0,42 Гкал) — no «за …». One field: an example and the unit inside.
-      return name + '<div class="f">Например (как в прошлом месяце)<div class="vrow vrow-one"><span class="vfield">' +
-        '<input data-k="sample" inputmode="decimal" value="' + (v.sample ? num(v.sample) : '') + '" placeholder="0,42">' +
+      return name + '<div class="f">Цифра для проверки формулы<div class="vrow vrow-one"><span class="vfield">' +
+        '<input data-k="sample" class="sample" disabled value="' + num(v.sample || sampleFor(v.unit)) + '">' +
         unitSelect('unit', v.unit, '—') + '</span></div></div><p class="vsay">' + valueSays(v) + '</p>';
     }
     return name + '<div class="f">Сколько<div class="vrow"><span class="vfield">' +
@@ -659,9 +668,10 @@
   function openDraft(type, anchor, at) {
     closePop();
     const v = { id: 0, type, label: '', unit: type === 'const' ? '₽' : '', per: '', value: 0, sample: 0 };
+    if (type === 'month') v.sample = sampleFor(v.unit);
     pop = document.createElement('div'); pop.className = 'pop';
     pop.innerHTML = '<h4>' + (type === 'const' ? 'Новый тариф / норматив' : 'Новое число — каждый месяц') + '</h4>' + valueFields(v) +
-      '<div class="acts"><button class="btn" data-cancel>Отмена</button><button class="btn" data-keep disabled title="Сохранить в палитру, поставить потом">В палитру</button>' +
+      '<div class="acts thirds"><button class="btn" data-cancel>Отмена</button><button class="btn" data-keep disabled title="Сохранить в палитру, поставить в формулу потом">Сохранить</button>' +
       '<button class="btn primary" data-put disabled>В формулу</button></div>';
     document.body.appendChild(pop);
     placePop(anchor);
@@ -672,6 +682,7 @@
       const name = (prompt('Своя единица (например, кг, шт, мес):') || '').trim();
       v[sel.dataset.k] = name;
       sel.outerHTML = unitSelect(sel.dataset.k, name, '—');
+      syncSample(v);
       pop.querySelector('.vsay').textContent = valueSays(v);
     });
     pop.addEventListener('input', ev => {
@@ -679,6 +690,7 @@
       let val = ev.target.value;
       if (key === 'value' || key === 'sample') val = Number(String(val).replace(/\s/g, '').replace(',', '.')) || 0;
       v[key] = val;
+      if (key === 'unit') syncSample(v);
       pop.querySelector('.vsay').textContent = valueSays(v);
       ready();
     });
@@ -688,6 +700,13 @@
     pop.querySelector('[data-put]').onclick = () => { const saved = save(); closePop(); insertBlock({ id: ++uid, type: 'val', vid: saved.id }, at); };
     pop.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !pop.querySelector('[data-put]').disabled) pop.querySelector('[data-put]').click(); });
     pop.querySelector('[data-k="label"]').focus();
+  }
+  // The monthly number's example follows its unit: ₽ — 6 400, кВт·ч — 270, Гкал — 0,42…
+  function syncSample(v) {
+    if (v.type !== 'month') return;
+    v.sample = sampleFor(v.unit);
+    const f = pop && pop.querySelector('.sample');
+    if (f) f.value = String(v.sample).replace('.', ',');
   }
   function placePop(anchor) {
     const r = anchor.getBoundingClientRect();
@@ -739,6 +758,7 @@
       if (sel.tagName !== 'SELECT' || sel.value !== CUSTOM) return;
       const name = (prompt('Своя единица (например, кг, шт, мес):') || '').trim();
       if (name) target[sel.dataset.k] = name;
+      if (sel.dataset.k === 'unit' && target.type === 'month') target.sample = sampleFor(target[sel.dataset.k]);
       render();
       openPop(b, strip.querySelector('.chip[data-id="' + b.id + '"]') || anchor);
     });
@@ -747,7 +767,9 @@
       let v = ev.target.value;
       if (key === 'value' || key === 'sample') v = Number(String(v).replace(/\s/g, '').replace(',', '.')) || 0;
       if (key === 'label' && !v.trim()) v = 'Число ' + (values.indexOf(target) + 1);
-      target[key] = v; render();
+      target[key] = v;
+      if (key === 'unit') syncSample(target);
+      render();
       const say = pop.querySelector('.vsay');
       if (say) say.textContent = valueSays(target);
     });
