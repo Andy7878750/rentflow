@@ -1203,11 +1203,28 @@ def meter_mode(receipt, meter):
     return meter.input_mode or receipt.input_mode
 
 
-def used(receipt, reading):
-    """(day, night) usage of one meter's month: typed as is («Расход») or «стало − было» («Показания»)."""
+def _raw_used(receipt, reading):
     if meter_mode(receipt, reading.meter) == Receipt.InputMode.USAGE:
         return reading.usage, reading.usage_night
     return reading.consumption, reading.consumption_night
+
+
+def _negative(value):
+    return value is not None and value < 0
+
+
+def used(receipt, reading):
+    """(day, night) usage of one meter's month: typed as is («Расход») or «стало − было» («Показания»).
+    A negative one («стало» below «было», 2026-11-16) is a typo: it counts as not typed yet (the red dot stays)."""
+    day, night = _raw_used(receipt, reading)
+    return (None if _negative(day) else day), (None if _negative(night) else night)
+
+
+def mark_negative(receipt, readings):
+    """reading.bad / bad_night — the object page paints such a field red: «меньше «было»»."""
+    for _, reading in readings:
+        day, night = _raw_used(receipt, reading)
+        reading.bad, reading.bad_night = _negative(day), _negative(night)
 
 
 def by_usage(receipt):
@@ -1433,6 +1450,7 @@ def month_bill(property_obj, month):
                 meter.two_zones = two_zones(receipt, meter)
                 meter.mode = meter_mode(receipt, meter)
                 meter.tariff_text = meter_tariff_text(receipt, entry, meter)
+            mark_negative(receipt, entry.readings)
             entry.modes = {meter.mode for meter, _ in entry.readings}
             entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
             entry.some_usage = Receipt.InputMode.USAGE in entry.modes
@@ -1485,6 +1503,7 @@ def month_bill(property_obj, month):
                 meter.two_zones = two_zones(receipt, meter)
                 meter.mode = meter_mode(receipt, meter)
                 meter.tariff_text = ''
+            mark_negative(receipt, entry.readings)
             entry.modes = {meter.mode for meter, _ in entry.readings}
             entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
             entry.some_usage = Receipt.InputMode.USAGE in entry.modes

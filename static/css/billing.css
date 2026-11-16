@@ -4252,3 +4252,19 @@
 @container month (max-width: 560px) {
   .obj-month .mreceipt-row { grid-template-columns: minmax(0, 1fr) 52px 88px 58px; column-gap: 8px; }
 }
+
+/* The month's rows, the golden middle (2026-11-16): a narrower «стало», a wider usage column — «13 750 кВт·ч» fits.
+   A receipt's sum (no meters) takes «стало» + «расход»: a longer field, the same edges. */
+.mread,
+.obj-month .mreceipt-row { grid-template-columns: minmax(0, 1fr) 72px 160px 104px; }
+.obj-month .mreceipt-row > span { grid-column: 3 / 5; }
+.mread-use .badge { white-space: nowrap; }
+
+@container month (max-width: 560px) {
+  .mread,
+  .obj-month .mreceipt-row { grid-template-columns: minmax(0, 1fr) 48px 84px 80px; }
+}
+
+/* «Стало» below «было» (or a negative usage): the field red, a red badge instead of the usage; not counted. */
+.mread .num-input.is-bad,
+.mread .num-input.is-bad:focus { border-color: var(--color-danger, #c0392b); box-shadow: 0 0 0 2px rgba(192, 57, 43, .12); }

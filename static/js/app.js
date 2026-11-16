@@ -1842,6 +1842,11 @@
         var fresh = doc.getElementById(card.id);
         if (fresh) card.classList.toggle('is-missing', fresh.classList.contains('is-missing'));
       });
+      // «Стало» below «было»: the field turns red (the value stays as typed).
+      monthForm.querySelectorAll('.mread .num-input[name]').forEach(function (input) {
+        var fresh = doc.querySelector('.mread .num-input[name="' + input.name + '"]');
+        if (fresh) input.classList.toggle('is-bad', fresh.classList.contains('is-bad'));
+      });
       if (selectedPayer !== null && document.querySelector('[data-bill="' + selectedPayer + '"]')) {
         showPayer(selectedPayer);
       }

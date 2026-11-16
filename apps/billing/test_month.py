@@ -295,6 +295,31 @@ class MonthBillTests(TestCase):
         self.assertEqual(services.fmt_number(Decimal('14961.49'), 2), '14 961,49')
         self.assertEqual(services.fmt_number(Decimal('6.50')), '6,5')
 
+    # «Стало» below «было» is a typo: not counted, the month stays incomplete, the field turns red (2026-11-16).
+    def test_current_below_previous_is_not_counted(self):
+        receipt = self.add('water', layout=Receipt.Layout.COMMON, tariff=Decimal('310'))
+        meter = receipt.meters.get()
+        services.save_month_input(self.prop, SEPT, {f'prev-{meter.pk}': '100', f'cur-{meter.pk}': '40'})
+
+        bill = services.month_bill(self.prop, SEPT)
+
+        entry = bill.entries[0]
+        self.assertIsNone(entry.total)
+        self.assertEqual(bill.missing, [receipt])
+        self.assertEqual(bill.to_invoice, 0)
+        self.assertTrue(entry.readings[0][1].bad)
+
+    def test_object_page_paints_the_field_red(self):
+        receipt = self.add('water', layout=Receipt.Layout.COMMON, tariff=Decimal('310'))
+        meter = receipt.meters.get()
+        services.save_month_input(self.prop, SEPT, {f'prev-{meter.pk}': '100', f'cur-{meter.pk}': '40'})
+        self.client.force_login(self.prop.owner)
+
+        page = self.client.get(f'/properties/{self.prop.pk}/?month=2026-09')
+
+        self.assertContains(page, f'is-bad" name="cur-{meter.pk}"')
+        self.assertContains(page, 'меньше «было»')
+
 
 class ObjectMetersTariffTests(TestCase):
     """«Счётчик: Да» from the window: the object's meters ticked, a tariff per kind of them."""
