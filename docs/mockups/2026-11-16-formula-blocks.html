@@ -148,6 +148,13 @@
   .pop .vfield select { flex: none; width: 66px; height: 100%; border: 0; border-left: 1px solid var(--border); border-radius: 0; background: #f7f9fa; padding: 0 6px; }
   .pop .vsay { min-height: 34px; margin: -4px 0 10px; font-size: 12px; color: var(--text); }
 
+  /* Round 6: the cursor in the formula — the next block goes here; the setup window is wider for three buttons. */
+  .cursor { width: 2px; height: 26px; border-radius: 1px; background: var(--accent); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .strip { cursor: text; }
+  .pop { width: 340px; }
+  .pop .acts .btn:disabled { opacity: .45; cursor: default; }
+
   @media (max-width: 640px) {
     .palette { grid-template-columns: 1fr 1fr; }
     .charges { grid-template-columns: 1fr 1fr; }
@@ -274,6 +281,7 @@
   // One number may stand in the formula several times: blocks point to it by vid.
   let values = [];
   let uid = 0, vid = 0;
+  let cursor = null;  // where the next block goes: an index in blocks, or null — the end
 
   function newValue(type, props) {
     const v = Object.assign({ id: ++vid, type, label: '', unit: '', per: '', value: 0, sample: 0 }, props || {});
@@ -285,8 +293,6 @@
 
   function make(kind) {
     const id = ++uid;
-    if (kind === 'new:month') return { id, type: 'val', vid: newValue('month').id, fresh: true };
-    if (kind === 'new:const') return { id, type: 'val', vid: newValue('const').id, fresh: true };
     if (kind.startsWith('val:')) return { id, type: 'val', vid: Number(kind.slice(4)) };
     if (kind.startsWith('meter:')) return { id, type: 'meter', kind: kind.slice(6), tenants: TENANTS.map(t => t.id), join: 'each' };
     if (kind.startsWith('op:')) return { id, type: 'op', op: kind.slice(3) };
@@ -340,6 +346,11 @@
       strip.appendChild(e);
     }
     blocks.forEach(b => strip.appendChild(chipEl(b)));
+    // The blinking cursor: where the next block goes (the end, or where you clicked between blocks).
+    if (cursor !== null && cursor > blocks.length) cursor = null;
+    const mark = document.createElement('span'); mark.className = 'cursor';
+    const chips = strip.querySelectorAll('.chip');
+    if (cursor === null || cursor >= chips.length) strip.appendChild(mark); else strip.insertBefore(mark, chips[cursor]);
     renderPalette();
     document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
     document.getElementById('split-row').hidden = mode !== 'total';
@@ -501,6 +512,21 @@
     badge.className = 'badge ' + (ok ? 'ok' : 'bad');
   }
 
+  // ---------- Where the next block goes ----------
+  function insertBlock(b, at) {
+    const pos = at !== undefined ? at : cursor === null ? blocks.length : cursor;
+    blocks.splice(pos, 0, b);
+    if (cursor !== null || at !== undefined) cursor = pos + 1 >= blocks.length ? null : pos + 1;
+    render();
+  }
+  let justDragged = false;
+  strip.addEventListener('click', e => {
+    if (justDragged || e.target.closest('.chip, .strip-clear')) return;
+    const at = insertIndex(e.clientX, e.clientY);
+    cursor = at >= blocks.length ? null : at;
+    render();
+  });
+
   // ---------- Drag and drop (mouse and finger), click to add ----------
   let drag = null;  // {block, fromStrip, ghost, startX, startY, moved, src}
   let caret = document.createElement('span'); caret.className = 'caret';
@@ -531,8 +557,11 @@
     if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 5) return;
     if (!drag.moved) {
       drag.moved = true;
-      drag.block = drag.fromStrip ? blocks.find(b => b.id == drag.chip.dataset.id) : make(drag.chip.dataset.new);
-      drag.ghost = chipEl(drag.block); drag.ghost.classList.add('is-ghost'); document.body.appendChild(drag.ghost);
+      const kind = drag.chip.dataset.new || '';
+      drag.block = drag.fromStrip ? blocks.find(b => b.id == drag.chip.dataset.id)
+        : kind.startsWith('new:') ? { id: 0, type: 'new', kind: kind.slice(4) } : make(kind);
+      drag.ghost = drag.block.type === 'new' ? drag.chip.cloneNode(true) : chipEl(drag.block);
+      drag.ghost.classList.add('is-ghost'); document.body.appendChild(drag.ghost);
       if (drag.fromStrip) drag.chip.classList.add('is-dragging');
     }
     drag.ghost.style.left = (e.clientX - 20) + 'px'; drag.ghost.style.top = (e.clientY - 15) + 'px';
@@ -550,20 +579,23 @@
     if (!drag) return;
     const d = drag; drag = null;
     caret.remove(); strip.classList.remove('is-over');
+    const kind = d.chip.dataset.new || '';
     if (!d.moved) {
-      // A click: a palette block goes to the end; a block in the line opens its editor.
-      if (!d.fromStrip) { const b = make(d.chip.dataset.new); blocks.push(b); render(); openFresh(b); }
+      // A click: «+ Новое число» opens its setup next to the palette (nothing in the formula yet);
+      // a ready block goes where the cursor is; a block in the line opens its editor.
+      if (kind.startsWith('new:')) openDraft(kind.slice(4), d.chip);
+      else if (!d.fromStrip) insertBlock(make(kind));
       else openPop(blocks.find(b => b.id == d.chip.dataset.id), d.chip);
       return;
     }
     d.ghost.remove();
+    justDragged = true; setTimeout(() => { justDragged = false; }, 0);
     const over = overStrip(e.clientX, e.clientY);
     const at = over ? insertIndex(e.clientX, e.clientY) : -1;
+    if (d.block.type === 'new') { if (over) openDraft(d.block.kind, d.chip, at); return; }  // set up first, then it goes there
     if (d.fromStrip) blocks = blocks.filter(b => b !== d.block);   // moved or dragged out (= deleted)
     if (over) blocks.splice(Math.min(at, blocks.length), 0, d.block);
-    else if (d.block.fresh) values = values.filter(v => v.id !== d.block.vid);  // a new number dropped outside — gone
     render();
-    if (over) openFresh(d.block);
   });
 
   // ---------- The small editor of a block ----------
@@ -603,12 +635,60 @@
     return v.per ? 'Это норматив: ' + n + ' ' + v.unit + ' на 1 ' + v.per + '.' : 'Это количество: ' + n + ' ' + v.unit + '.';
   }
 
-  // A new number opens its small window right away: name it, choose the unit, type the value.
-  function openFresh(b) {
-    if (!b.fresh) return;
-    delete b.fresh;
-    const chip = strip.querySelector('.chip[data-id="' + b.id + '"]');
-    if (chip) openPop(b, chip, true);
+  // The number's fields — the same in the setup of a new one and in the editor of one already in the formula.
+  function valueFields(v) {
+    const num = n => String(n).replace('.', ',');
+    return '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') + '" placeholder="Например, Тариф тепло"></label>' +
+      '<div class="f">' + (v.type === 'const' ? 'Сколько' : 'Что вводите каждый месяц') + '<div class="vrow"><span class="vfield">' +
+      (v.type === 'const'
+        ? '<input data-k="value" inputmode="decimal" value="' + (v.value ? num(v.value) : '') + '" placeholder="0">'
+        : '<input disabled placeholder="каждый месяц">') +
+      unitSelect('unit', v.unit, '—') + '</span><span>за</span>' + unitSelect('per', v.per, '—') + '</div></div>' +
+      '<p class="vsay">' + valueSays(v) + '</p>' +
+      (v.type === 'const' ? '' :
+        '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + (v.sample ? num(v.sample) : '') + '" placeholder="0"></label>');
+  }
+
+  // Round 6 (the user's wish): a new number is set up FIRST — next to the palette — and only then put in the formula.
+  // «Поставить в формулу» puts it where the cursor is (or where it was dropped), «Только сохранить» — into the palette.
+  function openDraft(type, anchor, at) {
+    closePop();
+    const v = { id: 0, type, label: '', unit: type === 'const' ? '₽' : '', per: '', value: 0, sample: 0 };
+    pop = document.createElement('div'); pop.className = 'pop';
+    pop.innerHTML = '<h4>' + (type === 'const' ? 'Новый тариф / норматив' : 'Новое число — каждый месяц') + '</h4>' + valueFields(v) +
+      '<div class="acts"><button class="btn" data-cancel>Отмена</button><button class="btn" data-keep disabled>Только сохранить</button>' +
+      '<button class="btn primary" data-put disabled>Поставить в формулу</button></div>';
+    document.body.appendChild(pop);
+    placePop(anchor);
+    const ready = () => pop.querySelectorAll('[data-keep], [data-put]').forEach(btn => { btn.disabled = !v.label.trim(); });
+    pop.addEventListener('change', ev => {
+      const sel = ev.target;
+      if (sel.tagName !== 'SELECT' || sel.value !== CUSTOM) return;
+      const name = (prompt('Своя единица (например, кг, шт, мес):') || '').trim();
+      v[sel.dataset.k] = name;
+      sel.outerHTML = unitSelect(sel.dataset.k, name, '—');
+      pop.querySelector('.vsay').textContent = valueSays(v);
+    });
+    pop.addEventListener('input', ev => {
+      const key = ev.target.dataset.k; if (!key || ev.target.value === CUSTOM) return;
+      let val = ev.target.value;
+      if (key === 'value' || key === 'sample') val = Number(String(val).replace(/\s/g, '').replace(',', '.')) || 0;
+      v[key] = val;
+      pop.querySelector('.vsay').textContent = valueSays(v);
+      ready();
+    });
+    function save() { return newValue(type, { label: v.label.trim(), unit: v.unit, per: v.per, value: v.value, sample: v.sample }); }
+    pop.querySelector('[data-cancel]').onclick = closePop;
+    pop.querySelector('[data-keep]').onclick = () => { save(); closePop(); render(); };
+    pop.querySelector('[data-put]').onclick = () => { const saved = save(); closePop(); insertBlock({ id: ++uid, type: 'val', vid: saved.id }, at); };
+    pop.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !pop.querySelector('[data-put]').disabled) pop.querySelector('[data-put]').click(); });
+    pop.querySelector('[data-k="label"]').focus();
+  }
+  function placePop(anchor) {
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(r.left, innerWidth - 350)) + 'px';
+    const h = pop.offsetHeight;
+    pop.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
   }
   function unitSelect(key, cur, none) {
     const known = !cur || UNITS.includes(cur);
@@ -658,7 +738,7 @@
     pop.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn danger" data-del>Убрать из формулы</button><button class="btn primary" data-ok>Готово</button></div>');
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect();
-    pop.style.left = Math.max(8, Math.min(r.left, innerWidth - 310)) + 'px';
+    pop.style.left = Math.max(8, Math.min(r.left, innerWidth - 350)) + 'px';
     const h = pop.offsetHeight;
     pop.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
     pop.addEventListener('change', ev => {
@@ -682,7 +762,7 @@
     pop.querySelector('[data-ok]').onclick = closePop;
     pop.querySelector('[data-del]').onclick = () => { blocks = blocks.filter(x => x !== b); closePop(); render(); };
   }
-  document.addEventListener('pointerdown', e => { if (pop && !pop.contains(e.target) && !e.target.closest('#strip .chip')) closePop(); }, true);
+  document.addEventListener('pointerdown', e => { if (pop && !pop.contains(e.target) && !e.target.closest('#strip')) closePop(); }, true);
 
   // ---------- Mode, split, examples ----------
   document.getElementById('mode').addEventListener('click', e => {
@@ -719,15 +799,22 @@
   function setMode(m) { mode = m; document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); }
   document.addEventListener('click', e => {
     const btn = e.target.closest('[data-example]'); if (!btn) return;
-    closePop(); blocks = EXAMPLES[btn.dataset.example](); render();
+    closePop(); cursor = null; blocks = EXAMPLES[btn.dataset.example](); render();
   });
 
   // Signs from the keyboard while the window is open (not while typing in a field).
   const KEYS = { '+': '+', '-': '−', '*': '×', '/': '÷', '(': '(', ')': ')' };
   document.addEventListener('keydown', e => {
     if (!overlay.classList.contains('is-open') || e.target.closest('input, select, textarea')) return;
-    if (KEYS[e.key]) { e.preventDefault(); blocks.push(make('op:' + KEYS[e.key])); render(); }
-    else if (e.key === 'Backspace' && blocks.length) { e.preventDefault(); blocks.pop(); render(); }
+    if (KEYS[e.key]) { e.preventDefault(); insertBlock(make('op:' + KEYS[e.key])); }
+    else if (e.key === 'Backspace') {
+      // The block before the cursor goes.
+      const at = cursor === null ? blocks.length : cursor;
+      if (!at) return;
+      e.preventDefault(); blocks.splice(at - 1, 1);
+      if (cursor !== null) cursor = at - 1;
+      render();
+    }
     else if (e.key === 'Escape') closeFormula(false);
   });
 
