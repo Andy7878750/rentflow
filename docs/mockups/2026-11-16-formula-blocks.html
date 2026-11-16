@@ -194,6 +194,13 @@
   .strip .chip.fx .is-cut { -webkit-mask-image: linear-gradient(to right, #000 75%, transparent); mask-image: linear-gradient(to right, #000 75%, transparent); }
   .strip .chip.k-op { min-width: 22px; height: 44px; padding: 0 5px; }
   .strip .cursor, .strip ~ .caret, .caret { height: 40px; }
+  /* Round 15: the small × in the corner of a block in the formula line (on hover; always on touch screens). */
+  .strip .chip { position: relative; overflow: visible; }
+  .strip .chip .del { position: absolute; top: -6px; right: -6px; display: none; width: 16px; height: 16px; align-items: center; justify-content: center;
+    border-radius: 50%; background: #fff; border: 1px solid var(--border); color: var(--muted); font-size: 12px; line-height: 1; cursor: pointer; z-index: 1; }
+  .strip .chip:hover .del { display: inline-flex; }
+  .strip .chip .del:hover { color: var(--danger); border-color: var(--danger); }
+  @media (hover: none) { .strip .chip .del { display: inline-flex; } }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -409,7 +416,12 @@
       e.textContent = 'Перетащите сюда блоки — например, Вода гор. + Вода хол. × Тариф';
       strip.appendChild(e);
     }
-    blocks.forEach(b => strip.appendChild(chipEl(b)));
+    // Round 15: a small × in the corner of each block in the line — removes it.
+    blocks.forEach(b => {
+      const el = chipEl(b);
+      el.insertAdjacentHTML('beforeend', '<span class="del" title="Убрать из формулы" aria-label="Убрать из формулы">×</span>');
+      strip.appendChild(el);
+    });
     // The blinking cursor: where the next block goes (the end, or where you clicked between blocks).
     if (cursor !== null && cursor > blocks.length) cursor = null;
     const mark = document.createElement('span'); mark.className = 'cursor';
@@ -623,6 +635,15 @@
   function overStrip(x, y) { const r = strip.getBoundingClientRect(); return x >= r.left - 12 && x <= r.right + 12 && y >= r.top - 12 && y <= r.bottom + 12; }
 
   document.addEventListener('pointerdown', e => {
+    const del = e.target.closest('#strip .del');
+    if (del) {
+      e.preventDefault(); closePop();
+      const id = del.closest('.chip').dataset.id, at = blocks.findIndex(b => b.id == id);
+      blocks.splice(at, 1);
+      if (cursor !== null && cursor > at) cursor--;
+      justDragged = true; setTimeout(() => { justDragged = false; }, 0);
+      render(); return;
+    }
     const chip = e.target.closest('.chip');
     if (!chip || e.button > 0) return;
     const inStrip = strip.contains(chip);
