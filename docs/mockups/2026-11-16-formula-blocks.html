@@ -44,7 +44,7 @@
   .hint { color: var(--muted); font-size: 12px; }
 
   /* Palette */
-  .palette { display: grid; grid-template-columns: 1.25fr 1.25fr 1fr 1fr; gap: 12px; }
+  .palette { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 12px; }
   .group h3 { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
   .group .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
@@ -52,7 +52,8 @@
   .chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--surface); font-size: 13px; white-space: nowrap; cursor: grab; user-select: none; touch-action: none; }
   .chip:hover { border-color: #b9c4cc; }
-  .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--muted)); flex: none; }
+  .chip .ico { display: inline-flex; flex: none; color: var(--c, var(--muted)); }
+  .chip .ico svg { width: 15px; height: 15px; }
   .chip.k-receipt { --c: #b07d2b; background: #fdf6ea; border-color: #f0dfbf; }
   .chip.k-const { --c: var(--accent); background: #f1f9f7; border-color: #cfe9e2; }
   .chip.k-meter { background: #f3f8fc; border-color: #d6e6f3; }
@@ -160,6 +161,21 @@
      the draft's three buttons — a third each. */
   .pop .f .hint { font-size: 11px; color: var(--muted); }
   .pop .vfield input.sample:disabled { text-align: right; font-size: 14px; color: var(--muted); }
+  /* Round 9: palette tiles — one size: full column width, 44px, two lines, an icon on the left. */
+  .group .chips { flex-direction: column; flex-wrap: nowrap; }
+  .group .chips:has(.k-op) { display: grid; grid-template-columns: repeat(3, 36px); gap: 6px; }
+  .chip.tile { display: flex; width: 100%; height: 44px; gap: 8px; padding: 0 10px; }
+  .chip.tile .ico { width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 7px; background: #fff; }
+  .chip.tile .ico svg { width: 16px; height: 16px; }
+  .chip.tile .tl { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .chip.tile .t1, .chip.tile .t2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip.tile .t1 { font-size: 13px; color: var(--text); }
+  .chip.tile .t2 { font-size: 11px; color: var(--muted); }
+  .chip.tile.k-new { background: #fff; }
+  .chip.tile.k-new .ico { background: transparent; }
+  .chip.tile.k-new .t1 { color: inherit; }
+  .chip.k-new.k-receipt { --c: #8a6420; } .chip.k-new.k-const { --c: var(--accent); }
+  .group .chip.k-op { width: 36px; height: 36px; padding: 0; }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -223,11 +239,7 @@
     <div class="palette" id="palette">
       <div class="group"><h3>Каждый месяц</h3><p class="sub">вводите на странице объекта</p><div class="chips" id="pal-month"></div></div>
       <div class="group"><h3>Тариф / норматив</h3><p class="sub">задаёте один раз</p><div class="chips" id="pal-const"></div></div>
-      <div class="group"><h3>Счётчики</h3><p class="sub">расход за месяц</p><div class="chips">
-        <span class="chip k-meter m-el" data-new="meter:el"><span class="dot"></span>Электричество</span>
-        <span class="chip k-meter m-cold" data-new="meter:cold"><span class="dot"></span>Вода хол.</span>
-        <span class="chip k-meter m-hot" data-new="meter:hot"><span class="dot"></span>Вода гор.</span>
-      </div></div>
+      <div class="group"><h3>Счётчики</h3><p class="sub">расход за месяц</p><div class="chips" id="pal-meter"></div></div>
       <div class="group"><h3>Знаки</h3><p class="sub">или с клавиатуры</p><div class="chips">
         <span class="chip k-op" data-new="op:+">+</span><span class="chip k-op" data-new="op:−">−</span>
         <span class="chip k-op" data-new="op:×">×</span><span class="chip k-op" data-new="op:÷">÷</span>
@@ -274,6 +286,17 @@
   const SAMPLES = { '₽': 6400, 'кВт·ч': 270, 'м³': 5, 'Гкал': 0.42, 'м²': 60, 'чел.': 3 };
   const sampleFor = unit => SAMPLES[unit] || 10;
   const CUSTOM = '__custom';
+  // Round 9: an icon instead of the dot — by what the block is (a monthly number, a tariff, a meter of its kind).
+  const svg = d => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  const ICONS = {
+    month: svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>'),
+    const: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+    el: svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'),
+    cold: svg('<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'),
+    hot: svg('<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/><path d="M10 15a2 2 0 0 0 2 2"/>'),
+    plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  };
+  const iconOf = b => b.type === 'meter' ? ICONS[b.kind] : ICONS[valueOf(b).type === 'const' ? 'const' : 'month'];
 
   let mode = 'each';
   let split = 'shares';
@@ -334,7 +357,7 @@
     const el = document.createElement('span');
     el.className = 'chip ' + kindClass(b);
     el.dataset.id = b.id;
-    if (b.type !== 'op') el.innerHTML = '<span class="dot"></span>';
+    if (b.type !== 'op') el.innerHTML = '<span class="ico">' + iconOf(b) + '</span>';
     el.appendChild(document.createTextNode(chipText(b)));
     const v = chipValue(b);
     if (v) { const s = document.createElement('span'); s.className = 'val'; s.textContent = v; el.appendChild(s); }
@@ -373,17 +396,28 @@
       const box = document.getElementById(id);
       box.innerHTML = '';
       values.filter(v => v.type === type).forEach(v => {
-        const el = chipEl({ type: 'val', vid: v.id });
-        el.dataset.new = 'val:' + v.id;
-        el.title = 'Нажмите — встанет в конец формулы ещё раз';
-        box.appendChild(el);
+        const b = { type: 'val', vid: v.id };
+        box.appendChild(tileEl(b, 'val:' + v.id, kindClass(b), iconOf(b), v.label, chipValue(b) || 'без единицы'));
       });
-      const add = document.createElement('span');
-      add.className = 'chip k-new ' + (type === 'const' ? 'k-const' : 'k-receipt');
-      add.dataset.new = 'new:' + type;
-      add.textContent = '+ Новое число';
-      box.appendChild(add);
+      box.appendChild(tileEl(null, 'new:' + type, 'k-new ' + (type === 'const' ? 'k-const' : 'k-receipt'), ICONS.plus, 'Новое число', 'настроить'));
     });
+    const meters = document.getElementById('pal-meter');
+    meters.innerHTML = '';
+    Object.keys(METER_KINDS).forEach(kind => {
+      const k = METER_KINDS[kind];
+      meters.appendChild(tileEl(null, 'meter:' + kind, 'k-meter ' + k.cls, ICONS[kind], k.name, 'расход, ' + k.unit));
+    });
+  }
+  // A palette tile: all the same size — an icon, the name, a small second line (unit, value).
+  function tileEl(b, kind, cls, icon, name, sub) {
+    const el = document.createElement('span');
+    el.className = 'chip tile ' + cls;
+    el.dataset.new = kind;
+    el.title = name + (sub ? ' · ' + sub : '');
+    el.innerHTML = '<span class="ico">' + icon + '</span><span class="tl"><span class="t1"></span><span class="t2"></span></span>';
+    el.querySelector('.t1').textContent = name;
+    el.querySelector('.t2').textContent = sub;
+    return el;
   }
 
   // ---------- Arithmetic with units ----------
