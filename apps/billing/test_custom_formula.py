@@ -87,6 +87,12 @@ class FormulaServiceTests(TestCase):
                                              input_mode=Receipt.InputMode.USAGE)
                 Reading.objects.create(meter=meter, month=SEPT, usage=Decimal(value))
                 self.meters[kind, tenant.pk] = meter
+        # One meter — one field: the readings are typed in the meters' own services; a formula only takes the usage.
+        for kind in usage:
+            services.save_receipt(services.new_receipt(self.prop, kind), meter_ids=self.ids(kind), tariffs={})
+        # Saving one service makes the not yet connected meters common: seat the tenants once all are connected.
+        for (kind, tenant_id), meter in self.meters.items():
+            Meter.objects.filter(pk=meter.pk).update(tenant_id=tenant_id)
 
     def ids(self, kind):
         return [self.meters[kind, self.viktor.pk].pk, self.meters[kind, self.vlad.pk].pk]
@@ -164,21 +170,31 @@ class FormulaServiceTests(TestCase):
         self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('7680.00'))
         self.assertIsNone(self.line(bill, self.vlad, receipt))
 
-    def test_meters_of_another_service_are_not_typed_again(self):
-        """«Экология» = (Вода хол. + Вода гор.) × тариф: the water services type the readings; the formula just takes them."""
-        water = services.new_receipt(self.prop, 'water')
-        services.save_receipt(water, meter_ids=self.ids('water'), tariffs={})
-        hot = self.ids('hot_water')  # in no service — common now; seated in the formula's meter window
+    def test_meters_are_typed_only_in_their_own_service(self):
+        """«Экология» = (Вода хол. + Вода гор.) × тариф: the water services type the readings; the formula just takes
+        them — one meter, one field."""
         receipt = self.make(
             [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'м³', 'value': '50'}],
             [self.op('('), self.meter('water'), self.op('+'), self.meter('hot_water'), self.op(')'), self.op('×'),
-             {'t': 'num', 'id': 'n1'}],
-            owners={str(hot[0]): str(self.viktor.pk), str(hot[1]): str(self.vlad.pk)})
+             {'t': 'num', 'id': 'n1'}])
         bill = services.month_bill(self.prop, SEPT)
         entry = next(entry for entry in bill.entries if entry.receipt.pk == receipt.pk)
-        self.assertEqual(entry.shared_services, ['Вода холодная'])
-        self.assertEqual({meter.kind for meter, _ in entry.readings}, {'hot_water'})  # only its own meters to type
+        self.assertEqual(entry.shared_services, ['Вода холодная', 'Вода горячая'])
+        self.assertEqual(entry.readings, [])  # no field of its own
         self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('300.00'))  # (2 + 4) × 50
+        # A reading not typed yet — the formula doesn't count at all.
+        Reading.objects.filter(meter=self.meters['hot_water', self.vlad.pk]).update(usage=None)
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertIsNone(self.line(bill, self.viktor, receipt))
+        self.assertIn(receipt, bill.missing)
+
+    def test_an_unconnected_meter_cant_go_in_a_formula(self):
+        gas = Meter.objects.create(property=self.prop, tenant=self.viktor, kind='gas', name='Газ', unit='м³', serial='9')
+        data = {'numbers': [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'м³', 'value': '7'}],
+                'blocks': [{'t': 'meter', 'key': 'gas', 'meters': [gas.pk], 'join': 'each'}, self.op('×'), {'t': 'num', 'id': 'n1'}]}
+        self.assertEqual(services.formula_problem(self.prop, data),
+                         'Счётчик «Газ № 9» пока не подключён ни к одной услуге — его показания негде вводить. '
+                         'Подключите его в услуге «По счётчикам», и тогда его можно будет взять в формулу.')
 
     def test_switched_off_tenant_leaves_his_part_to_the_owner(self):
         receipt = self.make(
@@ -224,18 +240,10 @@ class FormulaServiceTests(TestCase):
 
     def test_a_formula_locks_no_meter(self):
         """It only reads meters: «По счётчикам» of the same meter is still possible."""
-        self.make([{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': '2'}],
-                  [self.meter('electricity'), self.op('×'), {'t': 'num', 'id': 'n1'}])
+        formula = self.make([{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': '2'}],
+                            [self.meter('electricity'), self.op('×'), {'t': 'num', 'id': 'n1'}])
         other = services.new_receipt(self.prop, 'electricity')
-        self.assertEqual(services.busy_meters(other), {})
-
-    def test_its_meters_keep_their_tenants(self):
-        """A meter no «По счётчикам» service uses becomes common — but not one a formula reads."""
-        self.make([{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': '2'}],
-                  [self.meter('electricity'), self.op('×'), {'t': 'num', 'id': 'n1'}])
-        services.release_free_meters(self.prop)
-        self.assertEqual(Meter.objects.get(pk=self.ids('electricity')[0]).tenant_id, self.viktor.pk)
-        self.assertIsNone(Meter.objects.get(pk=self.ids('water')[0]).tenant_id)  # not in any service
+        self.assertNotIn(formula.pk, {receipt.pk for receipt in services.busy_meters(other).values()})
 
     def test_service_window_saves_the_formula(self):
         self.client.force_login(self.user)

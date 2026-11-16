@@ -100,6 +100,29 @@
       if (t) return t.name;
       return owners[meterId] === 'free' ? 'Собственник' : 'Общий';
     }
+    // One meter — one field: only a meter whose readings are typed in some service can go in the formula.
+    function isActive(m) { return !!(m && m.typed && m.typed.length); }
+    function meterName(m) { return m.name + (m.serial ? ' № ' + m.serial : ''); }
+    function offText(m) {
+      return 'Счётчик «' + meterName(m) + '» пока не подключён ни к одной услуге — его показания негде вводить. ' +
+        'Подключите его в услуге «По счётчикам», и тогда его можно будет взять в формулу.';
+    }
+    function offKindText(key) {
+      return 'Счётчики «' + kindOf(key).name + '» пока не подключены ни к одной услуге — их показания негде вводить. ' +
+        'Подключите счётчик в услуге «По счётчикам» (например, создайте услугу «' + kindOf(key).name + '»), ' +
+        'и тогда его можно будет взять в формулу.';
+    }
+    // A short window with the explanation and «Понятно».
+    function openNote(anchor, title, text) {
+      closePop();
+      pop = document.createElement('div'); pop.className = 'fx-pop';
+      pop.innerHTML = '<h4>' + esc(title) + '</h4><p class="fx-example">' + esc(text) + '</p>' +
+        '<div class="fx-acts"><button type="button" class="fx-btn is-primary" data-ok>Понятно</button></div>';
+      overlay.appendChild(pop);
+      placePop(anchor);
+      pop.querySelector('[data-ok]').onclick = closePop;
+      pop.querySelector('[data-ok]').focus();
+    }
     function usageOf(meterId) { var m = meterById(meterId); return m && m.last !== null && m.last !== undefined ? m.last : sampleFor(kindOf(m ? m.key : '').unit); }
     function usageIsSample(meterId) { var m = meterById(meterId); return !m || m.last === null || m.last === undefined; }
     function payBox(tenantId) { return form.querySelector('input[name=pays][value="' + tenantId + '"]'); }
@@ -111,7 +134,7 @@
       if (kind.indexOf('val:') === 0) return { id: id, type: 'val', vid: kind.slice(4) };
       if (kind.indexOf('meter:') === 0) {
         var key = kind.slice(6);
-        return { id: id, type: 'meter', key: key, meters: METERS.filter(function (m) { return m.key === key; }).map(function (m) { return m.id; }), join: 'each' };
+        return { id: id, type: 'meter', key: key, meters: METERS.filter(function (m) { return m.key === key && isActive(m); }).map(function (m) { return m.id; }), join: 'each' };
       }
       if (kind.indexOf('op:') === 0) return { id: id, type: 'op', op: kind.slice(3) };
     }
@@ -225,7 +248,11 @@
       meters.innerHTML = '';
       if (!KINDS.length) meters.innerHTML = '<p class="fx-hint">У объекта нет счётчиков — их добавляют в окне объекта.</p>';
       KINDS.forEach(function (k) {
-        meters.appendChild(tileEl('meter:' + k.key, 'k-meter mk-' + k.icon, ICONS[k.icon] || ICONS.custom, k.name, 'расход' + (k.unit ? ', ' + k.unit : '')));
+        var on = METERS.some(function (m) { return m.key === k.key && isActive(m); });
+        var tile = tileEl((on ? 'meter:' : 'off:') + k.key, 'k-meter mk-' + k.icon + (on ? '' : ' is-off'), ICONS[k.icon] || ICONS.custom, k.name,
+          on ? 'расход' + (k.unit ? ', ' + k.unit : '') : 'не подключён к услуге');
+        if (!on) tile.title = offKindText(k.key);
+        meters.appendChild(tile);
       });
     }
 
@@ -254,6 +281,8 @@
         }
         var k = kindOf(b.key);
         if (!b.meters.length) throw 'У счётчика «' + shortOf(b.key) + '» не отмечен ни один счётчик.';
+        var loose = b.meters.map(meterById).filter(function (m) { return !isActive(m); });
+        if (loose.length) throw offText(loose[0]);
         var ids = b.meters;
         if (b.meters.length > 1 && tenantId !== null && b.join !== 'sum') ids = b.meters.filter(function (id) { return tenantOf(id) === tenantId; });
         var v = ids.reduce(function (s, id) { return s + usageOf(id); }, 0);
@@ -423,6 +452,12 @@
       }
       var chip = e.target.closest('.fx-chip');
       if (!chip || e.button > 0) return;
+      if ((chip.dataset.new || '').indexOf('off:') === 0) {
+        // Not connected to any service: it can't be taken — say why and how to fix it.
+        e.preventDefault();
+        openNote(chip, 'Счётчик пока не подключён', offKindText(chip.dataset.new.slice(4)));
+        return;
+      }
       var inStrip = strip.contains(chip);
       if (!inStrip && !chip.dataset.new) return;
       e.preventDefault();
@@ -564,11 +599,17 @@
     function meterPopBody(b) {
       var k = kindOf(b.key), u = k.unit ? ' ' + k.unit : '';
       var many = b.meters.length > 1;
+      // Each meter of this kind: a connected one — a tick, whose it is and where its readings are typed («чей» is changed
+      // there); one no service types — greyed, a click says why it can't be taken.
       var rows = METERS.filter(function (m) { return m.key === b.key; }).map(function (m) {
-        var who = m.busy ? '<span class="fx-locked" title="«Чей» меняется в услуге «' + esc(m.busy) + '»">' + esc(whoLabel(m.id)) + ' · в «' + esc(m.busy) + '»</span>'
-          : '<button type="button" class="fx-usel" data-who="' + m.id + '"><span>' + esc(whoLabel(m.id)) + '</span>' + CHEV + '</button>';
-        return '<label class="fx-mrow"><input type="checkbox" data-meter="' + m.id + '"' + (b.meters.indexOf(m.id) >= 0 ? ' checked' : '') + '>' +
-          '<span>№ ' + esc(m.serial || '—') + (m.dn ? ' · день / ночь' : '') + '</span>' + who + '</label>';
+        var num = '<span>№ ' + esc(m.serial || '—') + (m.dn ? ' · день / ночь' : '') + '</span>';
+        if (!isActive(m)) {
+          return '<div class="fx-mrow is-off" data-off="' + m.id + '" title="' + esc(offText(m)) + '"><input type="checkbox" disabled>' + num +
+            '<span class="fx-locked">не подключён к услуге</span></div>';
+        }
+        return '<label class="fx-mrow"><input type="checkbox" data-meter="' + m.id + '"' + (b.meters.indexOf(m.id) >= 0 ? ' checked' : '') + '>' + num +
+          '<span class="fx-locked" title="Показания вводятся в услуге «' + esc(m.typed[0]) + '», там же меняется, чей счётчик">' +
+          esc(whoLabel(m.id)) + ' · в «' + esc(m.typed[0]) + '»</span></label>';
       }).join('');
       var example;
       if (!b.meters.length) example = 'Отметьте хотя бы один счётчик.';
@@ -628,6 +669,14 @@
         redraw();
       });
       pop.addEventListener('click', function (ev) {
+        var off = ev.target.closest('[data-off]');
+        if (off) {
+          // The explanation right in this window, where the example usually is.
+          var note = pop.querySelector('.fx-example');
+          note.textContent = offText(meterById(Number(off.dataset.off)));
+          note.classList.add('is-warn');
+          return;
+        }
         var btn = ev.target.closest('[data-join]'); if (!btn || btn.disabled) return;
         b.join = btn.dataset.join; redraw();
       });

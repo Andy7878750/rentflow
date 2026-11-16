@@ -166,6 +166,10 @@
 .fx-mrow input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--fx-accent); }
 .fx-mrow .fx-usel { height: 30px; font-size: 13px; }
 .fx-mrow .fx-locked { overflow: hidden; color: var(--fx-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+/* Not connected to any service (its readings can't be typed): seen, but greyed; a click says why. */
+.fx-chip.is-off { opacity: .55; border-style: dashed; cursor: help; }
+.fx-mrow.is-off { color: var(--fx-muted); cursor: help; }
+.fx-mrow.is-off input { cursor: help; }
 .fx-seg { display: inline-flex; margin-bottom: 8px; padding: 2px; border-radius: 8px; background: #eef2f4; }
 .fx-seg button { padding: 4px 12px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px; color: var(--fx-text); cursor: pointer; }
 .fx-seg button.is-on { background: var(--fx-accent); color: #fff; }

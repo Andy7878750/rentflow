@@ -1835,6 +1835,26 @@ def _posted_blocks(data, number_keys, meter_ids):
     return fx.clean_blocks(raw, set(number_keys), meter_ids)
 
 
+def typed_meters(property_obj):
+    """{meter id: [names of the services its readings are typed in]} — services that aren't formulas («По счётчикам»,
+    «Делим по расходу»). Only these meters can go in a formula: one meter — one field (2026-11-16)."""
+    typed = {}
+    rows = (Receipt.objects.filter(property=property_obj, meters__isnull=False)
+            .exclude(amount_mode=Receipt.AmountMode.FORMULA).values_list('meters', 'name'))
+    for meter_id, name in rows:
+        names = typed.setdefault(meter_id, [])
+        if name not in names:
+            names.append(name)
+    return typed
+
+
+def unconnected_text(meter):
+    """Why a meter can't go in a formula — the same words as the formula window says."""
+    name = f'{meter.name} № {meter.serial}' if meter.serial else meter.name
+    return (f'Счётчик «{name}» пока не подключён ни к одной услуге — его показания негде вводить. '
+            'Подключите его в услуге «По счётчикам», и тогда его можно будет взять в формулу.')
+
+
 def formula_problem(property_obj, data, receipt=None):
     """Why the posted formula can't be saved, in one sentence; '' when it is fine. Checked on units only
     (every number counts as 1), so a formula that needs this month's numbers still saves."""
@@ -1857,6 +1877,12 @@ def formula_problem(property_obj, data, receipt=None):
             raise fx.FormulaError('У счётчика в формуле не отмечен ни один счётчик.')
         return fx.Value(Decimal('1'), fx.units_of(meter_unit(meters[block['meters'][0]]), ''))
 
+    # One meter — one field: a meter no service types the readings of can't be in a formula (2026-11-16).
+    typed = typed_meters(property_obj)
+    for block in fx.meter_blocks(blocks):
+        loose = [meters[pk] for pk in block['meters'] if pk not in typed]
+        if loose:
+            return unconnected_text(loose[0])
     try:
         fx.evaluate(blocks, resolve)
         if not property_obj.is_owner_used and fx.mode(blocks, owners.get) == 'each':
@@ -1951,22 +1977,18 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
         usage[meter.pk] = None if day is None or (meter.day_night and night is None) else day + (night or Decimal('0'))
     # Meters another service already types («Вода холодная» по счётчикам): the formula just takes their usage — no second
     # field for the same reading on the object page (2026-11-16, the user: «мы не вводим никаких показаний»).
-    others = (Receipt.objects.filter(property_id=receipt.property_id, meters__in=list(meters))
-              .exclude(pk=receipt.pk).exclude(amount_mode=Receipt.AmountMode.FORMULA)
-              .values_list('meters', 'name'))
-    shared = {}
-    for meter_id, name in others:
-        shared.setdefault(meter_id, [])
-        if name not in shared[meter_id]:
-            shared[meter_id].append(name)
+    # One meter — one field: the readings are typed only in the meter's own service; the formula never asks for them.
+    typed = typed_meters(receipt.property)
     entry.shared_services = []
-    for names in shared.values():
-        entry.shared_services += [name for name in names if name not in entry.shared_services]
-    all_readings = entry.readings
-    entry.readings = [(meter, reading) for meter, reading in all_readings if meter.pk not in shared]
-    entry.modes = {meter.mode for meter, _ in entry.readings}
-    entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
-    entry.some_usage = Receipt.InputMode.USAGE in entry.modes
+    for meter in meters:
+        entry.shared_services += [name for name in typed.get(meter, []) if name not in entry.shared_services]
+    entry.readings = []
+    entry.modes, entry.all_usage, entry.some_usage = set(), False, False
+    loose = [meters[pk] for pk in meters if pk not in typed]
+    if loose:
+        entry.formula_error = unconnected_text(loose[0])
+        entry.total = None
+        return True
     blocks = receipt.formula or []
     in_formula = {block['id'] for block in blocks if block.get('t') == 'num'}
     if any(value is None for number, value in entry.month_numbers if number.pk in in_formula) or \
@@ -2033,7 +2055,7 @@ def formula_context(receipt, data=None, today=None):
     property_obj = receipt.property
     last = _last_month(today or date.today())
     tenants = [] if property_obj.is_owner_used else list(property_obj.tenants.all())
-    busy = busy_meters(receipt)
+    typed = typed_meters(property_obj)
     owners = formula_owners(property_obj, data, receipt) if data is not None else None
     meters, kinds = [], {}
     for meter in property_obj.meters.prefetch_related('readings'):
@@ -2052,7 +2074,8 @@ def formula_context(receipt, data=None, today=None):
         meters.append({
             'id': meter.pk, 'key': key, 'serial': meter.serial, 'dn': meter.day_night,
             'tenant': tenant_id, 'vacant': bool(meter.vacant and not tenant_id),
-            'busy': busy[meter.pk].name if meter.pk in busy else '',
+            # Where its readings are typed; none — it can't go in a formula (shown greyed, with why).
+            'typed': typed.get(meter.pk, []), 'name': meter.name,
             'last': float(usage) if usage is not None else None,
         })
     if data is not None:

@@ -1,6 +1,7 @@
 {% load billing %}
 {% comment %}«Своя формула» on the object page (2026-11-16): a field for each of its «Каждый месяц» numbers (fnum-<id>),
-   on the same grid as a receipt's sum; the meters it reads follow as usual rows. Why it can't be counted — one line.{% endcomment %}
+   on the same grid as a receipt's sum. Meters have no field here — one meter, one field: their readings are typed in the
+   meter's own service, the formula just takes the usage; without them it doesn't count. One line says where they come from.{% endcomment %}
 {% for number, value in entry.month_numbers %}
               <div class="mreceipt-row">
                 <label for="fnum-{{ number.pk }}">{{ number.label }} за {{ month_name }}{% if number.unit %}, {{ number.unit }}{% endif %}</label>
@@ -8,15 +9,11 @@
                        value="{{ value|num }}" placeholder="0"></span>
               </div>
 {% endfor %}
-{% if entry.shared_services and not entry.formula_error %}
-              <p class="mreceipt-fixed" id="fshared-{{ receipt.pk }}" data-live>Расход счётчиков берётся сам — из {% if entry.shared_services|length > 1 %}услуг{% else %}услуги{% endif %} {% for name in entry.shared_services %}«{{ name }}»{% if not forloop.last %}, {% endif %}{% endfor %}.{% if entry.total is not None %} Начислено <strong>{{ entry.total|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>.{% endif %}</p>
-{% endif %}
-{% if entry.formula_error %}
-              <p class="mreceipt-fixed formula-error">Не посчитать: {{ entry.formula_error }}
+              <p class="mreceipt-fixed{% if entry.formula_error %} formula-error{% endif %}" id="fnote-{{ receipt.pk }}" data-live>
+                {% if entry.formula_error %}Не посчитать: {{ entry.formula_error }}
+                {% elif entry.shared_services %}Расход счётчиков берётся из {% if entry.shared_services|length > 1 %}услуг{% else %}услуги{% endif %} {% for name in entry.shared_services %}«{{ name }}»{% if not forloop.last %}, {% endif %}{% endfor %}.
+                  {% if entry.total is not None %}Начислено <strong>{{ entry.total|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>.{% else %}Посчитается, когда там будут введены показания{% if entry.month_numbers %} и числа выше{% endif %}.{% endif %}
+                {% elif not entry.month_numbers %}Каждый месяц вводить ничего не нужно — формула считает сама.{% if entry.total is not None %} Начислено <strong>{{ entry.total|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>.{% endif %}
+                {% elif entry.total is not None %}Начислено <strong>{{ entry.total|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>.{% endif %}
                 <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></a>
               </p>
-{% elif not entry.month_numbers and not entry.readings and not entry.shared_services %}
-              <p class="mreceipt-fixed">Каждый месяц вводить ничего не нужно — формула считает сама.
-                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></a>
-              </p>
-{% endif %}
