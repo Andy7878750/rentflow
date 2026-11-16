@@ -103,6 +103,29 @@
   .btn.primary { border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .btn.danger { margin-right: auto; border: 0; color: var(--danger); padding: 0; }
 
+  /* The formula's own window */
+  .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; background: rgba(30, 40, 50, .45); overflow-y: auto; }
+  .overlay:not(.is-open) { display: none; }
+  .modal { width: 100%; max-width: 820px; background: var(--surface); border-radius: 16px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.25); display: flex; flex-direction: column; gap: 14px; }
+  .modal h2 { margin: 0; font-size: 20px; }
+  .modal .desc { margin: -8px 0 0; color: var(--muted); font-size: 13px; }
+  .modal .examples { margin: 0; }
+  .modal .trash-hint { margin: -8px 0 0; }
+  .strip-wrap { position: relative; }
+  .strip-wrap .strip { padding-right: 40px; }
+  .strip-clear { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: #eef2f4; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; }
+  .strip-clear:hover { background: #fbe9e7; color: var(--danger); }
+  .check-box { border-top: 1px solid var(--border); padding-top: 12px; }
+  .check-box h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .modal > .acts { display: flex; justify-content: flex-end; gap: 8px; }
+  .charge[role="button"] { cursor: pointer; }
+  .summary { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: #f4f6f8; }
+  .summary-text { flex: 1; min-width: 0; font-size: 13px; color: var(--text); }
+  .summary-text.is-empty { color: var(--muted); }
+  .pop .radios { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; font-size: 13px; }
+  .pop .radios label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .pop .radios input { height: auto; accent-color: var(--accent); }
+
   @media (max-width: 640px) {
     .palette { grid-template-columns: 1fr 1fr; }
     .charges { grid-template-columns: 1fr 1fr; }
@@ -113,17 +136,10 @@
 </head>
 <body>
 <div class="stage">
-  <p class="note">Макет 2026-11-16 (круг 2), ничего не сохраняется. Чисел два вида: «Каждый месяц» и «Постоянное».
-    «+ Новое число» — перетащите в строку или нажмите: сразу откроется окошко (название, единица, значение).
-    Настроенное число остаётся в палитре — его можно поставить в формулу ещё раз. Внутри строки блоки двигаются;
-    вытащили наружу — убран. Нажмите на блок в строке — откроется окошко.
-    Проверка внизу — на числах «прошлого месяца» (Виктор и Владислав, Королёва 61).</p>
-  <div class="examples">Примеры:
-    <button data-example="sewage">Водоотведение</button>
-    <button data-example="pesk">ПЕСК (сумма по расходу)</button>
-    <button data-example="heat">Отопление (Гкал − подогрев)</button>
-    <button data-example="clear">Очистить</button>
-  </div>
+  <p class="note">Макет 2026-11-16 (круг 3), ничего не сохраняется. Нажатие на плашку «Своя формула» открывает отдельное окно —
+    без плашек, только формула, подсказки и примеры. Чисел два вида: «Каждый месяц» и «Постоянное» («+ Новое число» — сразу окошко
+    настройки). У счётчика в формуле выбор: «свой у каждого», конкретный арендатор или «все вместе (сумма)».
+    Проверка — на числах «прошлого месяца» (Виктор и Владислав, Королёва 61).</p>
 
   <div class="win">
     <h1>Новая услуга</h1>
@@ -136,52 +152,77 @@
           <div class="charge">По квитанции<small>разная каждый месяц</small></div>
           <div class="charge">Фиксированная сумма<small>не меняется</small></div>
           <div class="charge">По счётчикам<small>расход × тариф</small></div>
-          <div class="charge on">Своя формула<small>собираю из блоков</small></div>
+          <div class="charge on" id="open-formula" role="button" tabindex="0">Своя формула<small>собираю из блоков</small></div>
         </div>
-
-        <div class="palette" id="palette">
-          <div class="group"><h3>Каждый месяц</h3><p class="sub">вводите на странице объекта</p><div class="chips" id="pal-month"></div></div>
-          <div class="group"><h3>Постоянное</h3><p class="sub">задаёте один раз</p><div class="chips" id="pal-const"></div></div>
-          <div class="group"><h3>Счётчики</h3><div class="chips">
-            <span class="chip k-meter m-el" data-new="meter:el"><span class="dot"></span>Электричество</span>
-            <span class="chip k-meter m-cold" data-new="meter:cold"><span class="dot"></span>Вода хол.</span>
-            <span class="chip k-meter m-hot" data-new="meter:hot"><span class="dot"></span>Вода гор.</span>
-          </div></div>
-          <div class="group"><h3>Знаки</h3><div class="chips">
-            <span class="chip k-op" data-new="op:+">+</span><span class="chip k-op" data-new="op:−">−</span>
-            <span class="chip k-op" data-new="op:×">×</span><span class="chip k-op" data-new="op:÷">÷</span>
-            <span class="chip k-op" data-new="op:(">(</span><span class="chip k-op" data-new="op:)">)</span>
-          </div></div>
-        </div>
-
-        <div>
-          <div class="strip" id="strip"></div>
-          <p class="trash-hint">Перетащите блок сюда · вытащите из строки, чтобы удалить</p>
-        </div>
-
-        <!-- Under the formula (2026-11-16, the user's wish): first build it, then say how it's counted. -->
-        <div class="row">
-          <span class="label">Как считаем</span>
-          <div class="seg" id="mode">
-            <button data-mode="each" class="on">Каждому по его счётчикам</button>
-            <button data-mode="total">Общая сумма → делим</button>
-          </div>
-        </div>
-        <div class="row" id="split-row" hidden>
-          <span class="label">Делим</span>
-          <div class="seg" id="split">
-            <button data-split="shares" class="on">По долям</button>
-            <button data-split="equal">Поровну</button>
-            <button data-split="area">По м²</button>
-          </div>
+        <!-- In the service window only a summary: the formula in words and «Изменить формулу». -->
+        <div class="summary" id="summary">
+          <span class="summary-text" id="summary-text"></span>
+          <button class="btn primary" id="edit-formula" type="button">Изменить формулу</button>
         </div>
       </div>
     </section>
+  </div>
+</div>
 
-    <section class="section">
-      <div class="section-head">Проверка <span class="badge" id="check-badge">на числах прошлого месяца</span></div>
-      <div class="section-body"><div class="check" id="check"></div></div>
-    </section>
+<!-- The formula's own window (2026-11-16, the user's wish): clean — no tiles, a description, hints, examples. -->
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-labelledby="formula-title">
+    <h2 id="formula-title">Своя формула</h2>
+    <p class="desc">Соберите расчёт как на бумаге: числа, счётчики и знаки. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>
+
+    <div class="examples">Примеры:
+      <button data-example="sewage">Водоотведение</button>
+      <button data-example="pesk">Сумма по расходу</button>
+      <button data-example="heat">Отопление</button>
+      <button data-example="one">Только Виктору</button>
+    </div>
+
+    <div class="strip-wrap">
+      <div class="strip" id="strip"></div>
+      <button class="strip-clear" data-example="clear" type="button" title="Очистить формулу" aria-label="Очистить формулу">×</button>
+    </div>
+    <p class="trash-hint">Перетащите блок в строку или нажмите на него · вытащите из строки, чтобы убрать · нажмите на блок в строке, чтобы настроить</p>
+
+    <div class="palette" id="palette">
+      <div class="group"><h3>Каждый месяц</h3><p class="sub">вводите на странице объекта</p><div class="chips" id="pal-month"></div></div>
+      <div class="group"><h3>Постоянное</h3><p class="sub">задаёте один раз</p><div class="chips" id="pal-const"></div></div>
+      <div class="group"><h3>Счётчики</h3><p class="sub">расход за месяц</p><div class="chips">
+        <span class="chip k-meter m-el" data-new="meter:el"><span class="dot"></span>Электричество</span>
+        <span class="chip k-meter m-cold" data-new="meter:cold"><span class="dot"></span>Вода хол.</span>
+        <span class="chip k-meter m-hot" data-new="meter:hot"><span class="dot"></span>Вода гор.</span>
+      </div></div>
+      <div class="group"><h3>Знаки</h3><p class="sub">или с клавиатуры</p><div class="chips">
+        <span class="chip k-op" data-new="op:+">+</span><span class="chip k-op" data-new="op:−">−</span>
+        <span class="chip k-op" data-new="op:×">×</span><span class="chip k-op" data-new="op:÷">÷</span>
+        <span class="chip k-op" data-new="op:(">(</span><span class="chip k-op" data-new="op:)">)</span>
+      </div></div>
+    </div>
+
+    <div class="row">
+      <span class="label">Как считаем</span>
+      <div class="seg" id="mode">
+        <button data-mode="each" class="on">Каждому по его счётчикам</button>
+        <button data-mode="total">Общая сумма → делим</button>
+      </div>
+    </div>
+    <div class="row" id="split-row" hidden>
+      <span class="label">Делим</span>
+      <div class="seg" id="split">
+        <button data-split="shares" class="on">По долям</button>
+        <button data-split="equal">Поровну</button>
+        <button data-split="area">По м²</button>
+      </div>
+    </div>
+
+    <div class="check-box">
+      <h3>Как посчитается <span class="badge" id="check-badge">на числах прошлого месяца</span></h3>
+      <div class="check" id="check"></div>
+    </div>
+
+    <div class="acts">
+      <button class="btn" id="formula-cancel" type="button">Отмена</button>
+      <button class="btn primary" id="formula-done" type="button">Готово</button>
+    </div>
   </div>
 </div>
 
@@ -240,7 +281,9 @@
     if (b.type === 'op') return b.op;
     if (b.type === 'meter') {
       const k = METER_KINDS[b.kind];
-      return k.short + (mode === 'each' && b.whose === 'all' ? ' · все' : '');
+      if (b.whose === 'all') return k.short + ' · все';
+      if (b.whose !== 'own') return k.short + ' · ' + TENANTS.find(t => t.id === b.whose).name.split(' ')[0];
+      return k.short + (mode === 'total' ? ' · все' : '');
     }
     return valueOf(b).label;
   }
@@ -278,6 +321,10 @@
     renderPalette();
     document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
     document.getElementById('split-row').hidden = mode !== 'total';
+    // The service window shows the formula in words.
+    const summary = document.getElementById('summary-text');
+    summary.textContent = blocks.length ? 'Формула: ' + blocks.map(chipText).join(' ') : 'Формула ещё не собрана';
+    summary.classList.toggle('is-empty', !blocks.length);
     renderCheck();
   }
 
@@ -326,8 +373,12 @@
         return { v: n, u: unitsOf(x.unit, x.per), text: fmt(n) + (x.unit ? ' ' + x.unit : '') + (x.per ? '/' + x.per : '') };
       }
       const k = METER_KINDS[b.kind];
-      const all = !tenant || b.whose === 'all';
-      const v = all ? Object.values(USAGE[b.kind]).reduce((s, x) => s + x, 0) : USAGE[b.kind][tenant.id];
+      // whose: 'own' — the tenant's own meters (all of them in «Общая сумма»), 'all' — all tenants' together,
+      // or a tenant's id — exactly that tenant's meters.
+      let v;
+      if (b.whose !== 'own' && b.whose !== 'all') v = USAGE[b.kind][b.whose];
+      else if (!tenant || b.whose === 'all') v = Object.values(USAGE[b.kind]).reduce((s, x) => s + x, 0);
+      else v = USAGE[b.kind][tenant.id];
       return { v, u: unitsOf(k.unit), text: fmt(v) + ' ' + k.unit };
     }
     function primary() {
@@ -385,13 +436,23 @@
     };
     let ok = true;
     if (mode === 'each') {
-      TENANTS.forEach(t => {
-        const r = evaluate(t);
-        if (r.error) { ok = false; line(t.name, r.error, '—', true); }
-        else line(t.name, r.text + ' =', rub(r.v));
-      });
-      const hasOwn = blocks.some(b => b.type === 'meter' && b.whose !== 'all');
-      if (ok && !hasOwn) { const h = document.createElement('p'); h.className = 'hint';
+      const meters = blocks.filter(b => b.type === 'meter');
+      const hasOwn = meters.some(b => b.whose === 'own');
+      const named = [...new Set(meters.filter(b => b.whose !== 'own' && b.whose !== 'all').map(b => b.whose))];
+      // A tenant picked in a meter (and no «свой у каждого»): the formula is only that tenant's.
+      const only = !hasOwn && named.length === 1 ? named[0] : null;
+      if (!hasOwn && named.length > 1) {
+        ok = false;
+        line('Кому?', 'В формуле счётчики разных арендаторов — непонятно, кому выставить. Оставьте одного или выберите «Общая сумма → делим».', '—', true);
+      } else {
+        TENANTS.forEach(t => {
+          if (only && t.id !== only) { line(t.name, 'не платит — в формуле счётчик: ' + TENANTS.find(x => x.id === only).name, '—'); return; }
+          const r = evaluate(t);
+          if (r.error) { ok = false; line(t.name, r.error, '—', true); }
+          else line(t.name, r.text + ' =', rub(r.v));
+        });
+      }
+      if (ok && !hasOwn && !named.length) { const h = document.createElement('p'); h.className = 'hint';
         h.textContent = 'В формуле нет «своих» счётчиков — у всех арендаторов выйдет одинаково. Может быть, нужен режим «Общая сумма → делим»?'; box.appendChild(h); }
     } else {
       const r = evaluate(null);
@@ -516,11 +577,14 @@
             '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + num(v.sample) + '"></label>');
     } else {
       const k = METER_KINDS[b.kind];
-      pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4>' +
-        (mode === 'each'
-          ? '<label class="f">Чьи счётчики<select data-k="whose"><option value="own"' + (b.whose !== 'all' ? ' selected' : '') + '>этого арендатора</option>' +
-            '<option value="all"' + (b.whose === 'all' ? ' selected' : '') + '>все на объекте</option></select></label>'
-          : '<p class="hint">В режиме «Общая сумма» — все счётчики этого вида на объекте вместе.</p>');
+      // Whose usage: each tenant's own (only «Каждому по его счётчикам»), exactly one tenant's, or all tenants' together.
+      const choices = (mode === 'each' ? [['own', 'Свой у каждого арендатора']] : [])
+        .concat(TENANTS.map(t => [t.id, t.name]))
+        .concat([['all', 'Все вместе (сумма расхода арендаторов)']]);
+      const cur = mode === 'total' && b.whose === 'own' ? 'all' : b.whose;
+      pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4><div class="f">Чей расход</div><div class="radios">' +
+        choices.map(([v, text]) => '<label><input type="radio" name="whose-' + b.id + '" data-k="whose" value="' + v + '"' + (v === cur ? ' checked' : '') + '>' + text + '</label>').join('') +
+        '</div>';
     }
     pop.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn danger" data-del>Убрать из формулы</button><button class="btn primary" data-ok>Готово</button></div>');
     document.body.appendChild(pop);
@@ -576,16 +640,52 @@
       const per = newValue('const', { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' });
       const tariff = newValue('const', { label: 'Тариф тепла', value: 4800, unit: '₽', per: 'Гкал' });
       return [make('op:('), val(heat), make('op:−'), make('op:('), make('meter:hot'), make('op:×'), val(per), make('op:)'), make('op:)'), make('op:×'), val(tariff)]; },
+    one: () => { setMode('each'); values = [];
+      const t = newValue('const', { label: 'Тариф', value: 9.6, unit: '₽', per: 'кВт·ч' });
+      return [Object.assign(make('meter:el'), { whose: 'v' }), make('op:×'), val(t)]; },
     clear: () => { values = []; return []; },
   };
   function setMode(m) { mode = m; document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); }
-  document.querySelector('.examples').addEventListener('click', e => {
+  document.addEventListener('click', e => {
     const btn = e.target.closest('[data-example]'); if (!btn) return;
     closePop(); blocks = EXAMPLES[btn.dataset.example](); render();
   });
 
-  blocks = EXAMPLES.sewage();
+  // Signs from the keyboard while the window is open (not while typing in a field).
+  const KEYS = { '+': '+', '-': '−', '*': '×', '/': '÷', '(': '(', ')': ')' };
+  document.addEventListener('keydown', e => {
+    if (!overlay.classList.contains('is-open') || e.target.closest('input, select, textarea')) return;
+    if (KEYS[e.key]) { e.preventDefault(); blocks.push(make('op:' + KEYS[e.key])); render(); }
+    else if (e.key === 'Backspace' && blocks.length) { e.preventDefault(); blocks.pop(); render(); }
+    else if (e.key === 'Escape') closeFormula(false);
+  });
+
+  // ---------- The window: open from the tile, «Отмена» brings back what was, «Готово» keeps ----------
+  const overlay = document.getElementById('overlay');
+  let saved = null;
+  function openFormula() {
+    saved = JSON.stringify({ blocks, values, mode, split });
+    overlay.classList.add('is-open');
+  }
+  function closeFormula(keep) {
+    closePop();
+    if (!keep && saved) {
+      const s = JSON.parse(saved);
+      blocks = s.blocks; values = s.values; split = s.split; setMode(s.mode);
+      document.querySelectorAll('#split button').forEach(b => b.classList.toggle('on', b.dataset.split === split));
+      render();
+    }
+    overlay.classList.remove('is-open');
+  }
+  document.getElementById('open-formula').addEventListener('click', openFormula);
+  document.getElementById('edit-formula').addEventListener('click', openFormula);
+  document.getElementById('formula-cancel').addEventListener('click', () => closeFormula(false));
+  document.getElementById('formula-done').addEventListener('click', () => closeFormula(true));
+  overlay.addEventListener('pointerdown', e => { if (e.target === overlay) closeFormula(false); });
+
+  blocks = EXAMPLES.pesk();
   render();
+  openFormula();
 })();
 </script>
 </body>
