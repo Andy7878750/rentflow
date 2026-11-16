@@ -221,6 +221,11 @@
   .check .calc .n i { width: max-content; max-width: 72px; white-space: normal; text-align: center; line-height: 1.15; overflow: visible; }
   .check .calc .op.paren { margin: 0 -2px; }
   .check .calc .eq { white-space: nowrap; line-height: 20px; }  /* «= result» never splits */
+  /* Round 21: the number sets the width, not its name — the name takes the number's width + 8px each side (it may reach
+     under the neighbouring sign), at most two lines, then «…» (full — on hover). No gaps between numbers and signs. */
+  .check .calc .n { display: inline-grid; justify-items: center; }
+  .check .calc .n i { width: 0; min-width: calc(100% + 16px); max-width: none; margin: 0 -8px; white-space: normal; overflow: hidden;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
   .check .sample-note { margin: 0 0 2px; }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
@@ -579,7 +584,7 @@
       let html;
       if (typeof parts === 'string') html = '<span class="note' + (bad ? ' err' : '') + '">' + esc(parts) + '</span>';
       else html = parts.map(x => x.op ? '<span class="op' + ('()'.includes(x.op) ? ' paren' : '') + '">' + x.op + '</span>'
-        : '<span class="n"><b>' + esc(x.num) + '</b><i>' + esc(x.word) + (x.sample ? ' · пример' : '') + '</i></span>').join('') +
+        : '<span class="n" title="' + esc(x.word) + '"><b>' + esc(x.num) + '</b><i>' + esc(x.word) + (x.sample ? ' · пример' : '') + '</i></span>').join('') +
         (sum ? '<span class="eq"><span class="op">=</span> <span class="res">' + esc(sum) + '</span></span>' : '');
       d.innerHTML = '<span class="who"></span><span class="calc">' + html + '</span>';
       d.querySelector('.who').textContent = who;
