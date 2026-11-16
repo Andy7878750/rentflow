@@ -201,18 +201,21 @@
   .strip .chip:hover .del { display: inline-flex; }
   .strip .chip .del:hover { color: var(--danger); }
   @media (hover: none) { .strip .chip .del { display: inline-flex; } }
-  /* Round 18: the check, simpler — one quiet line: who · the formula in numbers = result (right after it);
-     what each number is — on hover. No orange. */
-  .check .line { grid-template-columns: 150px minmax(0, 1fr); align-items: baseline; padding: 7px 0; }
-  .check .calc { display: block; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .check .calc .n { color: var(--muted); white-space: nowrap; cursor: help; }
-  .check .calc .op { margin: 0 4px; color: var(--muted); }
-  .check .calc .op.paren { margin: 0 1px; }
-  .check .calc .res { margin-left: 2px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  /* Round 19: the check — the names under the numbers are back (the user: «очень круто»), but quiet: no orange,
+     the example number is just signed «· пример»; «= result» right after the formula. */
+  .check .line { grid-template-columns: 150px minmax(0, 1fr); align-items: start; padding: 8px 0; }
+  .check .who { padding-top: 1px; }
+  .check .calc { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 2px 6px; color: var(--text); font-size: 13px; }
+  .check .calc .n { display: inline-flex; flex-direction: column; align-items: center; }
+  .check .calc .n b { font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .check .calc .n i { font-style: normal; font-size: 10.5px; color: var(--muted); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  .check .calc .op { font-size: 14px; color: var(--muted); line-height: 20px; }
+  .check .calc .op.paren { font-size: 17px; font-weight: 300; margin: 0 -3px; }
+  .check .calc .res { font-weight: 700; line-height: 20px; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .check .calc .note { color: var(--muted); }
   .check .calc .note.err { color: var(--danger); }
   .check .sample-note { margin: 6px 0 0; }
-  @media (max-width: 640px) { .check .line { grid-template-columns: 1fr; gap: 2px; } }
+  @media (max-width: 640px) { .check .line { grid-template-columns: 1fr; gap: 4px; } }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -570,7 +573,7 @@
       let html;
       if (typeof parts === 'string') html = '<span class="note' + (bad ? ' err' : '') + '">' + esc(parts) + '</span>';
       else html = parts.map(x => x.op ? '<span class="op' + ('()'.includes(x.op) ? ' paren' : '') + '">' + x.op + '</span>'
-        : '<span class="n" title="' + esc(x.word) + (x.sample ? ' · пример' : '') + '">' + esc(x.num) + '</span>').join('') +
+        : '<span class="n"><b>' + esc(x.num) + '</b><i>' + esc(x.word) + (x.sample ? ' · пример' : '') + '</i></span>').join('') +
         (sum ? '<span class="op">=</span><span class="res">' + esc(sum) + '</span>' : '');
       d.innerHTML = '<span class="who"></span><span class="calc">' + html + '</span>';
       d.querySelector('.who').textContent = who;
