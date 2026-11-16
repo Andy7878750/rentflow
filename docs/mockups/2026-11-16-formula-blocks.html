@@ -201,6 +201,22 @@
   .strip .chip:hover .del { display: inline-flex; }
   .strip .chip .del:hover { color: var(--danger); }
   @media (hover: none) { .strip .chip .del { display: inline-flex; } }
+  /* Round 17: the check — numbers with their names under them, «= result» right after the formula. */
+  .check .line { grid-template-columns: 150px minmax(0, 1fr); align-items: start; padding: 8px 0; }
+  .check .who { padding-top: 2px; }
+  .check .calc { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 2px 6px; color: var(--text); font-size: 13px; }
+  .check .calc .n { display: inline-flex; flex-direction: column; align-items: center; }
+  .check .calc .n b { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .check .calc .n i { font-style: normal; font-size: 10.5px; color: var(--muted); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  .check .calc .n.is-sample b { color: #9a6b1c; }
+  .check .calc .op { font-size: 15px; color: var(--muted); line-height: 20px; }
+  .check .calc .op.paren { font-size: 18px; font-weight: 300; margin: 0 -3px; }
+  .check .calc .res { font-weight: 700; line-height: 20px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .check .calc .note { color: var(--muted); }
+  .check .calc .note.err { color: var(--danger); }
+  .check .sample-note { margin: 0 0 4px; color: #9a6b1c; }
+  .badge.warn { background: #fdf3e1; color: #9a6b1c; }
+  @media (max-width: 640px) { .check .line { grid-template-columns: 1fr; gap: 4px; } }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -337,6 +353,7 @@
   function newValue(type, props) {
     const v = Object.assign({ id: ++vid, type, label: '', unit: '', per: '', value: 0, sample: 0 }, props || {});
     if (!v.label) v.label = 'Число ' + (values.length + 1);
+    v.real = !v.example;  // the examples' numbers are «last month»; a new number has none yet
     values.push(v);
     return v;
   }
@@ -489,7 +506,9 @@
       if (b.type === 'val') {
         const x = valueOf(b), n = x.type === 'const' ? x.value : x.sample;
         if (!x.unit && !x.per) bare = true;  // a number without a unit: the ₽ check is off for this formula
-        return { v: n, u: unitsOf(x.unit, x.per), text: fmt(n) + (x.unit ? ' ' + x.unit : '') + (x.per ? '/' + x.per : ''), words: x.label };
+        const text = fmt(n) + (x.unit ? ' ' + x.unit : '') + (x.per ? '/' + x.per : '');
+        const sample = x.type === 'month' && !x.real;  // no last month yet — an example number
+        return { v: n, u: unitsOf(x.unit, x.per), text, words: x.label, parts: [{ num: text, word: x.label, sample }] };
       }
       const k = METER_KINDS[b.kind];
       // tenants — whose meters are ticked; join — «each» (each tenant his own) or «sum» (added together).
@@ -498,7 +517,8 @@
       if (b.tenants.length === 1) v = USAGE[b.kind][b.tenants[0]];
       else if (!tenant || b.join === 'sum') v = b.tenants.reduce((s, id) => s + USAGE[b.kind][id], 0);
       else v = USAGE[b.kind][tenant.id];
-      return { v, u: unitsOf(k.unit), text: fmt(v) + ' ' + k.unit, words: chipText(b) };
+      const word = chipText(b).replace(' · у каждого', tenant ? ' · ' + tenant.name.split(' ')[0] : ' · у каждого');
+      return { v, u: unitsOf(k.unit), text: fmt(v) + ' ' + k.unit, words: chipText(b), parts: [{ num: fmt(v) + ' ' + k.unit, word }] };
     }
     function primary() {
       const b = toks[i];
@@ -506,7 +526,7 @@
       if (b.type === 'op' && b.op === '(') {
         i++; const r = sum();
         if (!toks[i] || toks[i].op !== ')') throw 'Не хватает закрывающей скобки «)».';
-        i++; return { v: r.v, u: r.u, text: '(' + r.text + ')', words: '(' + r.words + ')' };
+        i++; return { v: r.v, u: r.u, text: '(' + r.text + ')', words: '(' + r.words + ')', parts: [{ op: '(' }, ...r.parts, { op: ')' }] };
       }
       if (b.type === 'op') throw 'Знак «' + b.op + '» стоит не на месте.';
       i++; return value(b);
@@ -516,7 +536,7 @@
       while (toks[i] && toks[i].type === 'op' && (toks[i].op === '×' || toks[i].op === '÷')) {
         const op = toks[i++].op, b = primary();
         if (op === '÷' && !b.v) throw 'Делим на ноль: ' + b.text + '.';
-        a = { v: op === '×' ? a.v * b.v : a.v / b.v, u: mul(a, b, op === '×' ? 1 : -1), text: a.text + ' ' + op + ' ' + b.text, words: a.words + ' ' + op + ' ' + b.words };
+        a = { v: op === '×' ? a.v * b.v : a.v / b.v, u: mul(a, b, op === '×' ? 1 : -1), text: a.text + ' ' + op + ' ' + b.text, words: a.words + ' ' + op + ' ' + b.words, parts: [...a.parts, { op }, ...b.parts] };
       }
       return a;
     }
@@ -525,7 +545,7 @@
       while (toks[i] && toks[i].type === 'op' && (toks[i].op === '+' || toks[i].op === '−')) {
         const op = toks[i++].op, b = product();
         if (!bare && !sameUnits(a.u, b.u)) throw 'Нельзя ' + (op === '+' ? 'складывать' : 'вычитать') + ' ' + unitText(a.u) + ' и ' + unitText(b.u) + '.';
-        a = { v: op === '+' ? a.v + b.v : a.v - b.v, u: a.u, text: a.text + ' ' + op + ' ' + b.text, words: a.words + ' ' + op + ' ' + b.words };
+        a = { v: op === '+' ? a.v + b.v : a.v - b.v, u: a.u, text: a.text + ' ' + op + ' ' + b.text, words: a.words + ' ' + op + ' ' + b.words, parts: [...a.parts, { op }, ...b.parts] };
       }
       return a;
     }
@@ -546,13 +566,18 @@
     const badge = document.getElementById('state-badge');
     box.innerHTML = '';
     if (!blocks.length) { badge.textContent = ''; badge.className = 'badge'; box.innerHTML = '<span class="hint">Соберите формулу — здесь появится расчёт для каждого арендатора.</span>'; return; }
-    // A line of the check: the formula in words (what each number is) over the same formula in numbers.
-    const line = (who, calc, sum, bad, words) => {
+    // Round 17: a line of the check — who, then the formula as numbers with their names under them
+    // (like on paper), and «= result» right after it, not far away at the right edge.
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const line = (who, parts, sum, bad) => {
       const d = document.createElement('div'); d.className = 'line';
-      d.innerHTML = '<span class="who"></span><span class="calc"><span class="words"></span><span class="nums"></span></span><span class="sum"></span>';
-      d.children[0].textContent = who; d.querySelector('.nums').textContent = calc; d.children[2].textContent = sum;
-      d.querySelector('.words').textContent = words || '';
-      if (bad) d.children[1].classList.add('err');
+      let html;
+      if (typeof parts === 'string') html = '<span class="note' + (bad ? ' err' : '') + '">' + esc(parts) + '</span>';
+      else html = parts.map(x => x.op ? '<span class="op' + ('()'.includes(x.op) ? ' paren' : '') + '">' + x.op + '</span>'
+        : '<span class="n' + (x.sample ? ' is-sample' : '') + '"><b>' + esc(x.num) + '</b><i>' + esc(x.word) + (x.sample ? ' · пример' : '') + '</i></span>').join('') +
+        (sum ? '<span class="op">=</span><span class="res">' + esc(sum) + '</span>' : '');
+      d.innerHTML = '<span class="who"></span><span class="calc">' + html + '</span>';
+      d.querySelector('.who').textContent = who;
       box.appendChild(d);
     };
     let ok = true;
@@ -565,27 +590,30 @@
         : named.length === 1 ? named : TENANTS.map(t => t.id);
       if (!own.length && named.length > 1) {
         ok = false;
-        line('Кому?', 'В формуле счётчики разных арендаторов — непонятно, кому выставить. Отметьте у счётчика обоих и выберите «у каждого свой» или «складываем».', '—', true);
+        line('Кому?', 'В формуле счётчики разных арендаторов — непонятно, кому выставить. Отметьте у счётчика обоих и выберите «у каждого свой» или «складываем».', '', true);
       } else {
         TENANTS.forEach(t => {
-          if (!payers.includes(t.id)) { line(t.name, 'не платит — не отмечен у счётчика', '—'); return; }
+          if (!payers.includes(t.id)) { line(t.name, 'не платит — не отмечен у счётчика', ''); return; }
           const r = evaluate(t);
-          if (r.error) { ok = false; line(t.name, r.error, '—', true); }
-          else line(t.name, r.text + ' =', rub(r.v), false, r.words);
+          if (r.error) { ok = false; line(t.name, r.error, '', true); }
+          else line(t.name, r.parts, rub(r.v));
         });
       }
       if (ok && !own.length && !named.length) { const h = document.createElement('p'); h.className = 'hint';
         h.textContent = 'В формуле нет счётчиков «у каждого свой» — у всех арендаторов выйдет одинаково. Может быть, нужен режим «Общая сумма → делим»?'; box.appendChild(h); }
     } else {
       const r = evaluate(null);
-      if (r.error) { ok = false; line('Объект', r.error, '—', true); }
+      if (r.error) { ok = false; line('Объект', r.error, '', true); }
       else {
-        line('Объект', r.text + ' =', rub(r.v), false, r.words);
+        line('Объект', r.parts, rub(r.v));
         const totalArea = TENANTS.reduce((s, t) => s + t.area, 0);
         TENANTS.forEach(t => {
           const part = split === 'shares' ? r.v * t.share / 100 : split === 'equal' ? r.v / TENANTS.length : r.v * t.area / totalArea;
-          const how = split === 'shares' ? '× ' + t.share + '%' : split === 'equal' ? '÷ ' + TENANTS.length : '× ' + fmt(t.area) + ' из ' + fmt(totalArea) + ' м²';
-          line(t.name, rub(r.v) + ' ' + how + ' =', rub(part));
+          const whole = { num: rub(r.v), word: 'на объект' };
+          const parts = split === 'shares' ? [whole, { op: '×' }, { num: t.share + '%', word: 'доля' }]
+            : split === 'equal' ? [whole, { op: '÷' }, { num: String(TENANTS.length), word: 'арендатора' }]
+            : [whole, { op: '×' }, { num: fmt(t.area) + ' м²', word: 'его площадь' }, { op: '÷' }, { num: fmt(totalArea) + ' м²', word: 'вся площадь' }];
+          line(t.name, parts, rub(part));
         });
         const h = document.createElement('p'); h.className = 'hint';
         h.textContent = 'Формула даёт одну сумму на объект — она делится ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split] +
@@ -597,6 +625,17 @@
       const h = document.createElement('p'); h.className = 'hint';
       h.textContent = 'У одного из чисел не указана единица — проверку «итог в рублях» для этой формулы не делаем.';
       box.appendChild(h);
+    }
+    // Round 17: last month's numbers when there are any; otherwise example numbers — and a line saying which.
+    const samples = values.filter(v => v.type === 'month' && !v.real && blocks.some(b => b.vid === v.id));
+    const cb = document.getElementById('check-badge');
+    cb.textContent = samples.length ? 'на примерных числах' : 'на числах прошлого месяца';
+    cb.classList.toggle('warn', samples.length > 0);
+    if (samples.length) {
+      const h = document.createElement('p'); h.className = 'hint sample-note';
+      h.textContent = 'Прошлого месяца ещё нет для ' + samples.map(v => '«' + v.label + '»').join(', ') +
+        ' — чтобы проверить формулу, взяли примерное число: ' + samples.map(v => fmt(v.sample) + (v.unit ? ' ' + v.unit : '')).join(', ') + '.';
+      box.prepend(h);
     }
     badge.textContent = ok ? 'считается' : 'есть ошибка';
     badge.className = 'badge ' + (ok ? 'ok' : 'bad');
@@ -781,7 +820,7 @@
       pop.querySelector('.vsay').textContent = valueSays(v);
       ready();
     });
-    function save() { return newValue(type, { label: v.label.trim(), unit: v.unit, per: v.per, value: v.value, sample: v.sample }); }
+    function save() { return newValue(type, { label: v.label.trim(), unit: v.unit, per: v.per, value: v.value, sample: v.sample, example: true }); }
     pop.querySelector('[data-cancel]').onclick = closePop;
     pop.querySelector('[data-keep]').onclick = () => { save(); closePop(); render(); };
     pop.querySelector('[data-put]').onclick = () => { const saved = save(); closePop(); insertBlock({ id: ++uid, type: 'val', vid: saved.id }, at); };
