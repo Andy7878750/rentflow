@@ -182,15 +182,18 @@
   .chip.tile .ico, .chip.tile.k-new .ico { width: 18px; height: auto; background: transparent; border-radius: 0; }
   .chip.k-new, .chip.tile.k-new { background: #fff; border-color: #cfd8de; color: var(--muted); }
   .chip.tile.k-new .t1 { color: var(--text); }
-  /* Round 13: shorter blocks in the formula line — more steps fit in one row. 28px, tighter padding, smaller text;
-     a long name ends with «…» (full — on hover), the unit is tiny; signs stay as they were, just narrower. */
+  /* Round 14: blocks in the formula line — narrow tiles (104px) in two lines: icon + name, under it small grey
+     whose / value; what does not fit fades out. Signs — the same height, narrow. */
   .strip { gap: 4px; }
-  .strip .chip { height: 28px; padding: 0 6px; gap: 4px; font-size: 12px; }
-  .strip .chip .ico svg { width: 13px; height: 13px; }
-  .strip .chip .nm { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
-  .strip .chip .val { font-size: 10.5px; }
-  .strip .chip.k-op { min-width: 22px; padding: 0 4px; }
-  .strip .chip.k-meter .val { display: none; }  /* the meter's unit is in the palette and in the check — not in the line */
+  .strip .chip.fx { flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; width: 104px; height: 44px; padding: 0 8px; }
+  .strip .chip.fx .r1 { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .strip .chip.fx .ico svg { width: 13px; height: 13px; }
+  .strip .chip.fx .nm, .strip .chip.fx .sub { min-width: 0; overflow: hidden; white-space: nowrap; }
+  .strip .chip.fx .nm { font-size: 12.5px; color: var(--text); }
+  .strip .chip.fx .sub { font-size: 11px; color: var(--muted); }
+  .strip .chip.fx .is-cut { -webkit-mask-image: linear-gradient(to right, #000 75%, transparent); mask-image: linear-gradient(to right, #000 75%, transparent); }
+  .strip .chip.k-op { min-width: 22px; height: 44px; padding: 0 5px; }
+  .strip .cursor, .strip ~ .caret, .caret { height: 40px; }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -372,14 +375,28 @@
     const el = document.createElement('span');
     el.className = 'chip ' + kindClass(b);
     el.dataset.id = b.id;
-    if (b.type !== 'op') el.innerHTML = '<span class="ico">' + iconOf(b) + '</span>';
-    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = chipText(b);
-    el.appendChild(nm);
-    if (b.type !== 'op') el.title = chipText(b) + (chipValue(b) ? ' · ' + chipValue(b) : '');
-    const v = chipValue(b);
-    // In the line the unit is short: «45 ₽/м³» instead of «45 ₽ за м³».
-    if (v) { const s = document.createElement('span'); s.className = 'val'; s.textContent = v.replace(' за ', '/'); el.appendChild(s); }
+    if (b.type === 'op') { el.textContent = b.op; return el; }
+    // Round 14: a narrow tile in two lines — icon + name, under it small: whose (meter) or the value / unit;
+    // what does not fit fades out (the full text — on hover).
+    const [name, sub] = chipParts(b);
+    el.classList.add('fx');
+    el.title = name + (sub ? ' · ' + sub : '');
+    el.innerHTML = '<span class="r1"><span class="ico">' + iconOf(b) + '</span><span class="nm"></span></span><span class="sub"></span>';
+    el.querySelector('.nm').textContent = name;
+    el.querySelector('.sub').textContent = sub;
     return el;
+  }
+  function chipParts(b) {
+    if (b.type === 'meter') {
+      const k = METER_KINDS[b.kind];
+      return [k.short, chipText(b).slice(k.short.length + 3) + ' · ' + k.unit];
+    }
+    const v = valueOf(b), val = chipValue(b).replace(' за ', '/');
+    return [v.label, v.type === 'month' ? (val ? val + ' · каждый месяц' : 'каждый месяц') : (val || 'число')];
+  }
+  // A text that does not fit gets the fade at its right edge.
+  function markCut(root) {
+    root.querySelectorAll('.chip.fx .nm, .chip.fx .sub').forEach(e => e.classList.toggle('is-cut', e.scrollWidth > e.clientWidth + 1));
   }
 
   function render() {
@@ -398,6 +415,7 @@
     const mark = document.createElement('span'); mark.className = 'cursor';
     const chips = strip.querySelectorAll('.chip');
     if (cursor === null || cursor >= chips.length) strip.appendChild(mark); else strip.insertBefore(mark, chips[cursor]);
+    markCut(strip);
     renderPalette();
     document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
     document.getElementById('split-row').hidden = mode !== 'total' || !blocks.length;
