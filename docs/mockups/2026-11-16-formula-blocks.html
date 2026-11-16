@@ -187,6 +187,16 @@
           <span class="summary-text" id="summary-text"></span>
           <button class="btn primary" id="edit-formula" type="button">Изменить формулу</button>
         </div>
+        <!-- No «Как считаем» (round 7): the formula tells it. A meter «у каждого свой» (or one tenant's) — each pays by
+             his own; otherwise it's one sum, split here, in the service window, as with «По квитанции». -->
+        <div class="row" id="split-row" hidden>
+          <span class="label">Делим</span>
+          <div class="seg" id="split">
+            <button data-split="shares" class="on">По долям</button>
+            <button data-split="equal">Поровну</button>
+            <button data-split="area">По м²</button>
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -225,23 +235,6 @@
       <button class="strip-clear" data-example="clear" type="button" title="Очистить формулу" aria-label="Очистить формулу">×</button>
     </div>
     <p class="trash-hint">Перетащите блок в строку или нажмите на него · вытащите из строки, чтобы убрать · нажмите на блок в строке, чтобы настроить</p>
-
-
-    <div class="row">
-      <span class="label">Как считаем</span>
-      <div class="seg" id="mode">
-        <button data-mode="each" class="on">Каждому по его счётчикам</button>
-        <button data-mode="total">Общая сумма → делим</button>
-      </div>
-    </div>
-    <div class="row" id="split-row" hidden>
-      <span class="label">Делим</span>
-      <div class="seg" id="split">
-        <button data-split="shares" class="on">По долям</button>
-        <button data-split="equal">Поровну</button>
-        <button data-split="area">По м²</button>
-      </div>
-    </div>
 
     <div class="check-box">
       <h3>Как посчитается <span class="badge" id="check-badge">на числах прошлого месяца</span></h3>
@@ -341,6 +334,9 @@
   }
 
   function render() {
+    // «Как считаем» is not asked (round 7): a meter «у каждого свой» or one tenant's → each pays by his own;
+    // otherwise the formula gives one sum, split as chosen in the service window.
+    mode = blocks.some(b => b.type === 'meter' && (b.tenants.length === 1 || (b.tenants.length > 1 && b.join === 'each'))) ? 'each' : 'total';
     strip.innerHTML = '';
     if (!blocks.length) {
       const e = document.createElement('span'); e.className = 'empty';
@@ -355,7 +351,7 @@
     if (cursor === null || cursor >= chips.length) strip.appendChild(mark); else strip.insertBefore(mark, chips[cursor]);
     renderPalette();
     document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
-    document.getElementById('split-row').hidden = mode !== 'total';
+    document.getElementById('split-row').hidden = mode !== 'total' || !blocks.length;
     // The service window shows the formula in words.
     const summary = document.getElementById('summary-text');
     summary.textContent = blocks.length ? 'Формула: ' + blocks.map(chipText).join(' ') : 'Формула ещё не собрана';
@@ -503,6 +499,10 @@
           const how = split === 'shares' ? '× ' + t.share + '%' : split === 'equal' ? '÷ ' + TENANTS.length : '× ' + fmt(t.area) + ' из ' + fmt(totalArea) + ' м²';
           line(t.name, rub(r.v) + ' ' + how + ' =', rub(part));
         });
+        const h = document.createElement('p'); h.className = 'hint';
+        h.textContent = 'Формула даёт одну сумму на объект — она делится ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split] +
+          '. Как делить, выбираете в окне услуги, под формулой.';
+        box.appendChild(h);
       }
     }
     if (ok && evaluate(mode === 'each' ? TENANTS[0] : null).bare) {
@@ -608,7 +608,7 @@
   function meterPopBody(b) {
     const k = METER_KINDS[b.kind], u = ' ' + k.unit;
     const many = b.tenants.length > 1;
-    const join = mode === 'total' ? 'sum' : b.join;
+    const join = b.join;
     const use = id => USAGE[b.kind][id];
     const name = id => TENANTS.find(t => t.id === id).name;
     let example;
@@ -616,7 +616,7 @@
     else if (!many) example = 'Только ' + name(b.tenants[0]) + ': ' + fmt(use(b.tenants[0])) + u + '. Остальные по этой формуле не платят.';
     else if (join === 'sum') example = b.tenants.map(id => fmt(use(id))).join(' + ') + ' = ' + fmt(b.tenants.reduce((s, id) => s + use(id), 0)) + u + ' — одно число в формуле для всех.';
     else example = b.tenants.map(id => name(id).split(' ')[0] + ' — ' + fmt(use(id)) + u).join(' · ') + ' — каждому по его счётчику.';
-    const on = many && mode === 'each';
+    const on = many;
     return '<div class="meter-body"><div class="f">Чей расход</div><div class="radios">' +
       TENANTS.map(t => '<label><input type="checkbox" data-tenant="' + t.id + '"' + (b.tenants.includes(t.id) ? ' checked' : '') + '>' + t.name + '</label>').join('') +
       '</div><div class="seg join' + (on ? '' : ' is-off') + '">' +
@@ -758,12 +758,6 @@
   document.addEventListener('pointerdown', e => { if (pop && !pop.contains(e.target) && !e.target.closest('#strip')) closePop(); }, true);
 
   // ---------- Mode, split, examples ----------
-  document.getElementById('mode').addEventListener('click', e => {
-    const btn = e.target.closest('button'); if (!btn) return;
-    mode = btn.dataset.mode;
-    [...e.currentTarget.children].forEach(b => b.classList.toggle('on', b === btn));
-    render();
-  });
   document.getElementById('split').addEventListener('click', e => {
     const btn = e.target.closest('button'); if (!btn) return;
     split = btn.dataset.split;
@@ -783,13 +777,13 @@
       const heat = newValue('month', { label: 'Тепло по квитанции', unit: 'Гкал', sample: 0.42 });
       const per = newValue('const', { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' });
       const tariff = newValue('const', { label: 'Тариф тепла', value: 4800, unit: '₽', per: 'Гкал' });
-      return [make('op:('), val(heat), make('op:−'), make('op:('), make('meter:hot'), make('op:×'), val(per), make('op:)'), make('op:)'), make('op:×'), val(tariff)]; },
+      return [make('op:('), val(heat), make('op:−'), make('op:('), Object.assign(make('meter:hot'), { join: 'sum' }), make('op:×'), val(per), make('op:)'), make('op:)'), make('op:×'), val(tariff)]; },
     one: () => { setMode('each'); values = [];
       const t = newValue('const', { label: 'Тариф', value: 9.6, unit: '₽', per: 'кВт·ч' });
       return [Object.assign(make('meter:el'), { tenants: ['v'] }), make('op:×'), val(t)]; },
     clear: () => { values = []; return []; },
   };
-  function setMode(m) { mode = m; document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); }
+  function setMode() {}  // the mode follows from the formula itself (round 7)
   document.addEventListener('click', e => {
     const btn = e.target.closest('[data-example]'); if (!btn) return;
     closePop(); cursor = null; blocks = EXAMPLES[btn.dataset.example](); render();
