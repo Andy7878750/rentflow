@@ -101,7 +101,8 @@
                 <div class="receipt-title">
                   <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="fade">{{ receipt.name }}</a>
                   <span class="missing-dot" title="За месяц ещё не введено" aria-hidden="true"></span>
-                  <span class="tag">{{ receipt.get_split_display|lower }}</span>
+                  {% if receipt.amount_mode == 'formula' %}<span class="tag">своя формула{% if receipt.split != 'meters' %} · {{ receipt.get_split_display|lower }}{% endif %}</span>
+                  {% else %}<span class="tag">{{ receipt.get_split_display|lower }}</span>{% endif %}
                   {% if receipt.metered and receipt.layout == 'common' %}<span class="tag tag-muted">общий счётчик</span>{% elif receipt.metered and receipt.layout == 'both' %}<span class="tag tag-muted">общий + свои</span>{% endif %}
                 </div>
                 {% if receipt.provider %}<p class="receipt-meta fade">{{ receipt.provider }}</p>{% endif %}
@@ -127,8 +128,10 @@
               </details>
             </header>
 
-            {% if receipt.metered or receipt.split == 'usage' %}
-              {% if receipt.split == 'usage' %}{% include "properties/_month_sum.html" %}{% endif %}
+            {% if receipt.metered or receipt.split == 'usage' or receipt.amount_mode == 'formula' %}
+              {% if receipt.amount_mode == 'formula' %}{% include "properties/_month_formula.html" %}
+              {% elif receipt.split == 'usage' %}{% include "properties/_month_sum.html" %}{% endif %}
+              {% if entry.readings or receipt.metered %}
               {% comment %}One row per meter (2026-11-15): who pays · «№ 222 / 9,6 ₽/кВт·ч» under it · «было» as plain text
                  (last month's «стало», or the start reading) · the field for today's reading · the usage.
                  «Расход» services: the field is the month's usage; the last column shows last month's until it is typed.
@@ -176,6 +179,7 @@
                 {% endfor %}
               </div>
               {% endwith %}
+              {% endif %}
             {% else %}
               {% include "properties/_month_sum.html" %}
             {% endif %}

@@ -733,11 +733,14 @@ class ReceiptViewTests(TestCase):
             self.assertGreater(page.index('data-split-block'), page.index('data-meter-picks'))
             self.assertNotIn('Кто платит', page)
 
-    def test_constructor_tile_is_not_saved(self):
+    def test_formula_tile_without_a_formula_is_not_saved(self):
+        """«Своя формула» works now (test_custom_formula.py), but an empty one is refused with a sentence."""
         receipt = services.save_receipt(services.new_receipt(self.prop, 'management'))
         response = self.client.post(reverse('receipt_edit', args=[receipt.pk]),
                                     {'name': 'Охрана', 'charge': 'formula', 'split': 'equal'}, HTTP_X_MODAL='1')
-        self.assertContains(response, '«Своя формула» пока не готова')
+        self.assertContains(response, 'Соберите формулу')
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.amount_mode, Receipt.AmountMode.MONTHLY)
 
     def test_edit_and_delete(self):
         receipt = services.save_receipt(services.new_receipt(self.prop, 'management'))

@@ -16,14 +16,15 @@ class ReceiptForm(forms.ModelForm):
     zones = forms.TypedChoiceField(
         choices=[('1', 'Однотарифный'), ('2', 'День / ночь')], coerce=int, initial='1', required=False, empty_value=1,
     )
-    # «Начисление» as four tiles; it sets `metered` and `amount_mode` (see clean). «Своя формула» is not ready yet.
+    # «Начисление» as five tiles; it sets `metered` and `amount_mode` (see clean).
     CHARGES = [
         ('receipt', 'По квитанции', 'разная каждый месяц', 'i-file'),
         ('fixed', 'Фиксированная сумма', 'не меняется', 'i-lock'),
         ('rate', 'По площади', 'м² или чел. × тариф', 'i-ruler'),
         ('meters', 'По счётчикам', 'расход × тариф', 'i-gauge'),
-        ('formula', 'Своя формула', 'скоро', 'i-blocks'),
+        ('formula', 'Своя формула', 'собираю из блоков', 'i-blocks'),
     ]
+    _MODES = {'fixed': Receipt.AmountMode.FIXED, 'rate': Receipt.AmountMode.RATE, 'formula': Receipt.AmountMode.FORMULA}
     charge = forms.ChoiceField(choices=[(value, label) for value, label, _, _ in CHARGES], required=False)
 
     class Meta:
@@ -54,7 +55,7 @@ class ReceiptForm(forms.ModelForm):
         if self.instance.metered:
             self.initial['charge'] = 'meters'
         else:
-            self.initial['charge'] = {Receipt.AmountMode.FIXED: 'fixed', Receipt.AmountMode.RATE: 'rate'}.get(
+            self.initial['charge'] = {mode: charge for charge, mode in self._MODES.items()}.get(
                 self.instance.amount_mode, 'receipt')
         # The window posts `charge` instead of these two.
         self.fields['metered'].required = False
@@ -85,13 +86,10 @@ class ReceiptForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         charge = cleaned.get('charge')
-        if charge == 'formula':
-            self.add_error('charge', '«Своя формула» пока не готова — выберите один из трёх вариантов.')
-        elif charge:
+        if charge:
             cleaned['metered'] = charge == 'meters'
             if charge != 'meters':
-                cleaned['amount_mode'] = {'fixed': Receipt.AmountMode.FIXED, 'rate': Receipt.AmountMode.RATE}.get(
-                    charge, Receipt.AmountMode.MONTHLY)
+                cleaned['amount_mode'] = self._MODES.get(charge, Receipt.AmountMode.MONTHLY)
         if cleaned.get('metered') is None:
             cleaned['metered'] = False
         if not cleaned.get('amount_mode'):

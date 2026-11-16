@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
-from .models import Meter, MonthlyAmount, Reading, Receipt, ReceiptTariff, ServiceTemplate
+from .models import FormulaValue, Meter, MonthlyAmount, Reading, Receipt, ReceiptTariff, ServiceTemplate
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
 _BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
@@ -186,7 +186,10 @@ def normalize(receipt):
         receipt.layout = Receipt.Layout.COMMON
         if receipt.split != Receipt.Split.USAGE:  # «По расходу» keeps «было / стало» or «расход»
             receipt.input_mode = Receipt.InputMode.READINGS
-        if receipt.split == Receipt.Split.METERS:
+        if receipt.amount_mode == Receipt.AmountMode.FORMULA:
+            if receipt.split == Receipt.Split.USAGE:
+                receipt.split = Receipt.Split.SHARES  # the formula itself reads the meters
+        elif receipt.split == Receipt.Split.METERS:
             receipt.split = Receipt.Split.SHARES
     else:
         # The amount follows the readings, so it can't be a fixed sum.
@@ -571,7 +574,9 @@ def busy_meters(receipt):
     A meter this service already has is never busy for it (services made before could share one)."""
     mine = set(receipt.meters.values_list('pk', flat=True)) if receipt.pk else set()
     busy = {}
-    others = Receipt.objects.filter(property=receipt.property).exclude(pk=receipt.pk).prefetch_related('meters', 'tariffs')
+    others = (Receipt.objects.filter(property=receipt.property).exclude(pk=receipt.pk)
+              .exclude(amount_mode=Receipt.AmountMode.FORMULA)  # a formula only reads meters: it locks none
+              .prefetch_related('meters', 'tariffs'))
     for other in others:
         for meter in other.meters.all():
             if meter.pk not in mine:
@@ -911,11 +916,17 @@ def _layout_of(meters):
 
 
 @transaction.atomic
-def save_receipt(receipt, **options):
-    """Save the service (_save_receipt), then the meters no service counts by any more become common."""
+def save_receipt(receipt, formula=None, **options):
+    """Save the service (_save_receipt), then the meters no service counts by any more become common.
+    formula — the formula window's state (parse_formula) of a «Своя формула» service."""
     receipt = _save_receipt(receipt, **options)
     if receipt.amount_mode == Receipt.AmountMode.RATE:
         save_rate(receipt, options.get('today') or date.today())
+    if is_formula(receipt) and formula is not None:
+        save_formula(receipt, formula, options.get('today'))
+    elif not is_formula(receipt) and receipt.formula:
+        receipt.formula = []  # another way of charging: the formula goes (its numbers stay until it comes back)
+        receipt.save(update_fields=['formula'])
     release_free_meters(receipt.property)
     return receipt
 
@@ -984,6 +995,13 @@ def _save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=F
     premises'; who pays by each is set on the object), only its layout follows them.
     excluded — tenants switched off in «Кто платит» (parse_excluded); None keeps them as they are."""
     today = today or date.today()
+    if is_formula(receipt):
+        # «Своя формула»: its meters are linked by save_formula (it only reads them) — never dropped here.
+        normalize(receipt)
+        receipt.save()
+        if excluded is not None:
+            receipt.excluded.set(excluded)
+        return receipt
     if meter_ids is not None and by_usage(receipt):
         # «Делим по расходу»: the sum comes from the receipt; the ticked meters only give the proportion (no tariff).
         normalize(receipt)
@@ -1432,7 +1450,7 @@ def month_bill(property_obj, month):
     entries = []
     readings_done = readings_total = 0
 
-    prefetch = ('meters__readings', 'meters__tenant', 'monthly_amounts', 'excluded', 'tariffs')
+    prefetch = ('meters__readings', 'meters__tenant', 'monthly_amounts', 'excluded', 'tariffs', 'numbers__values')
     for receipt in property_obj.receipts.prefetch_related(*prefetch):
         amount = next((a for a in receipt.monthly_amounts.all() if a.month == month), None)
         entry = MonthEntry(receipt=receipt, amount=amount)
@@ -1490,6 +1508,12 @@ def month_bill(property_obj, month):
                         owner.lines.append(Line(receipt, entry.total - billed, 'разница общего и счётчиков арендаторов'))
                 continue
             entry.total = money(sum((cost[0] for _, cost in costs), Decimal('0')))
+        elif receipt.amount_mode == Receipt.AmountMode.FORMULA:
+            handled = _formula_month(receipt, entry, month, tenants, payers, owner)
+            readings_total += len(entry.readings)
+            readings_done += sum(1 for _, reading in entry.readings if used(receipt, reading)[0] is not None)
+            if handled:
+                continue  # each paid by his own meters, or the month isn't complete yet
         elif receipt.amount_mode == Receipt.AmountMode.FIXED:
             entry.total = receipt.fixed_amount
         elif receipt.amount_mode == Receipt.AmountMode.RATE:
@@ -1556,6 +1580,11 @@ def save_month_input(property_obj, month, data):
             row, _ = MonthlyAmount.objects.get_or_create(receipt=receipt, month=month)
             row.amount = parse_decimal(data.get(f'amount-{receipt.pk}'))
             row.save(update_fields=['amount'])
+        # «Своя формула»: its «Каждый месяц» numbers (fnum-<number>).
+        for number in receipt.numbers.filter(monthly=True):
+            if f'fnum-{number.pk}' in data:
+                FormulaValue.objects.update_or_create(
+                    number=number, month=month, defaults={'value': parse_decimal(data.get(f'fnum-{number.pk}'))})
         fields = {'prev': 'previous', 'cur': 'current', 'prevn': 'previous_night', 'curn': 'current_night',
                   'use': 'usage', 'usen': 'usage_night'}
         for meter in receipt.meters.all():
@@ -1671,3 +1700,364 @@ def formula_example(receipt, chosen=None):
     amount = tenant_line(receipt, exact, '').amount
     steps.append(FormulaStep(items, _rub(amount, currency)))
     return FormulaExample(choices, str(tenant.pk), tenant.name, amount, _rub(amount, currency), steps)
+
+
+# ---------------------------------------------------------------------------
+# «Своя формула»: numbers, meters and signs (formula.py counts; 2026-11-16)
+# ---------------------------------------------------------------------------
+
+# Units of the formula's numbers (the window adds «свой вариант…»).
+FORMULA_UNITS = ['₽', 'кВт·ч', 'м³', 'Гкал', 'м²', 'чел.']
+# A «Тариф / норматив» this big is kept on the number only (no history row: ReceiptTariff holds up to 999 999,9999).
+_HISTORY_LIMIT = Decimal('1000000')
+
+
+def is_formula(receipt):
+    return not receipt.metered and receipt.amount_mode == Receipt.AmountMode.FORMULA
+
+
+def meter_kind_key(meter):
+    """What a meter measures, as the formula's palette groups them: its kind, or «custom:<name>» for an own kind."""
+    return meter.kind if meter.kind in READY_METER_KINDS else f'custom:{meter.name}'
+
+
+def number_unit_text(number):
+    """«₽/Гкал», «Гкал», ''."""
+    if number.per:
+        return f'{number.unit or ""}/{number.per}'
+    return number.unit
+
+
+def _number_key(number):
+    return f'num:{number.pk}'
+
+
+def save_number_value(number, today):
+    """«Тариф / норматив» with history, as a tariff: a change starts this month, earlier months keep theirs."""
+    if number.monthly or number.value is None or abs(number.value) >= _HISTORY_LIMIT:
+        return
+    receipt = number.receipt
+    this_month = first_of_month(today)
+    key = _number_key(number)
+    rows = list(receipt.tariffs.filter(key=key).order_by('valid_from'))
+    now = tariff_at(rows, this_month)
+    if now and now.tariff == number.value:
+        return
+    if now and now.valid_from == this_month:
+        now.tariff = number.value
+        now.save(update_fields=['tariff'])
+        return
+    has_past = receipt.created_at.date() < this_month or receipt.monthly_amounts.filter(month__lt=this_month).exists()
+    valid_from = this_month if (rows or has_past) else SINCE_ALWAYS
+    ReceiptTariff.objects.create(receipt=receipt, key=key, valid_from=valid_from, tariff=number.value)
+
+
+def number_at(number, month):
+    """A «Тариф / норматив» in force in the month (uses the prefetched receipt.tariffs); a «Каждый месяц» number —
+    what was typed for the month (prefetched number.values), or None."""
+    if number.monthly:
+        row = next((row for row in number.values.all() if row.month == month), None)
+        return row.value if row else None
+    rows = sorted((row for row in number.receipt.tariffs.all() if row.key == _number_key(number)),
+                  key=lambda row: row.valid_from)
+    row = tariff_at(rows, month) or (rows[0] if rows else None)
+    return row.tariff if row is not None else number.value
+
+
+def parse_formula(posted):
+    """The formula window's state posted as JSON (`formula_json`): {numbers, blocks, owners}; None — not posted."""
+    import json
+
+    if posted is None or 'formula_json' not in posted:
+        return None
+    try:
+        data = json.loads(posted.get('formula_json') or '{}')
+    except ValueError:
+        data = {}
+    return data if isinstance(data, dict) else {}
+
+
+def _clean_numbers(raw):
+    """The posted numbers: [{key, label, monthly, unit, per, value}] — key is the stored id or a new one («n3»)."""
+    numbers = []
+    for position, item in enumerate(raw if isinstance(raw, list) else []):
+        if not isinstance(item, dict):
+            continue
+        monthly = bool(item.get('monthly'))
+        raw_value = item.get('value')
+        value = None if monthly or raw_value is None else parse_decimal(str(raw_value))
+        numbers.append({
+            'key': str(item.get('id', '')),
+            'label': str(item.get('label') or '').strip()[:60] or f'Число {position + 1}',
+            'monthly': monthly,
+            'unit': str(item.get('unit') or '').strip()[:12],
+            'per': '' if monthly else str(item.get('per') or '').strip()[:12],
+            'value': value,
+        })
+    return numbers
+
+
+def _posted_owner(value, tenant_ids):
+    """«Чей» posted for a meter: (tenant id or None, vacant)."""
+    value = str(value if value is not None else '')
+    if value.isdigit() and int(value) in tenant_ids:
+        return int(value), False
+    return None, value == 'free'
+
+
+def formula_owners(property_obj, data, receipt=None):
+    """{meter id: tenant id or None} — as the formula window has it now: the posted «чей» of meters it may change,
+    the stored one of meters another service («По счётчикам») seats tenants on."""
+    tenant_ids = set(property_obj.tenants.values_list('pk', flat=True))
+    busy = busy_meters(receipt) if receipt is not None else {}
+    posted = (data or {}).get('owners') or {}
+    owners = {}
+    for meter in property_obj.meters.all():
+        if str(meter.pk) in posted and meter.pk not in busy:
+            owners[meter.pk] = _posted_owner(posted[str(meter.pk)], tenant_ids)[0]
+        else:
+            owners[meter.pk] = meter.tenant_id
+    return owners
+
+
+def _posted_blocks(data, number_keys, meter_ids):
+    """The posted blocks with number keys («12», «n3») as they are — for checking before anything is saved."""
+    from . import formula as fx
+
+    raw = []
+    for block in (data or {}).get('blocks') or []:
+        if isinstance(block, dict) and block.get('t') == 'num':
+            key = str(block.get('id', ''))
+            if key in number_keys:
+                raw.append({'t': 'num', 'id': key})
+        else:
+            raw.append(block)
+    return fx.clean_blocks(raw, set(number_keys), meter_ids)
+
+
+def formula_problem(property_obj, data, receipt=None):
+    """Why the posted formula can't be saved, in one sentence; '' when it is fine. Checked on units only
+    (every number counts as 1), so a formula that needs this month's numbers still saves."""
+    from . import formula as fx
+
+    numbers = {item['key']: item for item in _clean_numbers((data or {}).get('numbers'))}
+    meters = {meter.pk: meter for meter in property_obj.meters.all()}
+    blocks = _posted_blocks(data, numbers, set(meters))
+    if not blocks:
+        return 'Соберите формулу — нажмите «Собрать формулу».'
+    owners = formula_owners(property_obj, data, receipt)
+
+    def resolve(block):
+        if block['t'] == 'num':
+            item = numbers[block['id']]
+            if not item['monthly'] and item['value'] is None:
+                raise fx.FormulaError(f'У числа «{item["label"]}» не задано значение.')
+            return fx.Value(Decimal('1'), fx.units_of(item['unit'], item['per']))
+        if not block['meters']:
+            raise fx.FormulaError('У счётчика в формуле не отмечен ни один счётчик.')
+        return fx.Value(Decimal('1'), fx.units_of(meter_unit(meters[block['meters'][0]]), ''))
+
+    try:
+        fx.evaluate(blocks, resolve)
+        if not property_obj.is_owner_used and fx.mode(blocks, owners.get) == 'each':
+            fx.payers(blocks, owners.get, list(property_obj.tenants.values_list('pk', flat=True)))
+    except fx.FormulaError as error:
+        return str(error)
+    return ''
+
+
+@transaction.atomic
+def save_formula(receipt, data, today=None):
+    """Store the formula window's state: the numbers (new ones made, gone ones removed; a tariff's history kept),
+    the blocks, the meters it reads (linked to the service, so their «чей» stays) and their «чей»."""
+    from . import formula as fx
+    from .models import FormulaNumber
+
+    today = today or date.today()
+    property_obj = receipt.property
+    existing = {str(number.pk): number for number in receipt.numbers.all()}
+    keys = {}
+    for position, item in enumerate(_clean_numbers((data or {}).get('numbers'))):
+        number = existing.pop(item['key'], None) or FormulaNumber(receipt=receipt)
+        number.label, number.monthly, number.unit, number.per = item['label'], item['monthly'], item['unit'], item['per']
+        number.value, number.position = item['value'], position
+        number.save()
+        save_number_value(number, today)
+        keys[item['key']] = number.pk
+    for number in existing.values():
+        receipt.tariffs.filter(key=_number_key(number)).delete()
+        number.delete()
+
+    meters = set(property_obj.meters.values_list('pk', flat=True))
+    blocks = [dict(block, id=keys[block['id']]) if block['t'] == 'num' else block
+              for block in _posted_blocks(data, set(keys), meters)]
+    receipt.formula = fx.clean_blocks(blocks, set(keys.values()), meters)
+
+    busy = busy_meters(receipt)
+    tenant_ids = set(property_obj.tenants.values_list('pk', flat=True))
+    posted = (data or {}).get('owners') or {}
+    used_meters = sorted({pk for block in fx.meter_blocks(receipt.formula) for pk in block['meters']})
+    for meter in property_obj.meters.filter(pk__in=used_meters):
+        if str(meter.pk) in posted and meter.pk not in busy:
+            tenant_id, vacant = _posted_owner(posted[str(meter.pk)], tenant_ids)
+            if meter.tenant_id != tenant_id or meter.vacant != vacant:
+                meter.tenant_id, meter.vacant = tenant_id, vacant
+                meter.save(update_fields=['tenant', 'vacant'])
+    owners = dict(property_obj.meters.values_list('pk', 'tenant_id'))
+    if not property_obj.is_owner_used and fx.mode(receipt.formula, owners.get) == 'each':
+        receipt.split = Receipt.Split.METERS  # each pays by his own meters: no «Делим»
+    elif receipt.split in (Receipt.Split.METERS, Receipt.Split.USAGE):
+        receipt.split = Receipt.Split.SHARES
+    receipt.save(update_fields=['formula', 'split'])
+    receipt.meters.set(used_meters)
+    return receipt
+
+
+def _parts_text(parts):
+    """The formula in numbers for a bill line: «8 450 ₽ ÷ 1 300 кВт·ч × 800 кВт·ч»."""
+    words = []
+    for part in parts:
+        if 'op' in part:
+            words.append(part['op'])
+        else:
+            unit = part.get('unit') or ''
+            words.append(fmt_number(part['value']) + (NBSP + unit if unit else ''))
+    return ' '.join(words).replace('( ', '(').replace(' )', ')')
+
+
+def _formula_month(receipt, entry, month, tenants, payers, owner):
+    """«Своя формула» in one month. Each pays by his own meters → the tenants' lines here (True: nothing left to
+    split); one sum for the object → entry.total, split like any sum after (False). A missing number or reading
+    leaves entry.total None (the red dot) and returns True."""
+    from . import formula as fx
+
+    entry.readings = _readings_for(receipt.meters.all(), month)
+    for meter, _ in entry.readings:
+        meter.two_zones = meter.day_night
+        meter.mode = meter_mode(receipt, meter)
+        meter.tariff_text = ''
+    mark_negative(receipt, entry.readings)
+    entry.modes = {meter.mode for meter, _ in entry.readings}
+    entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
+    entry.some_usage = Receipt.InputMode.USAGE in entry.modes
+    numbers = {number.pk: number for number in receipt.numbers.all()}
+    entry.month_numbers = [(number, number_at(number, month)) for number in numbers.values() if number.monthly]
+    entry.formula_error = ''
+
+    meters = {meter.pk: meter for meter, _ in entry.readings}
+    usage = {}
+    for meter, reading in entry.readings:
+        day, night = used(receipt, reading)
+        usage[meter.pk] = None if day is None or (meter.day_night and night is None) else day + (night or Decimal('0'))
+    blocks = receipt.formula or []
+    in_formula = {block['id'] for block in blocks if block.get('t') == 'num'}
+    if any(value is None for number, value in entry.month_numbers if number.pk in in_formula) or \
+            any(usage.get(pk) is None for block in fx.meter_blocks(blocks) for pk in block['meters']):
+        entry.total = None
+        return True
+
+    def owner_of(pk):
+        return meters[pk].tenant_id if pk in meters else None
+
+    def count(tenant_id):
+        def resolve(block):
+            if block['t'] == 'num':
+                number = numbers.get(block['id'])
+                if number is None:
+                    raise fx.FormulaError('В формуле число, которого больше нет.')
+                value = number_at(number, month)
+                if value is None:
+                    raise fx.FormulaError(f'Не задано «{number.label}».')
+                part = {'value': value, 'unit': number_unit_text(number), 'word': number.label}
+                return fx.Value(value, fx.units_of(number.unit, number.per), [part])
+            if not block['meters']:
+                raise fx.FormulaError('У счётчика в формуле не отмечен ни один счётчик.')
+            value = fx.meter_usage(block, tenant_id, usage.get, owner_of)
+            unit = meter_unit(meters[block['meters'][0]])
+            return fx.Value(value, fx.units_of(unit, ''), [{'value': value, 'unit': unit, 'word': ''}])
+
+        result, _ = fx.evaluate(blocks, resolve)
+        return result.value, _parts_text(result.parts)
+
+    try:
+        each = bool(tenants) and fx.mode(blocks, owner_of) == 'each'
+        if not each:
+            value, entry.formula_text = count(None)
+            entry.total = money(value)
+            return False
+        payer_ids = fx.payers(blocks, owner_of, [tenant.pk for tenant in tenants])
+        excluded = excluded_ids(receipt)
+        total = Decimal('0')
+        for tenant_id in payer_ids:
+            value, text = count(tenant_id)
+            if tenant_id in excluded:
+                line = Line(receipt, money(value), f'{text} · {payers[tenant_id].tenant.name} не платит')
+                owner.lines.append(line)
+            else:
+                line = tenant_line(receipt, value, text)
+                payers[tenant_id].lines.append(line)
+            total += line.base
+        entry.total = total
+    except fx.FormulaError as error:
+        entry.formula_error = str(error)
+        entry.total = None
+    return True
+
+
+def _last_month(today):
+    first = first_of_month(today)
+    return date(first.year - 1, 12, 1) if first.month == 1 else date(first.year, first.month - 1, 1)
+
+
+def formula_context(receipt, data=None, today=None):
+    """What the formula window needs (JSON for app.js): the tenants, the object's meters with last month's usage,
+    the numbers and the blocks — as posted (a refused save, the way back) or as stored."""
+    property_obj = receipt.property
+    last = _last_month(today or date.today())
+    tenants = [] if property_obj.is_owner_used else list(property_obj.tenants.all())
+    busy = busy_meters(receipt)
+    owners = formula_owners(property_obj, data, receipt) if data is not None else None
+    meters, kinds = [], {}
+    for meter in property_obj.meters.prefetch_related('readings'):
+        reading = next((r for r in meter.readings.all() if r.month == last), None)
+        usage = None
+        if reading is not None:
+            day, night = used(receipt, reading)
+            if day is not None and (not meter.day_night or night is not None):
+                usage = day + (night or Decimal('0'))
+        key = meter_kind_key(meter)
+        kinds.setdefault(key, {
+            'key': key, 'name': meter.name, 'unit': meter_unit(meter),
+            'icon': meter.kind if meter.kind in READY_METER_KINDS else 'custom',
+        })
+        tenant_id = owners[meter.pk] if owners is not None else meter.tenant_id
+        meters.append({
+            'id': meter.pk, 'key': key, 'serial': meter.serial, 'dn': meter.day_night,
+            'tenant': tenant_id, 'vacant': bool(meter.vacant and not tenant_id),
+            'busy': busy[meter.pk].name if meter.pk in busy else '',
+            'last': float(usage) if usage is not None else None,
+        })
+    if data is not None:
+        numbers = [{'id': item['key'], 'label': item['label'], 'monthly': item['monthly'], 'unit': item['unit'],
+                    'per': item['per'], 'value': float(item['value']) if item['value'] is not None else None, 'last': None}
+                   for item in _clean_numbers(data.get('numbers'))]
+        blocks = [block for block in data.get('blocks') or [] if isinstance(block, dict)]
+    else:
+        numbers = []
+        for number in (receipt.numbers.prefetch_related('values') if receipt.pk else []):
+            value = number_at(number, last) if number.monthly else number.value
+            numbers.append({'id': str(number.pk), 'label': number.label, 'monthly': number.monthly, 'unit': number.unit,
+                            'per': number.per, 'value': float(number.value) if number.value is not None else None,
+                            'last': float(value) if number.monthly and value is not None else None})
+        blocks = [dict(block, id=str(block['id'])) if block.get('t') == 'num' else block for block in receipt.formula or []]
+    return {
+        'tenants': [{'id': tenant.pk, 'name': tenant.name, 'share': float(tenant.share_percent or 0),
+                     'area': float(tenant.area) if tenant.area is not None else None} for tenant in tenants],
+        'area': float(property_obj.area) if property_obj.area else None,
+        'kinds': list(kinds.values()),
+        'meters': meters,
+        'numbers': numbers,
+        'blocks': blocks,
+        'units': FORMULA_UNITS,
+        'symbol': receipt.currency_symbol,
+    }

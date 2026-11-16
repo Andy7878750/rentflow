@@ -1,0 +1,193 @@
+/* «Своя формула» — its own window over the service window (formula.js), as in the approved mockup
+   docs/mockups/2026-11-16-formula-blocks.html (round 25). Everything is prefixed fx- so nothing leaks into other windows. */
+
+.fx-overlay {
+  --fx-text: var(--color-text); --fx-muted: var(--color-text-muted); --fx-border: var(--color-border);
+  --fx-accent: var(--color-accent); --fx-accent-soft: var(--color-accent-soft); --fx-danger: var(--color-danger);
+  --fx-info-bg: #e3f1f6; --fx-info: #1f6280; --fx-tile: #f4f6f8;
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; background: rgba(30, 40, 50, .45); overflow-y: auto; color: var(--fx-text);
+}
+.fx-overlay[hidden] { display: none; }
+.fx-modal { box-sizing: border-box; width: 100%; max-width: 820px; display: flex; flex-direction: column; gap: 14px;
+  padding: 22px 24px; border-radius: 16px; background: var(--color-surface); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.fx-modal h2 { margin: 0; font-size: 20px; }
+.fx-desc { margin: -8px 0 0; color: var(--fx-muted); font-size: 13px; }
+.fx-hint { margin: 0; color: var(--fx-muted); font-size: 12px; }
+.fx-badge { padding: 2px 8px; border-radius: 999px; background: var(--fx-info-bg); color: var(--fx-info); font-size: 11px; font-weight: 600;
+  letter-spacing: 0; text-transform: none; }
+.fx-badge:empty { display: none; }
+.fx-badge.is-bad { background: var(--color-danger-soft); color: var(--fx-danger); }
+.fx-badge.is-ok { background: var(--fx-accent-soft); color: var(--fx-accent); }
+
+/* Palette: numbers «Каждый месяц», «Тариф / норматив», the object's meters, signs */
+.fx-palette { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 12px; }
+.fx-group { min-width: 0; }
+.fx-group h3 { margin: 0 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fx-muted); }
+.fx-group .fx-sub { margin: 0 0 6px; font-size: 11px; color: var(--fx-muted); }
+.fx-chips { display: flex; flex-direction: column; gap: 6px; }
+.fx-chips.is-signs { display: grid; grid-template-columns: repeat(3, 36px); gap: 6px; }
+
+/* Blocks — grey, only the icon keeps its colour */
+.fx-chip { --c: var(--fx-muted); position: relative; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: 30px;
+  padding: 0 10px; border: 1px solid var(--fx-border); border-radius: 8px; background: var(--fx-tile); font-size: 13px; white-space: nowrap;
+  cursor: grab; user-select: none; touch-action: none; color: var(--fx-text); }
+.fx-chip:hover { border-color: #b9c4cc; }
+.fx-chip .fx-ico { display: inline-flex; flex: none; color: var(--c); }
+.fx-chip .fx-ico svg { width: 15px; height: 15px; }
+.fx-chip.k-month { --c: #b07d2b; }
+.fx-chip.k-const { --c: var(--fx-accent); }
+.fx-chip.k-op { justify-content: center; min-width: 30px; padding: 0 8px; font-weight: 700; }
+.fx-chip.mk-electricity { --c: #0e9aa7; } .fx-chip.mk-water { --c: #2e86c1; } .fx-chip.mk-hot_water { --c: #c0392b; }
+.fx-chip.mk-heating { --c: #e67e22; } .fx-chip.mk-gas { --c: #5b6bc0; }
+.fx-chip.k-new { background: var(--color-surface); border-style: dashed; border-color: #cfd8de; color: var(--fx-muted); }
+.fx-chip.k-new.k-month { --c: #8a6420; }
+.fx-chip.is-ghost { position: fixed; z-index: 100; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: grabbing; }
+.fx-chip.is-dragging { opacity: .3; }
+/* A palette tile: full column width, 44px, two lines */
+.fx-chip.is-tile { display: flex; width: 100%; height: 44px; gap: 8px; padding: 0 10px; }
+.fx-chip.is-tile .fx-ico { width: 18px; }
+.fx-chip.is-tile .fx-ico svg { width: 16px; height: 16px; }
+.fx-tl { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.fx-t1, .fx-t2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-t1 { font-size: 13px; color: var(--fx-text); }
+.fx-t2 { font-size: 11px; color: var(--fx-muted); }
+.fx-chips .fx-chip.k-op { width: 36px; height: 36px; padding: 0; }
+
+/* The formula line */
+.fx-strip-wrap { position: relative; }
+.fx-strip { box-sizing: border-box; min-height: 96px; display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 4px;
+  padding: 10px 40px 10px 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+.fx-strip.is-over { border-color: var(--fx-accent); background: var(--fx-accent-soft); }
+.fx-strip .fx-empty { color: var(--fx-muted); font-size: 13px; line-height: 44px; }
+.fx-strip .fx-chip.is-fx { flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; width: 104px; height: 44px; padding: 0 8px; }
+.fx-strip .fx-r1 { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.fx-strip .fx-chip .fx-ico svg { width: 13px; height: 13px; }
+.fx-strip .fx-nm, .fx-strip .fx-s2 { min-width: 0; overflow: hidden; white-space: nowrap; }
+.fx-strip .fx-nm { font-size: 12.5px; color: var(--fx-text); }
+.fx-strip .fx-s2 { font-size: 11px; color: var(--fx-muted); }
+.fx-strip .is-cut { -webkit-mask-image: linear-gradient(to right, #000 75%, transparent); mask-image: linear-gradient(to right, #000 75%, transparent); }
+.fx-strip .fx-chip.k-op { min-width: 22px; height: 44px; padding: 0 5px; }
+.fx-caret { width: 2px; height: 40px; border-radius: 1px; background: var(--fx-accent); }
+/* × on a block — a small white circle on its corner, like an attachment's */
+.fx-strip .fx-del { position: absolute; top: -7px; right: -7px; z-index: 2; display: none; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 18px; height: 18px; border: 1px solid var(--fx-border); border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--fx-muted); font-size: 13px; line-height: 1; cursor: pointer; }
+.fx-strip .fx-chip:hover .fx-del { display: inline-flex; }
+.fx-strip .fx-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
+@media (hover: none) { .fx-strip .fx-del { display: inline-flex; } }
+.fx-clear { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: #eef2f4;
+  color: var(--fx-muted); font-size: 16px; line-height: 1; cursor: pointer; }
+.fx-clear:hover { background: var(--color-danger-soft); color: var(--fx-danger); }
+.fx-trash-hint { margin: -8px 0 0; font-size: 12px; color: var(--fx-muted); }
+
+/* «Как посчитается» */
+.fx-check-box { min-height: 150px; padding-top: 12px; border-top: 1px solid var(--fx-border); }
+.fx-check-box h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--fx-muted); }
+.fx-check { display: flex; flex-direction: column; gap: 6px; }
+.fx-line { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--fx-border); }
+.fx-line:last-child { border-bottom: 0; }
+.fx-line.has-pay { grid-template-columns: 150px minmax(0, 1fr) auto; }
+.fx-who { padding-top: 1px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-line.is-off .fx-who, .fx-line.is-off .fx-calc { color: var(--fx-muted); }
+.fx-calc { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 6px; color: var(--fx-text); font-size: 13px; }
+/* Every number — the same 96px column, its name centred under it, up to three lines */
+.fx-n { display: inline-grid; justify-items: center; min-width: 96px; }
+.fx-n b { font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fx-n i { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; width: 0; min-width: 100%;
+  font-style: normal; font-size: 10.5px; line-height: 1.2; color: var(--fx-muted); text-align: center; white-space: normal; }
+.fx-op { font-size: 14px; line-height: 20px; color: var(--fx-muted); }
+.fx-op.is-paren { font-size: 17px; font-weight: 300; }
+.fx-eq { white-space: nowrap; line-height: 20px; }
+.fx-res { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fx-note { color: var(--fx-muted); font-size: 13px; line-height: 20px; }
+.fx-note.is-err { color: var(--fx-danger); }
+.fx-sample-note { margin: 0 0 2px; }
+.fx-pay { position: relative; width: 32px; height: 18px; margin-top: 1px; padding: 0; border: 0; border-radius: 9px; background: #cfd8dc; cursor: pointer; }
+.fx-pay span { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .15s; }
+.fx-pay.is-on { background: var(--fx-accent); }
+.fx-pay.is-on span { left: 16px; }
+
+.fx-acts { display: flex; justify-content: flex-end; gap: 8px; }
+.fx-btn { box-sizing: border-box; height: 34px; padding: 0 14px; border: 1px solid var(--fx-border); border-radius: 8px; background: #fff;
+  font: inherit; font-size: 14px; color: var(--fx-text); cursor: pointer; }
+.fx-btn.is-primary { border-color: var(--fx-accent); color: var(--fx-accent); font-weight: 600; }
+.fx-btn.is-danger { margin-right: auto; padding: 0; border: 0; color: var(--fx-danger); }
+.fx-btn:disabled { opacity: .45; cursor: default; }
+
+/* The small window over a block: a number's setup, a meter's «чей расход» */
+.fx-pop { --fx-text: var(--color-text); --fx-muted: var(--color-text-muted); --fx-border: var(--color-border); --fx-accent: var(--color-accent);
+  --fx-accent-soft: var(--color-accent-soft); --fx-danger: var(--color-danger);
+  position: fixed; z-index: 90; box-sizing: border-box; width: 340px; max-width: calc(100vw - 16px); padding: 14px; border-radius: 12px;
+  background: var(--color-surface); box-shadow: 0 12px 40px rgba(0,0,0,.2); color: var(--fx-text); font-size: 14px; }
+.fx-pop h4 { margin: 0 0 10px; font-size: 14px; }
+.fx-pop .fx-f { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--fx-muted); }
+.fx-pop .fx-f small { font-size: 11px; color: var(--fx-muted); }
+.fx-pop input { box-sizing: border-box; height: 34px; padding: 0 10px; border: 1px solid var(--fx-border); border-radius: 8px; font: inherit;
+  font-size: 14px; color: var(--fx-text); background: #fff; }
+.fx-pop input:focus { outline: none; border-color: var(--fx-accent); }
+.fx-pop .fx-vrow { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); gap: 6px; align-items: center; }
+.fx-pop .fx-vrow.is-one { grid-template-columns: minmax(0, 1fr); }
+.fx-pop .fx-vrow > span:not(.fx-vfield) { font-size: 12px; color: var(--fx-muted); }
+.fx-pop .fx-vfield { display: flex; align-items: center; height: 34px; overflow: hidden; border: 1px solid var(--fx-border); border-radius: 8px; background: #fff; }
+.fx-pop .fx-vfield:focus-within, .fx-pop .fx-vfield:has(.fx-usel.is-open) { border-color: var(--fx-accent); }
+.fx-pop .fx-vfield input { flex: 1; min-width: 0; height: 100%; border: 0; border-radius: 0; text-align: right; }
+.fx-pop .fx-vfield input:disabled { background: #f7f9fa; color: var(--fx-muted); }
+.fx-pop .fx-say { min-height: 34px; margin: -4px 0 10px; font-size: 12px; }
+.fx-pop .fx-uses { margin: -4px 0 10px; font-size: 12px; color: var(--fx-muted); }
+.fx-pop .fx-acts .fx-btn { flex: 1 1 0; min-width: 0; padding: 0 4px; }
+.fx-pop .fx-acts .fx-btn.is-danger { flex: none; }
+.fx-usel { display: inline-flex; align-items: center; justify-content: space-between; gap: 4px; box-sizing: border-box; height: 34px; min-width: 0;
+  padding: 0 8px 0 10px; border: 1px solid var(--fx-border); border-radius: 8px; background: #fff; font: inherit; font-size: 14px;
+  color: var(--fx-text); cursor: pointer; }
+.fx-usel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-usel svg { flex: none; width: 14px; height: 14px; color: var(--fx-muted); transition: transform .15s; }
+.fx-usel.is-open svg { transform: rotate(180deg); }
+.fx-usel:focus-visible, .fx-usel.is-open { outline: none; border-color: var(--fx-accent); }
+.fx-vrow > .fx-usel { width: 100%; }
+.fx-vfield .fx-usel { flex: none; width: 66px; height: 100%; border: 0; border-left: 1px solid var(--fx-border); border-radius: 0; background: #f7f9fa; }
+.fx-vrow.is-one .fx-vfield .fx-usel { width: 90px; }
+.fx-umenu { position: fixed; z-index: 95; display: flex; flex-direction: column; box-sizing: border-box; max-height: 280px; overflow: auto; padding: 4px;
+  border: 1px solid var(--color-border); border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+.fx-umenu > button { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px;
+  color: var(--color-text); text-align: left; cursor: pointer; white-space: nowrap; }
+.fx-umenu > button:hover { background: #f4f6f8; }
+.fx-umenu > button.is-on { color: var(--color-accent); font-weight: 600; background: var(--color-accent-soft); }
+.fx-umenu .fx-none { color: var(--color-text-muted); }
+.fx-ucustom { display: flex; gap: 4px; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--color-border); }
+.fx-ucustom input { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 6px; font: inherit; font-size: 13px; }
+.fx-ucustom input:focus { outline: none; border-color: var(--color-accent); }
+.fx-ucustom button { flex: none; width: 28px; height: 28px; border: 0; border-radius: 6px; background: var(--color-accent); color: #fff; cursor: pointer; }
+/* A meter's window: its meters with a tick and «чей» */
+.fx-mrows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.fx-mrow { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; align-items: center; font-size: 13px; }
+.fx-mrow input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--fx-accent); }
+.fx-mrow .fx-usel { height: 30px; font-size: 13px; }
+.fx-mrow .fx-locked { overflow: hidden; color: var(--fx-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.fx-seg { display: inline-flex; margin-bottom: 8px; padding: 2px; border-radius: 8px; background: #eef2f4; }
+.fx-seg button { padding: 4px 12px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px; color: var(--fx-text); cursor: pointer; }
+.fx-seg button.is-on { background: var(--fx-accent); color: #fff; }
+.fx-seg.is-off { opacity: .45; }
+.fx-seg button:disabled { cursor: default; }
+.fx-example { min-height: 36px; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: #f4f6f8; font-size: 12px; }
+
+@media (max-width: 640px) {
+  .fx-modal { padding: 18px 16px; }
+  .fx-palette { grid-template-columns: 1fr 1fr; }
+  .fx-line, .fx-line.has-pay { grid-template-columns: 1fr auto; gap: 4px; }
+  .fx-line .fx-calc { grid-column: 1 / -1; order: 3; }
+}
+
+/* The service window: the formula's panel row and «Делим» only for a formula of one sum */
+.rform:not(:has(input[name=charge][value=formula]:checked)) .formula-only { display: none; }
+.rform .cp-formula { flex: 1 1 auto; min-width: 0; color: var(--color-text); }
+.rform .cp-formula.is-empty { color: var(--color-text-muted); }
+.rform:has(input[name=charge][value=formula]:checked) .charge-panel { --caret: calc((100% - 32px) / 10 * 9 + 32px); }
+.rform:has(input[name=charge][value=formula]:checked) .meter-rows,
+.rform:has(input[name=charge][value=formula]:checked) .cp-row.metered-only,
+.rform:has(input[name=charge][value=formula]:checked) .split-track label:has(input[value=usage]) { display: none !important; }
+/* Each pays by his own meters — nothing to split; the «платит» switches are in the formula window's check. */
+.rform.is-formula-each:has(input[name=charge][value=formula]:checked) [data-split-home=charge],
+.rform.is-formula-each:has(input[name=charge][value=formula]:checked) .head-badge { display: none; }

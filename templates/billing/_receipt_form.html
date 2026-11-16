@@ -71,7 +71,7 @@
     <section class="form-section rows">
       <h2 class="form-section-head">Начисление
         <span class="badge metered-only">по счётчикам</span><span class="badge metered-only" data-meter-count>{{ meters_label }}</span>
-        <span class="badge fixed-only">фиксированная</span><span class="badge rate-only">по площади</span><span class="badge monthly-only">по квитанции</span>
+        <span class="badge fixed-only">фиксированная</span><span class="badge rate-only">по площади</span><span class="badge monthly-only">по квитанции</span><span class="badge formula-only">своя формула</span>
         {% if property.is_owner_used %}<span class="badge unmetered-only">на вас</span>
         {% else %}{% for value, label in split_choices %}<span class="badge head-badge unmetered-only" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
       </h2>
@@ -80,8 +80,8 @@
            The radio `charge` sets metered and amount_mode on the server. Day / night: each meter knows it.{% endcomment %}
         <div class="charge-tiles" role="radiogroup" aria-label="Как начисляем">
           {% for value, label, hint, icon in form.CHARGES %}
-            <label class="charge-tile{% if value == 'formula' %} is-soon{% endif %}">
-              <input type="radio" name="charge" value="{{ value }}"{% if form.charge.value == value %} checked{% endif %}{% if value == 'formula' %} disabled{% endif %}>
+            <label class="charge-tile">
+              <input type="radio" name="charge" value="{{ value }}"{% if form.charge.value == value %} checked{% endif %}>
               <svg class="icon"><use href="#{{ icon }}"/></svg>
               <span class="charge-name">{{ label }}</span>
               <span class="charge-hint">{{ hint }}</span>
@@ -129,6 +129,17 @@
             <svg class="icon"><use href="#i-gauge"/></svg>
             <span>Показания вводите <b>каждый месяц</b> на странице объекта — у каждого счётчика свой способ.</span>
           </p>
+          {% comment %}«Своя формула» (2026-11-16): here only the formula in words and the button; the formula is built in its
+             own window (app.js, initFormula). Its state goes as JSON in formula_json; the check of the window needs the
+             object's tenants, meters and numbers — formula-ctx.{% endcomment %}
+          <div class="cp-row formula-only" data-formula-panel>
+            <svg class="icon"><use href="#i-blocks"/></svg>
+            <span class="cp-formula fade" data-formula-summary>Формула ещё не собрана</span>
+            <button type="button" class="btn btn-primary btn-auto btn-sm" data-formula-open>Собрать формулу</button>
+            <input type="hidden" name="formula_json" value="" data-formula-json>
+            {{ formula_ctx|json_script:"formula-ctx" }}
+            {% if formula_error %}<p class="calc-error">{{ formula_error }}</p>{% endif %}
+          </div>
         </div>
 
 

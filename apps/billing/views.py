@@ -27,7 +27,10 @@ def _done(request, property_obj, message):
 
 def _payers_switchable(receipt, property_obj):
     """«Кто платит»: a switch at each tenant only when the sum is split between them."""
-    return not property_obj.is_owner_used and receipt.split in services.SWITCHABLE_SPLITS
+    if property_obj.is_owner_used:
+        return False
+    # «Своя формула»: each by his own meters can also be switched off (the check of the formula window shows it).
+    return receipt.split in services.SWITCHABLE_SPLITS or (services.is_formula(receipt) and receipt.split != Receipt.Split.OWNER)
 
 
 def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None):
@@ -83,14 +86,20 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None
         mixed = not property_obj.is_owner_used and services.mixed_owners(ticked, posted)
     elif posted is not None and form.is_valid() and services.by_usage(form.instance) and not ticked:
         meters_error = 'Отметьте счётчики, по расходу которых делится сумма.'
-    if posted is not None and not redraw and not meters_error and not mixed and form.is_valid():
+    # «Своя формула»: the formula window's state comes as JSON; checked (units, who pays) before saving.
+    formula_data = services.parse_formula(posted)
+    formula_error = ''
+    if posted is not None and not redraw and form.is_valid() and services.is_formula(form.instance):
+        formula_error = services.formula_problem(property_obj, formula_data or {}, receipt)
+    if posted is not None and not redraw and not meters_error and not mixed and not formula_error and form.is_valid():
         is_new = receipt.pk is None
         # The form has already written the new name into the receipt: the tile is found by the stored one.
         old_name = Receipt.objects.filter(pk=receipt.pk).values_list('name', flat=True).first() if receipt.pk else None
         old_tile = request.user.service_templates.filter(name=old_name).first() if old_name else None
         if form.instance.metered or services.by_usage(form.instance):
             services.apply_meter_owners(property_obj, posted)  # «чей» of each meter row
-        services.save_receipt(form.save(commit=False), meter_ids=[m.pk for m in ticked], tariffs=tariffs, excluded=excluded)
+        services.save_receipt(form.save(commit=False), meter_ids=[m.pk for m in ticked], tariffs=tariffs, excluded=excluded,
+                              formula=formula_data)
         verb = 'добавлена' if is_new else 'сохранена'
         message = f'Услуга «{receipt.name}» {verb}.'
         if 'tile_shown' in posted:
@@ -123,6 +132,8 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None
         'known_meters': ','.join(str(pick['meter'].pk) for pick in picks),
         'meters_error': meters_error,
         'mixed': mixed,
+        'formula_ctx': services.formula_context(receipt, formula_data),
+        'formula_error': formula_error,
         'payers': services.payer_preview(services.normalize(form.instance), excluded),
         'payers_switchable': _payers_switchable(form.instance, property_obj),
         'tenants': property_obj.tenants.all(),

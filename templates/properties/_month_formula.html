@@ -1,0 +1,19 @@
+{% load billing %}
+{% comment %}«Своя формула» on the object page (2026-11-16): a field for each of its «Каждый месяц» numbers (fnum-<id>),
+   on the same grid as a receipt's sum; the meters it reads follow as usual rows. Why it can't be counted — one line.{% endcomment %}
+{% for number, value in entry.month_numbers %}
+              <div class="mreceipt-row">
+                <label for="fnum-{{ number.pk }}">{{ number.label }} за {{ month_name }}{% if number.unit %}, {{ number.unit }}{% endif %}</label>
+                <span><input type="text" inputmode="decimal" class="num-input num-input-wide" id="fnum-{{ number.pk }}" name="fnum-{{ number.pk }}"
+                       value="{{ value|num }}" placeholder="0"></span>
+              </div>
+{% endfor %}
+{% if entry.formula_error %}
+              <p class="mreceipt-fixed formula-error">Не посчитать: {{ entry.formula_error }}
+                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></a>
+              </p>
+{% elif not entry.month_numbers and not entry.readings %}
+              <p class="mreceipt-fixed">Каждый месяц вводить ничего не нужно — формула считает сама.
+                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></a>
+              </p>
+{% endif %}

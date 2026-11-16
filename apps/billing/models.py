@@ -39,6 +39,8 @@ class Receipt(models.Model):
         FIXED = 'fixed', 'Постоянная'
         # A tariff × the object's area or × the number of people (garbage, capital repair; 2026-11-16).
         RATE = 'rate', 'По площади / на человека'
+        # The owner's own formula of numbers, meters and signs (formula.py; 2026-11-16).
+        FORMULA = 'formula', 'Своя формула'
 
     class RateBase(models.TextChoices):
         AREA = 'area', 'за м²'
@@ -83,6 +85,9 @@ class Receipt(models.Model):
     rate = models.DecimalField('Тариф', max_digits=10, decimal_places=4, null=True, blank=True)
     persons = models.PositiveSmallIntegerField('Человек', null=True, blank=True)
     currency = models.CharField(max_length=3, default=settings.CURRENCY)
+    # «Своя формула»: the blocks in order — {"t": "num", "id": <FormulaNumber>}, {"t": "meter", "key": <kind or
+    # «custom:<name>»>, "meters": [<Meter ids>], "join": "each" | "sum"}, {"t": "op", "op": "+" | "−" | "×" | "÷" | "(" | ")"}.
+    formula = models.JSONField(default=list, blank=True)
     # The object's meters whose readings drive this service. One meter can serve several services
     # (cold water and sewage, say).
     meters = models.ManyToManyField('Meter', related_name='receipts', blank=True)
@@ -197,6 +202,40 @@ class ServiceTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class FormulaNumber(models.Model):
+    """A number of a service's own formula: «Каждый месяц» (typed on the object page, FormulaValue) or
+    «Тариф / норматив» (set once; its history — ReceiptTariff with the key «num:<id>»).
+
+    Its unit: «₽ за Гкал» — unit «₽», per «Гкал»; the formula checks the result comes out in rubles.
+    """
+
+    receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, related_name='numbers')
+    label = models.CharField(max_length=60)
+    monthly = models.BooleanField(default=False)
+    unit = models.CharField(max_length=12, blank=True)
+    per = models.CharField(max_length=12, blank=True)
+    value = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)  # «Тариф / норматив» now
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['position', 'id']
+
+    def __str__(self):
+        return self.label
+
+
+class FormulaValue(models.Model):
+    """What a «Каждый месяц» number of a formula is in one month (typed on the object page)."""
+
+    number = models.ForeignKey(FormulaNumber, on_delete=models.CASCADE, related_name='values')
+    month = models.DateField()
+    value = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+
+    class Meta:
+        ordering = ['month']
+        constraints = [models.UniqueConstraint(fields=['number', 'month'], name='unique_formula_value_per_month')]
 
 
 class MonthlyAmount(models.Model):
