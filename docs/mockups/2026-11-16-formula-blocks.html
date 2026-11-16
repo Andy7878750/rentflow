@@ -234,6 +234,28 @@
   .check .calc .n { min-width: 96px; }
   .check .calc .n i { width: 0; min-width: 100%; margin: 0; line-height: 1.2; -webkit-line-clamp: 3; overflow-wrap: normal; }
   .check .calc .op.paren { margin: 0; }
+  /* Round 24: our own unit menu (no browser list) — a quiet button with ▾, a white card with options, the chosen one in
+     accent, «свой вариант…» — a field with ✓ at the bottom. */
+  .pop .usel { display: inline-flex; align-items: center; justify-content: space-between; gap: 4px; height: 34px; padding: 0 8px 0 10px;
+    border: 1px solid var(--border); border-radius: 8px; background: #fff; font: inherit; font-size: 14px; color: var(--text); cursor: pointer; min-width: 0; }
+  .pop .usel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pop .usel svg { flex: none; color: var(--muted); transition: transform .15s; }
+  .pop .usel.is-open svg { transform: rotate(180deg); }
+  .pop .usel:focus-visible, .pop .usel.is-open { outline: none; border-color: var(--accent); }
+  .pop .vrow > .usel { width: 100%; }
+  .pop .vfield .usel { flex: none; width: 66px; height: 100%; border: 0; border-left: 1px solid var(--border); border-radius: 0; background: #f7f9fa; }
+  .pop .vrow-one .vfield .usel { width: 90px; }
+  .pop .vfield:has(.usel.is-open) { border-color: var(--accent); }
+  .umenu { position: fixed; z-index: 95; display: flex; flex-direction: column; padding: 4px; border: 1px solid var(--border); border-radius: 10px;
+    background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.14); max-height: 280px; overflow: auto; }
+  .umenu > button { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px; color: var(--text); text-align: left; cursor: pointer; }
+  .umenu > button:hover { background: #f4f6f8; }
+  .umenu > button.on { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
+  .umenu .none { color: var(--muted); }
+  .umenu .ucustom { display: flex; gap: 4px; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .umenu .ucustom input { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 13px; }
+  .umenu .ucustom input:focus { outline: none; border-color: var(--accent); }
+  .umenu .ucustom button { flex: none; width: 28px; height: 28px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; }
   /* Round 23: «платит / не платит» — a small switch at the end of a tenant's line in the check; off — the line is grey. */
   .check .line.has-pay { grid-template-columns: 150px minmax(0, 1fr) auto; }
   .check .line.is-off .who, .check .line.is-off .calc { color: var(--muted); }
@@ -836,6 +858,7 @@
     pop.innerHTML = '<h4>' + (type === 'const' ? 'Новый тариф / норматив' : 'Новое число — каждый месяц') + '</h4>' + valueFields(v) +
       '<div class="acts thirds"><button class="btn" data-cancel>Отмена</button><button class="btn" data-keep disabled title="Сохранить в палитру, поставить в формулу потом">Сохранить</button>' +
       '<button class="btn primary" data-put disabled>В формулу</button></div>';
+    enhanceSelects(pop);
     document.body.appendChild(pop);
     placePop(anchor);
     const ready = () => pop.querySelectorAll('[data-keep], [data-put]').forEach(btn => { btn.disabled = !v.label.trim(); });
@@ -884,6 +907,55 @@
       (known ? '' : '<option selected>' + cur + '</option>') +
       '<option value="' + CUSTOM + '">свой вариант…</option></select>';
   }
+  // Round 24: our own unit menu instead of the browser's (the user: «меню привести в порядок»). The <select> stays hidden —
+  // it keeps the value, and picking from the menu fires its usual input / change; «свой вариант…» is a field in the menu.
+  const CHEV = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  function enhanceSelects(root) {
+    root.querySelectorAll('select[data-k]').forEach(sel => {
+      sel.hidden = true;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'usel';
+      const label = () => { const o = sel.selectedOptions[0]; btn.innerHTML = '<span>' + (o && o.value ? o.textContent : '—') + '</span>' + CHEV; };
+      label(); sel.after(btn);
+      btn.addEventListener('click', () => openUnitMenu(sel, btn, label));
+    });
+  }
+  function closeUnitMenu() { document.querySelectorAll('.umenu').forEach(m => m.remove()); document.querySelectorAll('.usel.is-open').forEach(b => b.classList.remove('is-open')); }
+  function openUnitMenu(sel, btn, label) {
+    const was = btn.classList.contains('is-open');
+    closeUnitMenu(); if (was) return;
+    btn.classList.add('is-open');
+    const m = document.createElement('div'); m.className = 'umenu'; m.setAttribute('role', 'listbox');
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    m.innerHTML = [...sel.options].filter(o => o.value !== CUSTOM).map(o => '<button type="button" role="option" data-v="' + esc(o.value) + '"' +
+      (o.selected ? ' class="on"' : '') + '>' + (o.value ? esc(o.textContent) : '<span class="none">без единицы</span>') + '</button>').join('') +
+      '<div class="ucustom"><input placeholder="свой вариант…" maxlength="10"><button type="button" title="Добавить">✓</button></div>';
+    btn.closest('.pop').appendChild(m);
+    const r = btn.getBoundingClientRect();
+    m.style.minWidth = Math.max(r.width, 150) + 'px';
+    m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
+    m.style.top = (r.bottom + 4 + m.offsetHeight > innerHeight ? r.top - 4 - m.offsetHeight : r.bottom + 4) + 'px';
+    const pick = val => {
+      val = val.trim();
+      if (![...sel.options].some(o => o.value === val)) sel.add(new Option(val, val), sel.options[sel.options.length - 1]);
+      sel.value = val;
+      sel.dispatchEvent(new Event('input', { bubbles: true }));
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      label(); closeUnitMenu(); btn.focus();
+    };
+    m.addEventListener('click', e => {
+      const o = e.target.closest('[data-v]'); if (o) return pick(o.dataset.v);
+      if (e.target.closest('.ucustom button')) { const t = m.querySelector('.ucustom input').value; if (t.trim()) pick(t); }
+    });
+    m.querySelector('.ucustom input').addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== 'Escape') return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === 'Escape') { closeUnitMenu(); btn.focus(); } else if (e.target.value.trim()) pick(e.target.value);
+    });
+  }
+  document.addEventListener('pointerdown', e => { if (!e.target.closest('.umenu, .usel')) closeUnitMenu(); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.querySelector('.umenu')) { closeUnitMenu(); e.stopPropagation(); } }, true);
+
   function openPop(b, anchor, fresh) {
     closePop();
     if (b.type === 'op') return;
@@ -911,6 +983,7 @@
       });
     }
     pop.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn danger" data-del>Убрать из формулы</button><button class="btn primary" data-ok>Готово</button></div>');
+    enhanceSelects(pop);
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect();
     pop.style.left = Math.max(8, Math.min(r.left, innerWidth - 350)) + 'px';
