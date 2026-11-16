@@ -201,22 +201,18 @@
   .strip .chip:hover .del { display: inline-flex; }
   .strip .chip .del:hover { color: var(--danger); }
   @media (hover: none) { .strip .chip .del { display: inline-flex; } }
-  /* Round 17: the check — numbers with their names under them, «= result» right after the formula. */
-  .check .line { grid-template-columns: 150px minmax(0, 1fr); align-items: start; padding: 8px 0; }
-  .check .who { padding-top: 2px; }
-  .check .calc { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 2px 6px; color: var(--text); font-size: 13px; }
-  .check .calc .n { display: inline-flex; flex-direction: column; align-items: center; }
-  .check .calc .n b { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .check .calc .n i { font-style: normal; font-size: 10.5px; color: var(--muted); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
-  .check .calc .n.is-sample b { color: #9a6b1c; }
-  .check .calc .op { font-size: 15px; color: var(--muted); line-height: 20px; }
-  .check .calc .op.paren { font-size: 18px; font-weight: 300; margin: 0 -3px; }
-  .check .calc .res { font-weight: 700; line-height: 20px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  /* Round 18: the check, simpler — one quiet line: who · the formula in numbers = result (right after it);
+     what each number is — on hover. No orange. */
+  .check .line { grid-template-columns: 150px minmax(0, 1fr); align-items: baseline; padding: 7px 0; }
+  .check .calc { display: block; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .check .calc .n { color: var(--muted); white-space: nowrap; cursor: help; }
+  .check .calc .op { margin: 0 4px; color: var(--muted); }
+  .check .calc .op.paren { margin: 0 1px; }
+  .check .calc .res { margin-left: 2px; font-weight: 700; color: var(--text); white-space: nowrap; }
   .check .calc .note { color: var(--muted); }
   .check .calc .note.err { color: var(--danger); }
-  .check .sample-note { margin: 0 0 4px; color: #9a6b1c; }
-  .badge.warn { background: #fdf3e1; color: #9a6b1c; }
-  @media (max-width: 640px) { .check .line { grid-template-columns: 1fr; gap: 4px; } }
+  .check .sample-note { margin: 6px 0 0; }
+  @media (max-width: 640px) { .check .line { grid-template-columns: 1fr; gap: 2px; } }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -574,7 +570,7 @@
       let html;
       if (typeof parts === 'string') html = '<span class="note' + (bad ? ' err' : '') + '">' + esc(parts) + '</span>';
       else html = parts.map(x => x.op ? '<span class="op' + ('()'.includes(x.op) ? ' paren' : '') + '">' + x.op + '</span>'
-        : '<span class="n' + (x.sample ? ' is-sample' : '') + '"><b>' + esc(x.num) + '</b><i>' + esc(x.word) + (x.sample ? ' · пример' : '') + '</i></span>').join('') +
+        : '<span class="n" title="' + esc(x.word) + (x.sample ? ' · пример' : '') + '">' + esc(x.num) + '</span>').join('') +
         (sum ? '<span class="op">=</span><span class="res">' + esc(sum) + '</span>' : '');
       d.innerHTML = '<span class="who"></span><span class="calc">' + html + '</span>';
       d.querySelector('.who').textContent = who;
@@ -630,12 +626,10 @@
     const samples = values.filter(v => v.type === 'month' && !v.real && blocks.some(b => b.vid === v.id));
     const cb = document.getElementById('check-badge');
     cb.textContent = samples.length ? 'на примерных числах' : 'на числах прошлого месяца';
-    cb.classList.toggle('warn', samples.length > 0);
     if (samples.length) {
       const h = document.createElement('p'); h.className = 'hint sample-note';
-      h.textContent = 'Прошлого месяца ещё нет для ' + samples.map(v => '«' + v.label + '»').join(', ') +
-        ' — чтобы проверить формулу, взяли примерное число: ' + samples.map(v => fmt(v.sample) + (v.unit ? ' ' + v.unit : '')).join(', ') + '.';
-      box.prepend(h);
+      h.textContent = 'Прошлого месяца ещё нет — для примера взяли ' + samples.map(v => v.label + ' ' + fmt(v.sample) + (v.unit ? ' ' + v.unit : '')).join(', ') + '.';
+      box.appendChild(h);
     }
     badge.textContent = ok ? 'считается' : 'есть ошибка';
     badge.className = 'badge ' + (ok ? 'ok' : 'bad');
