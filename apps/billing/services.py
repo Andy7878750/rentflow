@@ -1949,6 +1949,24 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
     for meter, reading in entry.readings:
         day, night = used(receipt, reading)
         usage[meter.pk] = None if day is None or (meter.day_night and night is None) else day + (night or Decimal('0'))
+    # Meters another service already types («Вода холодная» по счётчикам): the formula just takes their usage — no second
+    # field for the same reading on the object page (2026-11-16, the user: «мы не вводим никаких показаний»).
+    others = (Receipt.objects.filter(property_id=receipt.property_id, meters__in=list(meters))
+              .exclude(pk=receipt.pk).exclude(amount_mode=Receipt.AmountMode.FORMULA)
+              .values_list('meters', 'name'))
+    shared = {}
+    for meter_id, name in others:
+        shared.setdefault(meter_id, [])
+        if name not in shared[meter_id]:
+            shared[meter_id].append(name)
+    entry.shared_services = []
+    for names in shared.values():
+        entry.shared_services += [name for name in names if name not in entry.shared_services]
+    all_readings = entry.readings
+    entry.readings = [(meter, reading) for meter, reading in all_readings if meter.pk not in shared]
+    entry.modes = {meter.mode for meter, _ in entry.readings}
+    entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}
+    entry.some_usage = Receipt.InputMode.USAGE in entry.modes
     blocks = receipt.formula or []
     in_formula = {block['id'] for block in blocks if block.get('t') == 'num'}
     if any(value is None for number, value in entry.month_numbers if number.pk in in_formula) or \

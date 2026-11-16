@@ -8,11 +8,14 @@
                        value="{{ value|num }}" placeholder="0"></span>
               </div>
 {% endfor %}
+{% if entry.shared_services and not entry.formula_error %}
+              <p class="mreceipt-fixed" id="fshared-{{ receipt.pk }}" data-live>Расход счётчиков берётся сам — из {% if entry.shared_services|length > 1 %}услуг{% else %}услуги{% endif %} {% for name in entry.shared_services %}«{{ name }}»{% if not forloop.last %}, {% endif %}{% endfor %}.{% if entry.total is not None %} Начислено <strong>{{ entry.total|floatformat:"2g" }}&nbsp;{{ receipt.currency_symbol }}</strong>.{% endif %}</p>
+{% endif %}
 {% if entry.formula_error %}
               <p class="mreceipt-fixed formula-error">Не посчитать: {{ entry.formula_error }}
                 <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></a>
               </p>
-{% elif not entry.month_numbers and not entry.readings %}
+{% elif not entry.month_numbers and not entry.readings and not entry.shared_services %}
               <p class="mreceipt-fixed">Каждый месяц вводить ничего не нужно — формула считает сама.
                 <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="icon-link" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></a>
               </p>

@@ -164,6 +164,22 @@ class FormulaServiceTests(TestCase):
         self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('7680.00'))
         self.assertIsNone(self.line(bill, self.vlad, receipt))
 
+    def test_meters_of_another_service_are_not_typed_again(self):
+        """«Экология» = (Вода хол. + Вода гор.) × тариф: the water services type the readings; the formula just takes them."""
+        water = services.new_receipt(self.prop, 'water')
+        services.save_receipt(water, meter_ids=self.ids('water'), tariffs={})
+        hot = self.ids('hot_water')  # in no service — common now; seated in the formula's meter window
+        receipt = self.make(
+            [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'м³', 'value': '50'}],
+            [self.op('('), self.meter('water'), self.op('+'), self.meter('hot_water'), self.op(')'), self.op('×'),
+             {'t': 'num', 'id': 'n1'}],
+            owners={str(hot[0]): str(self.viktor.pk), str(hot[1]): str(self.vlad.pk)})
+        bill = services.month_bill(self.prop, SEPT)
+        entry = next(entry for entry in bill.entries if entry.receipt.pk == receipt.pk)
+        self.assertEqual(entry.shared_services, ['Вода холодная'])
+        self.assertEqual({meter.kind for meter, _ in entry.readings}, {'hot_water'})  # only its own meters to type
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('300.00'))  # (2 + 4) × 50
+
     def test_switched_off_tenant_leaves_his_part_to_the_owner(self):
         receipt = self.make(
             [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': '2'}],
