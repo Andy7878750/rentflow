@@ -227,6 +227,12 @@
   .check .calc .n i { width: 0; min-width: calc(100% + 16px); max-width: none; margin: 0 -8px; white-space: normal; overflow: hidden;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
   .check .sample-note { margin: 0 0 2px; }
+  /* Round 22: one look for every number — each number has the same column (96px, wider only if the number itself is
+     longer), the name is centred under it in up to two lines, never cut into «…»; signs sit between with a little air. */
+  .check .calc { gap: 4px 6px; }
+  .check .calc .n { min-width: 96px; }
+  .check .calc .n i { width: 0; min-width: 100%; margin: 0; line-height: 1.2; -webkit-line-clamp: 3; overflow-wrap: normal; }
+  .check .calc .op.paren { margin: 0; }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
