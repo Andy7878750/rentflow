@@ -4217,3 +4217,12 @@
 @media (max-width: 560px) {
   .rform .rows .charge-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* «По площади · за м²»: the sum comes from the m², so it is split only by m² (or «Плачу сам») — «По долям» and «Поровну»
+   are shown but can't be picked (2026-11-16, the user's wish). */
+.rform:has(input[name=charge][value=rate]:checked):not(:has(input[name=rate_base][value=person]:checked))
+  .split-track label:has(input[value=shares], input[value=equal]) {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+}

@@ -210,6 +210,8 @@ def normalize(receipt):
             receipt.rate_base, receipt.persons = Receipt.RateBase.AREA, None
         if receipt.split in (Receipt.Split.USAGE, Receipt.Split.METERS):
             receipt.split = Receipt.Split.SHARES  # the sum is known from the tariff: «по расходу» makes no sense
+        if receipt.rate_base == Receipt.RateBase.AREA and receipt.split in (Receipt.Split.SHARES, Receipt.Split.EQUAL):
+            receipt.split = Receipt.Split.AREA  # a sum of the m² is split by the m² (or «Плачу сам»)
     if receipt.split != Receipt.Split.USAGE or receipt.night_weight == 1:
         receipt.night_weight = None  # only «по расходу» weighs the night; 1 is the same as empty
     if receipt.property.is_owner_used:

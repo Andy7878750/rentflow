@@ -44,6 +44,12 @@ class RateTests(TestCase):
         self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('192.24'))
         self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('234.96'))
 
+    def test_area_is_split_only_by_area(self):
+        receipt = self.add(rate=Decimal('7.12'), split=Receipt.Split.SHARES)
+        self.assertEqual(receipt.split, Receipt.Split.AREA)
+        receipt = self.add(rate=Decimal('7.12'), split=Receipt.Split.OWNER)
+        self.assertEqual(receipt.split, Receipt.Split.OWNER)
+
     def test_people_times_tariff(self):
         receipt = self.add(rate=Decimal('150'), rate_base=Receipt.RateBase.PERSON, persons=3, split=Receipt.Split.EQUAL)
         bill = services.month_bill(self.prop, SEPT)
