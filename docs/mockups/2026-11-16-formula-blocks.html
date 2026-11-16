@@ -342,8 +342,8 @@
       const first = id => TENANTS.find(t => t.id === id).name.split(' ')[0];
       if (!b.tenants.length) return k.short + ' · ?';
       if (b.tenants.length === 1) return k.short + ' · ' + first(b.tenants[0]);
-      if (mode === 'total' || b.join === 'sum') return k.short + (b.tenants.length === TENANTS.length ? ' · все' : ' · ' + b.tenants.map(first).join(' + '));
-      return k.short + ' · свой';
+      if (mode === 'total' || b.join === 'sum') return k.short + (b.tenants.length === TENANTS.length ? ' · все вместе' : ' · ' + b.tenants.map(first).join(' + '));
+      return k.short + ' · у каждого';
     }
     return valueOf(b).label;
   }
