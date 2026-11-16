@@ -71,7 +71,7 @@
     <section class="form-section rows">
       <h2 class="form-section-head">Начисление
         <span class="badge metered-only">по счётчикам</span><span class="badge metered-only" data-meter-count>{{ meters_label }}</span>
-        <span class="badge fixed-only">фиксированная</span><span class="badge monthly-only">по квитанции</span>
+        <span class="badge fixed-only">фиксированная</span><span class="badge rate-only">по площади</span><span class="badge monthly-only">по квитанции</span>
         {% if property.is_owner_used %}<span class="badge unmetered-only">на вас</span>
         {% else %}{% for value, label in split_choices %}<span class="badge head-badge unmetered-only" data-split="{{ value }}">{{ label|lower }}</span>{% endfor %}{% endif %}
       </h2>
@@ -99,6 +99,26 @@
             <label class="cp-label" for="{{ form.fixed_amount.id_for_label }}">Сумма в месяц</label>
             <label class="ifield cp-field{% if form.fixed_amount.errors %} has-error{% endif %}">{{ form.fixed_amount }}<span class="ifield-fix">{{ receipt.currency_symbol }}</span></label>
             {% if form.fixed_amount.errors %}<p class="calc-error">{{ form.fixed_amount.errors.0 }}</p>{% endif %}
+          </div>
+          {# По площади: «Тариф [7,12 ₽] [за м² ▾] × 45 м² = 320,40 ₽ в месяц»; за человека — the number of people right here. #}
+          <div class="cp-row rate-only" data-rate data-area="{{ property.area|default_if_none:''|stringformat:'s' }}" data-symbol="{{ receipt.currency_symbol }}">
+            <svg class="icon"><use href="#i-ruler"/></svg>
+            <label class="cp-label" for="{{ form.rate.id_for_label }}">Тариф</label>
+            <label class="ifield cp-field cp-rate{% if form.rate.errors %} has-error{% endif %}">{{ form.rate }}<span class="ifield-fix">{{ receipt.currency_symbol }}</span></label>
+            <div class="pick pick-radio cp-base" data-drop>
+              <button type="button" class="pick-trigger" data-drop-trigger aria-haspopup="true" aria-expanded="false" aria-label="За что тариф">
+                <span data-drop-label>{% if form.rate_base.value == 'person' %}за человека{% else %}за м²{% endif %}</span>
+                <svg class="icon select-chevron"><use href="#i-chevron-down"/></svg>
+              </button>
+              <ul class="select-menu pick-menu" role="radiogroup" aria-label="За что тариф" data-drop-menu hidden>
+                <li class="select-row"><label class="select-option"><input type="radio" name="rate_base" value="area"{% if form.rate_base.value != 'person' %} checked{% endif %}><span>за м²</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+                <li class="select-row"><label class="select-option"><input type="radio" name="rate_base" value="person"{% if form.rate_base.value == 'person' %} checked{% endif %}><span>за человека</span><svg class="icon select-check"><use href="#i-check"/></svg></label></li>
+              </ul>
+            </div>
+            <span class="cp-times area-only">{% if property.area %}× {{ property.area|floatformat:"-2" }} м²{% else %}<span class="cp-warn">площадь объекта не указана</span>{% endif %}</span>
+            <span class="cp-times person-only">× <label class="ifield cp-persons{% if form.persons.errors %} has-error{% endif %}">{{ form.persons }}<span class="ifield-fix">чел.</span></label></span>
+            <span class="cp-total" data-rate-total></span>
+            {% if form.rate.errors %}<p class="calc-error">{{ form.rate.errors.0 }}</p>{% elif form.persons.errors %}<p class="calc-error">{{ form.persons.errors.0 }}</p>{% endif %}
           </div>
           <p class="cp-row monthly-only">
             <svg class="icon"><use href="#i-calendar"/></svg>

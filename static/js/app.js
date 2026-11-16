@@ -1684,6 +1684,52 @@
     if (first) first.checked = true;
   });
 
+  // «По площади» (2026-11-16): «= 320,40 ₽ в месяц» right after the tariff × m² (or × people), while typing.
+  function rateNumber(text) {
+    var value = parseFloat(String(text || '').replace(/[\s ]/g, '').replace(',', '.'));
+    return isNaN(value) ? null : value;
+  }
+
+  function updateRate(form) {
+    var row = form && form.querySelector('[data-rate]');
+    if (!row) return;
+    var out = row.querySelector('[data-rate-total]');
+    var rate = rateNumber(form.querySelector('input[name=rate]').value);
+    var person = form.querySelector('input[name=rate_base][value=person]:checked');
+    var quantity = person ? rateNumber(form.querySelector('input[name=persons]').value) : rateNumber(row.dataset.area);
+    if (rate === null || !quantity) { out.textContent = ''; return; }
+    var total = Math.round(rate * quantity * 100) / 100;
+    out.textContent = '= ' + total.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      + ' ' + row.dataset.symbol + ' в месяц';
+  }
+
+  document.addEventListener('input', function (event) {
+    if (event.target.matches && event.target.matches('.rform input[name=rate], .rform input[name=persons]')) updateRate(event.target.form);
+  });
+
+  // Picking «По площади» or «за м² / за человека»: «Делим» follows — по м² for the area, поровну for people.
+  document.addEventListener('change', function (event) {
+    var input = event.target;
+    if (!input.matches || !input.matches('.rform input[name=charge][value=rate], .rform input[name=rate_base]')) return;
+    var form = input.form;
+    updateRate(form);
+    var person = form.querySelector('input[name=rate_base][value=person]:checked');
+    var split = form.querySelector('input[name=split][value=' + (person ? 'equal' : 'area') + ']');
+    if (split && !form.querySelector('input[name=split][value=owner]:checked')) {
+      split.checked = true;
+      split.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+
+  // The window opens with a tariff already typed: show its total at once.
+  new MutationObserver(function () {
+    document.querySelectorAll('form.rform').forEach(function (form) {
+      if (form.dataset.rateReady) return;
+      form.dataset.rateReady = '1';
+      updateRate(form);
+    });
+  }).observe(document.body, { childList: true, subtree: true });
+
   // The unit picked for the service shows next to its price.
   document.addEventListener('click', function (event) {
     var row = event.target.closest && event.target.closest('.rform [data-pick-value]');

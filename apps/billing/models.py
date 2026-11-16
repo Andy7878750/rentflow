@@ -37,6 +37,12 @@ class Receipt(models.Model):
     class AmountMode(models.TextChoices):
         MONTHLY = 'monthly', 'Каждый месяц разная'
         FIXED = 'fixed', 'Постоянная'
+        # A tariff × the object's area or × the number of people (garbage, capital repair; 2026-11-16).
+        RATE = 'rate', 'По площади / на человека'
+
+    class RateBase(models.TextChoices):
+        AREA = 'area', 'за м²'
+        PERSON = 'person', 'за человека'
 
     property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='receipts')
     kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.CUSTOM)
@@ -71,6 +77,11 @@ class Receipt(models.Model):
     night_weight = models.DecimalField('Ночь к дню', max_digits=5, decimal_places=3, null=True, blank=True)
     amount_mode = models.CharField('Сумма', max_length=10, choices=AmountMode.choices, default=AmountMode.MONTHLY)
     fixed_amount = models.DecimalField('Сумма в месяц', max_digits=12, decimal_places=2, null=True, blank=True)
+    # «По площади»: the price per m² (of the object's area) or per person, and how many people — typed in the service
+    # itself, not kept on the tenants. Kept with history in ReceiptTariff (key «rate:area» / «rate:person»).
+    rate_base = models.CharField('За что', max_length=10, choices=RateBase.choices, default=RateBase.AREA)
+    rate = models.DecimalField('Тариф', max_digits=10, decimal_places=4, null=True, blank=True)
+    persons = models.PositiveSmallIntegerField('Человек', null=True, blank=True)
     currency = models.CharField(max_length=3, default=settings.CURRENCY)
     # The object's meters whose readings drive this service. One meter can serve several services
     # (cold water and sewage, say).
@@ -152,6 +163,8 @@ class ReceiptTariff(models.Model):
     valid_from = models.DateField()  # the 1st of the month it applies from
     tariff = models.DecimalField(max_digits=10, decimal_places=4)
     tariff_night = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    # «По площади · за человека»: how many people from this month (the tariff is in `tariff`).
+    quantity = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ['receipt', 'key', 'valid_from']

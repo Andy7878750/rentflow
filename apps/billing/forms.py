@@ -20,6 +20,7 @@ class ReceiptForm(forms.ModelForm):
     CHARGES = [
         ('receipt', 'По квитанции', 'разная каждый месяц', 'i-file'),
         ('fixed', 'Фиксированная сумма', 'не меняется', 'i-lock'),
+        ('rate', 'По площади', 'м² или чел. × тариф', 'i-ruler'),
         ('meters', 'По счётчикам', 'расход × тариф', 'i-gauge'),
         ('formula', 'Своя формула', 'скоро', 'i-blocks'),
     ]
@@ -29,7 +30,7 @@ class ReceiptForm(forms.ModelForm):
         model = Receipt
         fields = [
             'name', 'provider', 'metered', 'zones', 'unit', 'tariff', 'tariff_night', 'input_mode', 'layout',
-            'split', 'amount_mode', 'fixed_amount',
+            'split', 'amount_mode', 'fixed_amount', 'rate_base', 'rate', 'persons',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': ' ', 'maxlength': 100}),
@@ -41,6 +42,10 @@ class ReceiptForm(forms.ModelForm):
             # No browser autofill: it paints the field blue.
             'fixed_amount': forms.TextInput(attrs={'placeholder': '0,00', 'inputmode': 'decimal', 'aria-label': 'Сумма в месяц',
                                                    'autocomplete': 'off'}),
+            'rate': forms.TextInput(attrs={'placeholder': '0,00', 'inputmode': 'decimal', 'aria-label': 'Тариф',
+                                           'autocomplete': 'off'}),
+            'persons': forms.TextInput(attrs={'placeholder': '0', 'inputmode': 'numeric', 'aria-label': 'Сколько человек',
+                                              'autocomplete': 'off'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -49,12 +54,14 @@ class ReceiptForm(forms.ModelForm):
         if self.instance.metered:
             self.initial['charge'] = 'meters'
         else:
-            self.initial['charge'] = 'fixed' if self.instance.amount_mode == Receipt.AmountMode.FIXED else 'receipt'
+            self.initial['charge'] = {Receipt.AmountMode.FIXED: 'fixed', Receipt.AmountMode.RATE: 'rate'}.get(
+                self.instance.amount_mode, 'receipt')
         # The window posts `charge` instead of these two.
         self.fields['metered'].required = False
         self.fields['amount_mode'].required = False
         self.initial['zones'] = str(self.instance.zones or 1)
-        for name in ('tariff', 'tariff_night', 'fixed_amount'):
+        self.fields['rate_base'].required = False
+        for name in ('tariff', 'tariff_night', 'fixed_amount', 'rate'):
             self.fields[name].localize = True
         # Hidden sections still post their radios, but a service without a meter has no layout.
         self.fields['layout'].required = False
@@ -83,7 +90,8 @@ class ReceiptForm(forms.ModelForm):
         elif charge:
             cleaned['metered'] = charge == 'meters'
             if charge != 'meters':
-                cleaned['amount_mode'] = Receipt.AmountMode.FIXED if charge == 'fixed' else Receipt.AmountMode.MONTHLY
+                cleaned['amount_mode'] = {'fixed': Receipt.AmountMode.FIXED, 'rate': Receipt.AmountMode.RATE}.get(
+                    charge, Receipt.AmountMode.MONTHLY)
         if cleaned.get('metered') is None:
             cleaned['metered'] = False
         if not cleaned.get('amount_mode'):
@@ -103,6 +111,14 @@ class ReceiptForm(forms.ModelForm):
                 self.add_error('tariff', 'Укажите тариф — по нему считается сумма.')
             if cleaned.get('zones') == 2 and cleaned.get('tariff_night') is None:
                 self.add_error('tariff_night', 'Укажите ночной тариф.')
+        elif cleaned.get('amount_mode') == Receipt.AmountMode.RATE:
+            if not cleaned.get('rate_base'):
+                cleaned['rate_base'] = Receipt.RateBase.AREA
+            rate = cleaned.get('rate')
+            if rate is None or rate <= 0:
+                self.add_error('rate', 'Укажите тариф из квитанции.')
+            if cleaned['rate_base'] == Receipt.RateBase.PERSON and not cleaned.get('persons'):
+                self.add_error('persons', 'Укажите, сколько человек.')
         elif cleaned.get('amount_mode') == Receipt.AmountMode.FIXED:
             amount = cleaned.get('fixed_amount')
             if amount is None or amount <= 0:

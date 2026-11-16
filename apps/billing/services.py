@@ -203,6 +203,13 @@ def normalize(receipt):
             receipt.split = Receipt.Split.SHARES  # «по расходу» is for a sum from the receipt, not for meters × tariff
     if receipt.amount_mode != Receipt.AmountMode.FIXED:
         receipt.fixed_amount = None
+    if receipt.amount_mode != Receipt.AmountMode.RATE:
+        receipt.rate = receipt.persons = None
+    else:
+        if receipt.rate_base != Receipt.RateBase.PERSON:
+            receipt.rate_base, receipt.persons = Receipt.RateBase.AREA, None
+        if receipt.split in (Receipt.Split.USAGE, Receipt.Split.METERS):
+            receipt.split = Receipt.Split.SHARES  # the sum is known from the tariff: «по расходу» makes no sense
     if receipt.split != Receipt.Split.USAGE or receipt.night_weight == 1:
         receipt.night_weight = None  # only «по расходу» weighs the night; 1 is the same as empty
     if receipt.property.is_owner_used:
@@ -905,8 +912,66 @@ def _layout_of(meters):
 def save_receipt(receipt, **options):
     """Save the service (_save_receipt), then the meters no service counts by any more become common."""
     receipt = _save_receipt(receipt, **options)
+    if receipt.amount_mode == Receipt.AmountMode.RATE:
+        save_rate(receipt, options.get('today') or date.today())
     release_free_meters(receipt.property)
     return receipt
+
+
+# ---------------------------------------------------------------------------
+# «По площади»: a tariff × the object's area, or × the number of people (2026-11-16)
+# ---------------------------------------------------------------------------
+
+def rate_key(receipt):
+    return f'rate:{receipt.rate_base}'
+
+
+def save_rate(receipt, today):
+    """Keep the tariff (and the people) with history: a change starts this month, earlier months keep theirs;
+    a change in the same month corrects its row. The first one of a new service counts from always."""
+    if receipt.rate is None:
+        return
+    this_month = first_of_month(today)
+    key = rate_key(receipt)
+    rows = list(receipt.tariffs.filter(key=key).order_by('valid_from'))
+    now = tariff_at(rows, this_month)
+    if now and now.tariff == receipt.rate and now.quantity == receipt.persons:
+        return
+    if now and now.valid_from == this_month:
+        now.tariff, now.quantity = receipt.rate, receipt.persons
+        now.save(update_fields=['tariff', 'quantity'])
+        return
+    has_past = receipt.monthly_amounts.filter(month__lt=this_month).exists() or receipt.created_at.date() < this_month
+    valid_from = this_month if (rows or has_past) else SINCE_ALWAYS
+    ReceiptTariff.objects.create(receipt=receipt, key=key, valid_from=valid_from, tariff=receipt.rate, quantity=receipt.persons)
+
+
+def rate_at(receipt, month):
+    """(tariff, people) in force in the month: from the history, else as the service says now."""
+    rows = sorted((row for row in receipt.tariffs.all() if row.key == rate_key(receipt)), key=lambda row: row.valid_from)
+    row = tariff_at(rows, month) or (rows[0] if rows else None)
+    if row is None:
+        return receipt.rate, receipt.persons
+    return row.tariff, row.quantity
+
+
+def rate_total(receipt, month, typed=False):
+    """(the month's sum, «45 м² × 7,12 ₽») of a «По площади» service; (None, why) while the area, the tariff
+    or the people are missing. typed — as the service window has it now (not saved yet), not from the history."""
+    rate, persons = (receipt.rate, receipt.persons) if typed or not receipt.pk else rate_at(receipt, month)
+    symbol = receipt.currency_symbol
+    if rate is None:
+        return None, 'не указан тариф'
+    if receipt.rate_base == Receipt.RateBase.PERSON:
+        if not persons:
+            return None, 'не указано, сколько человек'
+        quantity, text = Decimal(persons), f'{persons}{NBSP}чел.'
+    else:
+        area = receipt.property.area
+        if not area:
+            return None, 'у объекта не указана площадь'
+        quantity, text = area, f'{fmt_number(area)}{NBSP}м²'
+    return money(quantity * rate), f'{text} × {fmt_number(rate)}{NBSP}{symbol}'
 
 
 def _save_receipt(receipt, meters=None, today=None, excluded=None, keep_meters=False, meter_ids=None, tariffs=None):
@@ -971,6 +1036,8 @@ def split_warning(receipt):
     """A gentle note when the chosen split can't work yet with the object's data."""
     property_obj = receipt.property
     tenants = list(property_obj.tenants.all())
+    if receipt.amount_mode == Receipt.AmountMode.RATE and receipt.rate_base == Receipt.RateBase.AREA and not property_obj.area:
+        return 'Укажите площадь объекта в карточке объекта — по ней считается сумма.'
     if property_obj.is_owner_used or receipt.split == Receipt.Split.OWNER:
         return ''
     if not tenants:
@@ -1066,6 +1133,7 @@ class MonthEntry:
     total: object = None                         # the month's sum; None while input is missing
     kind_tariffs: dict = field(default_factory=dict)  # {key: ReceiptTariff} in force this month
     tariff_lines: list = field(default_factory=list)  # «Электричество 7,5 / 3,2 ₽ за кВт·ч» for the object page
+    rate_text: str = ''                          # «По площади»: «45 м² × 7,12 ₽», or why it can't be counted
 
 
 @dataclass
@@ -1277,11 +1345,13 @@ def payer_preview(receipt, excluded=None):
     tenants = list(property_obj.tenants.all())
     excluded = excluded_ids(receipt) if excluded is None else set(excluded)
     paying = [tenant for tenant in tenants if tenant.pk not in excluded]
-    fixed = (
-        not receipt.metered and receipt.amount_mode == Receipt.AmountMode.FIXED
-        and receipt.fixed_amount and receipt.split != Receipt.Split.OWNER
-    )
-    lines = _split(receipt.fixed_amount, receipt, paying, property_obj) if fixed else {}
+    known = None
+    if not receipt.metered and receipt.split != Receipt.Split.OWNER:
+        if receipt.amount_mode == Receipt.AmountMode.FIXED:
+            known = receipt.fixed_amount
+        elif receipt.amount_mode == Receipt.AmountMode.RATE:
+            known = rate_total(receipt, first_of_month(date.today()), typed=True)[0]
+    lines = _split(known, receipt, paying, property_obj) if known else {}
     rows = []
     for tenant in tenants:
         pays = tenant.pk not in excluded
@@ -1402,6 +1472,8 @@ def month_bill(property_obj, month):
             entry.total = money(sum((cost[0] for _, cost in costs), Decimal('0')))
         elif receipt.amount_mode == Receipt.AmountMode.FIXED:
             entry.total = receipt.fixed_amount
+        elif receipt.amount_mode == Receipt.AmountMode.RATE:
+            entry.total, entry.rate_text = rate_total(receipt, month)
         else:
             entry.total = amount.amount if amount else None
 

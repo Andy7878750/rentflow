@@ -3245,7 +3245,7 @@
    Icon on top, the name (may wrap) and a small grey hint under it. Picked — accent frame and pale accent fill. */
 .rform .rows .charge-tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   padding: 10px 0;
 }
@@ -4189,3 +4189,31 @@
 
 /* The column titles of the meter rows, tuned by the user in DevTools (2026-11-16): darker, bolder, 10px. */
 .rform .mrow-head { padding-bottom: 2px; color: #333; font-size: 10px; font-weight: 700; }
+
+/* ---------- «По площади» (2026-11-16): the fifth tile, between «Фиксированная» and «По счётчикам» ----------
+   Five tiles: the caret points at the middle of the picked one (4 gaps of 8px). */
+.rform .rows .charge-panel { --caret: calc((100% - 32px) / 10); }
+.rform:has(input[name=charge][value=fixed]:checked) .charge-panel { --caret: calc((100% - 32px) / 10 * 3 + 8px); }
+.rform:has(input[name=charge][value=rate]:checked) .charge-panel { --caret: calc((100% - 32px) / 10 * 5 + 16px); }
+.rform:has(input[name=charge][value=meters]:checked) .charge-panel { --caret: calc((100% - 32px) / 10 * 7 + 24px); }
+
+.rform:not(:has(input[name=charge][value=rate]:checked)) .rate-only,
+.rform:has(input[name=rate_base][value=person]:checked) .area-only,
+.rform:not(:has(input[name=rate_base][value=person]:checked)) .person-only { display: none; }
+
+.rform .cp-rate { width: 130px; }
+.rform .cp-base { position: relative; }
+.rform .cp-base .pick-trigger { height: 38px; padding: 0 10px 0 12px; border-radius: 8px; background: var(--color-surface); font-size: 13.5px; }
+.rform .cp-base .pick-menu { left: 0; right: auto; min-width: 150px; }
+.rform .cp-times { display: inline-flex; align-items: center; gap: 8px; color: var(--color-text); }
+.rform .cp-persons { box-sizing: border-box; width: 96px; height: 38px; border-radius: 8px; background: var(--color-surface); }
+.rform .cp-persons input { flex: 1 1 auto; width: auto; font-size: 15px; font-weight: 600; text-align: right; }
+.rform .cp-total { font-weight: 600; white-space: nowrap; }
+.rform .cp-warn { color: var(--color-warning, #8a5a00); }
+
+/* The sum is known from the tariff: «По расходу» isn't offered (as with «По счётчикам»). */
+.rform:has(input[name=charge][value=rate]:checked) .split-track label:has(input[value=usage]) { display: none; }
+
+@media (max-width: 560px) {
+  .rform .rows .charge-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
