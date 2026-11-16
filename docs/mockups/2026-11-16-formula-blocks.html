@@ -138,6 +138,16 @@
   .pop .seg.join button:disabled { cursor: default; }
   .pop .example { min-height: 36px; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: #f4f6f8; font-size: 12px; color: var(--text); }
 
+  /* Round 5: the number with its unit inside the field, «за …» next to it, and what it is under it. */
+  .pop .vrow { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); gap: 6px; align-items: center; }
+  .pop .vrow > span:not(.vfield) { font-size: 12px; color: var(--muted); }
+  .pop .vfield { display: flex; align-items: center; height: 34px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
+  .pop .vfield:focus-within { border-color: var(--accent); }
+  .pop .vfield input { flex: 1; min-width: 0; height: 100%; border: 0; border-radius: 0; text-align: right; }
+  .pop .vfield input:disabled { background: #f7f9fa; text-align: left; font-size: 13px; }
+  .pop .vfield select { flex: none; width: 66px; height: 100%; border: 0; border-left: 1px solid var(--border); border-radius: 0; background: #f7f9fa; padding: 0 6px; }
+  .pop .vsay { min-height: 34px; margin: -4px 0 10px; font-size: 12px; color: var(--text); }
+
   @media (max-width: 640px) {
     .palette { grid-template-columns: 1fr 1fr; }
     .charges { grid-template-columns: 1fr 1fr; }
@@ -580,6 +590,19 @@
       '</div><p class="example">' + example + '</p></div>';
   }
 
+  // What the number is, in words, by its unit: rubles — a tariff (or a sum), anything else «за …» — a norm.
+  function valueSays(v) {
+    const n = v.type === 'const' ? fmt(v.value) : 'число';
+    const one = v.per ? ' за 1 ' + v.per : '';
+    if (v.type === 'month') {
+      if (!v.unit) return 'Каждый месяц вводите число без единицы — итог в рублях не проверяем.';
+      return 'Каждый месяц вводите ' + (v.unit === '₽' ? 'сумму в ₽' : 'количество в ' + v.unit) + (v.per ? one : '') + ' — на странице объекта.';
+    }
+    if (!v.unit) return 'Просто число ' + n + ' — без единицы итог в рублях не проверяем.';
+    if (v.unit === '₽') return v.per ? 'Это тариф: ' + n + ' ₽' + one + '.' : 'Это сумма: ' + n + ' ₽ каждый месяц.';
+    return v.per ? 'Это норматив: ' + n + ' ' + v.unit + ' на 1 ' + v.per + '.' : 'Это количество: ' + n + ' ' + v.unit + '.';
+  }
+
   // A new number opens its small window right away: name it, choose the unit, type the value.
   function openFresh(b) {
     if (!b.fresh) return;
@@ -606,11 +629,16 @@
       pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Тариф / норматив · задаёте один раз' : 'Каждый месяц · вводите на странице объекта') + '</h4>' +
         (uses > 1 ? '<p class="uses">Стоит в формуле ' + uses + ' раза — правка меняет везде.</p>' : '') +
         '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') + '" placeholder="Например, Тариф тепло"></label>' +
-        '<div class="f">Единица<div class="unit-row">' + unitSelect('unit', v.unit, 'без единицы') + '<span>за</span>' + unitSelect('per', v.per, '—') + '</div></div>' +
+        // The number, its unit and «за …» — one line read as a phrase: [4 800 | ₽ ▾] за [Гкал ▾] (round 5).
+        // No word «Значение»: the number IS the tariff or the norm — which one, the line under it says by the unit.
+        '<div class="f">' + (v.type === 'const' ? 'Сколько' : 'Что вводите каждый месяц') + '<div class="vrow"><span class="vfield">' +
         (v.type === 'const'
-          ? '<label class="f">Значение<input data-k="value" inputmode="decimal" value="' + num(v.value) + '"></label>'
-          : '<div class="f"><span class="gray">Значение вводится каждый месяц на странице объекта</span></div>' +
-            '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + num(v.sample) + '"></label>');
+          ? '<input data-k="value" inputmode="decimal" value="' + num(v.value) + '">'
+          : '<input disabled placeholder="каждый месяц">') +
+        unitSelect('unit', v.unit, '—') + '</span><span>за</span>' + unitSelect('per', v.per, '—') + '</div></div>' +
+        '<p class="vsay">' + valueSays(v) + '</p>' +
+        (v.type === 'const' ? '' :
+          '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + num(v.sample) + '"></label>');
     } else {
       const k = METER_KINDS[b.kind];
       pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4>' + meterPopBody(b);
@@ -647,6 +675,8 @@
       if (key === 'value' || key === 'sample') v = Number(String(v).replace(/\s/g, '').replace(',', '.')) || 0;
       if (key === 'label' && !v.trim()) v = 'Число ' + (values.indexOf(target) + 1);
       target[key] = v; render();
+      const say = pop.querySelector('.vsay');
+      if (say) say.textContent = valueSays(target);
     });
     if (fresh) { const f = pop.querySelector('[data-k="label"]'); f.focus(); f.select(); }
     pop.querySelector('[data-ok]').onclick = closePop;
