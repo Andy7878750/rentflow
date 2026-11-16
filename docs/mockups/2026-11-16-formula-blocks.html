@@ -154,6 +154,8 @@
   .strip { cursor: text; }
   .pop { width: 340px; }
   .pop .acts .btn:disabled { opacity: .45; cursor: default; }
+  .pop .vrow-one { grid-template-columns: minmax(0, 1fr); }
+  .pop .vrow-one .vfield select { width: 90px; }
 
   @media (max-width: 640px) {
     .palette { grid-template-columns: 1fr 1fr; }
@@ -627,8 +629,8 @@
     const n = v.type === 'const' ? fmt(v.value) : 'число';
     const one = v.per ? ' за 1 ' + v.per : '';
     if (v.type === 'month') {
-      if (!v.unit) return 'Каждый месяц вводите число без единицы — итог в рублях не проверяем.';
-      return 'Каждый месяц вводите ' + (v.unit === '₽' ? 'сумму в ₽' : 'количество в ' + v.unit) + (v.per ? one : '') + ' — на странице объекта.';
+      if (!v.unit) return 'Каждый месяц на странице объекта вводите число (без единицы итог в рублях не проверяем).';
+      return 'Каждый месяц на странице объекта вводите ' + (v.unit === '₽' ? 'сумму в ₽' : 'сколько ' + v.unit) + ' — например, из квитанции.';
     }
     if (!v.unit) return 'Просто число ' + n + ' — без единицы итог в рублях не проверяем.';
     if (v.unit === '₽') return v.per ? 'Это тариф: ' + n + ' ₽' + one + '.' : 'Это сумма: ' + n + ' ₽ каждый месяц.';
@@ -638,15 +640,18 @@
   // The number's fields — the same in the setup of a new one and in the editor of one already in the formula.
   function valueFields(v) {
     const num = n => String(n).replace('.', ',');
-    return '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') + '" placeholder="Например, Тариф тепло"></label>' +
-      '<div class="f">' + (v.type === 'const' ? 'Сколько' : 'Что вводите каждый месяц') + '<div class="vrow"><span class="vfield">' +
-      (v.type === 'const'
-        ? '<input data-k="value" inputmode="decimal" value="' + (v.value ? num(v.value) : '') + '" placeholder="0">'
-        : '<input disabled placeholder="каждый месяц">') +
+    const name = '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') +
+      '" placeholder="' + (v.type === 'const' ? 'Например, Тариф тепло' : 'Например, Тепло по квитанции') + '"></label>';
+    if (v.type === 'month') {
+      // «Каждый месяц» is just a number with its unit (0,42 Гкал) — no «за …». One field: an example and the unit inside.
+      return name + '<div class="f">Например (как в прошлом месяце)<div class="vrow vrow-one"><span class="vfield">' +
+        '<input data-k="sample" inputmode="decimal" value="' + (v.sample ? num(v.sample) : '') + '" placeholder="0,42">' +
+        unitSelect('unit', v.unit, '—') + '</span></div></div><p class="vsay">' + valueSays(v) + '</p>';
+    }
+    return name + '<div class="f">Сколько<div class="vrow"><span class="vfield">' +
+      '<input data-k="value" inputmode="decimal" value="' + (v.value ? num(v.value) : '') + '" placeholder="0">' +
       unitSelect('unit', v.unit, '—') + '</span><span>за</span>' + unitSelect('per', v.per, '—') + '</div></div>' +
-      '<p class="vsay">' + valueSays(v) + '</p>' +
-      (v.type === 'const' ? '' :
-        '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + (v.sample ? num(v.sample) : '') + '" placeholder="0"></label>');
+      '<p class="vsay">' + valueSays(v) + '</p>';
   }
 
   // Round 6 (the user's wish): a new number is set up FIRST — next to the palette — and only then put in the formula.
@@ -656,8 +661,8 @@
     const v = { id: 0, type, label: '', unit: type === 'const' ? '₽' : '', per: '', value: 0, sample: 0 };
     pop = document.createElement('div'); pop.className = 'pop';
     pop.innerHTML = '<h4>' + (type === 'const' ? 'Новый тариф / норматив' : 'Новое число — каждый месяц') + '</h4>' + valueFields(v) +
-      '<div class="acts"><button class="btn" data-cancel>Отмена</button><button class="btn" data-keep disabled>Только сохранить</button>' +
-      '<button class="btn primary" data-put disabled>Поставить в формулу</button></div>';
+      '<div class="acts"><button class="btn" data-cancel>Отмена</button><button class="btn" data-keep disabled title="Сохранить в палитру, поставить потом">В палитру</button>' +
+      '<button class="btn primary" data-put disabled>В формулу</button></div>';
     document.body.appendChild(pop);
     placePop(anchor);
     const ready = () => pop.querySelectorAll('[data-keep], [data-put]').forEach(btn => { btn.disabled = !v.label.trim(); });
@@ -705,20 +710,8 @@
     if (b.type === 'val') {
       const v = target;
       const uses = blocks.filter(x => x.vid === v.id).length;
-      const num = n => String(n).replace('.', ',');
       pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Тариф / норматив · задаёте один раз' : 'Каждый месяц · вводите на странице объекта') + '</h4>' +
-        (uses > 1 ? '<p class="uses">Стоит в формуле ' + uses + ' раза — правка меняет везде.</p>' : '') +
-        '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') + '" placeholder="Например, Тариф тепло"></label>' +
-        // The number, its unit and «за …» — one line read as a phrase: [4 800 | ₽ ▾] за [Гкал ▾] (round 5).
-        // No word «Значение»: the number IS the tariff or the norm — which one, the line under it says by the unit.
-        '<div class="f">' + (v.type === 'const' ? 'Сколько' : 'Что вводите каждый месяц') + '<div class="vrow"><span class="vfield">' +
-        (v.type === 'const'
-          ? '<input data-k="value" inputmode="decimal" value="' + num(v.value) + '">'
-          : '<input disabled placeholder="каждый месяц">') +
-        unitSelect('unit', v.unit, '—') + '</span><span>за</span>' + unitSelect('per', v.per, '—') + '</div></div>' +
-        '<p class="vsay">' + valueSays(v) + '</p>' +
-        (v.type === 'const' ? '' :
-          '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + num(v.sample) + '"></label>');
+        (uses > 1 ? '<p class="uses">Стоит в формуле ' + uses + ' раза — правка меняет везде.</p>' : '') + valueFields(v);
     } else {
       const k = METER_KINDS[b.kind];
       pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4>' + meterPopBody(b);
