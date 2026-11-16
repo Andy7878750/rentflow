@@ -139,22 +139,6 @@
           <div class="charge on">Своя формула<small>собираю из блоков</small></div>
         </div>
 
-        <div class="row">
-          <span class="label">Как считаем</span>
-          <div class="seg" id="mode">
-            <button data-mode="each" class="on">Каждому по его счётчикам</button>
-            <button data-mode="total">Общая сумма → делим</button>
-          </div>
-        </div>
-        <div class="row" id="split-row" hidden>
-          <span class="label">Делим</span>
-          <div class="seg" id="split">
-            <button data-split="shares" class="on">По долям</button>
-            <button data-split="equal">Поровну</button>
-            <button data-split="area">По м²</button>
-          </div>
-        </div>
-
         <div class="palette" id="palette">
           <div class="group"><h3>Каждый месяц</h3><p class="sub">вводите на странице объекта</p><div class="chips" id="pal-month"></div></div>
           <div class="group"><h3>Постоянное</h3><p class="sub">задаёте один раз</p><div class="chips" id="pal-const"></div></div>
@@ -173,6 +157,23 @@
         <div>
           <div class="strip" id="strip"></div>
           <p class="trash-hint">Перетащите блок сюда · вытащите из строки, чтобы удалить</p>
+        </div>
+
+        <!-- Under the formula (2026-11-16, the user's wish): first build it, then say how it's counted. -->
+        <div class="row">
+          <span class="label">Как считаем</span>
+          <div class="seg" id="mode">
+            <button data-mode="each" class="on">Каждому по его счётчикам</button>
+            <button data-mode="total">Общая сумма → делим</button>
+          </div>
+        </div>
+        <div class="row" id="split-row" hidden>
+          <span class="label">Делим</span>
+          <div class="seg" id="split">
+            <button data-split="shares" class="on">По долям</button>
+            <button data-split="equal">Поровну</button>
+            <button data-split="area">По м²</button>
+          </div>
         </div>
       </div>
     </section>
