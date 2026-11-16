@@ -44,7 +44,7 @@
   .hint { color: var(--muted); font-size: 12px; }
 
   /* Palette */
-  .palette { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .palette { display: grid; grid-template-columns: 1.25fr 1.25fr 1fr 1fr; gap: 12px; }
   .group h3 { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
   .group .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
@@ -58,6 +58,18 @@
   .chip.k-meter { background: #f3f8fc; border-color: #d6e6f3; }
   .chip.k-op { min-width: 30px; justify-content: center; padding: 0 8px; font-weight: 700; background: #f4f6f8; }
   .chip .val { color: var(--muted); font-size: 12px; }
+  .chip.k-new { background: #fff; border-style: dashed; color: var(--muted); }
+  .chip.k-new.k-receipt { border-color: #e2c48f; color: #8a6420; }
+  .chip.k-new.k-const { border-color: #9fd3c6; color: var(--accent); }
+  .group .sub { margin: -4px 0 6px; font-size: 11px; color: var(--muted); }
+  .group { min-width: 0; }
+  .group .chip { max-width: 100%; overflow: hidden; }
+  .group .chip .val { overflow: hidden; text-overflow: ellipsis; }
+  .pop select { width: 100%; min-width: 0; }
+  .pop .unit-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; }
+  .pop .unit-row > span { font-size: 12px; color: var(--muted); }
+  .pop .gray { padding: 8px 10px; border-radius: 8px; background: #f4f6f8; font-size: 12px; color: var(--muted); }
+  .pop .uses { margin: -4px 0 10px; font-size: 12px; color: var(--muted); }
   .chip.m-el { --c: var(--el); } .chip.m-cold { --c: var(--cold); } .chip.m-hot { --c: var(--hot); }
   .chip.is-ghost { position: fixed; z-index: 100; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: grabbing; }
   .chip.is-dragging { opacity: .3; }
@@ -101,8 +113,10 @@
 </head>
 <body>
 <div class="stage">
-  <p class="note">Макет 2026-11-16, ничего не сохраняется. Блоки перетаскиваются в строку формулы (или нажмите блок — встанет в конец).
-    Внутри строки блоки двигаются; вытащили наружу — удалён. Нажмите на тариф, число из квитанции или счётчик в строке — откроется окошко.
+  <p class="note">Макет 2026-11-16 (круг 2), ничего не сохраняется. Чисел два вида: «Каждый месяц» и «Постоянное».
+    «+ Новое число» — перетащите в строку или нажмите: сразу откроется окошко (название, единица, значение).
+    Настроенное число остаётся в палитре — его можно поставить в формулу ещё раз. Внутри строки блоки двигаются;
+    вытащили наружу — убран. Нажмите на блок в строке — откроется окошко.
     Проверка внизу — на числах «прошлого месяца» (Виктор и Владислав, Королёва 61).</p>
   <div class="examples">Примеры:
     <button data-example="sewage">Водоотведение</button>
@@ -142,14 +156,8 @@
         </div>
 
         <div class="palette" id="palette">
-          <div class="group"><h3>Из квитанции</h3><div class="chips">
-            <span class="chip k-receipt" data-new="receipt-sum"><span class="dot"></span>Сумма из квитанции</span>
-            <span class="chip k-receipt" data-new="receipt-num"><span class="dot"></span>Число из квитанции</span>
-          </div></div>
-          <div class="group"><h3>Постоянные</h3><div class="chips">
-            <span class="chip k-const" data-new="tariff"><span class="dot"></span>Тариф / норматив</span>
-            <span class="chip k-const" data-new="fixed"><span class="dot"></span>Фикс. сумма</span>
-          </div></div>
+          <div class="group"><h3>Каждый месяц</h3><p class="sub">вводите на странице объекта</p><div class="chips" id="pal-month"></div></div>
+          <div class="group"><h3>Постоянное</h3><p class="sub">задаёте один раз</p><div class="chips" id="pal-const"></div></div>
           <div class="group"><h3>Счётчики</h3><div class="chips">
             <span class="chip k-meter m-el" data-new="meter:el"><span class="dot"></span>Электричество</span>
             <span class="chip k-meter m-cold" data-new="meter:cold"><span class="dot"></span>Вода хол.</span>
@@ -192,22 +200,36 @@
   };
   // Last month's usage of each tenant's meters, by kind.
   const USAGE = { el: { v: 800, l: 500 }, cold: { v: 3, l: 2 }, hot: { v: 1, l: 4 } };
-  const UNITS = ['₽', 'Гкал', 'м³', 'кВт·ч', 'м²'];
+  const UNITS = ['₽', 'кВт·ч', 'м³', 'Гкал', 'м²', 'чел.'];
+  const CUSTOM = '__custom';
 
   let mode = 'each';
   let split = 'shares';
-  let blocks = [];  // the formula: [{type, ...}]
-  let uid = 0;
+  let blocks = [];  // the formula: [{id, type: 'val' | 'meter' | 'op', ...}]
+  // Numbers of the formula — two kinds only (2026-11-16, the user's simplification):
+  // «Каждый месяц» (type 'month': typed on the object page; sample — last month, for the check)
+  // and «Постоянное» (type 'const': value set once). Each has a name and a unit «₽ за Гкал».
+  // One number may stand in the formula several times: blocks point to it by vid.
+  let values = [];
+  let uid = 0, vid = 0;
+
+  function newValue(type, props) {
+    const v = Object.assign({ id: ++vid, type, label: '', unit: '', per: '', value: 0, sample: 0 }, props || {});
+    if (!v.label) v.label = 'Число ' + (values.length + 1);
+    values.push(v);
+    return v;
+  }
+  const valueOf = b => values.find(v => v.id === b.vid);
 
   function make(kind) {
     const id = ++uid;
-    if (kind === 'receipt-sum') return { id, type: 'receipt', unit: '₽', label: 'Сумма из квитанции', sample: 8450 };
-    if (kind === 'receipt-num') return { id, type: 'receipt', unit: 'Гкал', label: 'Гкал из квитанции', sample: 0.42 };
-    if (kind === 'tariff') return { id, type: 'const', label: 'Тариф', value: 45, unit: '₽', per: 'м³' };
-    if (kind === 'fixed') return { id, type: 'const', label: 'Фикс. сумма', value: 500, unit: '₽', per: '' };
+    if (kind === 'new:month') return { id, type: 'val', vid: newValue('month').id, fresh: true };
+    if (kind === 'new:const') return { id, type: 'val', vid: newValue('const').id, fresh: true };
+    if (kind.startsWith('val:')) return { id, type: 'val', vid: Number(kind.slice(4)) };
     if (kind.startsWith('meter:')) return { id, type: 'meter', kind: kind.slice(6), whose: 'own' };
     if (kind.startsWith('op:')) return { id, type: 'op', op: kind.slice(3) };
   }
+  const unitLabel = v => (v.unit || '') + (v.per ? (v.unit ? ' за ' : 'за ') + v.per : '');
 
   // ---------- Drawing ----------
   const strip = document.getElementById('strip');
@@ -219,18 +241,23 @@
       const k = METER_KINDS[b.kind];
       return k.short + (mode === 'each' && b.whose === 'all' ? ' · все' : '');
     }
-    if (b.type === 'receipt') return b.label;
-    return b.label;
+    return valueOf(b).label;
   }
   function chipValue(b) {
-    if (b.type === 'const') return fmt(b.value) + ' ' + b.unit + (b.per ? '/' + b.per : '');
-    if (b.type === 'receipt') return b.unit;
     if (b.type === 'meter') return METER_KINDS[b.kind].unit;
-    return '';
+    if (b.type !== 'val') return '';
+    const v = valueOf(b);
+    if (v.type === 'const') return fmt(v.value) + (unitLabel(v) ? ' ' + unitLabel(v) : '');
+    return unitLabel(v);
+  }
+  function kindClass(b) {
+    if (b.type === 'op') return 'k-op';
+    if (b.type === 'meter') return 'k-meter ' + METER_KINDS[b.kind].cls;
+    return valueOf(b).type === 'const' ? 'k-const' : 'k-receipt';
   }
   function chipEl(b) {
     const el = document.createElement('span');
-    el.className = 'chip ' + (b.type === 'op' ? 'k-op' : b.type === 'const' ? 'k-const' : b.type === 'receipt' ? 'k-receipt' : 'k-meter ' + METER_KINDS[b.kind].cls);
+    el.className = 'chip ' + kindClass(b);
     el.dataset.id = b.id;
     if (b.type !== 'op') el.innerHTML = '<span class="dot"></span>';
     el.appendChild(document.createTextNode(chipText(b)));
@@ -247,9 +274,29 @@
       strip.appendChild(e);
     }
     blocks.forEach(b => strip.appendChild(chipEl(b)));
+    renderPalette();
     document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
     document.getElementById('split-row').hidden = mode !== 'total';
     renderCheck();
+  }
+
+  // The palette: every number already set up (to put it in again) and a dashed «+ Новое число».
+  function renderPalette() {
+    [['month', 'pal-month'], ['const', 'pal-const']].forEach(([type, id]) => {
+      const box = document.getElementById(id);
+      box.innerHTML = '';
+      values.filter(v => v.type === type).forEach(v => {
+        const el = chipEl({ type: 'val', vid: v.id });
+        el.dataset.new = 'val:' + v.id;
+        el.title = 'Нажмите — встанет в конец формулы ещё раз';
+        box.appendChild(el);
+      });
+      const add = document.createElement('span');
+      add.className = 'chip k-new ' + (type === 'const' ? 'k-const' : 'k-receipt');
+      add.dataset.new = 'new:' + type;
+      add.textContent = '+ Новое число';
+      box.appendChild(add);
+    });
   }
 
   // ---------- Arithmetic with units ----------
@@ -269,11 +316,14 @@
 
   // Evaluate the blocks for one tenant (or for the whole object): returns {v, u, text} or {error}.
   function evaluate(tenant) {
-    let i = 0;
+    let i = 0, bare = false;
     const toks = blocks;
     function value(b) {
-      if (b.type === 'const') return { v: b.value, u: unitsOf(b.unit, b.per), text: fmt(b.value) + ' ' + b.unit + (b.per ? '/' + b.per : '') };
-      if (b.type === 'receipt') return { v: b.sample, u: unitsOf(b.unit), text: fmt(b.sample) + ' ' + b.unit };
+      if (b.type === 'val') {
+        const x = valueOf(b), n = x.type === 'const' ? x.value : x.sample;
+        if (!x.unit && !x.per) bare = true;  // a number without a unit: the ₽ check is off for this formula
+        return { v: n, u: unitsOf(x.unit, x.per), text: fmt(n) + (x.unit ? ' ' + x.unit : '') + (x.per ? '/' + x.per : '') };
+      }
       const k = METER_KINDS[b.kind];
       const all = !tenant || b.whose === 'all';
       const v = all ? Object.values(USAGE[b.kind]).reduce((s, x) => s + x, 0) : USAGE[b.kind][tenant.id];
@@ -303,7 +353,7 @@
       let a = product();
       while (toks[i] && toks[i].type === 'op' && (toks[i].op === '+' || toks[i].op === '−')) {
         const op = toks[i++].op, b = product();
-        if (!sameUnits(a.u, b.u)) throw 'Нельзя ' + (op === '+' ? 'складывать' : 'вычитать') + ' ' + unitText(a.u) + ' и ' + unitText(b.u) + '.';
+        if (!bare && !sameUnits(a.u, b.u)) throw 'Нельзя ' + (op === '+' ? 'складывать' : 'вычитать') + ' ' + unitText(a.u) + ' и ' + unitText(b.u) + '.';
         a = { v: op === '+' ? a.v + b.v : a.v - b.v, u: a.u, text: a.text + ' ' + op + ' ' + b.text };
       }
       return a;
@@ -312,7 +362,8 @@
       if (!toks.length) return { error: '' };
       const r = sum();
       if (i < toks.length) throw toks[i].op === ')' ? 'Лишняя закрывающая скобка «)».' : 'Между блоками не хватает знака.';
-      if (!sameUnits(r.u, { '₽': 1 })) return Object.assign(r, { error: 'В итоге получается ' + unitText(r.u) + ', а нужны рубли.' });
+      if (bare) r.bare = true;
+      else if (!sameUnits(r.u, { '₽': 1 })) return Object.assign(r, { error: 'В итоге получается ' + unitText(r.u) + ', а нужны рубли.' });
       return r;
     } catch (msg) { return { error: msg }; }
   }
@@ -353,6 +404,11 @@
           line(t.name, rub(r.v) + ' ' + how + ' =', rub(part));
         });
       }
+    }
+    if (ok && evaluate(mode === 'each' ? TENANTS[0] : null).bare) {
+      const h = document.createElement('p'); h.className = 'hint';
+      h.textContent = 'У одного из чисел не указана единица — проверку «итог в рублях» для этой формулы не делаем.';
+      box.appendChild(h);
     }
     badge.textContent = ok ? 'считается' : 'есть ошибка';
     badge.className = 'badge ' + (ok ? 'ok' : 'bad');
@@ -409,7 +465,7 @@
     caret.remove(); strip.classList.remove('is-over');
     if (!d.moved) {
       // A click: a palette block goes to the end; a block in the line opens its editor.
-      if (!d.fromStrip) { blocks.push(make(d.chip.dataset.new)); render(); }
+      if (!d.fromStrip) { const b = make(d.chip.dataset.new); blocks.push(b); render(); openFresh(b); }
       else openPop(blocks.find(b => b.id == d.chip.dataset.id), d.chip);
       return;
     }
@@ -418,28 +474,45 @@
     const at = over ? insertIndex(e.clientX, e.clientY) : -1;
     if (d.fromStrip) blocks = blocks.filter(b => b !== d.block);   // moved or dragged out (= deleted)
     if (over) blocks.splice(Math.min(at, blocks.length), 0, d.block);
+    else if (d.block.fresh) values = values.filter(v => v.id !== d.block.vid);  // a new number dropped outside — gone
     render();
+    if (over) openFresh(d.block);
   });
 
   // ---------- The small editor of a block ----------
   let pop = null;
   function closePop() { if (pop) pop.remove(); pop = null; }
-  function openPop(b, anchor) {
+  // A new number opens its small window right away: name it, choose the unit, type the value.
+  function openFresh(b) {
+    if (!b.fresh) return;
+    delete b.fresh;
+    const chip = strip.querySelector('.chip[data-id="' + b.id + '"]');
+    if (chip) openPop(b, chip, true);
+  }
+  function unitSelect(key, cur, none) {
+    const known = !cur || UNITS.includes(cur);
+    return '<select data-k="' + key + '"><option value="">' + none + '</option>' +
+      UNITS.map(u => '<option' + (u === cur ? ' selected' : '') + '>' + u + '</option>').join('') +
+      (known ? '' : '<option selected>' + cur + '</option>') +
+      '<option value="' + CUSTOM + '">свой вариант…</option></select>';
+  }
+  function openPop(b, anchor, fresh) {
     closePop();
     if (b.type === 'op') return;
     pop = document.createElement('div'); pop.className = 'pop';
-    const opts = (list, cur, none) => (none ? '<option value="">' + none + '</option>' : '') + list.map(u => '<option' + (u === cur ? ' selected' : '') + '>' + u + '</option>').join('');
-    if (b.type === 'const') {
-      pop.innerHTML = '<h4>' + (b.per ? 'Тариф / норматив' : 'Постоянное число') + '</h4>' +
-        '<label class="f">Название (в счёте)<input data-k="label" value="' + b.label + '"></label>' +
-        '<div class="two"><label class="f">Число<input data-k="value" inputmode="decimal" value="' + String(b.value).replace('.', ',') + '"></label>' +
-        '<label class="f">Чего<select data-k="unit">' + opts(UNITS, b.unit, 'без единиц') + '</select></label></div>' +
-        '<label class="f">За что<select data-k="per">' + opts(UNITS.filter(u => u !== '₽').concat(['мес']), b.per, '— ни за что (просто сумма)') + '</select></label>';
-    } else if (b.type === 'receipt') {
-      pop.innerHTML = '<h4>Из квитанции — вводится каждый месяц</h4>' +
-        '<label class="f">Название<input data-k="label" value="' + b.label + '"></label>' +
-        '<div class="two"><label class="f">Единица<select data-k="unit">' + opts(UNITS, b.unit) + '</select></label>' +
-        '<label class="f">Для проверки<input data-k="sample" inputmode="decimal" value="' + String(b.sample).replace('.', ',') + '"></label></div>';
+    const target = b.type === 'val' ? valueOf(b) : b;
+    if (b.type === 'val') {
+      const v = target;
+      const uses = blocks.filter(x => x.vid === v.id).length;
+      const num = n => String(n).replace('.', ',');
+      pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Постоянное · задаёте один раз' : 'Каждый месяц · вводите на странице объекта') + '</h4>' +
+        (uses > 1 ? '<p class="uses">Стоит в формуле ' + uses + ' раза — правка меняет везде.</p>' : '') +
+        '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') + '" placeholder="Например, Тариф тепло"></label>' +
+        '<div class="f">Единица<div class="unit-row">' + unitSelect('unit', v.unit, 'без единицы') + '<span>за</span>' + unitSelect('per', v.per, '—') + '</div></div>' +
+        (v.type === 'const'
+          ? '<label class="f">Значение<input data-k="value" inputmode="decimal" value="' + num(v.value) + '"></label>'
+          : '<div class="f"><span class="gray">Значение вводится каждый месяц на странице объекта</span></div>' +
+            '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + num(v.sample) + '"></label>');
     } else {
       const k = METER_KINDS[b.kind];
       pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4>' +
@@ -448,18 +521,28 @@
             '<option value="all"' + (b.whose === 'all' ? ' selected' : '') + '>все на объекте</option></select></label>'
           : '<p class="hint">В режиме «Общая сумма» — все счётчики этого вида на объекте вместе.</p>');
     }
-    pop.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn danger" data-del>Убрать</button><button class="btn primary" data-ok>Готово</button></div>');
+    pop.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn danger" data-del>Убрать из формулы</button><button class="btn primary" data-ok>Готово</button></div>');
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect();
     pop.style.left = Math.max(8, Math.min(r.left, innerWidth - 310)) + 'px';
     const h = pop.offsetHeight;
     pop.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
+    pop.addEventListener('change', ev => {
+      const sel = ev.target;
+      if (sel.tagName !== 'SELECT' || sel.value !== CUSTOM) return;
+      const name = (prompt('Своя единица (например, кг, шт, мес):') || '').trim();
+      if (name) target[sel.dataset.k] = name;
+      render();
+      openPop(b, strip.querySelector('.chip[data-id="' + b.id + '"]') || anchor);
+    });
     pop.addEventListener('input', ev => {
-      const key = ev.target.dataset.k; if (!key) return;
+      const key = ev.target.dataset.k; if (!key || ev.target.value === CUSTOM) return;
       let v = ev.target.value;
       if (key === 'value' || key === 'sample') v = Number(String(v).replace(/\s/g, '').replace(',', '.')) || 0;
-      b[key] = v; render();
+      if (key === 'label' && !v.trim()) v = 'Число ' + (values.indexOf(target) + 1);
+      target[key] = v; render();
     });
+    if (fresh) { const f = pop.querySelector('[data-k="label"]'); f.focus(); f.select(); }
     pop.querySelector('[data-ok]').onclick = closePop;
     pop.querySelector('[data-del]').onclick = () => { blocks = blocks.filter(x => x !== b); closePop(); render(); };
   }
@@ -479,14 +562,20 @@
     render();
   });
 
+  const val = v => ({ id: ++uid, type: 'val', vid: v.id });
   const EXAMPLES = {
-    sewage: () => { setMode('each'); return [make('op:('), make('meter:hot'), make('op:+'), make('meter:cold'), make('op:)'), make('op:×'),
-      Object.assign(make('tariff'), { label: 'Тариф водоотведения', value: 45 })]; },
-    pesk: () => { setMode('each'); return [make('receipt-sum'), make('op:÷'), Object.assign(make('meter:el'), { whose: 'all' }), make('op:×'), make('meter:el')]; },
-    heat: () => { setMode('total'); return [make('op:('), make('receipt-num'), make('op:−'), make('op:('), make('meter:hot'), make('op:×'),
-      Object.assign(make('tariff'), { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' }), make('op:)'), make('op:)'), make('op:×'),
-      Object.assign(make('tariff'), { label: 'Тариф тепла', value: 4800, unit: '₽', per: 'Гкал' })]; },
-    clear: () => [],
+    sewage: () => { setMode('each'); values = [];
+      const t = newValue('const', { label: 'Тариф водоотведения', value: 45, unit: '₽', per: 'м³' });
+      return [make('op:('), make('meter:hot'), make('op:+'), make('meter:cold'), make('op:)'), make('op:×'), val(t)]; },
+    pesk: () => { setMode('each'); values = [];
+      const sum = newValue('month', { label: 'Сумма по квитанции', unit: '₽', sample: 8450 });
+      return [val(sum), make('op:÷'), Object.assign(make('meter:el'), { whose: 'all' }), make('op:×'), make('meter:el')]; },
+    heat: () => { setMode('total'); values = [];
+      const heat = newValue('month', { label: 'Тепло по квитанции', unit: 'Гкал', sample: 0.42 });
+      const per = newValue('const', { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' });
+      const tariff = newValue('const', { label: 'Тариф тепла', value: 4800, unit: '₽', per: 'Гкал' });
+      return [make('op:('), val(heat), make('op:−'), make('op:('), make('meter:hot'), make('op:×'), val(per), make('op:)'), make('op:)'), make('op:×'), val(tariff)]; },
+    clear: () => { values = []; return []; },
   };
   function setMode(m) { mode = m; document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); }
   document.querySelector('.examples').addEventListener('click', e => {
