@@ -216,6 +216,12 @@
   .check .calc .note.err { color: var(--danger); }
   .check .sample-note { margin: 6px 0 0; }
   @media (max-width: 640px) { .check .line { grid-template-columns: 1fr; gap: 4px; } }
+  /* Round 20: no big gaps — a long name no longer widens its number: it wraps under it in two short lines. */
+  .check .calc { gap: 2px 4px; }
+  .check .calc .n i { width: max-content; max-width: 72px; white-space: normal; text-align: center; line-height: 1.15; overflow: visible; }
+  .check .calc .op.paren { margin: 0 -2px; }
+  .check .calc .eq { white-space: nowrap; line-height: 20px; }  /* «= result» never splits */
+  .check .sample-note { margin: 0 0 2px; }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
@@ -574,7 +580,7 @@
       if (typeof parts === 'string') html = '<span class="note' + (bad ? ' err' : '') + '">' + esc(parts) + '</span>';
       else html = parts.map(x => x.op ? '<span class="op' + ('()'.includes(x.op) ? ' paren' : '') + '">' + x.op + '</span>'
         : '<span class="n"><b>' + esc(x.num) + '</b><i>' + esc(x.word) + (x.sample ? ' · пример' : '') + '</i></span>').join('') +
-        (sum ? '<span class="op">=</span><span class="res">' + esc(sum) + '</span>' : '');
+        (sum ? '<span class="eq"><span class="op">=</span> <span class="res">' + esc(sum) + '</span></span>' : '');
       d.innerHTML = '<span class="who"></span><span class="calc">' + html + '</span>';
       d.querySelector('.who').textContent = who;
       box.appendChild(d);
@@ -632,7 +638,7 @@
     if (samples.length) {
       const h = document.createElement('p'); h.className = 'hint sample-note';
       h.textContent = 'Прошлого месяца ещё нет — для примера взяли ' + samples.map(v => v.label + ' ' + fmt(v.sample) + (v.unit ? ' ' + v.unit : '')).join(', ') + '.';
-      box.appendChild(h);
+      box.prepend(h);
     }
     badge.textContent = ok ? 'считается' : 'есть ошибка';
     badge.className = 'badge ' + (ok ? 'ok' : 'bad');
