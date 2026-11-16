@@ -126,6 +126,18 @@
   .pop .radios label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
   .pop .radios input { height: auto; accent-color: var(--accent); }
 
+  /* Round 4: nothing jumps — room kept for the formula (two lines) and the check; the split row only fades. */
+  .strip { min-height: 96px; align-content: flex-start; }
+  .check-box { min-height: 190px; }
+  #split-row[hidden] { display: flex !important; visibility: hidden; }
+  .check .calc { display: flex; flex-direction: column; gap: 1px; }
+  .check .calc .words { color: var(--text); font-size: 12px; }
+  .check .calc .words:empty { display: none; }
+  .pop .seg.join { margin-bottom: 8px; }
+  .pop .seg.join.is-off { opacity: .45; }
+  .pop .seg.join button:disabled { cursor: default; }
+  .pop .example { min-height: 36px; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: #f4f6f8; font-size: 12px; color: var(--text); }
+
   @media (max-width: 640px) {
     .palette { grid-template-columns: 1fr 1fr; }
     .charges { grid-template-columns: 1fr 1fr; }
@@ -136,10 +148,7 @@
 </head>
 <body>
 <div class="stage">
-  <p class="note">Макет 2026-11-16 (круг 3), ничего не сохраняется. Нажатие на плашку «Своя формула» открывает отдельное окно —
-    без плашек, только формула, подсказки и примеры. Чисел два вида: «Каждый месяц» и «Постоянное» («+ Новое число» — сразу окошко
-    настройки). У счётчика в формуле выбор: «свой у каждого», конкретный арендатор или «все вместе (сумма)».
-    Проверка — на числах «прошлого месяца» (Виктор и Владислав, Королёва 61).</p>
+  <p class="note">Макет 2026-11-16 (круг 4), ничего не сохраняется. «Своя формула» — отдельное окно. Сверху — из чего собирать: числа «Каждый месяц» и «Тариф / норматив» («+ Новое число» — сразу окошко настройки), счётчики, знаки; ниже — строка формулы. У счётчика в формуле — флажки по арендаторам; если отмечено несколько — «У каждого свой» или «Складываем», и пример на числах. В проверке над числами — что это за числа. Место под формулу и проверку зарезервировано — окно не прыгает.</p>
 
   <div class="win">
     <h1>Новая услуга</h1>
@@ -177,15 +186,9 @@
       <button data-example="one">Только Виктору</button>
     </div>
 
-    <div class="strip-wrap">
-      <div class="strip" id="strip"></div>
-      <button class="strip-clear" data-example="clear" type="button" title="Очистить формулу" aria-label="Очистить формулу">×</button>
-    </div>
-    <p class="trash-hint">Перетащите блок в строку или нажмите на него · вытащите из строки, чтобы убрать · нажмите на блок в строке, чтобы настроить</p>
-
     <div class="palette" id="palette">
       <div class="group"><h3>Каждый месяц</h3><p class="sub">вводите на странице объекта</p><div class="chips" id="pal-month"></div></div>
-      <div class="group"><h3>Постоянное</h3><p class="sub">задаёте один раз</p><div class="chips" id="pal-const"></div></div>
+      <div class="group"><h3>Тариф / норматив</h3><p class="sub">задаёте один раз</p><div class="chips" id="pal-const"></div></div>
       <div class="group"><h3>Счётчики</h3><p class="sub">расход за месяц</p><div class="chips">
         <span class="chip k-meter m-el" data-new="meter:el"><span class="dot"></span>Электричество</span>
         <span class="chip k-meter m-cold" data-new="meter:cold"><span class="dot"></span>Вода хол.</span>
@@ -197,6 +200,13 @@
         <span class="chip k-op" data-new="op:(">(</span><span class="chip k-op" data-new="op:)">)</span>
       </div></div>
     </div>
+
+    <div class="strip-wrap">
+      <div class="strip" id="strip"></div>
+      <button class="strip-clear" data-example="clear" type="button" title="Очистить формулу" aria-label="Очистить формулу">×</button>
+    </div>
+    <p class="trash-hint">Перетащите блок в строку или нажмите на него · вытащите из строки, чтобы убрать · нажмите на блок в строке, чтобы настроить</p>
+
 
     <div class="row">
       <span class="label">Как считаем</span>
@@ -268,7 +278,7 @@
     if (kind === 'new:month') return { id, type: 'val', vid: newValue('month').id, fresh: true };
     if (kind === 'new:const') return { id, type: 'val', vid: newValue('const').id, fresh: true };
     if (kind.startsWith('val:')) return { id, type: 'val', vid: Number(kind.slice(4)) };
-    if (kind.startsWith('meter:')) return { id, type: 'meter', kind: kind.slice(6), whose: 'own' };
+    if (kind.startsWith('meter:')) return { id, type: 'meter', kind: kind.slice(6), tenants: TENANTS.map(t => t.id), join: 'each' };
     if (kind.startsWith('op:')) return { id, type: 'op', op: kind.slice(3) };
   }
   const unitLabel = v => (v.unit || '') + (v.per ? (v.unit ? ' за ' : 'за ') + v.per : '');
@@ -281,9 +291,11 @@
     if (b.type === 'op') return b.op;
     if (b.type === 'meter') {
       const k = METER_KINDS[b.kind];
-      if (b.whose === 'all') return k.short + ' · все';
-      if (b.whose !== 'own') return k.short + ' · ' + TENANTS.find(t => t.id === b.whose).name.split(' ')[0];
-      return k.short + (mode === 'total' ? ' · все' : '');
+      const first = id => TENANTS.find(t => t.id === id).name.split(' ')[0];
+      if (!b.tenants.length) return k.short + ' · ?';
+      if (b.tenants.length === 1) return k.short + ' · ' + first(b.tenants[0]);
+      if (mode === 'total' || b.join === 'sum') return k.short + (b.tenants.length === TENANTS.length ? ' · все' : ' · ' + b.tenants.map(first).join(' + '));
+      return k.short + ' · свой';
     }
     return valueOf(b).label;
   }
@@ -370,16 +382,16 @@
       if (b.type === 'val') {
         const x = valueOf(b), n = x.type === 'const' ? x.value : x.sample;
         if (!x.unit && !x.per) bare = true;  // a number without a unit: the ₽ check is off for this formula
-        return { v: n, u: unitsOf(x.unit, x.per), text: fmt(n) + (x.unit ? ' ' + x.unit : '') + (x.per ? '/' + x.per : '') };
+        return { v: n, u: unitsOf(x.unit, x.per), text: fmt(n) + (x.unit ? ' ' + x.unit : '') + (x.per ? '/' + x.per : ''), words: x.label };
       }
       const k = METER_KINDS[b.kind];
-      // whose: 'own' — the tenant's own meters (all of them in «Общая сумма»), 'all' — all tenants' together,
-      // or a tenant's id — exactly that tenant's meters.
+      // tenants — whose meters are ticked; join — «each» (each tenant his own) or «sum» (added together).
+      if (!b.tenants.length) throw 'У счётчика «' + k.short + '» не отмечен ни один арендатор.';
       let v;
-      if (b.whose !== 'own' && b.whose !== 'all') v = USAGE[b.kind][b.whose];
-      else if (!tenant || b.whose === 'all') v = Object.values(USAGE[b.kind]).reduce((s, x) => s + x, 0);
+      if (b.tenants.length === 1) v = USAGE[b.kind][b.tenants[0]];
+      else if (!tenant || b.join === 'sum') v = b.tenants.reduce((s, id) => s + USAGE[b.kind][id], 0);
       else v = USAGE[b.kind][tenant.id];
-      return { v, u: unitsOf(k.unit), text: fmt(v) + ' ' + k.unit };
+      return { v, u: unitsOf(k.unit), text: fmt(v) + ' ' + k.unit, words: chipText(b) };
     }
     function primary() {
       const b = toks[i];
@@ -387,7 +399,7 @@
       if (b.type === 'op' && b.op === '(') {
         i++; const r = sum();
         if (!toks[i] || toks[i].op !== ')') throw 'Не хватает закрывающей скобки «)».';
-        i++; return { v: r.v, u: r.u, text: '(' + r.text + ')' };
+        i++; return { v: r.v, u: r.u, text: '(' + r.text + ')', words: '(' + r.words + ')' };
       }
       if (b.type === 'op') throw 'Знак «' + b.op + '» стоит не на месте.';
       i++; return value(b);
@@ -397,7 +409,7 @@
       while (toks[i] && toks[i].type === 'op' && (toks[i].op === '×' || toks[i].op === '÷')) {
         const op = toks[i++].op, b = primary();
         if (op === '÷' && !b.v) throw 'Делим на ноль: ' + b.text + '.';
-        a = { v: op === '×' ? a.v * b.v : a.v / b.v, u: mul(a, b, op === '×' ? 1 : -1), text: a.text + ' ' + op + ' ' + b.text };
+        a = { v: op === '×' ? a.v * b.v : a.v / b.v, u: mul(a, b, op === '×' ? 1 : -1), text: a.text + ' ' + op + ' ' + b.text, words: a.words + ' ' + op + ' ' + b.words };
       }
       return a;
     }
@@ -406,7 +418,7 @@
       while (toks[i] && toks[i].type === 'op' && (toks[i].op === '+' || toks[i].op === '−')) {
         const op = toks[i++].op, b = product();
         if (!bare && !sameUnits(a.u, b.u)) throw 'Нельзя ' + (op === '+' ? 'складывать' : 'вычитать') + ' ' + unitText(a.u) + ' и ' + unitText(b.u) + '.';
-        a = { v: op === '+' ? a.v + b.v : a.v - b.v, u: a.u, text: a.text + ' ' + op + ' ' + b.text };
+        a = { v: op === '+' ? a.v + b.v : a.v - b.v, u: a.u, text: a.text + ' ' + op + ' ' + b.text, words: a.words + ' ' + op + ' ' + b.words };
       }
       return a;
     }
@@ -427,38 +439,41 @@
     const badge = document.getElementById('state-badge');
     box.innerHTML = '';
     if (!blocks.length) { badge.textContent = ''; badge.className = 'badge'; box.innerHTML = '<span class="hint">Соберите формулу — здесь появится расчёт для каждого арендатора.</span>'; return; }
-    const line = (who, calc, sum, bad) => {
+    // A line of the check: the formula in words (what each number is) over the same formula in numbers.
+    const line = (who, calc, sum, bad, words) => {
       const d = document.createElement('div'); d.className = 'line';
-      d.innerHTML = '<span class="who"></span><span class="calc"></span><span class="sum"></span>';
-      d.children[0].textContent = who; d.children[1].textContent = calc; d.children[2].textContent = sum;
-      if (bad) d.children[1].className = 'calc err';
+      d.innerHTML = '<span class="who"></span><span class="calc"><span class="words"></span><span class="nums"></span></span><span class="sum"></span>';
+      d.children[0].textContent = who; d.querySelector('.nums').textContent = calc; d.children[2].textContent = sum;
+      d.querySelector('.words').textContent = words || '';
+      if (bad) d.children[1].classList.add('err');
       box.appendChild(d);
     };
     let ok = true;
     if (mode === 'each') {
       const meters = blocks.filter(b => b.type === 'meter');
-      const hasOwn = meters.some(b => b.whose === 'own');
-      const named = [...new Set(meters.filter(b => b.whose !== 'own' && b.whose !== 'all').map(b => b.whose))];
-      // A tenant picked in a meter (and no «свой у каждого»): the formula is only that tenant's.
-      const only = !hasOwn && named.length === 1 ? named[0] : null;
-      if (!hasOwn && named.length > 1) {
+      const own = meters.filter(b => b.tenants.length > 1 && b.join === 'each');
+      const named = [...new Set(meters.filter(b => b.tenants.length === 1).map(b => b.tenants[0]))];
+      // Who pays: those ticked in every «у каждого свой» meter; with none — the one tenant whose meter stands in the formula.
+      const payers = own.length ? TENANTS.filter(t => own.every(b => b.tenants.includes(t.id))).map(t => t.id)
+        : named.length === 1 ? named : TENANTS.map(t => t.id);
+      if (!own.length && named.length > 1) {
         ok = false;
-        line('Кому?', 'В формуле счётчики разных арендаторов — непонятно, кому выставить. Оставьте одного или выберите «Общая сумма → делим».', '—', true);
+        line('Кому?', 'В формуле счётчики разных арендаторов — непонятно, кому выставить. Отметьте у счётчика обоих и выберите «у каждого свой» или «складываем».', '—', true);
       } else {
         TENANTS.forEach(t => {
-          if (only && t.id !== only) { line(t.name, 'не платит — в формуле счётчик: ' + TENANTS.find(x => x.id === only).name, '—'); return; }
+          if (!payers.includes(t.id)) { line(t.name, 'не платит — не отмечен у счётчика', '—'); return; }
           const r = evaluate(t);
           if (r.error) { ok = false; line(t.name, r.error, '—', true); }
-          else line(t.name, r.text + ' =', rub(r.v));
+          else line(t.name, r.text + ' =', rub(r.v), false, r.words);
         });
       }
-      if (ok && !hasOwn && !named.length) { const h = document.createElement('p'); h.className = 'hint';
-        h.textContent = 'В формуле нет «своих» счётчиков — у всех арендаторов выйдет одинаково. Может быть, нужен режим «Общая сумма → делим»?'; box.appendChild(h); }
+      if (ok && !own.length && !named.length) { const h = document.createElement('p'); h.className = 'hint';
+        h.textContent = 'В формуле нет счётчиков «у каждого свой» — у всех арендаторов выйдет одинаково. Может быть, нужен режим «Общая сумма → делим»?'; box.appendChild(h); }
     } else {
       const r = evaluate(null);
       if (r.error) { ok = false; line('Объект', r.error, '—', true); }
       else {
-        line('Объект', r.text + ' =', rub(r.v));
+        line('Объект', r.text + ' =', rub(r.v), false, r.words);
         const totalArea = TENANTS.reduce((s, t) => s + t.area, 0);
         TENANTS.forEach(t => {
           const part = split === 'shares' ? r.v * t.share / 100 : split === 'equal' ? r.v / TENANTS.length : r.v * t.area / totalArea;
@@ -544,6 +559,27 @@
   // ---------- The small editor of a block ----------
   let pop = null;
   function closePop() { if (pop) pop.remove(); pop = null; }
+  // The meter's window: a tick per tenant, then — with two or more — «у каждого свой | складываем», and an example
+  // on last month's numbers. Always the same height (nothing jumps): the switch is there, just greyed, with one tick.
+  function meterPopBody(b) {
+    const k = METER_KINDS[b.kind], u = ' ' + k.unit;
+    const many = b.tenants.length > 1;
+    const join = mode === 'total' ? 'sum' : b.join;
+    const use = id => USAGE[b.kind][id];
+    const name = id => TENANTS.find(t => t.id === id).name;
+    let example;
+    if (!b.tenants.length) example = 'Отметьте хотя бы одного арендатора.';
+    else if (!many) example = 'Только ' + name(b.tenants[0]) + ': ' + fmt(use(b.tenants[0])) + u + '. Остальные по этой формуле не платят.';
+    else if (join === 'sum') example = b.tenants.map(id => fmt(use(id))).join(' + ') + ' = ' + fmt(b.tenants.reduce((s, id) => s + use(id), 0)) + u + ' — одно число в формуле для всех.';
+    else example = b.tenants.map(id => name(id).split(' ')[0] + ' — ' + fmt(use(id)) + u).join(' · ') + ' — каждому по его счётчику.';
+    const on = many && mode === 'each';
+    return '<div class="meter-body"><div class="f">Чей расход</div><div class="radios">' +
+      TENANTS.map(t => '<label><input type="checkbox" data-tenant="' + t.id + '"' + (b.tenants.includes(t.id) ? ' checked' : '') + '>' + t.name + '</label>').join('') +
+      '</div><div class="seg join' + (on ? '' : ' is-off') + '">' +
+      [['each', 'У каждого свой'], ['sum', 'Складываем']].map(([v, t]) => '<button type="button" data-join="' + v + '"' + (join === v ? ' class="on"' : '') + (on ? '' : ' disabled') + '>' + t + '</button>').join('') +
+      '</div><p class="example">' + example + '</p></div>';
+  }
+
   // A new number opens its small window right away: name it, choose the unit, type the value.
   function openFresh(b) {
     if (!b.fresh) return;
@@ -567,7 +603,7 @@
       const v = target;
       const uses = blocks.filter(x => x.vid === v.id).length;
       const num = n => String(n).replace('.', ',');
-      pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Постоянное · задаёте один раз' : 'Каждый месяц · вводите на странице объекта') + '</h4>' +
+      pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Тариф / норматив · задаёте один раз' : 'Каждый месяц · вводите на странице объекта') + '</h4>' +
         (uses > 1 ? '<p class="uses">Стоит в формуле ' + uses + ' раза — правка меняет везде.</p>' : '') +
         '<label class="f">Название — так подписано на странице объекта и в счёте<input data-k="label" value="' + v.label.replace(/"/g, '&quot;') + '" placeholder="Например, Тариф тепло"></label>' +
         '<div class="f">Единица<div class="unit-row">' + unitSelect('unit', v.unit, 'без единицы') + '<span>за</span>' + unitSelect('per', v.per, '—') + '</div></div>' +
@@ -577,14 +613,19 @@
             '<label class="f">Для проверки (как будто прошлый месяц)<input data-k="sample" inputmode="decimal" value="' + num(v.sample) + '"></label>');
     } else {
       const k = METER_KINDS[b.kind];
-      // Whose usage: each tenant's own (only «Каждому по его счётчикам»), exactly one tenant's, or all tenants' together.
-      const choices = (mode === 'each' ? [['own', 'Свой у каждого арендатора']] : [])
-        .concat(TENANTS.map(t => [t.id, t.name]))
-        .concat([['all', 'Все вместе (сумма расхода арендаторов)']]);
-      const cur = mode === 'total' && b.whose === 'own' ? 'all' : b.whose;
-      pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4><div class="f">Чей расход</div><div class="radios">' +
-        choices.map(([v, text]) => '<label><input type="radio" name="whose-' + b.id + '" data-k="whose" value="' + v + '"' + (v === cur ? ' checked' : '') + '>' + text + '</label>').join('') +
-        '</div>';
+      pop.innerHTML = '<h4>' + k.name + ' — расход за месяц</h4>' + meterPopBody(b);
+      // Ticks and «у каждого свой / складываем» redraw the window in place, with its example.
+      pop.addEventListener('change', ev => {
+        if (ev.target.dataset.tenant === undefined) return;
+        const id = ev.target.dataset.tenant;
+        b.tenants = ev.target.checked ? TENANTS.map(t => t.id).filter(x => x === id || b.tenants.includes(x)) : b.tenants.filter(x => x !== id);
+        pop.querySelector('.meter-body').outerHTML = meterPopBody(b); render();
+      });
+      pop.addEventListener('click', ev => {
+        const btn = ev.target.closest('[data-join]'); if (!btn || btn.disabled) return;
+        b.join = btn.dataset.join;
+        pop.querySelector('.meter-body').outerHTML = meterPopBody(b); render();
+      });
     }
     pop.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn danger" data-del>Убрать из формулы</button><button class="btn primary" data-ok>Готово</button></div>');
     document.body.appendChild(pop);
@@ -634,7 +675,7 @@
       return [make('op:('), make('meter:hot'), make('op:+'), make('meter:cold'), make('op:)'), make('op:×'), val(t)]; },
     pesk: () => { setMode('each'); values = [];
       const sum = newValue('month', { label: 'Сумма по квитанции', unit: '₽', sample: 8450 });
-      return [val(sum), make('op:÷'), Object.assign(make('meter:el'), { whose: 'all' }), make('op:×'), make('meter:el')]; },
+      return [val(sum), make('op:÷'), Object.assign(make('meter:el'), { join: 'sum' }), make('op:×'), make('meter:el')]; },
     heat: () => { setMode('total'); values = [];
       const heat = newValue('month', { label: 'Тепло по квитанции', unit: 'Гкал', sample: 0.42 });
       const per = newValue('const', { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' });
@@ -642,7 +683,7 @@
       return [make('op:('), val(heat), make('op:−'), make('op:('), make('meter:hot'), make('op:×'), val(per), make('op:)'), make('op:)'), make('op:×'), val(tariff)]; },
     one: () => { setMode('each'); values = [];
       const t = newValue('const', { label: 'Тариф', value: 9.6, unit: '₽', per: 'кВт·ч' });
-      return [Object.assign(make('meter:el'), { whose: 'v' }), make('op:×'), val(t)]; },
+      return [Object.assign(make('meter:el'), { tenants: ['v'] }), make('op:×'), val(t)]; },
     clear: () => { values = []; return []; },
   };
   function setMode(m) { mode = m; document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m)); }
