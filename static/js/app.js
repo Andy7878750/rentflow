@@ -1878,7 +1878,27 @@
         });
     }
 
-    monthForm.addEventListener('input', function () {
+    // Digit groups while typing: «17580» → «17 580» (as the server shows numbers); the caret stays after the same digit.
+    function groupDigits(input) {
+      var value = input.value;
+      var caret = input.selectionStart == null ? value.length : input.selectionStart;
+      var before = value.slice(0, caret).replace(/[^\d,.\-]/g, '').length;
+      var clean = value.replace(/[\s ]/g, '').replace('.', ',');
+      var match = clean.match(/^(-?)(\d+)(.*)$/);
+      if (!match) return;
+      var grouped = match[1] + match[2].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + match[3];
+      if (grouped === value) return;
+      input.value = grouped;
+      var pos = 0, seen = 0;
+      while (pos < grouped.length && seen < before) {
+        if (/[\d,.\-]/.test(grouped[pos])) seen++;
+        pos++;
+      }
+      if (document.activeElement === input) input.setSelectionRange(pos, pos);
+    }
+
+    monthForm.addEventListener('input', function (event) {
+      if (event.target.matches && event.target.matches('.num-input:not(.num-input-coef)')) groupDigits(event.target);
       status.textContent = '';
       clearTimeout(timer);
       timer = setTimeout(save, 700);

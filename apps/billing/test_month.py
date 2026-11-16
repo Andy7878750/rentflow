@@ -318,7 +318,7 @@ class MonthBillTests(TestCase):
         page = self.client.get(f'/properties/{self.prop.pk}/?month=2026-09')
 
         self.assertContains(page, f'is-bad" name="cur-{meter.pk}"')
-        self.assertContains(page, 'меньше «было»')
+        self.assertContains(page, 'class="bad-dot"')
 
 
 class ObjectMetersTariffTests(TestCase):

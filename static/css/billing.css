@@ -4268,3 +4268,13 @@
 /* «Стало» below «было» (or a negative usage): the field red, a red badge instead of the usage; not counted. */
 .mread .num-input.is-bad,
 .mread .num-input.is-bad:focus { border-color: var(--color-danger, #c0392b); box-shadow: 0 0 0 2px rgba(192, 57, 43, .12); }
+
+/* Instead of words — just a red dot in the usage column (2026-11-16, the user's wish); the reason is in its tooltip. */
+.mread-use .bad-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 6px 4px;
+  border-radius: 50%;
+  background: var(--color-danger);
+}
