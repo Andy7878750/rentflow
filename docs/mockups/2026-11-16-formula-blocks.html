@@ -196,10 +196,10 @@
   .strip .cursor, .strip ~ .caret, .caret { height: 40px; }
   /* Round 15: the small × in the corner of a block in the formula line (on hover; always on touch screens). */
   .strip .chip { position: relative; overflow: visible; }
-  .strip .chip .del { position: absolute; top: -6px; right: -6px; display: none; width: 16px; height: 16px; align-items: center; justify-content: center;
-    border-radius: 50%; background: #fff; border: 1px solid var(--border); color: var(--muted); font-size: 12px; line-height: 1; cursor: pointer; z-index: 1; }
+  .strip .chip .del { position: absolute; top: 1px; right: 3px; display: none; width: 12px; height: 12px; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 13px; line-height: 1; cursor: pointer; z-index: 1; }
   .strip .chip:hover .del { display: inline-flex; }
-  .strip .chip .del:hover { color: var(--danger); border-color: var(--danger); }
+  .strip .chip .del:hover { color: var(--danger); }
   @media (hover: none) { .strip .chip .del { display: inline-flex; } }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
@@ -424,9 +424,7 @@
     });
     // The blinking cursor: where the next block goes (the end, or where you clicked between blocks).
     if (cursor !== null && cursor > blocks.length) cursor = null;
-    const mark = document.createElement('span'); mark.className = 'cursor';
-    const chips = strip.querySelectorAll('.chip');
-    if (cursor === null || cursor >= chips.length) strip.appendChild(mark); else strip.insertBefore(mark, chips[cursor]);
+    // Round 16: no blinking cursor — a block goes to the end of the line, or where it is dropped.
     markCut(strip);
     renderPalette();
     document.getElementById('mode-badge').textContent = mode === 'each' ? 'каждому по его счётчикам' : 'общая сумма · ' + { shares: 'по долям', equal: 'поровну', area: 'по м²' }[split];
@@ -608,15 +606,13 @@
   function insertBlock(b, at) {
     const pos = at !== undefined ? at : cursor === null ? blocks.length : cursor;
     blocks.splice(pos, 0, b);
-    if (cursor !== null || at !== undefined) cursor = pos + 1 >= blocks.length ? null : pos + 1;
+    cursor = null;  // round 16: no cursor — the next block always goes to the end
     render();
   }
   let justDragged = false;
   strip.addEventListener('click', e => {
     if (justDragged || e.target.closest('.chip, .strip-clear')) return;
-    const at = insertIndex(e.clientX, e.clientY);
-    cursor = at >= blocks.length ? null : at;
-    render();
+    // Round 16: a click on the line no longer moves a cursor (there is none).
   });
 
   // ---------- Drag and drop (mouse and finger), click to add ----------
