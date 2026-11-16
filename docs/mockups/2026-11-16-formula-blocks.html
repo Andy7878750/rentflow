@@ -176,6 +176,12 @@
   .chip.tile.k-new .t1 { color: inherit; }
   .chip.k-new.k-receipt { --c: #8a6420; } .chip.k-new.k-const { --c: var(--accent); }
   .group .chip.k-op { width: 36px; height: 36px; padding: 0; }
+  /* Round 10: «пёстро» — all blocks grey (palette and formula line), only the icons keep their colour; no white box around the icon. */
+  .chip.k-receipt, .chip.k-const, .chip.k-meter { background: #f4f6f8; border-color: #e3e8ec; }
+  .chip.k-receipt { --c: #b07d2b; }
+  .chip.tile .ico, .chip.tile.k-new .ico { width: 18px; height: auto; background: transparent; border-radius: 0; }
+  .chip.k-new, .chip.tile.k-new { background: #fff; border-color: #cfd8de; color: var(--muted); }
+  .chip.tile.k-new .t1 { color: var(--text); }
   .pop .acts.thirds .btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
 
   @media (max-width: 640px) {
