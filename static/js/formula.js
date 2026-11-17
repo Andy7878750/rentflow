@@ -37,6 +37,8 @@
   }
   function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
   function sampleFor(unit) { return SAMPLES[unit] || 10; }
+  // «-», «—» typed as an own unit mean «no unit» (a coefficient): not a unit of its own.
+  function cleanUnit(text) { var t = String(text || '').trim(); return /^[-–—_.\s]*$/.test(t) ? '' : t; }
   function toNumber(text) { var n = Number(String(text).replace(/[\s ]/g, '').replace(',', '.')); return isFinite(n) ? n : 0; }
 
   // ---------- Arithmetic with units: 45 ₽/м³ → { '₽': 1, 'м³': -1 } ----------
@@ -68,7 +70,7 @@
     var uid = 0, nid = 0;
 
     var values = ctx.numbers.map(function (n) {
-      return { id: String(n.id), type: n.monthly ? 'month' : 'const', label: n.label, unit: n.unit || '', per: n.per || '',
+      return { id: String(n.id), type: n.monthly ? 'month' : 'const', label: n.label, unit: cleanUnit(n.unit), per: cleanUnit(n.per),
         value: n.value === null || n.value === undefined ? 0 : n.value,
         sample: n.last === null || n.last === undefined ? sampleFor(n.unit) : n.last, real: n.last !== null && n.last !== undefined };
     });
@@ -161,9 +163,14 @@
       '<div class="fx-modal" role="dialog" aria-label="Своя формула">' +
       '<h2>Своя формула</h2>' +
       '<p class="fx-desc">Соберите расчёт как на бумаге: числа, счётчики и знаки. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>' +
+      '<div class="fx-examples">Примеры:' +
+      '<button type="button" data-example="sewage">Водоотведение</button>' +
+      '<button type="button" data-example="usage">Сумма по расходу</button>' +
+      '<button type="button" data-example="heat">Отопление</button>' +
+      '<button type="button" data-example="one">Только арендатору 1</button></div>' +
       '<div class="fx-palette">' +
-      '<div class="fx-group"><h3>Каждый месяц</h3><p class="fx-sub">вводите на странице объекта</p><div class="fx-chips" data-pal="month"></div></div>' +
-      '<div class="fx-group"><h3>Тариф / норматив</h3><p class="fx-sub">задаёте один раз</p><div class="fx-chips" data-pal="const"></div></div>' +
+      '<div class="fx-group"><h3>Вводите каждый месяц</h3><p class="fx-sub">например, из квитанции</p><div class="fx-chips" data-pal="month"></div></div>' +
+      '<div class="fx-group"><h3>Тарифы и нормативы</h3><p class="fx-sub">задаёте один раз</p><div class="fx-chips" data-pal="const"></div></div>' +
       '<div class="fx-group"><h3>Счётчики</h3><p class="fx-sub">расход за месяц</p><div class="fx-chips" data-pal="meter"></div></div>' +
       '<div class="fx-group"><h3>Знаки</h3><p class="fx-sub">или с клавиатуры</p><div class="fx-chips is-signs">' +
       ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + s + '</span>'; }).join('') +
@@ -240,9 +247,12 @@
         box.innerHTML = '';
         values.filter(function (v) { return v.type === type; }).forEach(function (v) {
           var b = { type: 'val', vid: v.id };
-          box.appendChild(tileEl('val:' + v.id, kindClass(b), iconOf(b), v.label, chipValue(b) || 'без единицы'));
+          var tile = tileEl('val:' + v.id, kindClass(b), iconOf(b), v.label, chipValue(b) || 'без единицы');
+          tile.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Удалить число" aria-label="Удалить число «' + esc(v.label) + '»">×</span>');
+          box.appendChild(tile);
         });
-        box.appendChild(tileEl('new:' + type, 'k-new ' + (type === 'const' ? 'k-const' : 'k-month'), ICONS.plus, 'Новое число', 'настроить'));
+        box.appendChild(tileEl('new:' + type, 'k-new ' + (type === 'const' ? 'k-const' : 'k-month'), ICONS.plus,
+          type === 'const' ? 'Тариф или норматив' : 'Число или сумма', type === 'const' ? 'например, 45 ₽ за м³' : 'например, Гкал или сумма'));
       });
       var meters = overlay.querySelector('[data-pal="meter"]');
       meters.innerHTML = '';
@@ -445,8 +455,13 @@
       var del = e.target.closest('.fx-del');
       if (del) {
         e.preventDefault(); closePop();
-        var id = del.closest('.fx-chip').dataset.id;
-        blocks = blocks.filter(function (b) { return String(b.id) !== id; });
+        var owner = del.closest('.fx-chip'), id = owner.dataset.id;
+        if ((owner.dataset.new || '').indexOf('val:') === 0) {
+          // A number of the palette: it goes away together with its blocks in the formula.
+          var vid = owner.dataset.new.slice(4);
+          values = values.filter(function (v) { return v.id !== vid; });
+          blocks = blocks.filter(function (b) { return !(b.type === 'val' && b.vid === vid); });
+        } else blocks = blocks.filter(function (b) { return String(b.id) !== id; });
         justDragged = true; setTimeout(function () { justDragged = false; }, 0);
         render(); return;
       }
@@ -507,6 +522,58 @@
       render();
     });
     overlay.querySelector('[data-clear]').addEventListener('click', function () { closePop(); blocks = []; render(); });
+
+    // ---------- Examples: a ready formula from this object's own meters; its numbers go to the palette ----------
+    // A number of an example is taken from the palette when it is already there (by its name) — pressing twice adds nothing.
+    function exampleValue(type, props) {
+      return values.find(function (v) { return v.type === type && v.label === props.label; }) ||
+        newValue(type, Object.assign({ sample: type === 'month' ? sampleFor(props.unit) : 0 }, props));
+    }
+    function val(v) { return { id: ++uid, type: 'val', vid: v.id }; }
+    function op(sign) { return make('op:' + sign); }
+    function meterSum(key) { var b = make('meter:' + key); b.join = 'sum'; return b; }
+    var EXAMPLES = {
+      sewage: { needs: ['hot_water', 'water'], build: function () {
+        var t = exampleValue('const', { label: 'Тариф водоотведения', value: 45, unit: '₽', per: 'м³' });
+        return [op('('), make('meter:hot_water'), op('+'), make('meter:water'), op(')'), op('×'), val(t)];
+      } },
+      usage: { needs: ['electricity'], build: function () {
+        var sum = exampleValue('month', { label: 'Сумма по квитанции', unit: '₽' });
+        return [val(sum), op('÷'), meterSum('electricity'), op('×'), make('meter:electricity')];
+      } },
+      heat: { needs: ['hot_water'], build: function () {
+        var heat = exampleValue('month', { label: 'Тепло по квитанции', unit: 'Гкал' });
+        var per = exampleValue('const', { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' });
+        var tariff = exampleValue('const', { label: 'Тариф тепла', value: 4800, unit: '₽', per: 'Гкал' });
+        return [op('('), val(heat), op('−'), op('('), meterSum('hot_water'), op('×'), val(per), op(')'), op(')'), op('×'), val(tariff)];
+      } },
+      // The first tenant's own light meter × a tariff: only that tenant pays by this formula.
+      one: { needs: ['electricity'], build: function (anchor) {
+        var first = TENANTS[0];
+        var meter = first && METERS.find(function (m) { return m.key === 'electricity' && isActive(m) && tenantOf(m.id) === first.id; });
+        if (!meter) {
+          openNote(anchor, 'Пример не собрать', 'Для этого примера у первого арендатора должен быть свой счётчик электричества, подключённый к услуге «По счётчикам».');
+          return null;
+        }
+        var t = exampleValue('const', { label: 'Тариф', value: 9.6, unit: '₽', per: 'кВт·ч' });
+        var b = make('meter:electricity'); b.meters = [meter.id];
+        return [b, op('×'), val(t)];
+      } },
+    };
+    overlay.querySelector('.fx-examples').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-example]'); if (!btn) return;
+      closePop();
+      var example = EXAMPLES[btn.dataset.example];
+      var missing = example.needs.filter(function (key) { return !METERS.some(function (m) { return m.key === key && isActive(m); }); });
+      if (missing.length) {
+        var names = { electricity: 'Электричество', water: 'Вода холодная', hot_water: 'Вода горячая' };
+        openNote(btn, 'Пример не собрать', 'Для этого примера нужны счётчики: ' + missing.map(function (k) { return '«' + names[k] + '»'; }).join(' и ') +
+          '. Добавьте их в окне объекта и подключите в услуге «По счётчикам» — там вводятся показания.');
+        return;
+      }
+      var built = example.build(btn);
+      if (built) { blocks = built; render(); }
+    });
     overlay.querySelector('[data-check]').addEventListener('click', function (e) {
       var b = e.target.closest('[data-pay]'); if (!b) return;
       var box = payBox(b.dataset.pay); if (!box) return;
@@ -531,7 +598,7 @@
         if (!v.unit) return 'Каждый месяц на странице объекта вводите число (без единицы итог в рублях не проверяем).';
         return 'Каждый месяц на странице объекта вводите ' + (v.unit === '₽' ? 'сумму в ₽' : 'сколько ' + v.unit) + ' — например, из квитанции.';
       }
-      if (!v.unit) return 'Просто число ' + n + ' — без единицы итог в рублях не проверяем.';
+      if (!v.unit) return 'Просто число ' + n + ' — например, коэффициент. Без единицы итог в рублях не проверяем.';
       if (v.unit === '₽') return v.per ? 'Это тариф: ' + n + ' ₽' + one + '.' : 'Это сумма: ' + n + ' ₽ каждый месяц.';
       return v.per ? 'Это норматив: ' + n + ' ' + v.unit + ' на 1 ' + v.per + '.' : 'Это количество: ' + n + ' ' + v.unit + '.';
     }
@@ -578,10 +645,10 @@
     // A new number is set up first — next to the palette — then kept («Сохранить») or put in the formula.
     function openDraft(type, anchor, at) {
       closePop();
-      var v = { id: '', type: type, label: '', unit: type === 'const' ? '₽' : '', per: '', value: 0, sample: 0, real: false };
+      var v = { id: '', type: type, label: '', unit: '₽', per: '', value: 0, sample: 0, real: false };
       if (type === 'month') v.sample = sampleFor(v.unit);
       pop = document.createElement('div'); pop.className = 'fx-pop';
-      pop.innerHTML = '<h4>' + (type === 'const' ? 'Новый тариф / норматив' : 'Новое число — каждый месяц') + '</h4>' + valueFields(v) +
+      pop.innerHTML = '<h4>' + (type === 'const' ? 'Новый тариф или норматив' : 'Новое число или сумма — каждый месяц') + '</h4>' + valueFields(v) +
         '<div class="fx-acts"><button type="button" class="fx-btn" data-cancel>Отмена</button><button type="button" class="fx-btn" data-keep disabled title="Сохранить в палитру, поставить в формулу потом">Сохранить</button>' +
         '<button type="button" class="fx-btn is-primary" data-put disabled>В формулу</button></div>';
       overlay.appendChild(pop);
@@ -636,7 +703,7 @@
       if (b.type === 'val') {
         var v = valueOf(b);
         var uses = blocks.filter(function (x) { return x.vid === v.id; }).length;
-        pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Тариф / норматив · задаёте один раз' : 'Каждый месяц · вводите на странице объекта') + '</h4>' +
+        pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Тариф или норматив · задаёте один раз' : 'Вводите каждый месяц · например, из квитанции') + '</h4>' +
           (uses > 1 ? '<p class="fx-uses">Стоит в формуле ' + uses + ' раза — правка меняет везде.</p>' : '') + valueFields(v);
       } else {
         pop.innerHTML = '<h4>' + esc(kindOf(b.key).name) + ' — расход за месяц</h4>' + meterPopBody(b);
@@ -708,7 +775,7 @@
       m.style.minWidth = Math.max(r.width, 150) + 'px';
       m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
       m.style.top = (r.bottom + 4 + m.offsetHeight > innerHeight ? r.top - 4 - m.offsetHeight : r.bottom + 4) + 'px';
-      function done(value) { closeUnitMenu(); btn.focus(); pick(String(value).trim()); }
+      function done(value) { closeUnitMenu(); btn.focus(); pick(cleanUnit(value)); }
       m.addEventListener('click', function (e) {
         var o = e.target.closest('[data-v]'); if (o) { done(o.dataset.v); return; }
         if (e.target.closest('.fx-ucustom button')) { var t = m.querySelector('.fx-ucustom input').value; if (t.trim()) done(t); }

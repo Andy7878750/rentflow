@@ -88,14 +88,15 @@
     {% if bill.entries %}
       <p class="month-hint">Введите суммы и показания за {{ month_name }} — счета справа посчитаются сами.</p>
 
-      <form method="post" action="{% url 'month_save' property.pk %}" class="month-form" data-month-form>
+      <form method="post" action="{% url 'month_save' property.pk %}" class="month-form" data-month-form data-order-url="{% url 'receipt_order' property.pk %}">
         {% csrf_token %}
         <input type="hidden" name="month" value="{{ month }}">
 
         {% for entry in bill.entries %}
           {% with receipt=entry.receipt %}
-          <article class="mreceipt{% if entry.total is None %} is-missing{% endif %}" id="mreceipt-{{ receipt.pk }}">
+          <article class="mreceipt{% if entry.total is None %} is-missing{% endif %}" id="mreceipt-{{ receipt.pk }}" data-receipt-id="{{ receipt.pk }}">
             <header class="mreceipt-head">
+              {% if bill.entries|length > 1 %}<button type="button" class="mreceipt-grip" data-receipt-grip title="Перетащите, чтобы поменять услуги местами" aria-label="Переместить услугу «{{ receipt.name }}»"><svg class="icon"><use href="#i-grip"/></svg></button>{% endif %}
               <span class="receipt-icon rk-{{ receipt.kind }}"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
               <div class="receipt-body">
                 <div class="receipt-title">
@@ -121,6 +122,14 @@
                   <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="dropdown-item" role="menuitem">
                     <svg class="icon"><use href="#i-edit"/></svg>Настроить
                   </a>
+                  {% if bill.entries|length > 1 %}
+                    <button type="button" class="dropdown-item" role="menuitem" data-receipt-move="up">
+                      <svg class="icon"><use href="#i-arrow-up"/></svg>Выше
+                    </button>
+                    <button type="button" class="dropdown-item" role="menuitem" data-receipt-move="down">
+                      <svg class="icon"><use href="#i-arrow-down"/></svg>Ниже
+                    </button>
+                  {% endif %}
                   <a href="{% url 'receipt_delete' receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
                     <svg class="icon"><use href="#i-trash"/></svg>Удалить
                   </a>

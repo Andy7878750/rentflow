@@ -52,7 +52,7 @@
         </ul>
       </details>
 
-      <details class="nav-group"{% if url_name == 'receipt_list' %} open{% endif %}>
+      <details class="nav-group"{% if url_name == 'receipt_list' or url_name == 'tariff_list' %} open{% endif %}>
         <summary>
           <svg class="icon"><use href="#i-gauge"/></svg>
           <span>Услуги</span>
@@ -62,6 +62,11 @@
           <li>
             <a href="{% url 'receipt_list' %}" class="nav-item{% if url_name == 'receipt_list' %} is-active{% endif %}">
               <span>Все услуги</span><span class="nav-count">{{ sidebar_receipt_count }}</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'tariff_list' %}" class="nav-item{% if url_name == 'tariff_list' %} is-active{% endif %}">
+              <span>Тарифы</span>
             </a>
           </li>
           <li>
@@ -122,6 +127,25 @@
         </span>
       </div>
     </nav>
+    {% comment %}The menu keeps its open sections from page to page (the user, 2026-11-17: going to «Все счётчики» used to
+       close the others). The section of the current page is always open. Runs right here, so nothing flickers.{% endcomment %}
+    <script>
+      (function () {
+        var KEY = 'rentflow.navOpen';
+        var groups = document.querySelectorAll('.sidebar-nav details.nav-group');
+        var saved = null;
+        try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+        groups.forEach(function (group, index) {
+          if (saved && typeof saved[index] === 'boolean' && !group.querySelector('.nav-item.is-active')) group.open = saved[index];
+          else if (group.querySelector('.nav-item.is-active')) group.open = true;
+          group.addEventListener('toggle', function () {
+            var state = [];
+            groups.forEach(function (g) { state.push(g.open); });
+            try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+          });
+        });
+      })();
+    </script>
 
     <button type="button" class="sidebar-collapse" data-sidebar-toggle>
       <svg class="icon"><use href="#i-chevrons-left"/></svg>

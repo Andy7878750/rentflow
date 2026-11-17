@@ -58,6 +58,14 @@ class EvaluatorTests(SimpleTestCase):
         self.assertTrue(bare)
         self.assertEqual(result.value, Decimal('135'))
 
+    def test_a_dash_for_a_unit_is_no_unit(self):
+        # 2026-11-17: a coefficient typed with the unit «-» used to give «В итоге получается ₽·-, а нужны рубли».
+        result, bare = self.run_formula(num('6400', '₽'), '×', num('1.25', '-'))
+        self.assertTrue(bare)
+        self.assertEqual(result.value, Decimal('8000.00'))
+        self.assertEqual(services._clean_unit(' — '), '')
+        self.assertEqual(services._clean_unit('м³'), 'м³')
+
     def test_broken_formulas_say_why(self):
         cases = [
             (('×', num('1', '₽')), 'Знак «×» стоит не на месте.'),

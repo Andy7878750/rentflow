@@ -99,12 +99,20 @@ class Receipt(models.Model):
     coefficient = models.DecimalField('Коэффициент', max_digits=6, decimal_places=4, default=1)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    # The order of the service cards on the object page (the owner drags them); a new one goes last.
+    position = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ['created_at', 'id']
+        ordering = ['position', 'created_at', 'id']
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if self.pk is None and not self.position:
+            last = Receipt.objects.filter(property_id=self.property_id).aggregate(models.Max('position'))['position__max']
+            self.position = (last or 0) + 1
+        super().save(*args, **kwargs)
 
     @builtins.property  # plain `property` is the ForeignKey field above
     def currency_symbol(self):

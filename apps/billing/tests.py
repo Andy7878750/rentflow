@@ -10,7 +10,7 @@ from apps.properties.services import free_meters, setup_steps
 from apps.tenants.models import Tenant
 
 from . import services
-from .models import Meter, MonthlyAmount, Reading, Receipt
+from .models import Meter, MonthlyAmount, Reading, Receipt, ReceiptTariff
 
 User = get_user_model()
 
@@ -455,6 +455,34 @@ class ReceiptViewTests(TestCase):
         response = self.client.post(reverse('receipt_create', args=[self.prop.pk]), data, HTTP_X_MODAL='1')
         self.assertEqual(response.status_code, 204)
 
+    def test_tariffs_page(self):
+        # 2026-11-17: «Услуги → Тарифы» — every tariff in force; a row opens the service, where it is changed.
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч', serial='222')
+        self._light_service(light)
+        receipt = self.prop.receipts.get()
+        area = Receipt.objects.create(property=self.prop, kind='custom', name='Содержание', amount_mode='rate',
+                                      rate_base='area', rate=Decimal('7.12'))
+        stranger = Receipt.objects.create(property=make_property(self.other), kind='custom', name='Чужая',
+                                          amount_mode='rate', rate_base='area', rate=Decimal('99'))
+
+        response = self.client.get(reverse('tariff_list'))
+        self.assertContains(response, 'Электричество № 222')
+        self.assertContains(response, '5,5 ₽/кВт·ч')
+        self.assertContains(response, '7,12\xa0₽/м²')
+        self.assertContains(response, 'с начала')
+        self.assertContains(response, f'data-row-modal="{reverse("receipt_edit", args=[receipt.pk])}"')
+        self.assertContains(response, f'data-row-modal="{reverse("receipt_edit", args=[area.pk])}"')
+        self.assertNotContains(response, stranger.name)
+
+        # A new price starts this month; the page says since when and what it was before.
+        ReceiptTariff.objects.filter(receipt=receipt).update(valid_from=date(2026, 1, 1))
+        ReceiptTariff.objects.create(receipt=receipt, key=f'm:{light.pk}', valid_from=date(2026, 11, 1), tariff=Decimal('6'))
+        rows = services.tariff_table(self.user, today=date(2026, 11, 17))[0]['rows']
+        row = next(row for row in rows if row['receipt'] == receipt)
+        self.assertEqual((row['price'], row['since'], row['before']), ('6 ₽/кВт·ч', 'с ноября 2026', '5,5 ₽/кВт·ч'))
+        earlier = services.tariff_table(self.user, today=date(2026, 10, 5))[0]['rows']
+        self.assertEqual(next(r for r in earlier if r['receipt'] == receipt)['since'], 'с января 2026')
+
     def test_all_meters_page(self):
         tenant = self.prop.tenants.get()
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
@@ -782,6 +810,26 @@ class MonthPageTests(TestCase):
         self.vlad = Tenant.objects.create(property=self.prop, name='Владислав', share_percent=Decimal('55'))
         self.receipt = services.save_receipt(services.new_receipt(self.prop, 'management'))
         self.client.force_login(self.user)
+
+    def test_service_cards_change_places(self):
+        # 2026-11-17: the owner drags the service cards of the object page; a new service goes last.
+        light = services.save_receipt(services.new_receipt(self.prop, 'internet'))
+        own = Receipt.objects.create(property=self.prop, kind='custom', name='Охрана')
+        self.assertEqual([r.pk for r in self.prop.receipts.all()], [self.receipt.pk, light.pk, own.pk])
+        stranger = Receipt.objects.create(property=make_property(
+            User.objects.create_user(username='b@example.ru', password='secret1')), kind='custom', name='Чужая')
+
+        url = reverse('receipt_order', args=[self.prop.pk])
+        response = self.client.post(url, {'order': f'{own.pk},{stranger.pk},{self.receipt.pk}'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([r.pk for r in self.prop.receipts.all()], [own.pk, self.receipt.pk, light.pk])
+        stranger.refresh_from_db()
+        self.assertEqual(stranger.position, 1, "another owner's service is not touched")
+
+        page = self.client.get(reverse('property_detail', args=[self.prop.pk])).content.decode()
+        self.assertLess(page.index(f'id="mreceipt-{own.pk}"'), page.index(f'id="mreceipt-{self.receipt.pk}"'))
+        self.assertIn('data-receipt-grip', page)
+        self.assertEqual(self.client.get(url).status_code, 405)
 
     def test_live_save_returns_recalculated_page(self):
         response = self.client.post(

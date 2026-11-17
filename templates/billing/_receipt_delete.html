@@ -1,7 +1,7 @@
 <div class="modal-panel modal-panel-confirm">
   <div class="confirm-icon" aria-hidden="true"><svg class="icon"><use href="#i-trash"/></svg></div>
   <h1 class="confirm-title">Удалить услугу «{{ receipt.name }}»?</h1>
-  <p class="confirm-text">Счётчики объекта и их показания останутся. Отменить это действие нельзя.</p>
+  <p class="confirm-text">Вы уверены? Услуги больше не будет: её тарифы и суммы удалятся, в счета она не попадёт. Счётчики объекта и их показания останутся. Отменить это действие нельзя.</p>
   <form method="post" action="{% url 'receipt_delete' receipt.pk %}" data-modal-form class="confirm-actions">
     {% csrf_token %}
     <a href="{% url 'property_detail' property.pk %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>

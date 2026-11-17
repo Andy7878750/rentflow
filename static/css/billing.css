@@ -3914,62 +3914,33 @@
 /* «По расходу» only for a sum from the receipt: by meters × tariff it makes no sense. */
 .rform:has(input[name=charge][value=meters]:checked) .split-track label:has(input[value=usage]) { display: none; }
 
-/* ---------- «Все счётчики» (2026-11-16): the same table as «Все услуги», one per object ---------- */
-.mtr-group + .mtr-group { margin-top: 24px; }
+/* ---------- «Все счётчики» and «Тарифы» — the same table as «Все услуги» (the user, 2026-11-17: the three tables
+   in one style): one table for all objects with an «Объект» column, the usual rows, a 34px icon tile, the name with
+   a quiet line under it, labels as tags. Each keeps its own logic (a row opens the window where the thing changes). */
+.svc-table tbody tr[data-row-modal] { cursor: pointer; }
+.svc-table td > .svc-meta { display: block; }
+.svc-table .svc-plain { color: var(--color-text); text-decoration: none; }
+.svc-table .svc-plain:hover { color: var(--color-accent); }
+.svc-table .svc-strong { font-weight: 600; white-space: nowrap; }
+.svc-table .tag + .tag { margin-left: 4px; }
+.svc-name-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.svc-name-title { color: var(--color-primary); font-weight: 600; }
 
-.mtr-object {
-  margin: 0 0 10px;
-  font-size: 16px;
+/* The same column widths in the three tables (the user, 2026-11-17): name · object · two middle ones · the number · «…». */
+@container (min-width: 721px) {
+  .svc-table { table-layout: fixed; }
+  .svc-table th:nth-child(1) { width: 25%; }
+  .svc-table th:nth-child(2) { width: 12%; }
+  .svc-table th:nth-child(3) { width: 20%; }
+  .svc-table th:nth-child(4) { width: 16%; }
+  .svc-table th:nth-child(6) { width: 68px; }
+  .svc-table td:not(.svc-actions) { overflow: hidden; text-overflow: ellipsis; }
+  .svc-table .svc-name-cell, .svc-table .svc-object { max-width: none; }
 }
 
-.mtr-object a { color: inherit; text-decoration: none; }
-.mtr-object a:hover { color: var(--color-accent); }
-
-.mtr-table tbody tr[data-row-modal] { cursor: pointer; }
-
-.mtr-table .tm-icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  color: var(--mk, var(--color-text-muted));
-}
-
-.mtr-table .tm-icon svg { width: 18px; height: 18px; }
-.mtr-table td > .svc-meta { display: block; }
-.mtr-table td a { color: inherit; text-decoration: none; }
-.mtr-table td a:hover { color: var(--color-accent); }
-.mtr-name { font-weight: 600; }
-
-/* Narrow: each meter a tidy card — name · «№ 222 · Виктор» · service with its tariff on the left, the reading on the right.
-   No «Номер:» labels: the words speak for themselves. */
-@container (max-width: 720px) {
-  .svc-table.mtr-table tr {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      "name name name"
-      "serial who who"
-      "svc svc last";
-    column-gap: 10px;
-    row-gap: 4px;
-    padding: 12px 56px 12px 16px;
-  }
-
-  .svc-table.mtr-table td { display: block; margin: 0; padding: 0; min-width: 0; }
-  .svc-table.mtr-table td[data-label]::before { content: none; }
-  .mtr-table td:nth-child(1) { grid-area: name; }
-  .mtr-table td:nth-child(2) { grid-area: serial; color: var(--color-text-muted); white-space: nowrap; }
-  .mtr-table td:nth-child(3) { grid-area: who; color: var(--color-text-muted); overflow: hidden; }
-  .mtr-table td:nth-child(3) .fade { display: block; white-space: nowrap; }
-  .mtr-table td:nth-child(2)::after { content: '·'; margin-left: 10px; }
-  .mtr-table td:nth-child(4) { grid-area: svc; align-self: end; overflow: hidden; }
-  .mtr-table td:nth-child(5) { grid-area: last; align-self: end; text-align: right; white-space: nowrap; }
-  .mtr-table td:nth-child(4) > a,
-  .mtr-table td:nth-child(4) > .svc-meta { display: inline; }
-  .mtr-table td:nth-child(4) > .svc-meta::before { content: ' · '; }
-  .mtr-table .svc-name-body { flex-direction: row; align-items: baseline; gap: 8px; }
-}
+/* A meter's icon tile in the colour of what it measures (light turquoise, cold water blue, hot red…). */
+.receipt-icon.is-meter { background: color-mix(in srgb, var(--rk, var(--color-accent)) 12%, #fff); color: var(--rk, var(--color-accent)); }
+.receipt-icon.is-meter svg { width: 18px; height: 18px; }
 
 /* ---------- Object page, the month's input (2026-11-15, feature/month-input) ---------- */
 
@@ -4282,3 +4253,40 @@
 /* The supplier under a service's name on the object page starts at the icon's edge, not under the name
    (2026-11-16, the user: «придвинь название поставщика на уровень иконки»). Icon 20px + gap 12px. */
 .mreceipt-head .receipt-meta { margin-left: -32px; }
+
+/* ---------- The service cards change places (2026-11-17): a grip in the card's left padding ---------- */
+.mreceipt { position: relative; }
+
+.mreceipt-grip {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  opacity: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.mreceipt-grip .icon { width: 14px; height: 14px; fill: currentColor; }
+.mreceipt:hover .mreceipt-grip,
+.mreceipt-grip:focus-visible,
+.mreceipt.is-moving .mreceipt-grip { opacity: 1; }
+.mreceipt-grip:hover { color: var(--color-accent); }
+@media (hover: none) { .mreceipt-grip { opacity: .6; } }
+
+.mreceipt.is-moving {
+  border-color: var(--color-accent);
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+
+.mreceipt.is-moving .mreceipt-grip { cursor: grabbing; }
+.mreceipt .dropdown-menu button.dropdown-item { width: 100%; border: 0; background: none; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }

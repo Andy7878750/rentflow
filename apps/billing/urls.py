@@ -6,6 +6,7 @@ urlpatterns = [
     path('services/', views.receipt_list, name='receipt_list'),
     path('services/add/', views.receipt_add, name='receipt_add'),
     path('meters/', views.meter_list, name='meter_list'),
+    path('tariffs/', views.tariff_list, name='tariff_list'),
     path('meters/add/', views.meter_add, name='meter_add'),
     path('meters/<int:pk>/remove/', views.meter_remove, name='meter_remove'),
     path('properties/<int:property_pk>/receipts/new/', views.receipt_create, name='receipt_create'),
@@ -15,5 +16,6 @@ urlpatterns = [
     path('properties/<int:property_pk>/month/', views.month_save, name='month_save'),
     path('receipts/<int:pk>/edit/', views.receipt_edit, name='receipt_edit'),
     path('receipts/<int:pk>/delete/', views.receipt_delete, name='receipt_delete'),
+    path('properties/<int:property_pk>/receipts/order/', views.receipt_order, name='receipt_order'),
     path('receipts/<int:pk>/night-weight/', views.receipt_night_weight, name='receipt_night_weight'),
 ]

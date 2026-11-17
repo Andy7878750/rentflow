@@ -675,6 +675,103 @@ def meter_table(owner):
     return groups
 
 
+def reorder_receipts(property_obj, ids):
+    """The object's services in the order of `ids` (top to bottom on the object page); the ones not named keep
+    their order after them. Other objects' ids are ignored."""
+    receipts = list(property_obj.receipts.all())
+    by_id = {receipt.pk: receipt for receipt in receipts}
+    named = [by_id[pk] for pk in dict.fromkeys(ids) if pk in by_id]
+    rest = [receipt for receipt in receipts if receipt not in named]
+    for position, receipt in enumerate(named + rest, start=1):
+        if receipt.position != position:
+            receipt.position = position
+            receipt.save(update_fields=['position'])
+
+
+def _tariff_since(rows, month):
+    """(«с ноября 2026» or '' for «from always», the tariff row before the one in force — or None)."""
+    rows = sorted(rows, key=lambda row: row.valid_from)
+    now = tariff_at(rows, month)
+    if now is None:
+        return '', None
+    earlier = [row for row in rows if row.valid_from < now.valid_from]
+    if now.valid_from == SINCE_ALWAYS:
+        return '', None
+    return f'с {_MONTHS_GEN[now.valid_from.month - 1]} {now.valid_from.year}', (earlier[-1] if earlier else None)
+
+
+_MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября',
+               'ноября', 'декабря']
+
+
+def tariff_table(owner, today=None):
+    """«Услуги → Тарифы»: every tariff in force of the owner's services, grouped by object. Read-only — a tariff
+    is changed in its service window (the one place), a row opens it. A row: the service · what the tariff is for
+    (a meter, «за м²», a formula's «Тариф / норматив») · the price · since when · the price before."""
+    from apps.properties.models import Property
+
+    month = first_of_month(today or date.today())
+    groups = []
+    properties = (Property.objects.filter(owner=owner).order_by('name')
+                  .prefetch_related('receipts__tariffs', 'receipts__meters', 'receipts__numbers'))
+    for property_obj in properties:
+        rows = []
+        for receipt in property_obj.receipts.all():
+            symbol = receipt.currency_symbol
+            history = {}
+            for row in receipt.tariffs.all():
+                history.setdefault(row.key, []).append(row)
+
+            def add(what, price, key_rows, kind='', note='', before_text=None):
+                since, before = _tariff_since(key_rows, month)
+                rows.append({
+                    'receipt': receipt, 'what': what, 'kind': kind, 'note': note, 'price': price, 'since': since,
+                    'before': before_text(before) if before is not None and before_text else '',
+                })
+
+            if receipt.amount_mode == Receipt.AmountMode.FORMULA:
+                for number in receipt.numbers.all():
+                    if number.monthly or number.value is None:
+                        continue
+                    unit = number_unit_text(number)
+                    text = lambda value, unit=unit: f'{fmt_number(value)}{NBSP}{unit}'.strip()  # noqa: E731
+                    key_rows = history.get(_number_key(number), [])
+                    now = tariff_at(sorted(key_rows, key=lambda row: row.valid_from), month)
+                    add(number.label, text(now.tariff if now else number.value), key_rows, note='в формуле',
+                        before_text=lambda row, text=text: text(row.tariff))
+            elif receipt.amount_mode == Receipt.AmountMode.RATE:
+                rate, persons = rate_at(receipt, month)
+                if rate is not None:
+                    per = 'чел.' if receipt.rate_base == Receipt.RateBase.PERSON else 'м²'
+                    text = lambda value, per=per: f'{fmt_number(value)}{NBSP}{symbol}/{per}'  # noqa: E731
+                    add('За человека' if receipt.rate_base == Receipt.RateBase.PERSON else 'За м²', text(rate),
+                        history.get(rate_key(receipt), []), before_text=lambda row, text=text: text(row.tariff))
+            elif receipt.metered:
+                seen = set()
+                for meter in receipt.meters.all():
+                    key = tariff_key(receipt, meter)
+                    key_rows = history.get(key) or history.get(kind_key(receipt, meter), [])
+                    if key == '*' and key in seen:
+                        continue
+                    seen.add(key)
+                    price = busy_tariff_text(receipt, meter)
+                    if not price:
+                        continue
+                    unit = meter_unit(meter)
+
+                    def before_text(row, meter=meter, unit=unit):
+                        if meter.day_night:
+                            night = fmt_number(row.tariff_night) if row.tariff_night is not None else '—'
+                            return f'{fmt_number(row.tariff)} / {night} {symbol}'
+                        return f'{fmt_number(row.tariff)} {symbol}' + (f'/{unit}' if unit else '')
+
+                    what = 'Все счётчики' if key == '*' else meter.name + (f' № {meter.serial}' if meter.serial else '')
+                    add(what, price, key_rows, kind=meter.kind if meter.kind in READY_METER_KINDS else 'custom',
+                        note='день / ночь' if meter.day_night and key != '*' else '', before_text=before_text)
+        groups.append({'property': property_obj, 'rows': rows})
+    return groups
+
+
 def mixed_owners(meters, posted):
     """Both common meters and the tenants' own (or free) ones among the switched-on meters, by the «чей» just posted
     (who_<pk>; the meter's own when not posted). They go in separate services (2026-11-15): one service would
@@ -1778,6 +1875,12 @@ def parse_formula(posted):
     return data if isinstance(data, dict) else {}
 
 
+def _clean_unit(text):
+    """A unit as typed; «-», «—» (typed for «no unit», a coefficient) — no unit, not a unit of its own."""
+    unit = str(text or '').strip()[:12]
+    return '' if not unit.strip('-–—_. ') else unit
+
+
 def _clean_numbers(raw):
     """The posted numbers: [{key, label, monthly, unit, per, value}] — key is the stored id or a new one («n3»)."""
     numbers = []
@@ -1791,8 +1894,8 @@ def _clean_numbers(raw):
             'key': str(item.get('id', '')),
             'label': str(item.get('label') or '').strip()[:60] or f'Число {position + 1}',
             'monthly': monthly,
-            'unit': str(item.get('unit') or '').strip()[:12],
-            'per': '' if monthly else str(item.get('per') or '').strip()[:12],
+            'unit': _clean_unit(item.get('unit')),
+            'per': '' if monthly else _clean_unit(item.get('per')),
             'value': value,
         })
     return numbers

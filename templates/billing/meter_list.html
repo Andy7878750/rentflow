@@ -12,62 +12,60 @@
    or, for a meter in no service, «Новая услуга» with the tiles, the matching tile picked and this meter switched on.
    «…» → «Удалить»: a confirmation, or «привязан к услуге» (meter_remove). data-row-modal in app.js.{% endcomment %}
 {% if has_meters %}
-  {% for group in groups %}{% if group.rows %}
-    <section class="mtr-group">
-      <h2 class="mtr-object"><a href="{% url 'property_detail' group.property.pk %}" class="fade">{{ group.property.name }}</a></h2>
-      <div class="svc-wrap">
-      <table class="svc-table mtr-table">
-        <thead>
-          <tr><th>Счётчик</th><th>Номер</th><th>Кто платит</th><th>Услуга</th><th class="svc-num">Последнее показание</th><th><span class="visually-hidden">Действия</span></th></tr>
-        </thead>
-        <tbody>
-          {% for row in group.rows %}
-            {% with meter=row.meter %}
-            {% if row.service %}{% url 'receipt_edit' row.service.pk as open_url %}{% else %}{% url 'receipt_create' group.property.pk as create_url %}{% endif %}
-            <tr data-row-modal="{% if row.service %}{{ open_url }}{% else %}{{ create_url }}?kind={{ row.new_kind }}&amp;meter={{ meter.pk }}{% endif %}"
-                title="{% if row.service %}Открыть услугу «{{ row.service.name }}»{% else %}Создать услугу по этому счётчику{% endif %}">
-              <td class="svc-name"><div class="svc-name-cell">
-                <span class="tm-icon mk-{{ row.kind }}">{% include "billing/_meter_icon.html" with kind=row.kind %}</span>
-                <span class="svc-name-body">
-                  <span class="mtr-name fade">{{ meter.name }}</span>
-                  {% if meter.day_night %}<span class="svc-meta">день / ночь</span>{% endif %}
-                </span>
-              </div></td>
-              <td data-label="Номер">№ {{ meter.serial|default:'—' }}</td>
-              <td data-label="Кто платит"><span class="fade">{{ row.who }}</span></td>
-              <td data-label="Услуга">
-                {% if row.service %}
-                  <a href="{% url 'receipt_edit' row.service.pk %}" data-modal class="fade">{{ row.service.name }}</a>
-                  {% if row.tariff %}<span class="svc-meta">{{ row.tariff }}</span>{% endif %}
-                {% else %}<span class="svc-muted">не в услуге</span>{% endif %}
-              </td>
-              <td class="svc-num" data-label="Показание">
-                {% if row.last %}{{ row.last }}{% if row.unit %} {{ row.unit }}{% endif %}<span class="svc-meta">{{ row.last_when }}</span>
-                {% else %}<span class="svc-muted">—</span>{% endif %}
-              </td>
-              <td class="svc-actions">
-                <details class="dropdown" data-dropdown>
-                  <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия со счётчиком № {{ meter.serial }}">
-                    <svg class="icon"><use href="#i-more"/></svg>
-                  </summary>
-                  <div class="dropdown-menu" role="menu">
-                    <a href="{% if row.service %}{{ open_url }}{% else %}{{ create_url }}?kind={{ row.new_kind }}&amp;meter={{ meter.pk }}{% endif %}" data-modal class="dropdown-item" role="menuitem">
-                      <svg class="icon"><use href="#i-edit"/></svg>{% if row.service %}Изменить{% else %}Создать услугу{% endif %}
-                    </a>
-                    <a href="{% url 'meter_remove' meter.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
-                      <svg class="icon"><use href="#i-trash"/></svg>Удалить
-                    </a>
-                  </div>
-                </details>
-              </td>
-            </tr>
-            {% endwith %}
-          {% endfor %}
-        </tbody>
-      </table>
-      </div>
-    </section>
-  {% endif %}{% endfor %}
+  <div class="svc-wrap">
+  <table class="svc-table">
+    <thead>
+      <tr><th>Счётчик</th><th>Объект</th><th>Кто платит</th><th>Услуга</th><th class="svc-num">Последнее показание</th><th><span class="visually-hidden">Действия</span></th></tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}{% for row in group.rows %}
+        {% with meter=row.meter %}
+        {% if row.service %}{% url 'receipt_edit' row.service.pk as open_url %}{% else %}{% url 'receipt_create' group.property.pk as create_url %}{% endif %}
+        <tr data-row-modal="{% if row.service %}{{ open_url }}{% else %}{{ create_url }}?kind={{ row.new_kind }}&amp;meter={{ meter.pk }}{% endif %}"
+            title="{% if row.service %}Открыть услугу «{{ row.service.name }}»{% else %}Создать услугу по этому счётчику{% endif %}">
+          <td class="svc-name"><div class="svc-name-cell">
+            <span class="receipt-icon is-meter rk-{{ row.kind }}">{% include "billing/_meter_icon.html" with kind=row.kind %}</span>
+            <span class="svc-name-body">
+              <span class="svc-name-line">
+                <span class="svc-name-title fade">{{ meter.name }}</span>
+                {% if meter.day_night %}<span class="tag tag-muted">день / ночь</span>{% endif %}
+              </span>
+              <span class="svc-meta">№ {{ meter.serial|default:'—' }}</span>
+            </span>
+          </div></td>
+          <td class="svc-object"><a href="{% url 'property_detail' group.property.pk %}" class="fade">{{ group.property.name }}</a></td>
+          <td class="svc-split"><span class="tag{% if not meter.tenant_id %} tag-muted{% endif %}">{{ row.who }}</span></td>
+          <td data-label="Услуга">
+            {% if row.service %}
+              <a href="{% url 'receipt_edit' row.service.pk %}" data-modal class="svc-plain">{{ row.service.name }}</a>
+              {% if row.tariff %}<span class="svc-meta">{{ row.tariff }}</span>{% endif %}
+            {% else %}<span class="tag tag-muted">не в услуге</span>{% endif %}
+          </td>
+          <td class="svc-num" data-label="Показание">
+            {% if row.last %}{{ row.last }}{% if row.unit %} {{ row.unit }}{% endif %}<span class="svc-meta">{{ row.last_when }}</span>
+            {% else %}<span class="svc-muted">—</span>{% endif %}
+          </td>
+          <td class="svc-actions">
+            <details class="dropdown" data-dropdown>
+              <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия со счётчиком № {{ meter.serial }}">
+                <svg class="icon"><use href="#i-more"/></svg>
+              </summary>
+              <div class="dropdown-menu" role="menu">
+                <a href="{% if row.service %}{{ open_url }}{% else %}{{ create_url }}?kind={{ row.new_kind }}&amp;meter={{ meter.pk }}{% endif %}" data-modal class="dropdown-item" role="menuitem">
+                  <svg class="icon"><use href="#i-edit"/></svg>{% if row.service %}Изменить{% else %}Создать услугу{% endif %}
+                </a>
+                <a href="{% url 'meter_remove' meter.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
+                  <svg class="icon"><use href="#i-trash"/></svg>Удалить
+                </a>
+              </div>
+            </details>
+          </td>
+        </tr>
+        {% endwith %}
+      {% endfor %}{% endfor %}
+    </tbody>
+  </table>
+  </div>
 {% else %}
   <section class="empty-state">
     <h2>Счётчиков пока нет</h2>

@@ -33,6 +33,8 @@ class Value:
 
 
 def units_of(unit, per):
+    # «-», «—» typed for «no unit» (a coefficient) is no unit, not a unit of its own.
+    unit, per = ((text or '').strip().strip('-–—_.').strip() and text.strip() for text in (unit, per))
     units = {}
     if unit:
         units[unit] = 1

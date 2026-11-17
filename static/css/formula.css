@@ -20,10 +20,16 @@
 .fx-badge.is-bad { background: var(--color-danger-soft); color: var(--fx-danger); }
 .fx-badge.is-ok { background: var(--fx-accent-soft); color: var(--fx-accent); }
 
+/* Examples: a ready formula in one press */
+.fx-examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--fx-muted); }
+.fx-examples button { padding: 5px 12px; border: 1px solid var(--fx-border); border-radius: 999px; background: var(--color-surface);
+  font: inherit; color: var(--fx-text); cursor: pointer; }
+.fx-examples button:hover { border-color: var(--fx-accent); color: var(--fx-accent); }
+
 /* Palette: numbers «Каждый месяц», «Тариф / норматив», the object's meters, signs */
 .fx-palette { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 12px; }
 .fx-group { min-width: 0; }
-.fx-group h3 { margin: 0 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fx-muted); }
+.fx-group h3 { margin: 0 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fx-text); }
 .fx-group .fx-sub { margin: 0 0 6px; font-size: 11px; color: var(--fx-muted); }
 .fx-chips { display: flex; flex-direction: column; gap: 6px; }
 .fx-chips.is-signs { display: grid; grid-template-columns: repeat(3, 36px); gap: 6px; }
@@ -56,7 +62,7 @@
 
 /* The formula line */
 .fx-strip-wrap { position: relative; }
-.fx-strip { box-sizing: border-box; min-height: 96px; display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 4px;
+.fx-strip { box-sizing: border-box; min-height: 116px; display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 4px;
   padding: 10px 40px 10px 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
 .fx-strip.is-over { border-color: var(--fx-accent); background: var(--fx-accent-soft); }
 .fx-strip .fx-empty { color: var(--fx-muted); font-size: 13px; line-height: 44px; }
@@ -70,12 +76,12 @@
 .fx-strip .fx-chip.k-op { min-width: 22px; height: 44px; padding: 0 5px; }
 .fx-caret { width: 2px; height: 40px; border-radius: 1px; background: var(--fx-accent); }
 /* × on a block — a small white circle on its corner, like an attachment's */
-.fx-strip .fx-del { position: absolute; top: -7px; right: -7px; z-index: 2; display: none; align-items: center; justify-content: center;
+.fx-strip .fx-del, .fx-chips .fx-del { position: absolute; top: -7px; right: -7px; z-index: 2; display: none; align-items: center; justify-content: center;
   box-sizing: border-box; width: 18px; height: 18px; border: 1px solid var(--fx-border); border-radius: 50%; background: #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--fx-muted); font-size: 13px; line-height: 1; cursor: pointer; }
-.fx-strip .fx-chip:hover .fx-del { display: inline-flex; }
-.fx-strip .fx-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
-@media (hover: none) { .fx-strip .fx-del { display: inline-flex; } }
+.fx-strip .fx-chip:hover .fx-del, .fx-chips .fx-chip:hover .fx-del { display: inline-flex; }
+.fx-strip .fx-del:hover, .fx-chips .fx-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
+@media (hover: none) { .fx-strip .fx-del, .fx-chips .fx-del { display: inline-flex; } }
 .fx-clear { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: #eef2f4;
   color: var(--fx-muted); font-size: 16px; line-height: 1; cursor: pointer; }
 .fx-clear:hover { background: var(--color-danger-soft); color: var(--fx-danger); }

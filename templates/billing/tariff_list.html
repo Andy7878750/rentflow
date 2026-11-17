@@ -1,0 +1,69 @@
+{% extends "app/base.html" %}
+{% block title %}Тарифы — RentFlow{% endblock %}
+{% block app_content %}
+<div class="page-head">
+  <div class="page-title"><h1>Тарифы</h1></div>
+  <a href="{% url 'receipt_add' %}" data-modal class="btn btn-primary btn-auto">
+    <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
+  </a>
+</div>
+
+{% comment %}All tariffs in force (2026-11-17), the same table as «Все услуги». Nothing is edited here: a tariff lives in its
+   service window (the one place) — a row opens it. data-row-modal in app.js.{% endcomment %}
+{% if has_tariffs %}
+  <div class="svc-wrap">
+  <table class="svc-table">
+    <thead>
+      <tr><th>Услуга</th><th>Объект</th><th>За что</th><th>Действует</th><th class="svc-num">Тариф</th><th><span class="visually-hidden">Действия</span></th></tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}{% for row in group.rows %}
+        {% url 'receipt_edit' row.receipt.pk as open_url %}
+        <tr data-row-modal="{{ open_url }}" title="Открыть услугу «{{ row.receipt.name }}» — тариф меняется там">
+          <td class="svc-name"><div class="svc-name-cell">
+            <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ row.receipt.kind }}"/></svg></span>
+            <span class="svc-name-body">
+              <a href="{{ open_url }}" data-modal class="fade">{{ row.receipt.name }}</a>
+              {% if row.receipt.provider %}<span class="svc-meta fade">{{ row.receipt.provider }}</span>{% endif %}
+            </span>
+          </div></td>
+          <td class="svc-object"><a href="{% url 'property_detail' group.property.pk %}" class="fade">{{ group.property.name }}</a></td>
+          <td data-label="За что">
+            {{ row.what }}
+            {% if row.note %}<span class="tag tag-muted">{{ row.note }}</span>{% endif %}
+          </td>
+          <td data-label="Действует">
+            {% if row.since %}<span class="tag">{{ row.since }}</span>{% if row.before %}<span class="svc-meta">раньше {{ row.before }}</span>{% endif %}
+            {% else %}<span class="tag tag-muted">с начала</span>{% endif %}
+          </td>
+          <td class="svc-num svc-strong" data-label="Тариф">{{ row.price }}</td>
+          <td class="svc-actions">
+            <details class="dropdown" data-dropdown>
+              <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с услугой «{{ row.receipt.name }}»">
+                <svg class="icon"><use href="#i-more"/></svg>
+              </summary>
+              <div class="dropdown-menu" role="menu">
+                <a href="{{ open_url }}" data-modal class="dropdown-item" role="menuitem">
+                  <svg class="icon"><use href="#i-edit"/></svg>Изменить
+                </a>
+                <a href="{% url 'receipt_delete' row.receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
+                  <svg class="icon"><use href="#i-trash"/></svg>Удалить
+                </a>
+              </div>
+            </details>
+          </td>
+        </tr>
+      {% endfor %}{% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% else %}
+  <section class="empty-state">
+    <h2>Тарифов пока нет</h2>
+    <p>Тариф задаётся в услуге — «По счётчикам», «По площади» или в своей формуле. Здесь они соберутся одним списком.</p>
+    <a href="{% url 'receipt_add' %}" data-modal class="btn btn-primary btn-auto">
+      <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
+    </a>
+  </section>
+{% endif %}
+{% endblock %}

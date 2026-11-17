@@ -1910,6 +1910,59 @@
       save();
     });
 
+    // The service cards change places (2026-11-17): drag a card by its grip (mouse or finger), or «Выше» / «Ниже»
+    // in its «…» menu. The new order is stored at once (receipt_order); the cards themselves are not reloaded.
+    function receiptCards() { return Array.prototype.slice.call(monthForm.querySelectorAll('.mreceipt[data-receipt-id]')); }
+    function storeOrder() {
+      var body = new FormData();
+      body.append('order', receiptCards().map(function (card) { return card.dataset.receiptId; }).join(','));
+      fetch(monthForm.dataset.orderUrl, {
+        method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken(monthForm) }
+      });
+    }
+    monthForm.addEventListener('click', function (event) {
+      var item = event.target.closest('[data-receipt-move]');
+      if (!item) return;
+      var card = item.closest('.mreceipt');
+      var cards = receiptCards(), at = cards.indexOf(card);
+      var other = cards[item.dataset.receiptMove === 'up' ? at - 1 : at + 1];
+      var menu = item.closest('details');
+      if (menu) menu.removeAttribute('open');
+      if (!other) return;
+      if (item.dataset.receiptMove === 'up') other.before(card); else other.after(card);
+      storeOrder();
+    });
+    var moving = null;
+    monthForm.addEventListener('pointerdown', function (event) {
+      var grip = event.target.closest('[data-receipt-grip]');
+      if (!grip || (event.button !== undefined && event.button > 0)) return;
+      event.preventDefault();
+      moving = { card: grip.closest('.mreceipt'), before: receiptCards().map(function (c) { return c.dataset.receiptId; }).join(',') };
+      moving.card.classList.add('is-moving');
+      grip.setPointerCapture(event.pointerId);
+    });
+    monthForm.addEventListener('pointermove', function (event) {
+      if (!moving) return;
+      // The card steps over a neighbour once the pointer passes the neighbour's middle.
+      receiptCards().some(function (other) {
+        if (other === moving.card) return false;
+        var r = other.getBoundingClientRect(), middle = r.top + r.height / 2;
+        var above = other.compareDocumentPosition(moving.card) & Node.DOCUMENT_POSITION_FOLLOWING;  // the card is below it
+        if (above && event.clientY < middle) { other.before(moving.card); return true; }
+        if (!above && event.clientY > middle) { other.after(moving.card); return true; }
+        return false;
+      });
+    });
+    function dropCard() {
+      if (!moving) return;
+      moving.card.classList.remove('is-moving');
+      var now = receiptCards().map(function (c) { return c.dataset.receiptId; }).join(',');
+      if (now !== moving.before) storeOrder();
+      moving = null;
+    }
+    monthForm.addEventListener('pointerup', dropCard);
+    monthForm.addEventListener('pointercancel', dropCard);
+
     // «н×0,6» in a night field of «По расходу»: a small window «Ночь дешевле дня» — type the weight, «Сохранить»
     // stores it on the service and the bills recount (2026-11-16).
     var nwCard = null;

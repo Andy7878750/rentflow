@@ -253,6 +253,25 @@ def meter_list(request):
 
 @login_required
 @require_POST
+def receipt_order(request, property_pk):
+    """The service cards of the object page dragged into a new order: `order` — their ids, top to bottom."""
+    property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
+    ids = [int(pk) for pk in request.POST.get('order', '').split(',') if pk.isdigit()]
+    services.reorder_receipts(property_obj, ids)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def tariff_list(request):
+    """«Услуги → Тарифы»: every tariff in force, read-only; a row opens its service, where the tariff is changed."""
+    groups = services.tariff_table(request.user)
+    return render(request, 'billing/tariff_list.html', {
+        'groups': groups, 'has_tariffs': any(group['rows'] for group in groups),
+    })
+
+
+@login_required
+@require_POST
 def receipt_night_weight(request, pk):
     """«н×0,6» on the object page: how much a night kWh weighs in «По расходу». Empty or 1 — like a day one."""
     receipt = _own_receipt(request, pk)
@@ -309,7 +328,7 @@ def receipt_list(request):
     receipts = (
         Receipt.objects.filter(property__owner=request.user)
         .select_related('property')
-        .order_by('property__name', 'property_id', 'created_at', 'id')
+        .order_by('property__name', 'property_id', 'position', 'created_at', 'id')
     )
     return render(request, 'billing/receipt_list.html', {'receipts': receipts})
 
