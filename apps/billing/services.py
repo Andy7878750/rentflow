@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
-from .models import FormulaValue, Meter, MonthlyAmount, Reading, Receipt, ReceiptTariff, ServiceTemplate
+from .models import FormulaValue, Meter, MonthlyAmount, Payment, Reading, Receipt, ReceiptTariff, ServiceTemplate
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
 _BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
@@ -673,6 +673,94 @@ def meter_table(owner):
             })
         groups.append({'property': property_obj, 'rows': rows})
     return groups
+
+
+def parse_day(text):
+    """'17.11.2026' (or '2026-11-17') → date; anything else → None."""
+    from datetime import datetime
+
+    for pattern in ('%d.%m.%Y', '%Y-%m-%d'):
+        try:
+            return datetime.strptime((text or '').strip(), pattern).date()
+        except ValueError:
+            continue
+    return None
+
+
+def payment_table(owner, month):
+    """«Оплаты»: what the owner pays the providers this month. A card per object, a tile per service of it — the
+    owner pays for the object, so services with one name (a meter service per tenant, say) are one tile with their
+    sums added up. A sum comes from the month's input of the object page by itself and stands «не оплачено» until
+    the tile is marked.
+
+    Returns {'rows': [{'property', 'tiles', 'due', 'paid', 'left'}], 'totals': {...}}; a tile: {'name', 'key' (the
+    first service's id — what the mark is posted by), 'kind', 'amount' (None while nothing is typed), 'partial'
+    (some of its services have no sum yet), 'state': 'paid' | 'due' | 'empty', 'paid_on', 'note'}."""
+    from apps.properties.models import Property
+
+    zero = Decimal('0.00')
+    payments = {payment.receipt_id: payment
+                for payment in Payment.objects.filter(receipt__property__owner=owner, month=month)}
+    rows = []
+    totals = {'due': zero, 'paid': zero, 'left': zero, 'unpaid': 0, 'empty': 0}
+    for property_obj in Property.objects.filter(owner=owner).order_by('name'):
+        groups = {}
+        for entry in month_bill(property_obj, month).entries:
+            groups.setdefault(entry.receipt.name, []).append(entry)
+        tiles = []
+        row = {'property': property_obj, 'tiles': tiles, 'due': zero, 'paid': zero, 'left': zero}
+        for name, entries in groups.items():
+            sums = [entry.total for entry in entries if entry.total is not None]
+            marks = [payments.get(entry.receipt.pk) for entry in entries]
+            dates = [mark.paid_on for mark in marks if mark and mark.paid_on]
+            paid = len(dates) == len(entries)
+            amount = sum(sums, zero) if sums else None
+            state = 'paid' if paid else ('due' if sums else 'empty')
+            tiles.append({
+                'name': name, 'key': entries[0].receipt.pk, 'kind': entries[0].receipt.kind, 'amount': amount,
+                'partial': bool(sums) and len(sums) < len(entries), 'state': state,
+                'paid_on': max(dates) if paid else None,
+                'note': next((mark.note for mark in marks if mark and mark.note), ''),
+            })
+            row['due'] += amount or zero
+            if state == 'paid':
+                row['paid'] += amount or zero
+            elif state == 'due':
+                row['left'] += amount
+                totals['unpaid'] += 1
+            else:
+                totals['empty'] += 1
+        if tiles:
+            rows.append(row)
+            for key in ('due', 'paid', 'left'):
+                totals[key] += row[key]
+    return {'rows': rows, 'totals': totals}
+
+
+def save_payment(receipt, month, paid_on=None, note=None):
+    """Mark a tile of «Оплаты»: the month's bill of the service — and of the object's other services with the same
+    name (they are one tile) — paid on a date, or not paid (None). note=None keeps the remark as it is.
+    A row with neither a date nor a remark goes away."""
+    for one in receipt.property.receipts.filter(name=receipt.name):
+        payment = Payment.objects.filter(receipt=one, month=month).first() or Payment(receipt=one, month=month)
+        payment.paid_on = paid_on
+        if note is not None:
+            payment.note = note.strip()[:60]
+        if payment.paid_on or payment.note:
+            payment.save()
+        elif payment.pk:
+            payment.delete()
+
+
+def save_payment_note(receipt, month, note):
+    """The remark of a tile, whether it is paid or not."""
+    for one in receipt.property.receipts.filter(name=receipt.name):
+        payment = Payment.objects.filter(receipt=one, month=month).first() or Payment(receipt=one, month=month)
+        payment.note = (note or '').strip()[:60]
+        if payment.paid_on or payment.note:
+            payment.save()
+        elif payment.pk:
+            payment.delete()
 
 
 def reorder_receipts(property_obj, ids):

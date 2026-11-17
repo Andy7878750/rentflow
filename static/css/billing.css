@@ -4290,3 +4290,112 @@
 
 .mreceipt.is-moving .mreceipt-grip { cursor: grabbing; }
 .mreceipt .dropdown-menu button.dropdown-item { width: 100%; border: 0; background: none; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+
+/* ---------- «Оплаты» (2026-11-17, round 2): a card per object, a tile per service — all tiles of one size, no empty
+   cells, nothing opens: the mark, the date and the remark are right in the tile ---------- */
+.pay-ok { color: var(--color-accent); }
+.pay-left { color: #c0392b; }
+
+.pay-card {
+  margin-bottom: 14px;
+  padding: 14px 16px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.pay-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pay-card-head h2 { min-width: 0; margin: 0; font-size: 16px; }
+.pay-card-head h2 a { display: block; overflow: hidden; color: var(--color-primary); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.pay-card-head h2 a:hover { color: var(--color-accent); }
+.pay-card-sum { display: flex; align-items: center; gap: 10px; white-space: nowrap; font-size: 15px; }
+.pay-tag-left { background: #fdf1ef; color: #c0392b; }
+
+/* Eight tiles in a row on a wide screen; fewer — the same size, the row just ends earlier. */
+.pay-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.pay-tile {
+  display: grid;
+  grid-template-rows: 22px 24px 20px 24px;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--color-bg);
+}
+
+.pay-tile.is-due { background: #fdf1ef; }
+.pay-tile.is-paid { background: #eaf6f2; }
+
+.pay-tile-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.pay-name { min-width: 0; overflow: hidden; color: var(--color-text-muted); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.pay-sum { overflow: hidden; font-size: 15px; font-weight: 700; line-height: 24px; white-space: nowrap; }
+.pay-sum .is-none { color: var(--color-text-muted); font-size: 13px; font-weight: 400; }
+.pay-partial { color: var(--color-text-muted); }
+.pay-state { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 12px; font-weight: 600; line-height: 20px; white-space: nowrap; }
+.pay-tile.is-due .pay-state { color: #c0392b; }
+.pay-tile.is-paid .pay-state { color: #0e6b59; }
+.pay-tile.is-empty .pay-state { color: var(--color-text-muted); font-weight: 400; }
+
+/* The round mark: empty — not paid, filled green — paid. */
+.pay-check {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid #c9d3da;
+  border-radius: 50%;
+  background: #fff;
+  color: transparent;
+  cursor: pointer;
+}
+
+.pay-check .icon { width: 13px; height: 13px; stroke-width: 3; }
+.pay-check:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.pay-tile.is-paid .pay-check { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+.pay-tile.is-empty .pay-check { visibility: hidden; }
+
+/* The date and the remark are typed in place: quiet fields with a line that shows on hover and focus. */
+.pay-date,
+.pay-note {
+  min-width: 0;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.pay-date { width: 78px; font-weight: 600; cursor: pointer; }
+.pay-note { width: 100%; height: 24px; color: var(--color-text); font-size: 12px; }
+.pay-note::placeholder { color: #a9b3ba; }
+.pay-tile:hover .pay-note,
+.pay-date:hover { border-bottom-color: #c9d3da; }
+.pay-date:focus,
+.pay-note:focus { border-bottom-color: var(--color-accent); }
+
+.pay-hint { margin-top: 4px; }
+
+@media (max-width: 720px) {
+  .pay-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pay-card-head { flex-wrap: wrap; }
+}

@@ -831,6 +831,69 @@ class MonthPageTests(TestCase):
         self.assertIn('data-receipt-grip', page)
         self.assertEqual(self.client.get(url).status_code, 405)
 
+    def test_payments_page(self):
+        # 2026-11-17: «Оплаты» — what the owner pays the providers; a typed sum stands «не оплачено» until marked.
+        # Round 2: a tile per service NAME of the object (same-name services add up), marked in place — no window.
+        month = date(2026, 9, 1)
+        MonthlyAmount.objects.create(receipt=self.receipt, month=month, amount=Decimal('4200'))
+        internet = services.new_receipt(self.prop, 'internet')
+        internet.fixed_amount = Decimal('650')
+        internet = services.save_receipt(internet)
+        twin = Receipt.objects.create(property=self.prop, kind='internet', name=internet.name, amount_mode='fixed',
+                                      fixed_amount=Decimal('350'))
+        other = Property.objects.create(owner=self.user, name='Яблочная 2', kind='commercial')
+        Receipt.objects.create(property=other, kind='management', name=self.receipt.name)  # no sum yet
+
+        def tiles(of=None):
+            table = services.payment_table(self.user, month)
+            row = next(row for row in table['rows'] if row['property'] == (of or self.prop))
+            return table, {tile['name']: tile for tile in row['tiles']}
+
+        table, mine = tiles()
+        self.assertEqual(list(mine), [self.receipt.name, internet.name], 'one tile per name')
+        self.assertEqual((mine[internet.name]['amount'], mine[internet.name]['state']), (Decimal('1000.00'), 'due'))
+        self.assertEqual(tiles(other)[1][self.receipt.name]['state'], 'empty')
+        self.assertEqual((table['totals']['due'], table['totals']['left'], table['totals']['unpaid'], table['totals']['empty']),
+                         (Decimal('5200.00'), Decimal('5200.00'), 2, 1))
+
+        page = self.client.get(reverse('payment_list') + '?month=2026-09')
+        self.assertContains(page, 'не оплачено')
+        self.assertContains(page, 'Сентябрь 2026')
+        self.assertContains(page, 'data-pay-toggle')
+
+        # The round button: paid today — both same-name services at once; the board comes back drawn anew.
+        url = reverse('payment_edit', args=[internet.pk, '2026-09'])
+        response = self.client.post(url, {'paid': '1', 'note': ''})
+        self.assertContains(response, date.today().strftime('%d.%m.%Y'))
+        self.assertEqual(twin.payments.get().paid_on, date.today())
+        table, mine = tiles()
+        self.assertEqual(mine[internet.name]['state'], 'paid')
+        self.assertEqual((table['totals']['paid'], table['totals']['left'], table['totals']['unpaid']),
+                         (Decimal('1000.00'), Decimal('4200.00'), 1))
+
+        # The date typed in the tile, a remark; a remark alone doesn't make it paid.
+        self.client.post(url, {'paid': '1', 'paid_on': '12.09.2026', 'note': 'переплата'})
+        tile = tiles()[1][internet.name]
+        self.assertEqual((tile['paid_on'], tile['note']), (date(2026, 9, 12), 'переплата'))
+        main_url = reverse('payment_edit', args=[self.receipt.pk, '2026-09'])
+        self.client.post(main_url, {'note': 'жду квитанцию'})
+        tile = tiles()[1][self.receipt.name]
+        self.assertEqual((tile['state'], tile['note']), ('due', 'жду квитанцию'))
+
+        # Not paid again: the mark goes, the remark stays; another month is not touched.
+        self.client.post(url, {'paid': '0', 'note': 'переплата'})
+        tile = tiles()[1][internet.name]
+        self.assertEqual((tile['state'], tile['note']), ('due', 'переплата'))
+        self.assertEqual(services.payment_table(self.user, date(2026, 10, 1))['totals']['paid'], Decimal('0.00'))
+        self.client.post(main_url, {'note': ''})
+        self.assertFalse(self.receipt.payments.exists(), 'neither a date nor a remark — no row')
+
+        # Someone else's service can't be marked; the mark is POST only.
+        stranger = Receipt.objects.create(property=make_property(
+            User.objects.create_user(username='c@example.ru', password='secret1')), kind='custom', name='Чужая')
+        self.assertEqual(self.client.post(reverse('payment_edit', args=[stranger.pk, '2026-09']), {'paid': '1'}).status_code, 404)
+        self.assertEqual(self.client.get(url).status_code, 405)
+
     def test_live_save_returns_recalculated_page(self):
         response = self.client.post(
             reverse('month_save', args=[self.prop.pk]),

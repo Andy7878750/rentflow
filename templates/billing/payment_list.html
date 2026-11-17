@@ -1,0 +1,19 @@
+{% extends "app/base.html" %}
+{% block title %}Оплаты — RentFlow{% endblock %}
+{% block app_content %}
+<div class="page-head">
+  <div class="page-title">
+    <h1>Оплаты</h1>
+    <div class="month-switch">
+      <a href="?month={{ prev_month }}" class="icon-button" aria-label="Предыдущий месяц"><svg class="icon"><use href="#i-chevron-left"/></svg></a>
+      <span class="month-label">{{ month_label }}</span>
+      <a href="?month={{ next_month }}" class="icon-button" aria-label="Следующий месяц"><svg class="icon"><use href="#i-chevron-right"/></svg></a>
+    </div>
+  </div>
+</div>
+
+<form data-pay-board onsubmit="return false">
+  {% csrf_token %}
+  <div data-pay-body>{% include "billing/_payment_board.html" %}</div>
+</form>
+{% endblock %}

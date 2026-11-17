@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
@@ -259,6 +261,39 @@ def receipt_order(request, property_pk):
     ids = [int(pk) for pk in request.POST.get('order', '').split(',') if pk.isdigit()]
     services.reorder_receipts(property_obj, ids)
     return JsonResponse({'ok': True})
+
+
+def _payment_context(request, month):
+    return {
+        'table': services.payment_table(request.user, month), 'month': property_services.month_param(month),
+        'month_label': property_services.month_label(month),
+        'prev_month': property_services.month_param(property_services.shift_month(month, -1)),
+        'next_month': property_services.month_param(property_services.shift_month(month, 1)),
+    }
+
+
+@login_required
+def payment_list(request):
+    """«Оплаты»: the owner's payments to the providers for a month — a card per object, a tile per service."""
+    month = property_services.parse_month(request.GET.get('month'))
+    return render(request, 'billing/payment_list.html', _payment_context(request, month))
+
+
+@login_required
+@require_POST
+def payment_edit(request, pk, month):
+    """A tile of «Оплаты» marked right in place (no window): `paid` 1 / 0 with the date `paid_on` (today when
+    empty), or just the remark `note`. Answers with the board drawn anew (the sums on top, the tiles)."""
+    receipt = _own_receipt(request, pk)
+    month_date = property_services.parse_month(month)
+    if 'paid' in request.POST:
+        paid_on = None
+        if request.POST['paid'] == '1':
+            paid_on = services.parse_day(request.POST.get('paid_on')) or date.today()
+        services.save_payment(receipt, month_date, paid_on, request.POST.get('note'))
+    elif 'note' in request.POST:
+        services.save_payment_note(receipt, month_date, request.POST['note'])
+    return render(request, 'billing/_payment_board.html', _payment_context(request, month_date))
 
 
 @login_required

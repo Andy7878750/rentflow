@@ -126,10 +126,13 @@
       if (!form) return;
       event.preventDefault();
       var button = form.querySelector('[type=submit]');
+      // The pressed button's own name goes too («Не оплачено» in the payment window is name="unpay").
+      var body = new FormData(form);
+      if (event.submitter && event.submitter.name) body.append(event.submitter.name, event.submitter.value);
       if (button) button.disabled = true;
       fetch(form.action, {
         method: 'POST',
-        body: new FormData(form),
+        body: body,
         headers: { 'X-Modal': '1' },
         credentials: 'same-origin',
       })
@@ -1802,6 +1805,42 @@
   });
 
   // ---------- Object page: monthly input saves itself, bills recalc ----------
+
+  // «Оплаты»: a tile is marked right in place — the round button (paid today / not paid), the date, the remark.
+  // The server answers with the board drawn anew (the sums on top, the tiles); a remark saves without redrawing.
+  var payBoard = document.querySelector('[data-pay-board]');
+  if (payBoard) {
+    var payBody = payBoard.querySelector('[data-pay-body]');
+    var postTile = function (tile, fields, redraw) {
+      var body = new FormData();
+      Object.keys(fields).forEach(function (key) { body.append(key, fields[key]); });
+      return fetch(tile.dataset.url, {
+        method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken(payBoard) }
+      }).then(function (response) { return response.text(); }).then(function (html) {
+        if (redraw) { closeDate(); payBody.innerHTML = html; }
+      });
+    };
+    payBoard.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-pay-toggle]');
+      if (!button) return;
+      var tile = button.closest('[data-pay-tile]');
+      postTile(tile, { paid: tile.classList.contains('is-paid') ? '0' : '1', note: tile.querySelector('[data-pay-note]').value }, true);
+    });
+    payBoard.addEventListener('change', function (event) {
+      var tile = event.target.closest('[data-pay-tile]');
+      if (!tile) return;
+      if (event.target.matches('[data-pay-date]')) {
+        // A date typed or picked in the calendar; cleared — not paid.
+        var day = event.target.value.trim();
+        postTile(tile, { paid: day ? '1' : '0', paid_on: day, note: tile.querySelector('[data-pay-note]').value }, true);
+      } else if (event.target.matches('[data-pay-note]')) {
+        postTile(tile, { note: event.target.value }, false);
+      }
+    });
+    payBoard.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && event.target.matches('[data-pay-note], [data-pay-date]')) { event.preventDefault(); event.target.blur(); }
+    });
+  }
 
   var monthForm = document.querySelector('[data-month-form]');
   var selectedPayer = null;

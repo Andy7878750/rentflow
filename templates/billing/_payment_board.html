@@ -1,0 +1,56 @@
+{% comment %}The board of «Оплаты» (2026-11-17, round 2 — the user: no windows, one tile per service of the object, all tiles
+   of one size, no empty cells). A card per object; a tile: the service's name · the sum · «не оплачено» or the date
+   paid · a one-line remark. The round button marks it paid today (again — not paid); the date and the remark are
+   typed right in the tile. app.js posts to payment_edit and puts the answer (this file) back in place.{% endcomment %}
+{% if table.rows %}
+  <section class="kpi-row">
+    <div class="kpi"><span class="kpi-label">К оплате за месяц</span><span class="kpi-value">{{ table.totals.due|floatformat:"2g" }} ₽</span></div>
+    <div class="kpi"><span class="kpi-label">Оплачено</span><span class="kpi-value pay-ok">{{ table.totals.paid|floatformat:"2g" }} ₽</span></div>
+    <div class="kpi"><span class="kpi-label">Осталось оплатить</span><span class="kpi-value{% if table.totals.left %} pay-left{% endif %}">{{ table.totals.left|floatformat:"2g" }} ₽</span></div>
+    <div class="kpi"><span class="kpi-label">Не оплачено</span><span class="kpi-value">{{ table.totals.unpaid }} <small>{% if table.totals.empty %}· без суммы {{ table.totals.empty }}{% else %}из введённых{% endif %}</small></span></div>
+  </section>
+
+  {% for row in table.rows %}
+    <section class="pay-card">
+      <header class="pay-card-head">
+        <h2><a href="{% url 'property_detail' row.property.pk %}?month={{ month }}" class="fade" title="Открыть объект — там вводятся суммы">{{ row.property.name }}</a></h2>
+        <span class="pay-card-sum">
+          {% if row.left %}<span class="tag pay-tag-left">осталось {{ row.left|floatformat:"2g" }} ₽</span>
+          {% elif row.paid %}<span class="tag">всё оплачено</span>{% endif %}
+          <strong>{{ row.due|floatformat:"2g" }} ₽</strong>
+        </span>
+      </header>
+      <div class="pay-tiles">
+        {% for tile in row.tiles %}
+          <div class="pay-tile is-{{ tile.state }}" data-pay-tile data-url="{% url 'payment_edit' tile.key month %}">
+            <div class="pay-tile-head">
+              <span class="pay-name fade" title="{{ tile.name }}">{{ tile.name }}</span>
+              <button type="button" class="pay-check" data-pay-toggle aria-pressed="{% if tile.state == 'paid' %}true{% else %}false{% endif %}"
+                      title="{% if tile.state == 'paid' %}Снять отметку об оплате{% else %}Отметить: оплачено сегодня{% endif %}"
+                      aria-label="{% if tile.state == 'paid' %}Снять отметку об оплате{% else %}Отметить оплаченной{% endif %}: {{ tile.name }}">
+                <svg class="icon"><use href="#i-check"/></svg>
+              </button>
+            </div>
+            <div class="pay-sum">{% if tile.amount is not None %}{{ tile.amount|floatformat:"2g" }} ₽{% if tile.partial %}<span class="pay-partial" title="Введены не все суммы этой услуги">…</span>{% endif %}{% else %}<span class="is-none">сумма не введена</span>{% endif %}</div>
+            <div class="pay-state">
+              {% if tile.state == 'paid' %}
+                <span>оплачено</span>
+                <input type="text" class="pay-date" data-date data-pay-date value="{{ tile.paid_on|date:'d.m.Y' }}" inputmode="numeric" autocomplete="off" aria-label="Дата оплаты">
+              {% elif tile.state == 'due' %}не оплачено{% else %}ждёт ввода за месяц{% endif %}
+            </div>
+            <input type="text" class="pay-note" data-pay-note value="{{ tile.note }}" maxlength="60" placeholder="пометка" autocomplete="off" aria-label="Пометка: {{ tile.name }}">
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+  <p class="month-hint pay-hint">Суммы берутся сами — из ввода за месяц на странице объекта. Галочка на плитке отмечает оплату сегодняшним числом; дату и пометку можно поправить прямо в плитке.</p>
+{% else %}
+  <section class="empty-state">
+    <h2>Пока нечего оплачивать</h2>
+    <p>Здесь появятся услуги ваших объектов: сумма за месяц — и отметка, оплачена она или нет.</p>
+    <a href="{% url 'receipt_add' %}" data-modal class="btn btn-primary btn-auto">
+      <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
+    </a>
+  </section>
+{% endif %}

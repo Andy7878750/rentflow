@@ -897,3 +897,8 @@
 .property-contacts dt {
   flex-shrink: 0;
 }
+
+/* A menu section that is one page itself («Оплаты»): a link in the look of a section's head. */
+a.nav-group-link { text-decoration: none; }
+a.nav-group-link:hover { background: var(--color-bg); }
+a.nav-group-link.is-active { background: var(--color-accent-soft); color: var(--color-accent-hover); }

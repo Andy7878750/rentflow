@@ -16,6 +16,9 @@
       <a href="{% url 'meter_list' %}" class="rail-link{% if url_name == 'meter_list' %} is-active{% endif %}" title="Счётчики">
         <svg class="icon"><use href="#i-meter"/></svg>
       </a>
+      <a href="{% url 'payment_list' %}" class="rail-link{% if url_name == 'payment_list' %} is-active{% endif %}" title="Оплаты">
+        <svg class="icon"><use href="#i-wallet"/></svg>
+      </a>
       <span class="rail-link is-soon" title="Счета — скоро"><svg class="icon"><use href="#i-file"/></svg></span>
       <span class="rail-link is-soon" title="Справочники — скоро"><svg class="icon"><use href="#i-library"/></svg></span>
       <span class="rail-link is-soon" title="Отчёты — скоро"><svg class="icon"><use href="#i-chart"/></svg></span>
@@ -96,6 +99,13 @@
           </li>
         </ul>
       </details>
+
+      <div class="nav-group">
+        <a href="{% url 'payment_list' %}" class="nav-group-link{% if url_name == 'payment_list' %} is-active{% endif %}">
+          <svg class="icon"><use href="#i-wallet"/></svg>
+          <span>Оплаты</span>
+        </a>
+      </div>
 
       <details class="nav-group">
         <summary>
