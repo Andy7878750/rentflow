@@ -4,9 +4,9 @@
    meter's own service, the formula just takes the usage; without them it doesn't count. One line says where they come from.{% endcomment %}
 {% for number, value in entry.month_numbers %}
               <div class="mreceipt-row">
-                <label for="fnum-{{ number.pk }}">{{ number.label }} за {{ month_name }}{% if number.unit %}, {{ number.unit }}{% endif %}</label>
-                <span><input type="text" inputmode="decimal" class="num-input num-input-wide" id="fnum-{{ number.pk }}" name="fnum-{{ number.pk }}"
-                       value="{{ value|num }}" placeholder="0"></span>
+                <label for="fnum-{{ number.pk }}">{{ number.label }} за {{ month_name }}</label>
+                <span class="num-wrap"><input type="text" inputmode="decimal" class="num-input num-input-wide" id="fnum-{{ number.pk }}" name="fnum-{{ number.pk }}"
+                       value="{{ value|num }}" placeholder="0">{% if number.unit %}<span class="num-unit">{{ number.unit }}</span>{% endif %}</span>
               </div>
 {% endfor %}
               <p class="mreceipt-fixed{% if entry.formula_error %} formula-error{% endif %}" id="fnote-{{ receipt.pk }}" data-live>

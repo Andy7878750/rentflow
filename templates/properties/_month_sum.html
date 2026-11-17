@@ -17,8 +17,8 @@
               </p>
 {% else %}
               <div class="mreceipt-row">
-                <label for="amount-{{ receipt.pk }}">Сумма за {{ month_name }}, {{ receipt.currency_symbol }}</label>
-                <span><input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
-                       value="{{ entry.amount.amount|num }}" placeholder="0,00"></span>
+                <label for="amount-{{ receipt.pk }}">Сумма за {{ month_name }}</label>
+                <span class="num-wrap"><input type="text" inputmode="decimal" class="num-input num-input-wide" id="amount-{{ receipt.pk }}" name="amount-{{ receipt.pk }}"
+                       value="{{ entry.amount.amount|num }}" placeholder="0,00"><span class="num-unit">{{ receipt.currency_symbol }}</span></span>
               </div>
 {% endif %}

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счёт — варианты</title>
+<style>
+  :root {
+    --color-primary: #34495e; --color-accent: #148f77; --color-accent-soft: #e8f5f1;
+    --color-text: #2c3e50; --color-text-muted: #7f8c8d; --color-border: #e3e8ec;
+    --color-bg: #f4f6f7; --color-surface: #fff; --radius: 12px;
+    --badge-bg: #e3f1f6; --badge-text: #1f6280;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; padding: 24px 16px 60px; background: var(--color-bg); color: var(--color-text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { margin: 0 0 4px; color: var(--color-primary); font-size: 22px; }
+  .lead { margin: 0 0 18px; color: var(--color-text-muted); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .tabs button { height: 34px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: 999px;
+    background: #fff; color: var(--color-text); font: inherit; cursor: pointer; }
+  .tabs button.on { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+  .stage { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+  .notes { flex: 1 1 280px; max-width: 420px; color: var(--color-text); }
+  .notes h2 { margin: 0 0 8px; color: var(--color-primary); font-size: 16px; }
+  .notes li { margin-bottom: 6px; }
+  .who { display: flex; gap: 6px; margin-bottom: 10px; }
+  .who button { height: 28px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 999px;
+    background: #fff; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .who button.on { border-color: var(--color-accent); color: var(--color-accent); font-weight: 600; }
+  .variant[hidden] { display: none; }
+
+  /* The bill column, as on the object page */
+  .obj-bill { width: 360px; max-width: 100%; padding: 18px; background: var(--color-surface);
+    border: 1px solid var(--color-border); border-radius: var(--radius); }
+  .bill-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .bill-cap { color: var(--color-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .bill-who { margin: 2px 0 0; color: var(--color-primary); font-size: 18px; font-weight: 700; }
+  .bill-month { color: var(--color-text-muted); font-size: 13px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 999px;
+    background: var(--badge-bg); color: var(--badge-text); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .badge.ok { background: var(--color-accent-soft); color: var(--color-accent); }
+  .badge.warn { background: #fdf3e1; color: #a86a12; }
+  .badge.grey { background: #eef1f3; color: var(--color-text-muted); }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .f { color: var(--color-text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .f2 { color: #a3adb4; font-size: 11.5px; }
+
+  /* Groups in frames — like .form-section */
+  .grp { margin-top: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+  .grp-head { display: flex; justify-content: space-between; align-items: center; height: 34px; padding: 0 12px;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
+  .grp-head span:first-child { color: var(--color-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .grp-head .num { font-weight: 700; font-size: 13px; color: var(--color-primary); }
+  .ln { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; padding: 9px 12px; }
+  .ln + .ln { border-top: 1px solid var(--color-border); }
+  .ln .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .ln .num { font-size: 14px; font-weight: 600; text-align: right; }
+  .ln .f, .ln .f2 { grid-column: 1 / -1; }
+
+  .total { margin-top: 14px; padding-top: 12px; border-top: 2px solid var(--color-primary); }
+  .total-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .total-row b { color: var(--color-primary); font-size: 14px; }
+  .total-row .num { color: var(--color-primary); font-size: 24px; font-weight: 800; }
+  .words { margin: 4px 0 0; color: var(--color-text-muted); font-size: 12px; }
+  .acts { display: flex; gap: 8px; margin-top: 14px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 14px;
+    border: 1px solid var(--color-border); border-radius: 8px; background: #fff; color: var(--color-text);
+    font: inherit; font-weight: 600; cursor: pointer; }
+  .btn-primary { flex: 1; background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+  .btn svg { width: 16px; height: 16px; }
+
+  /* Б — lines with the service icon */
+  .icon-box { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: var(--color-bg); }
+  .icon-box svg { width: 17px; height: 17px; }
+  .k-el { color: #0e9aa7; } .k-water { color: #2e86de; } .k-hot { color: #d35454; } .k-mg { color: #7f8c8d; } .k-trash { color: #6d7b85; }
+  .ib { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 0 10px; align-items: start; padding: 10px 0; }
+  .ib + .ib { border-top: 1px solid var(--color-border); }
+  .ib .nm { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ib .sub { display: flex; gap: 6px; align-items: center; margin-top: 3px; flex-wrap: wrap; }
+  .ib .num { font-size: 14px; font-weight: 700; padding-top: 1px; }
+  .ib .badge { height: 18px; padding: 0 7px; font-size: 10.5px; }
+  .mix { display: flex; height: 6px; margin: 10px 0 4px; border-radius: 999px; overflow: hidden; background: var(--color-bg); }
+  .mix i { display: block; }
+  .mix-legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--color-text-muted); font-size: 11.5px; }
+  .mix-legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; background: var(--c); }
+
+  /* В — short lines, the formula opens on a click */
+  .row { border-top: 1px solid var(--color-border); }
+  .row:first-child { border-top: 0; }
+  .row summary { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center;
+    height: 38px; cursor: pointer; list-style: none; }
+  .row summary::-webkit-details-marker { display: none; }
+  .row summary .chev { color: #b4bec5; transition: transform .15s; font-size: 11px; }
+  .row[open] summary .chev { transform: rotate(90deg); color: var(--color-accent); }
+  .row summary .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row summary .num { font-weight: 600; }
+  .row .calc { margin: 0 0 10px 22px; padding: 8px 10px; border-radius: 8px; background: var(--color-bg); }
+  .row .calc div { display: flex; justify-content: space-between; gap: 10px; }
+  .status { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; padding: 8px 10px; border-radius: 8px;
+    background: #fdf3e1; color: #8a5a10; font-size: 12.5px; }
+  .status.ok { background: var(--color-accent-soft); color: var(--color-accent); }
+  .lines-box { margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Блок «Счёт» — варианты</h1>
+<p class="lead">Королева 61 · ноябрь 2026, настоящие числа. Справа на странице объекта ширина колонки ~360px.</p>
+
+<div class="tabs" id="tabs">
+  <button data-v="a" class="on">А · Группы, как в примере</button>
+  <button data-v="b">Б · Строки с иконками</button>
+  <button data-v="c">В · Коротко, формула по нажатию</button>
+</div>
+
+<div class="who" id="who">
+  <button data-t="all" class="on">Готов к счёту</button>
+  <button data-t="miss">Не всё введено</button>
+</div>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6zM14 2v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+</svg>
+
+<!-- ============ А ============ -->
+<div class="stage variant" data-variant="a">
+  <aside class="obj-bill">
+    <div class="bill-head">
+      <div><div class="bill-cap">Счёт · ноябрь 2026</div><div class="bill-who">Виктор «Эгоист»</div></div>
+      <span class="badge ok" data-ok>Готов к счёту</span><span class="badge warn" data-miss hidden>Не всё введено</span>
+    </div>
+
+    <div class="grp">
+      <div class="grp-head"><span>Общие · по долям 45%</span><span class="num">5 130,00 ₽</span></div>
+      <div class="ln"><span class="nm">Содержание и ремонт</span><span class="num">2 340,00</span><span class="f">5 200,00 ₽ × 45%</span></div>
+      <div class="ln"><span class="nm">Вывоз мусора</span><span class="num">2 790,00</span><span class="f">6 200,00 ₽ × 45%</span></div>
+    </div>
+    <div class="grp">
+      <div class="grp-head"><span>По счётчикам</span><span class="num" data-ok>6 575,80 ₽</span><span class="num" data-miss hidden>—</span></div>
+      <div class="ln"><span class="nm">Электричество</span><span class="num" data-ok>6 575,80</span><span class="num" data-miss hidden style="color:#a86a12">нет показаний</span>
+        <span class="f" data-ok>день 538 кВт·ч × 9,60 ₽ + ночь 166 кВт·ч × 8,50 ₽</span>
+        <span class="f2">счётчик № 222, день / ночь</span></div>
+    </div>
+
+    <div class="total">
+      <div class="total-row"><b>Итого к оплате</b><span class="num" data-ok>11 705,80 ₽</span><span class="num" data-miss hidden>5 130,00 ₽</span></div>
+      <p class="words" data-ok>Одиннадцать тысяч семьсот пять рублей 80 копеек.</p>
+      <p class="words" data-miss hidden>Пока без электричества — введите показания слева.</p>
+    </div>
+    <div class="acts">
+      <button class="btn btn-primary"><svg><use href="#i-pdf"/></svg>Счёт PDF</button>
+      <button class="btn" title="Отправить арендатору"><svg><use href="#i-send"/></svg></button>
+    </div>
+  </aside>
+  <div class="notes">
+    <h2>А · Группы, как в примере</h2>
+    <ul>
+      <li>Счёт делится на группы в рамках (как блоки в наших окнах): <b>«Общие · по долям 45%»</b> и <b>«По счётчикам»</b>, у группы своя сумма.</li>
+      <li>В строке: название и сумма, под ними серым — формула; мелко ещё бледнее — откуда число (№ счётчика).</li>
+      <li>Внизу жирная линия, «Итого к оплате» крупно, сумма прописью.</li>
+      <li>Метка в шапке: «Готов к счёту» / «Не всё введено».</li>
+      <li>Кнопки «Счёт PDF» и «Отправить» (позже).</li>
+      <li>Минус: при 1–2 услугах группы выглядят тяжеловато.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ Б ============ -->
+<div class="stage variant" data-variant="b" hidden>
+  <aside class="obj-bill">
+    <div class="bill-head">
+      <div><div class="bill-cap">Счёт · ноябрь 2026</div><div class="bill-who">Виктор «Эгоист»</div></div>
+      <span class="badge ok" data-ok>Готов к счёту</span><span class="badge warn" data-miss hidden>Не всё введено</span>
+    </div>
+    <div class="lines-box">
+      <div class="ib">
+        <span class="icon-box k-mg"><svg><use href="#i-home"/></svg></span>
+        <div><div class="nm">Содержание и ремонт</div><div class="sub"><span class="badge grey">доля 45%</span><span class="f">5 200,00 ₽ × 45%</span></div></div>
+        <span class="num">2 340,00 ₽</span>
+      </div>
+      <div class="ib">
+        <span class="icon-box k-el"><svg><use href="#i-bolt"/></svg></span>
+        <div><div class="nm">Электричество</div>
+          <div class="sub" data-ok><span class="badge grey">счётчик № 222</span></div>
+          <div class="f" data-ok style="margin-top:3px">день 538 кВт·ч × 9,60 ₽<br>ночь 166 кВт·ч × 8,50 ₽</div>
+          <div class="sub" data-miss hidden><span class="badge warn">нет показаний</span></div></div>
+        <span class="num" data-ok>6 575,80 ₽</span><span class="num" data-miss hidden style="color:#a86a12">—</span>
+      </div>
+      <div class="ib">
+        <span class="icon-box k-trash"><svg><use href="#i-trash"/></svg></span>
+        <div><div class="nm">Вывоз мусора</div><div class="sub"><span class="badge grey">доля 45%</span><span class="f">6 200,00 ₽ × 45%</span></div></div>
+        <span class="num">2 790,00 ₽</span>
+      </div>
+    </div>
+    <div class="mix" data-ok><i style="width:44%;background:#9fb3c2"></i><i style="width:56%;background:#0e9aa7"></i></div>
+    <div class="mix-legend" data-ok><span style="--c:#9fb3c2">общие 5 130,00</span><span style="--c:#0e9aa7">по счётчикам 6 575,80</span></div>
+    <div class="total">
+      <div class="total-row"><b>Итого к оплате</b><span class="num" data-ok>11 705,80 ₽</span><span class="num" data-miss hidden>5 130,00 ₽</span></div>
+      <p class="words" data-ok>Одиннадцать тысяч семьсот пять рублей 80 копеек.</p>
+      <p class="words" data-miss hidden>Пока без электричества — введите показания слева.</p>
+    </div>
+    <div class="acts">
+      <button class="btn btn-primary"><svg><use href="#i-pdf"/></svg>Счёт PDF</button>
+      <button class="btn" title="Отправить арендатору"><svg><use href="#i-send"/></svg></button>
+    </div>
+  </aside>
+  <div class="notes">
+    <h2>Б · Строки с иконками</h2>
+    <ul>
+      <li>Без групп: у каждой услуги её иконка (цвета — как у счётчиков и карточек слева), название, справа сумма.</li>
+      <li>Под названием метка «как считали» (доля 45% / счётчик № 222) и формула; день и ночь — двумя строками.</li>
+      <li>Под строками тонкая полоска: сколько из счёта общие, сколько по счётчикам.</li>
+      <li>Связь со страницей: те же иконки, что у карточек услуг слева — глаз сразу находит услугу.</li>
+      <li>Минус: самый «высокий» вариант.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ В ============ -->
+<div class="stage variant" data-variant="c" hidden>
+  <aside class="obj-bill">
+    <div class="bill-head">
+      <div><div class="bill-cap">Счёт · ноябрь 2026</div><div class="bill-who">Виктор «Эгоист»</div></div>
+      <span class="badge grey">доля 45%</span>
+    </div>
+    <div class="status ok" data-ok>✓ Всё введено — счёт готов</div>
+    <div class="status" data-miss hidden>Не введено: Электричество — счёт пока неполный</div>
+    <div>
+      <details class="row"><summary><span class="chev">▶</span><span class="nm">Содержание и ремонт</span><span class="num">2 340,00</span></summary>
+        <div class="calc f"><div><span>Сумма по квитанции</span><span>5 200,00 ₽</span></div><div><span>Доля Виктора</span><span>× 45%</span></div></div></details>
+      <details class="row" open><summary><span class="chev">▶</span><span class="nm">Электричество</span><span class="num" data-ok>6 575,80</span><span class="num" data-miss hidden style="color:#a86a12">—</span></summary>
+        <div class="calc f" data-ok><div><span>День: 538 кВт·ч × 9,60 ₽</span><span>5 164,80</span></div><div><span>Ночь: 166 кВт·ч × 8,50 ₽</span><span>1 411,00</span></div><div class="f2"><span>счётчик № 222</span><span></span></div></div>
+        <div class="calc f" data-miss hidden>Нет показаний счётчика № 222 за ноябрь.</div></details>
+      <details class="row"><summary><span class="chev">▶</span><span class="nm">Вывоз мусора</span><span class="num">2 790,00</span></summary>
+        <div class="calc f"><div><span>Сумма по квитанции</span><span>6 200,00 ₽</span></div><div><span>Доля Виктора</span><span>× 45%</span></div></div></details>
+    </div>
+    <div class="total">
+      <div class="total-row"><b>Итого к оплате</b><span class="num" data-ok>11 705,80 ₽</span><span class="num" data-miss hidden>5 130,00 ₽</span></div>
+      <p class="words" data-ok>Одиннадцать тысяч семьсот пять рублей 80 копеек.</p>
+    </div>
+    <div class="acts">
+      <button class="btn btn-primary"><svg><use href="#i-pdf"/></svg>Счёт PDF</button>
+      <button class="btn" title="Отправить арендатору"><svg><use href="#i-send"/></svg></button>
+    </div>
+  </aside>
+  <div class="notes">
+    <h2>В · Коротко, формула по нажатию</h2>
+    <ul>
+      <li>Каждая услуга — одна строка 38px: название и сумма. Весь счёт виден сразу, даже при 8 услугах.</li>
+      <li>Нажал на строку — раскрывается расчёт столбиком (день и ночь отдельно, со своими суммами).</li>
+      <li>Сверху полоса состояния: «Всё введено — счёт готов» или что ещё не введено.</li>
+      <li>Доля арендатора — меткой в шапке.</li>
+      <li>Минус: формулы не видны сразу — надо нажать.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    document.querySelectorAll('.variant').forEach(function (v) { v.hidden = v.dataset.variant !== b.dataset.v; });
+  });
+  document.getElementById('who').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    var miss = b.dataset.t === 'miss';
+    document.querySelectorAll('[data-ok]').forEach(function (x) { x.hidden = miss; });
+    document.querySelectorAll('[data-miss]').forEach(function (x) { x.hidden = !miss; });
+  });
+</script>
+</body>
+</html>

@@ -79,9 +79,17 @@
         </div>
       </div>
       {% if bill.entries %}
-        <a href="{% url 'receipt_create' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm">
-          <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
-        </a>
+        <div class="section-actions">
+          {% if bill.entries|length > 1 %}
+            <button type="button" class="btn btn-ghost btn-auto btn-sm order-on" data-order-on title="Поменять услуги местами">
+              <svg class="icon"><use href="#i-sort"/></svg>Порядок
+            </button>
+            <button type="button" class="btn btn-primary btn-auto btn-sm order-off" data-order-off>Готово</button>
+          {% endif %}
+          <a href="{% url 'receipt_create' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm order-add">
+            <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
+          </a>
+        </div>
       {% endif %}
     </div>
 
@@ -92,11 +100,28 @@
         {% csrf_token %}
         <input type="hidden" name="month" value="{{ month }}">
 
+        {% comment %}«⇅ Порядок» (2026-11-17, variant Г of the user): the cards fold into these short rows, dragged by the
+           whole row; «Готово» puts the cards in the same order (app.js). data-live — the sums stay fresh.{% endcomment %}
+        {% if bill.entries|length > 1 %}
+          <div class="morder" id="morder" data-live>
+            <p class="morder-hint">Перетащите услуги в нужном порядке — так же они пойдут в счёт арендатора.</p>
+            {% for entry in bill.entries %}
+              <div class="morder-row" data-order-row data-receipt-id="{{ entry.receipt.pk }}">
+                <span class="morder-grip" aria-hidden="true"><svg class="icon"><use href="#i-grip"/></svg></span>
+                <span class="receipt-icon rk-{{ entry.receipt.kind }}"><svg class="icon"><use href="#i-r-{{ entry.receipt.kind }}"/></svg></span>
+                <span class="morder-name fade">{{ entry.receipt.name }}</span>
+                {% if entry.receipt.provider %}<span class="morder-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
+                <span class="morder-sum">{% if entry.total is not None %}{{ entry.total|floatformat:"2g" }}&nbsp;{{ entry.receipt.currency_symbol }}{% else %}—{% endif %}</span>
+              </div>
+            {% endfor %}
+            <div class="morder-done"><button type="button" class="btn btn-primary btn-auto btn-sm" data-order-off>Готово</button></div>
+          </div>
+        {% endif %}
+
         {% for entry in bill.entries %}
           {% with receipt=entry.receipt %}
           <article class="mreceipt{% if entry.total is None %} is-missing{% endif %}" id="mreceipt-{{ receipt.pk }}" data-receipt-id="{{ receipt.pk }}">
             <header class="mreceipt-head">
-              {% if bill.entries|length > 1 %}<button type="button" class="mreceipt-grip" data-receipt-grip title="Перетащите, чтобы поменять услуги местами" aria-label="Переместить услугу «{{ receipt.name }}»"><svg class="icon"><use href="#i-grip"/></svg></button>{% endif %}
               <span class="receipt-icon rk-{{ receipt.kind }}"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
               <div class="receipt-body">
                 <div class="receipt-title">
@@ -122,14 +147,6 @@
                   <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="dropdown-item" role="menuitem">
                     <svg class="icon"><use href="#i-edit"/></svg>Настроить
                   </a>
-                  {% if bill.entries|length > 1 %}
-                    <button type="button" class="dropdown-item" role="menuitem" data-receipt-move="up">
-                      <svg class="icon"><use href="#i-arrow-up"/></svg>Выше
-                    </button>
-                    <button type="button" class="dropdown-item" role="menuitem" data-receipt-move="down">
-                      <svg class="icon"><use href="#i-arrow-down"/></svg>Ниже
-                    </button>
-                  {% endif %}
                   <a href="{% url 'receipt_delete' receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
                     <svg class="icon"><use href="#i-trash"/></svg>Удалить
                   </a>
@@ -164,14 +181,14 @@
                     <span class="mread-ins">
                       {% if mode == 'usage' %}
                         <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="use-{{ meter.pk }}"
-                               value="{{ reading.usage|num }}" aria-label="{{ meter.who }}: расход{% if dn %} днём{% endif %} за {{ month_name }}"></label>
+                               value="{{ reading.usage|num }}" placeholder=" " aria-label="{{ meter.who }}: расход{% if dn %} днём{% endif %} за {{ month_name }}"></label>
                         {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in" data-zone="н">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="usen-{{ meter.pk }}"
-                               value="{{ reading.usage_night|num }}" aria-label="{{ meter.who }}: расход ночью за {{ month_name }}">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
+                               value="{{ reading.usage_night|num }}" placeholder=" " aria-label="{{ meter.who }}: расход ночью за {{ month_name }}">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
                       {% else %}
                         <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="cur-{{ meter.pk }}"
-                               value="{{ reading.current|num }}" aria-label="{{ meter.who }}: показание{% if dn %} днём{% endif %} сейчас"></label>
+                               value="{{ reading.current|num }}" placeholder=" " aria-label="{{ meter.who }}: показание{% if dn %} днём{% endif %} сейчас"></label>
                         {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in" data-zone="н">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="curn-{{ meter.pk }}"
-                               value="{{ reading.current_night|num }}" aria-label="{{ meter.who }}: показание ночью сейчас">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
+                               value="{{ reading.current_night|num }}" placeholder=" " aria-label="{{ meter.who }}: показание ночью сейчас">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
                       {% endif %}
                     </span>
                     <span class="mread-use">

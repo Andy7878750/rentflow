@@ -1,22 +1,59 @@
-{# One payer's bill for the month. All are rendered; app.js shows the selected one. #}
+{% load billing %}
+{# One payer's bill for the month. All are rendered; app.js shows the selected one. Variant А (2026-11-17): groups in frames. #}
 <div class="bill" data-bill="{{ active }}"{% if selected_tenant|stringformat:'s' != active %} hidden{% endif %}>
-  <h2>Счёт</h2>
-  <p class="bill-sub">{{ title }} · {{ month_name }} {{ month_label|slice:"-4:" }}</p>
+  <div class="bill-head">
+    <div class="bill-head-text">
+      <span class="bill-cap">Счёт · {{ month_name }} {{ month_label|slice:"-4:" }}</span>
+      <h2 class="fade">{{ title }}</h2>
+    </div>
+    {% if payer.lines %}
+      {% if bill.missing %}<span class="badge badge-warn">Не всё введено</span>{% else %}<span class="badge badge-ok">Готов к счёту</span>{% endif %}
+    {% endif %}
+  </div>
   {% if payer.lines %}
-    <ul class="bill-lines">
-      {% for line in payer.lines %}
-        <li>
-          <span class="bill-name fade">{{ line.receipt.name }}</span>
-          <span class="bill-amount">{{ line.amount|floatformat:"2g" }}&nbsp;{{ line.receipt.currency_symbol }}</span>
-          <span class="bill-formula">{{ line.formula }}</span>
-        </li>
-      {% endfor %}
-    </ul>
-    <div class="bill-total"><span>Итого</span><span>{{ payer.total|floatformat:"2g" }}&nbsp;₽</span></div>
+    {% for group in payer|bill_groups %}
+      <section class="bill-group">
+        <header class="bill-group-head"><span>{{ group.title }}</span></header>
+        {% for line in group.lines %}
+          <div class="bill-line">
+            <span class="bill-name fade">{{ line.receipt.name }}</span>
+            <span class="bill-amount">{{ line.amount|floatformat:"2g" }}</span>
+            {% for row in line|meter_rows %}<span class="bill-source{% if not forloop.first %} is-reading{% endif %}">{{ row }}</span>{% empty %}<span class="bill-formula">{{ line.formula }}</span>{% endfor %}
+          </div>
+        {% endfor %}
+      </section>
+    {% endfor %}
+    <div class="bill-total">
+      <div class="bill-total-row"><span>Итого к оплате</span><b>{{ payer.total|floatformat:"2g" }}&nbsp;₽</b></div>
+      {% if bill.missing %}
+        <p class="bill-words">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %} — сумма неполная.</p>
+      {% else %}
+        <p class="bill-words">{{ payer.total|money_words }}.</p>
+      {% endif %}
+    </div>
+    {% url 'bill_print' property.pk active|add:0 as pdf_url %}
+    {% bill_share payer title month_label as share %}
+    <div class="bill-acts" data-share data-pdf="{{ pdf_url }}?month={{ month }}" data-file="{{ share.file }}" data-text="{{ share.text }}">
+      <a class="btn btn-primary bill-pdf" href="{{ pdf_url }}?month={{ month }}" download="{{ share.file }}">
+        <svg class="icon"><use href="#i-download"/></svg>PDF
+      </a>
+      <a class="btn bill-view" href="{{ pdf_url }}?month={{ month }}&amp;inline=1" data-pdf-view data-title="Счёт · {{ title }} · {{ month_name }} {{ month_label|slice:'-4:' }}" target="_blank" rel="noopener">
+        <svg class="icon"><use href="#i-eye"/></svg>Посмотреть
+      </a>
+      <button type="button" class="btn bill-share" data-share-open aria-haspopup="true" title="Поделиться" aria-label="Поделиться">
+        <svg class="icon"><use href="#i-share"/></svg><span class="share-label">Поделиться</span>
+      </button>
+      <div class="share-menu" data-share-menu hidden>
+        <button type="button" data-share-file><svg class="icon"><use href="#i-file"/></svg>Отправить PDF…</button>
+        <a href="#" data-share-to="whatsapp" target="_blank" rel="noopener"><span class="share-dot is-wa"></span>WhatsApp</a>
+        <a href="#" data-share-to="telegram" target="_blank" rel="noopener"><span class="share-dot is-tg"></span>Telegram</a>
+        <button type="button" data-share-copy><svg class="icon"><use href="#i-copy"/></svg>Скопировать текст счёта</button>
+      </div>
+    </div>
   {% else %}
     <p class="calc-empty">{% if bill.entries %}Пока нечего начислять — введите суммы и показания слева.{% else %}Добавьте услуги — здесь появится, кто сколько платит за месяц.{% endif %}</p>
-  {% endif %}
-  {% if bill.missing %}
-    <p class="bill-missing">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+    {% if bill.missing %}
+      <p class="bill-missing">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+    {% endif %}
   {% endif %}
 </div>

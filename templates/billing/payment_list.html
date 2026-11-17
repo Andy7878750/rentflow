@@ -12,8 +12,23 @@
   </div>
 </div>
 
-<form data-pay-board onsubmit="return false">
+<form data-pay-board data-month="{{ month }}" onsubmit="return false">
   {% csrf_token %}
   <div data-pay-body>{% include "billing/_payment_board.html" %}</div>
 </form>
+
+{% comment %}The note window of a cell: what to remember and «Переносить на следующий месяц» (app.js).{% endcomment %}
+<div class="pay-note-back" data-pay-note-back hidden>
+  <div class="pay-note-win" role="dialog" aria-modal="true" aria-labelledby="pay-note-title">
+    <h2 id="pay-note-title" data-pay-note-title>Пометка</h2>
+    <p class="pay-note-sub" data-pay-note-sub></p>
+    <textarea data-pay-note-text rows="3" maxlength="120" placeholder="Что запомнить — например, «переплата 300 ₽, учесть в декабре»"></textarea>
+    <label class="pay-note-carry"><input type="checkbox" data-pay-note-carry><span>Переносить на следующий месяц</span></label>
+    <div class="pay-note-acts">
+      <button type="button" class="pay-note-clear" data-pay-note-clear>Удалить пометку</button>
+      <button type="button" class="btn btn-ghost btn-auto btn-sm" data-pay-note-cancel>Отмена</button>
+      <button type="button" class="btn btn-primary btn-auto btn-sm" data-pay-note-save>Сохранить</button>
+    </div>
+  </div>
+</div>
 {% endblock %}

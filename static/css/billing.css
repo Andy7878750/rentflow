@@ -1049,59 +1049,141 @@
 /* ---------- Bill ---------- */
 
 .obj-bill {
-  padding: 20px;
+  padding: 18px;
 }
 
-.bill h2 {
-  margin: 0;
-  color: var(--color-primary);
-  font-size: 18px;
-}
+/* The bill, variant А (2026-11-17): a small caption over the payer's name, a badge «Готов к счёту»;
+   lines in framed groups (like .form-section) — «Общие · по долям 45%», «По счётчикам» — each with its sum;
+   a heavy line, «Итого к оплате» big and the sum in words. */
+.bill-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.bill-head-text { min-width: 0; }
+.bill-cap { color: var(--color-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.bill h2 { margin: 2px 0 0; overflow: hidden; color: var(--color-primary); font-size: 18px; white-space: nowrap; }
+.bill-head .badge { flex-shrink: 0; margin-top: 2px; }
 
-.bill-sub {
-  margin: 2px 0 12px;
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.bill-lines {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.bill-lines li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.bill-name {
-  font-size: 15px;
-}
-
-.bill-amount {
-  font-size: 15px;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.bill-formula {
-  grid-column: 1 / -1;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.bill-total {
+.bill-group { margin-top: 12px; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius); }
+.bill-group-head {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding-top: 12px;
-  color: var(--color-primary);
-  font-size: 18px;
+  gap: 10px;
+  height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
 }
+
+.bill-group-sum { color: var(--color-primary); font-size: 13px; letter-spacing: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bill-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; padding: 9px 12px; }
+.bill-line + .bill-line { border-top: 1px solid var(--color-border); }
+.bill-name { font-size: 14px; }
+.bill-amount { font-size: 14px; font-weight: 600; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bill-formula { grid-column: 1 / -1; color: var(--color-text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.bill-source { grid-column: 1 / -1; color: #a3adb4; font-size: 11.5px; }
+/* A meter's line: № and tariff, then «было → стало = расход» (day and night), then the formula with its result. */
+.bill-source.is-reading { color: var(--color-text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.bill-total { margin-top: 14px; padding-top: 12px; border-top: 2px solid var(--color-primary); }
+.bill-total-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--color-primary); }
+.bill-total-row span { font-size: 14px; font-weight: 700; }
+.bill-total-row b { font-size: 24px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bill-words { margin: 4px 0 0; color: var(--color-text-muted); font-size: 12px; }
+/* «Счёт PDF» (the file) and «Поделиться» (the phone's share sheet with the PDF; else WhatsApp / Telegram / copy). */
+/* Three buttons in a row (2026-11-17): «PDF» (download) · «Посмотреть» (the PDF in a new tab) · «Поделиться». */
+/* «Поделиться» — always a square icon (the user: «супер»); «PDF» and «Посмотреть» share the rest equally. */
+.bill-acts { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 38px; gap: 6px; margin-top: 14px; }
+.bill-acts .bill-share { padding: 0; }
+.bill-share .share-label { display: none; }
+
+/* «Посмотреть»: the PDF in a modal window (an iframe), «Скачать» and × in its head. */
+.pdf-view-back {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(30, 40, 48, .45);
+}
+
+.pdf-view-back[hidden] { display: none; }
+.pdf-view {
+  display: flex;
+  flex-direction: column;
+  width: 820px;
+  max-width: 100%;
+  height: 100%;
+  max-height: 1100px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 16px 48px rgba(30, 40, 48, .25);
+}
+
+.pdf-view-head { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 10px 0 18px; border-bottom: 1px solid var(--color-border); }
+.pdf-view-head h3 { flex: 1; min-width: 0; margin: 0; overflow: hidden; color: var(--color-primary); font-size: 15px;
+  text-overflow: ellipsis; white-space: nowrap; }
+.pdf-view-head a { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid var(--color-border);
+  border-radius: 8px; color: var(--color-primary); font-size: 13px; font-weight: 600; text-decoration: none; }
+.pdf-view-head a:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.pdf-view-head .icon { width: 15px; height: 15px; }
+.pdf-view-close { width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; color: var(--color-text-muted);
+  font-size: 22px; line-height: 1; cursor: pointer; }
+.pdf-view-close:hover { background: var(--color-bg); color: var(--color-text); }
+.pdf-view iframe { flex: 1; width: 100%; border: 0; background: #525659; }
+.bill-acts .btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 0;
+  height: 38px; padding: 0 8px; font-size: 13px; text-decoration: none; white-space: nowrap; }
+.bill-acts .btn .icon { flex-shrink: 0; width: 15px; height: 15px; }
+.bill-share,
+.bill-view { border: 2px solid var(--color-border); background: var(--color-surface); color: var(--color-primary); }
+.bill-share:hover, .bill-share[aria-expanded="true"],
+.bill-view:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.share-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  width: 230px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgba(30, 40, 48, .14);
+}
+
+.share-menu[hidden] { display: none; }
+.share-menu a,
+.share-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.share-menu a:hover,
+.share-menu button:hover { background: var(--color-bg); }
+.share-menu .icon { width: 16px; height: 16px; color: var(--color-text-muted); }
+.share-dot { width: 16px; height: 16px; border-radius: 50%; }
+.share-dot.is-wa { background: #25d366; }
+.share-dot.is-tg { background: #2aabee; }
+.share-menu .is-done { color: var(--color-accent); }
 
 .bill-missing {
   margin: 12px 0 0;
@@ -3627,6 +3709,7 @@
 
 .rform .mrow:has(input[name=meter_ids]:not(:checked)) > :not(.payer-pays) {
   opacity: 0.45;
+  pointer-events: none;  /* switched off: only the switch works (the user typed into an off tariff, 2026-11-17) */
 }
 
 .rform .mrow-empty {
@@ -4254,109 +4337,217 @@
    (2026-11-16, the user: «придвинь название поставщика на уровень иконки»). Icon 20px + gap 12px. */
 .mreceipt-head .receipt-meta { margin-left: -32px; }
 
-/* ---------- The service cards change places (2026-11-17): a grip in the card's left padding ---------- */
-.mreceipt { position: relative; }
+/* ---------- The service cards change places (2026-11-17, variant Г): «⇅ Порядок» folds them into short rows ---------- */
+.section-actions { display: flex; flex-shrink: 0; flex-wrap: nowrap; justify-content: flex-end; gap: 8px; }
+@media (max-width: 480px) { .section-actions { flex-wrap: wrap; } }
+.order-off { display: none; }
+.obj-month.is-ordering .order-on,
+.obj-month.is-ordering .order-add { display: none; }
+.obj-month.is-ordering .order-off { display: inline-flex; }
 
-.mreceipt-grip {
-  position: absolute;
-  top: 14px;
-  left: 0;
+.morder { display: none; }
+.obj-month.is-ordering .morder { display: flex; flex-direction: column; gap: 6px; }
+.obj-month.is-ordering .mreceipt,
+.obj-month.is-ordering .month-actions,
+.obj-month.is-ordering .month-hint { display: none; }
+
+.morder-hint { margin: 0 0 4px; color: var(--color-text-muted); font-size: 13px; }
+
+.morder-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-text-muted);
-  opacity: 0;
+  gap: 10px;
+  height: 48px;
+  padding: 0 14px 0 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
   cursor: grab;
   touch-action: none;
+  user-select: none;
 }
 
-.mreceipt-grip .icon { width: 14px; height: 14px; fill: currentColor; }
-.mreceipt:hover .mreceipt-grip,
-.mreceipt-grip:focus-visible,
-.mreceipt.is-moving .mreceipt-grip { opacity: 1; }
-.mreceipt-grip:hover { color: var(--color-accent); }
-@media (hover: none) { .mreceipt-grip { opacity: .6; } }
+.morder-row:hover { border-color: var(--color-accent); }
+.morder-grip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 34px;
+  border-radius: 7px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
 
-.mreceipt.is-moving {
+.morder-grip .icon { width: 18px; height: 18px; fill: currentColor; }
+.morder-row:hover .morder-grip { background: var(--color-accent-soft); color: var(--color-accent); }
+.morder-row .receipt-icon { width: 30px; height: 30px; color: var(--rk, var(--color-accent)); }
+.morder-row .receipt-icon .icon { width: 17px; height: 17px; }
+.morder-name { min-width: 0; font-weight: 700; white-space: nowrap; }
+.morder-meta { min-width: 0; color: var(--color-text-muted); font-size: 13px; white-space: nowrap; }
+.morder-sum { flex-shrink: 0; margin-left: auto; color: var(--color-text-muted); font-size: 13px; white-space: nowrap; }
+.morder-done { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+.morder-row.is-moving {
+  position: relative;
+  z-index: 5;
   border-color: var(--color-accent);
-  background: var(--color-surface);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .16);
+  cursor: grabbing;
 }
 
-.mreceipt.is-moving .mreceipt-grip { cursor: grabbing; }
-.mreceipt .dropdown-menu button.dropdown-item { width: 100%; border: 0; background: none; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+/* While a row is dragged nothing else gets selected or hovered. */
+body.is-dragging { cursor: grabbing; user-select: none; }
+body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 
-/* ---------- «Оплаты» (2026-11-17, round 2): a card per object, a tile per service — all tiles of one size, no empty
-   cells, nothing opens: the mark, the date and the remark are right in the tile ---------- */
+@media (max-width: 560px) { .morder-meta { display: none; } }
+
+/* ---------- «Оплаты» (2026-11-17, variant А «компактно» of the user): one table, objects × services; a cell is a small
+   square — the sum with kopecks, the date paid, a small check, «?» for the note ---------- */
 .pay-ok { color: var(--color-accent); }
 .pay-left { color: #c0392b; }
+.pay-kpis { margin-bottom: 14px; }
 
-.pay-card {
-  margin-bottom: 14px;
-  padding: 14px 16px 16px;
+/* Last month's bills still not paid: a pale red strip over the table, each one marked right in it. */
+.pay-prev {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #f4f6f7;
+  font-size: 12.5px;
+}
+
+/* Grey strip and grey chips (2026-11-17): only the numbers are red. */
+.pay-prev b { color: var(--color-text); }
+.pay-prev-sum { color: var(--color-text-muted); }
+.pay-red { color: #c0392b; font-weight: 700; }
+.pay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 26px;
+  padding: 0 5px 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.pay-chip .fade { min-width: 0; overflow: hidden; white-space: nowrap; }
+.pay-chip-sum { color: #c0392b; font-weight: 700; white-space: nowrap; }
+
+.pay-wrap {
+  overflow-x: auto;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
 
-.pay-card-head {
-  display: flex;
+.pay-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.pay-table th,
+.pay-table td { padding: 6px; border-bottom: 1px solid var(--color-border); text-align: center; white-space: nowrap; }
+.pay-table thead th { height: 32px; padding: 0 6px; color: var(--color-text-muted); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase; }
+.pay-table thead th .fade { display: block; max-width: 100px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; }
+.pay-table tbody tr:hover th,
+.pay-table tbody tr:hover td { background: #fafbfc; }
+.pay-table tbody tr:last-child th,
+.pay-table tbody tr:last-child td { border-bottom: 0; }
+
+/* The object stays in place while the services scroll sideways; «Итого» stays at the right edge. */
+.pay-table .pay-obj {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  height: 54px;
+  max-width: 190px;
+  padding: 0 10px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  font-weight: 600;
+  text-align: left;
+}
+
+.pay-table thead .pay-obj { height: 32px; font-weight: 700; }
+.pay-table .pay-obj a { display: block; overflow: hidden; color: var(--color-primary); text-decoration: none; text-overflow: ellipsis; }
+.pay-table .pay-obj a:hover { color: var(--color-accent); }
+.pay-table .pay-total {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  width: 128px;
+  min-width: 128px;
+  padding: 0 10px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  text-align: right;
+}
+
+/* A fixed width: «всё оплачено» and «осталось …» differ, and the whole table shifted at each check (2026-11-17). */
+
+.pay-total-sum { display: block; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pay-rest { display: block; color: #c0392b; font-size: 11px; font-weight: 600; }
+.pay-rest.is-ok { color: var(--color-accent); }
+.pay-none { display: inline-block; width: 100px; color: #d5dbdf; }
+
+/* A cell: [sum | check] over [date | ?]. */
+.pay-sq {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15px;
+  grid-template-rows: 1fr 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.pay-card-head h2 { min-width: 0; margin: 0; font-size: 16px; }
-.pay-card-head h2 a { display: block; overflow: hidden; color: var(--color-primary); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
-.pay-card-head h2 a:hover { color: var(--color-accent); }
-.pay-card-sum { display: flex; align-items: center; gap: 10px; white-space: nowrap; font-size: 15px; }
-.pay-tag-left { background: #fdf1ef; color: #c0392b; }
-
-/* Eight tiles in a row on a wide screen; fewer — the same size, the row just ends earlier. */
-.pay-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
-}
-
-.pay-tile {
-  display: grid;
-  grid-template-rows: 22px 24px 20px 24px;
-  gap: 2px;
-  min-width: 0;
-  padding: 8px 10px;
+  width: 100px;
+  height: 46px;
+  margin: 0 auto;
+  padding: 4px 5px 4px 7px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--color-bg);
+  text-align: left;
 }
 
-.pay-tile.is-due { background: #fdf1ef; }
-.pay-tile.is-paid { background: #eaf6f2; }
-
-.pay-tile-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
-.pay-name { min-width: 0; overflow: hidden; color: var(--color-text-muted); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.pay-sum { overflow: hidden; font-size: 15px; font-weight: 700; line-height: 24px; white-space: nowrap; }
-.pay-sum .is-none { color: var(--color-text-muted); font-size: 13px; font-weight: 400; }
+.pay-sq.is-due { background: #fdf1ef; border-color: #f6dcd7; }
+.pay-sq.is-paid { background: #eaf6f2; border-color: #cfe9e0; }
+.pay-sq .pay-sum { overflow: hidden; font-size: 12.5px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pay-sq.is-due .pay-sum { color: #c0392b; }
+.pay-sq.is-paid .pay-sum { color: var(--color-accent); }
+.pay-sq.is-empty .pay-sum { color: var(--color-text-muted); font-size: 11px; font-weight: 400; }
 .pay-partial { color: var(--color-text-muted); }
-.pay-state { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 12px; font-weight: 600; line-height: 20px; white-space: nowrap; }
-.pay-tile.is-due .pay-state { color: #c0392b; }
-.pay-tile.is-paid .pay-state { color: #0e6b59; }
-.pay-tile.is-empty .pay-state { color: var(--color-text-muted); font-weight: 400; }
+.pay-date { min-width: 0; overflow: hidden; color: var(--color-text-muted); font-size: 10.5px; white-space: nowrap; }
+.pay-sq.is-due .pay-date { color: #d37a6c; }
+.pay-date-input {
+  width: 100%;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+}
 
-/* The round mark: empty — not paid, filled green — paid. */
+.pay-date-input:hover,
+.pay-date-input:focus { border-bottom-color: var(--color-accent); }
+
+/* The small round check: empty — not paid, green — paid. */
 .pay-check {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  justify-self: end;
+  width: 13px;
+  height: 13px;
   padding: 0;
   border: 1.5px solid #c9d3da;
   border-radius: 50%;
@@ -4365,37 +4556,111 @@
   cursor: pointer;
 }
 
-.pay-check .icon { width: 13px; height: 13px; stroke-width: 3; }
+.pay-check .icon { width: 8px; height: 8px; stroke-width: 4; }
 .pay-check:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.pay-tile.is-paid .pay-check { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
-.pay-tile.is-empty .pay-check { visibility: hidden; }
+.pay-sq.is-paid .pay-check { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+.pay-sq.is-empty .pay-check { visibility: hidden; }
+.pay-chip .pay-check { width: 18px; height: 18px; }
+.pay-chip .pay-check .icon { width: 11px; height: 11px; }
 
-/* The date and the remark are typed in place: quiet fields with a line that shows on hover and focus. */
-.pay-date,
-.pay-note {
-  min-width: 0;
-  height: 20px;
+/* «?» — the note: grey when there is none, red when there is. */
+.pay-q {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  width: 13px;
+  height: 13px;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid transparent;
-  border-radius: 0;
-  background: none;
-  color: inherit;
+  border-radius: 50%;
+  background: #cfd6db;
+  color: #fff;
+  font: 700 9px/1 var(--font, system-ui), sans-serif;
+  cursor: pointer;
+}
+
+.pay-q:hover { background: var(--color-text-muted); }
+.pay-q.is-on { background: #c0392b; }
+.pay-q.is-on:hover { background: #a93226; }
+
+.pay-hint { margin-top: 10px; }
+
+/* The note window */
+.pay-note-back {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14vh 16px 0;
+  background: rgba(30, 40, 48, .35);
+}
+
+.pay-note-back[hidden] { display: none; }
+.pay-note-win {
+  width: 380px;
+  max-width: 100%;
+  padding: 18px 18px 16px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+}
+
+.pay-note-win h2 { margin: 0; color: var(--color-primary); font-size: 16px; }
+.pay-note-sub { margin: 2px 0 12px; color: var(--color-text-muted); font-size: 12.5px; }
+.pay-note-win textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
   font: inherit;
+  font-size: 14px;
+  resize: vertical;
   outline: none;
 }
 
-.pay-date { width: 78px; font-weight: 600; cursor: pointer; }
-.pay-note { width: 100%; height: 24px; color: var(--color-text); font-size: 12px; }
-.pay-note::placeholder { color: #a9b3ba; }
-.pay-tile:hover .pay-note,
-.pay-date:hover { border-bottom-color: #c9d3da; }
-.pay-date:focus,
-.pay-note:focus { border-bottom-color: var(--color-accent); }
+.pay-note-win textarea:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.pay-note-carry { display: flex; align-items: center; gap: 8px; margin: 10px 0 14px; font-size: 13.5px; cursor: pointer; }
+.pay-note-carry input { width: 16px; height: 16px; accent-color: var(--color-accent); }
+.pay-note-acts { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.pay-note-clear { margin-right: auto; padding: 0; border: 0; background: none; color: #c0392b; font: inherit; font-size: 13px; cursor: pointer; }
+.pay-note-clear[hidden] { display: none; }
 
-.pay-hint { margin-top: 4px; }
+/* ---------- Fields you type numbers into (2026-11-17, the user): a warm pale yellow, as input cells in a sheet —
+   sums, readings, tariffs; on the object page and in the service window. Text fields stay white. ---------- */
+:root { --input-warm: #fff8e6; --input-warm-border: #ecd9a8; }
 
-@media (max-width: 720px) {
-  .pay-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pay-card-head { flex-wrap: wrap; }
+/* Round 2 (the user: «переборщил»): yellow only while the field is EMPTY — it says «type here»; once typed it is
+   white. The coefficient is always white. Empty = the placeholder shows (reading fields have an invisible one). */
+.num-input:not(.num-input-coef):placeholder-shown,
+.ifield:has(input[inputmode=decimal]:placeholder-shown),
+.ifield:has(input[inputmode=numeric]:placeholder-shown) {
+  border-color: var(--input-warm-border);
+  background: var(--input-warm);
+}
+
+.num-input::placeholder,
+.ifield input[inputmode=decimal]::placeholder { color: #b9a77c; }
+.num-input:focus,
+.ifield:has(input[inputmode=decimal]):focus-within { border-color: var(--color-accent); background: var(--color-surface); }
+.num-input.is-bad { border-color: var(--color-danger); }
+
+/* A switched-off meter row of the service window: grey, as everything off. */
+.rform .mrow:has(input[name=meter_ids]:not(:checked)) .ifield { border-color: var(--color-border); background: var(--color-bg); }
+
+/* The unit right inside the field: «5 200,00 ₽». */
+.num-wrap { position: relative; display: block; }
+.num-wrap .num-input,
+.obj-month .num-wrap .num-input { padding-right: 28px; }
+.num-unit {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  color: #9a8a62;
+  font-size: 14px;
+  pointer-events: none;
+  transform: translateY(-50%);
 }

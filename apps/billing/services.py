@@ -687,80 +687,122 @@ def parse_day(text):
     return None
 
 
-def payment_table(owner, month):
-    """«Оплаты»: what the owner pays the providers this month. A card per object, a tile per service of it — the
-    owner pays for the object, so services with one name (a meter service per tenant, say) are one tile with their
-    sums added up. A sum comes from the month's input of the object page by itself and stands «не оплачено» until
-    the tile is marked.
+def _inherited_notes(owner, month):
+    """{receipt id: (note, carry)} a month has without its own row: the latest earlier row's note when it was
+    «переносить» (it comes by itself into the next months; a month with its own row decides for itself)."""
+    from apps.properties.services import shift_month
 
-    Returns {'rows': [{'property', 'tiles', 'due', 'paid', 'left'}], 'totals': {...}}; a tile: {'name', 'key' (the
-    first service's id — what the mark is posted by), 'kind', 'amount' (None while nothing is typed), 'partial'
-    (some of its services have no sum yet), 'state': 'paid' | 'due' | 'empty', 'paid_on', 'note'}."""
+    found = {}
+    rows = (Payment.objects.filter(receipt__property__owner=owner, month__lt=month, month__gte=shift_month(month, -24))
+            .order_by('month'))
+    for row in rows:  # oldest first: a later row decides
+        found[row.receipt_id] = (row.note, True) if row.note and row.note_carry else None
+    return {pk: value for pk, value in found.items() if value}
+
+
+def _month_tiles(owner, month):
+    """Per object, per service NAME (same-name services of an object are one bill — the sums add up): the month's sum
+    from the object page, paid or not, the note. [{'property', 'tiles': [tile]}]."""
     from apps.properties.models import Property
 
     zero = Decimal('0.00')
-    payments = {payment.receipt_id: payment
-                for payment in Payment.objects.filter(receipt__property__owner=owner, month=month)}
+    own = {payment.receipt_id: payment for payment in Payment.objects.filter(receipt__property__owner=owner, month=month)}
+    inherited = _inherited_notes(owner, month)
+
+    def note_of(pk):
+        if pk in own:
+            return own[pk].note, own[pk].note_carry
+        return inherited.get(pk, ('', False))
+
     rows = []
-    totals = {'due': zero, 'paid': zero, 'left': zero, 'unpaid': 0, 'empty': 0}
     for property_obj in Property.objects.filter(owner=owner).order_by('name'):
         groups = {}
         for entry in month_bill(property_obj, month).entries:
             groups.setdefault(entry.receipt.name, []).append(entry)
         tiles = []
-        row = {'property': property_obj, 'tiles': tiles, 'due': zero, 'paid': zero, 'left': zero}
         for name, entries in groups.items():
             sums = [entry.total for entry in entries if entry.total is not None]
-            marks = [payments.get(entry.receipt.pk) for entry in entries]
-            dates = [mark.paid_on for mark in marks if mark and mark.paid_on]
+            dates = [own[e.receipt.pk].paid_on for e in entries if e.receipt.pk in own and own[e.receipt.pk].paid_on]
             paid = len(dates) == len(entries)
-            amount = sum(sums, zero) if sums else None
-            state = 'paid' if paid else ('due' if sums else 'empty')
+            notes = [note_of(e.receipt.pk) for e in entries]
+            note, carry = next((n for n in notes if n[0]), ('', False))
             tiles.append({
-                'name': name, 'key': entries[0].receipt.pk, 'kind': entries[0].receipt.kind, 'amount': amount,
-                'partial': bool(sums) and len(sums) < len(entries), 'state': state,
-                'paid_on': max(dates) if paid else None,
-                'note': next((mark.note for mark in marks if mark and mark.note), ''),
+                'name': name, 'key': entries[0].receipt.pk, 'kind': entries[0].receipt.kind, 'property': property_obj,
+                'amount': sum(sums, zero) if sums else None, 'partial': bool(sums) and len(sums) < len(entries),
+                'state': 'paid' if paid else ('due' if sums else 'empty'), 'paid_on': max(dates) if paid else None,
+                'note': note, 'carry': carry,
             })
-            row['due'] += amount or zero
-            if state == 'paid':
-                row['paid'] += amount or zero
-            elif state == 'due':
-                row['left'] += amount
-                totals['unpaid'] += 1
-            else:
-                totals['empty'] += 1
         if tiles:
-            rows.append(row)
-            for key in ('due', 'paid', 'left'):
-                totals[key] += row[key]
-    return {'rows': rows, 'totals': totals}
+            rows.append({'property': property_obj, 'tiles': tiles})
+    return rows
 
 
-def save_payment(receipt, month, paid_on=None, note=None):
-    """Mark a tile of «Оплаты»: the month's bill of the service — and of the object's other services with the same
-    name (they are one tile) — paid on a date, or not paid (None). note=None keeps the remark as it is.
-    A row with neither a date nor a remark goes away."""
+def payment_table(owner, month):
+    """«Оплаты» (2026-11-17, variant А of the user): what the owner pays the providers this month — ONE table, objects
+    down, services across (a column per service name in the order they first appear; an object without the service has
+    a thin «—»). A sum comes from the month's input of the object page by itself and stands «не оплачено» until marked.
+    Over the table — last month's bills still not paid, marked right there."""
+    from apps.properties.services import shift_month
+
+    zero = Decimal('0.00')
+    rows = _month_tiles(owner, month)
+    columns = []
+    for row in rows:
+        for tile in row['tiles']:
+            if tile['name'] not in columns:
+                columns.append(tile['name'])
+    totals = {'due': zero, 'paid': zero, 'left': zero, 'unpaid': 0, 'empty': 0}
+    for row in rows:
+        by_name = {tile['name']: tile for tile in row['tiles']}
+        row['cells'] = [by_name.get(name) for name in columns]
+        row['due'] = row['paid'] = row['left'] = zero
+        for tile in row['cells']:
+            if tile is None:
+                continue
+            if tile['state'] == 'empty':
+                totals['empty'] += 1
+                continue
+            row['due'] += tile['amount']
+            if tile['state'] == 'paid':
+                row['paid'] += tile['amount']
+            else:
+                row['left'] += tile['amount']
+                totals['unpaid'] += 1
+        for key in ('due', 'paid', 'left'):
+            totals[key] += row[key]
+    prev_month = shift_month(month, -1)
+    prev = [tile for row in _month_tiles(owner, prev_month) for tile in row['tiles'] if tile['state'] == 'due']
+    return {
+        'columns': columns, 'rows': rows, 'totals': totals,
+        'prev': prev, 'prev_month': prev_month, 'prev_left': sum((tile['amount'] for tile in prev), zero),
+    }
+
+
+def _payment_rows(receipt, month):
+    """The month's mark rows of a service and of the object's other services with the same name (one bill); a new row
+    starts with the note it inherits, so marking a month paid doesn't cut a carried note off."""
+    inherited = _inherited_notes(receipt.property.owner, month)
     for one in receipt.property.receipts.filter(name=receipt.name):
-        payment = Payment.objects.filter(receipt=one, month=month).first() or Payment(receipt=one, month=month)
-        payment.paid_on = paid_on
-        if note is not None:
-            payment.note = note.strip()[:60]
-        if payment.paid_on or payment.note:
-            payment.save()
-        elif payment.pk:
-            payment.delete()
+        row = Payment.objects.filter(receipt=one, month=month).first()
+        if row is None:
+            note, carry = inherited.get(one.pk, ('', False))
+            row = Payment(receipt=one, month=month, note=note, note_carry=carry)
+        yield row
 
 
-def save_payment_note(receipt, month, note):
-    """The remark of a tile, whether it is paid or not."""
-    for one in receipt.property.receipts.filter(name=receipt.name):
-        payment = Payment.objects.filter(receipt=one, month=month).first() or Payment(receipt=one, month=month)
-        payment.note = (note or '').strip()[:60]
-        if payment.paid_on or payment.note:
-            payment.save()
-        elif payment.pk:
-            payment.delete()
+def save_payment(receipt, month, paid_on=None):
+    """A tile of «Оплаты» paid on a date, or not paid (None)."""
+    for row in _payment_rows(receipt, month):
+        row.paid_on = paid_on
+        row.save()
+
+
+def save_payment_note(receipt, month, note, carry=False):
+    """The note of a tile and «Переносить на следующий месяц»; an empty note carries nothing."""
+    note = (note or '').strip()[:120]
+    for row in _payment_rows(receipt, month):
+        row.note, row.note_carry = note, bool(note and carry)
+        row.save()
 
 
 def reorder_receipts(property_obj, ids):
@@ -1301,6 +1343,8 @@ class Line:
     amount: Decimal          # what the payer is billed
     formula: str
     base: Decimal = None     # the payer's part of the receipt itself, before the coefficient
+    meter: object = None     # the meter the line is counted by, if any (shown under it in the bill)
+    reading: object = None   # that meter's month: «было → стало» in the bill
 
     def __post_init__(self):
         if self.base is None:
@@ -1313,6 +1357,121 @@ def tenant_line(receipt, exact, formula):
     if coefficient == 1:
         return Line(receipt, money(exact), formula)
     return Line(receipt, money(exact * coefficient), f'{formula} × {fmt_number(coefficient)}', base=money(exact))
+
+
+_SPLIT_GROUP = {'shares': 'по долям', 'equal': 'поровну', 'area': 'по м²', 'usage': 'по расходу'}
+
+
+def bill_groups(payer):
+    """A payer's bill in two framed groups (variant А, 2026-11-17): «Общие» — sums split between the tenants,
+    «По счётчикам» — what their own meters show. Lines keep the order of the service cards."""
+    common, metered = [], []
+    for line in payer.lines:
+        receipt = line.receipt
+        (metered if receipt.metered or receipt.split == Receipt.Split.METERS else common).append(line)
+    groups = []
+    if common:
+        title = 'Общие'
+        splits = {line.receipt.split for line in common}
+        if payer.tenant is not None and len(splits) == 1:
+            split = splits.pop()
+            text = _SPLIT_GROUP.get(split, '')
+            if split == Receipt.Split.SHARES and payer.tenant.share_percent is not None:
+                text += f' {fmt_number(payer.tenant.share_percent)}%'
+            if text:
+                title += ' · ' + text
+        groups.append({'title': title, 'lines': common, 'total': sum((line.amount for line in common), Decimal('0'))})
+    if metered:
+        groups.append({'title': 'По счётчикам', 'lines': metered,
+                       'total': sum((line.amount for line in metered), Decimal('0'))})
+    return groups
+
+
+def bill_meter_rows(line):
+    """Under a meter's line in the bill (2026-11-17, the user's fixes): «счётчик № 222», then one row per zone —
+    «251 → 255 = 4 кВт·ч × 9,5 ₽ = 38,00 ₽» (day and night: «день …», «ночь …»; a meter typed as «Расход» — without
+    the arrow). A coefficient other than 1 adds «× 1,2 = …»."""
+    meter, reading, receipt = line.meter, line.reading, line.receipt
+    if meter is None:
+        return []
+    rows = [f'счётчик №{NBSP}{meter.serial}' if meter.serial else 'счётчик']
+    rows += getattr(reading, 'bill_rows', None) or [line.formula]
+    if receipt.coefficient != 1:
+        rows.append(f'× {fmt_number(receipt.coefficient)} = {fmt_number(line.amount, 2)}{NBSP}{receipt.currency_symbol}')
+    return rows
+
+
+def bill_file_name(title, month_label):
+    """«Счёт ноябрь 2026 — Аптека Вита.pdf»: quotes and slashes out — they break file names."""
+    clean = ''.join(ch for ch in title if ch not in '"«»\'/\\:*?<>|').strip() or 'счёт'
+    return f'Счёт {month_label.lower()} — {clean}.pdf'
+
+
+def bill_text(payer, title, month_label):
+    """The bill as a message for WhatsApp / Telegram: lines with sums and «Итого»."""
+    rows = [f'Счёт за {month_label.lower()} · {title}', '']
+    for group in bill_groups(payer):
+        for line in group['lines']:
+            rows.append(f'{line.receipt.name}: {fmt_number(line.amount, 2)} ₽')
+    rows += ['', f'Итого к оплате: {fmt_number(payer.total, 2)} ₽']
+    return '\n'.join(rows)
+
+
+_UNITS = ('', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять', 'десять', 'одиннадцать',
+          'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать',
+          'девятнадцать')
+_TENS = ('', '', 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто')
+_HUNDREDS = ('', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот')
+# Word forms for 1 / 2–4 / 5+, and whether the scale is feminine (одна / две тысячи).
+_SCALES = ((('рубль', 'рубля', 'рублей'), False), (('тысяча', 'тысячи', 'тысяч'), True),
+           (('миллион', 'миллиона', 'миллионов'), False), (('миллиард', 'миллиарда', 'миллиардов'), False))
+
+
+def _plural(n, forms):
+    if n % 100 in range(11, 15):
+        return forms[2]
+    return forms[0] if n % 10 == 1 else forms[1] if n % 10 in (2, 3, 4) else forms[2]
+
+
+def _triad(n, feminine):
+    words = [_HUNDREDS[n // 100]]
+    rest = n % 100
+    if rest < 20:
+        unit = _UNITS[rest]
+    else:
+        words.append(_TENS[rest // 10])
+        unit = _UNITS[rest % 10]
+    if feminine and unit in ('один', 'два'):
+        unit = 'одна' if unit == 'один' else 'две'
+    words.append(unit)
+    return [word for word in words if word]
+
+
+def money_words(amount):
+    """A sum in words, as on a bill: 11705.80 → «Одиннадцать тысяч семьсот пять рублей 80 копеек»."""
+    amount = money(Decimal(amount))
+    negative = amount < 0
+    amount = abs(amount)
+    rubles = int(amount)
+    kopecks = int((amount - rubles) * 100)
+    words = []
+    if rubles == 0:
+        words = ['ноль']
+    rest = rubles
+    parts = []
+    for forms, feminine in _SCALES:
+        parts.append((rest % 1000, forms, feminine))
+        rest //= 1000
+    for index in range(len(parts) - 1, 0, -1):
+        n, forms, feminine = parts[index]
+        if n:
+            words += _triad(n, feminine) + [_plural(n, forms)]
+    words += _triad(parts[0][0], False)
+    words.append(_plural(rubles, _SCALES[0][0]))
+    text = ' '.join(words)
+    if negative:
+        text = 'минус ' + text
+    return f'{text[0].upper()}{text[1:]} {kopecks:02d} {_plural(kopecks, ("копейка", "копейки", "копеек"))}'
 
 
 @dataclass
@@ -1500,11 +1659,22 @@ def _meter_cost(receipt, entry, reading):
     day, night = used(receipt, reading)
     if tariff is None or day is None:
         return None
+    by_usage_typed = meter_mode(receipt, meter) == Receipt.InputMode.USAGE
+
+    def bill_row(previous, current, use, price):
+        # The bill's row (2026-11-17): «251 → 255 = 4 кВт·ч × 9,5 ₽ = 38,00 ₽» — no «было / стало», no tariff apart.
+        counted = '' if by_usage_typed else f'{fmt_number(previous)} → {fmt_number(current)} = '
+        return (f'{counted}{fmt_number(use)}{NBSP}{unit} × {fmt_number(price)}{NBSP}{currency} = '
+                f'{fmt_number(money(use * price), 2)}{NBSP}{currency}')
+
     if not two_zones(receipt, meter):
+        reading.bill_rows = [bill_row(reading.previous, reading.current, day, tariff)]
         formula = f'{fmt_number(day)} {unit} × {fmt_number(tariff)}{NBSP}{currency}'
         return day * tariff, formula
     if tariff_night is None or night is None:
         return None
+    reading.bill_rows = ['день ' + bill_row(reading.previous, reading.current, day, tariff),
+                         'ночь ' + bill_row(reading.previous_night, reading.current_night, night, tariff_night)]
     formula = (f'день {fmt_number(day)} {unit} × {fmt_number(tariff)}{NBSP}{currency} + '
                f'ночь {fmt_number(night)} {unit} × {fmt_number(tariff_night)}{NBSP}{currency}')
     return day * tariff + night * tariff_night, formula
@@ -1668,6 +1838,7 @@ def month_bill(property_obj, month):
                 # Each tenant pays for what their own meter shows.
                 common = None
                 billed = Decimal('0')
+                month_of = {meter.pk: reading for meter, reading in entry.readings}
                 for meter, (exact, formula) in costs:
                     payer = payers.get(meter.tenant_id)
                     if meter.vacant and not meter.tenant_id:
@@ -1679,10 +1850,11 @@ def month_bill(property_obj, month):
                         common = (common or Decimal('0')) + exact
                     elif payer:
                         line = tenant_line(receipt, exact, formula)
+                        line.meter, line.reading = meter, month_of.get(meter.pk)
                         payer.lines.append(line)
                         billed += line.base
                     else:
-                        line = Line(receipt, money(exact), formula)
+                        line = Line(receipt, money(exact), formula, meter=meter, reading=month_of.get(meter.pk))
                         owner.lines.append(line)
                         billed += line.base
                 if common is None:

@@ -298,13 +298,15 @@ class Payment(models.Model):
     """The owner's own payment of a service's bill for a month — to the provider («Оплаты», 2026-11-17).
 
     No row or no `paid_on` — not paid yet. `amount` — what was really paid when it differs from the month's sum
-    (empty — the month's sum); `note` — a short remark («переплата», «ok»)."""
+    (empty — the month's sum; not used yet); `note` — a remark («переплата 300 ₽»); `note_carry` — «Переносить на
+    следующий месяц»: the note comes by itself into the next months until a month takes it off."""
 
     receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, related_name='payments')
     month = models.DateField()  # always the 1st of the month
     paid_on = models.DateField(null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    note = models.CharField(max_length=60, blank=True)
+    note = models.CharField(max_length=120, blank=True)
+    note_carry = models.BooleanField(default=False)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['receipt', 'month'], name='unique_payment_per_month')]

@@ -1,4 +1,5 @@
 from datetime import date
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,6 +8,7 @@ from django.forms.utils import ErrorDict
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from apps.properties import services as property_services
@@ -264,17 +266,44 @@ def receipt_order(request, property_pk):
 
 
 def _payment_context(request, month):
+    table = services.payment_table(request.user, month)
     return {
-        'table': services.payment_table(request.user, month), 'month': property_services.month_param(month),
+        'table': table, 'month': property_services.month_param(month),
         'month_label': property_services.month_label(month),
+        'prev_param': property_services.month_param(table['prev_month']),
+        'prev_name': property_services.month_label(table['prev_month']).split()[0],
         'prev_month': property_services.month_param(property_services.shift_month(month, -1)),
         'next_month': property_services.month_param(property_services.shift_month(month, 1)),
     }
 
 
 @login_required
+@xframe_options_sameorigin  # «Посмотреть» shows it in a modal window (an iframe of our own page)
+def bill_print(request, property_pk, payer):
+    """«Счёт PDF»: one payer's bill for the month as a PDF file, downloaded (2026-11-17: «просто в pdf, не печать»).
+    `payer` — the tenant's id, 0 — the owner («Остаётся на вас»). `?inline=1` — shown in the browser (for «Поделиться»
+    it is fetched as a file anyway)."""
+    from .pdf import bill_pdf
+
+    property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
+    month = property_services.parse_month(request.GET.get('month'))
+    bill = services.month_bill(property_obj, month)
+    found = bill.owner if payer == 0 else bill.payer_for(payer)
+    if found is None:
+        return HttpResponse(status=404)
+    title = found.tenant.name if found.tenant else 'Остаётся на вас'
+    label = property_services.month_label(month)
+    data = bill_pdf(property_obj, bill, found, title, label, date.today())
+    name = services.bill_file_name(title, label)
+    response = HttpResponse(data, content_type='application/pdf')
+    disposition = 'inline' if request.GET.get('inline') else 'attachment'
+    response['Content-Disposition'] = f"{disposition}; filename*=UTF-8''{quote(name)}"
+    return response
+
+
+@login_required
 def payment_list(request):
-    """«Оплаты»: the owner's payments to the providers for a month — a card per object, a tile per service."""
+    """«Оплаты»: the owner's payments to the providers for a month — one table, objects × services."""
     month = property_services.parse_month(request.GET.get('month'))
     return render(request, 'billing/payment_list.html', _payment_context(request, month))
 
@@ -282,18 +311,20 @@ def payment_list(request):
 @login_required
 @require_POST
 def payment_edit(request, pk, month):
-    """A tile of «Оплаты» marked right in place (no window): `paid` 1 / 0 with the date `paid_on` (today when
-    empty), or just the remark `note`. Answers with the board drawn anew (the sums on top, the tiles)."""
+    """A cell of «Оплаты» marked in place: `paid` 1 / 0 (with `paid_on`, today when empty), or the note (`note` +
+    `carry`). `month` — the bill's month (last month's ones are marked from the strip over the table); `view` — the
+    month shown. Answers with the board drawn anew."""
     receipt = _own_receipt(request, pk)
     month_date = property_services.parse_month(month)
     if 'paid' in request.POST:
         paid_on = None
         if request.POST['paid'] == '1':
             paid_on = services.parse_day(request.POST.get('paid_on')) or date.today()
-        services.save_payment(receipt, month_date, paid_on, request.POST.get('note'))
+        services.save_payment(receipt, month_date, paid_on)
     elif 'note' in request.POST:
-        services.save_payment_note(receipt, month_date, request.POST['note'])
-    return render(request, 'billing/_payment_board.html', _payment_context(request, month_date))
+        services.save_payment_note(receipt, month_date, request.POST['note'], request.POST.get('carry') == '1')
+    view = property_services.parse_month(request.POST.get('view') or month)
+    return render(request, 'billing/_payment_board.html', _payment_context(request, view))
 
 
 @login_required

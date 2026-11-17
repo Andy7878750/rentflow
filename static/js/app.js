@@ -1806,41 +1806,167 @@
 
   // ---------- Object page: monthly input saves itself, bills recalc ----------
 
-  // «Оплаты»: a tile is marked right in place — the round button (paid today / not paid), the date, the remark.
-  // The server answers with the board drawn anew (the sums on top, the tiles); a remark saves without redrawing.
+  // «Оплаты» (variant А): a cell is marked right in place — the small check (paid today / not paid), the date typed or
+  // picked in the calendar; «?» opens the note window. The server answers with the board drawn anew.
   var payBoard = document.querySelector('[data-pay-board]');
   if (payBoard) {
     var payBody = payBoard.querySelector('[data-pay-body]');
-    var postTile = function (tile, fields, redraw) {
+    var noteBack = document.querySelector('[data-pay-note-back]');
+    var noteCell = null;
+    var postCell = function (cell, fields) {
       var body = new FormData();
       Object.keys(fields).forEach(function (key) { body.append(key, fields[key]); });
-      return fetch(tile.dataset.url, {
+      body.append('view', payBoard.dataset.month);
+      return fetch(cell.dataset.url, {
         method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken(payBoard) }
       }).then(function (response) { return response.text(); }).then(function (html) {
-        if (redraw) { closeDate(); payBody.innerHTML = html; }
+        // The board comes back drawn anew: keep the table where it was scrolled sideways, or it jumps to the start.
+        var wrap = payBody.querySelector('.pay-wrap');
+        var left = wrap ? wrap.scrollLeft : 0;
+        closeDate();
+        payBody.innerHTML = html;
+        wrap = payBody.querySelector('.pay-wrap');
+        if (wrap) wrap.scrollLeft = left;
       });
     };
     payBoard.addEventListener('click', function (event) {
-      var button = event.target.closest('[data-pay-toggle]');
-      if (!button) return;
-      var tile = button.closest('[data-pay-tile]');
-      postTile(tile, { paid: tile.classList.contains('is-paid') ? '0' : '1', note: tile.querySelector('[data-pay-note]').value }, true);
+      var toggle = event.target.closest('[data-pay-toggle]');
+      if (toggle) {
+        var cell = toggle.closest('[data-pay-tile]');
+        postCell(cell, { paid: cell.classList.contains('is-paid') ? '0' : '1' });
+        return;
+      }
+      var q = event.target.closest('[data-pay-note]');
+      if (!q) return;
+      noteCell = q.closest('[data-pay-tile]');
+      noteBack.querySelector('[data-pay-note-title]').textContent = 'Пометка · ' + noteCell.dataset.title;
+      noteBack.querySelector('[data-pay-note-sub]').textContent = noteCell.dataset.sub;
+      noteBack.querySelector('[data-pay-note-text]').value = noteCell.dataset.note || '';
+      noteBack.querySelector('[data-pay-note-carry]').checked = noteCell.dataset.carry === '1';
+      noteBack.querySelector('[data-pay-note-clear]').hidden = !noteCell.dataset.note;
+      noteBack.hidden = false;
+      noteBack.querySelector('[data-pay-note-text]').focus();
     });
-    payBoard.addEventListener('change', function (event) {
-      var tile = event.target.closest('[data-pay-tile]');
-      if (!tile) return;
-      if (event.target.matches('[data-pay-date]')) {
-        // A date typed or picked in the calendar; cleared — not paid.
-        var day = event.target.value.trim();
-        postTile(tile, { paid: day ? '1' : '0', paid_on: day, note: tile.querySelector('[data-pay-note]').value }, true);
-      } else if (event.target.matches('[data-pay-note]')) {
-        postTile(tile, { note: event.target.value }, false);
+    var closeNote = function () { noteBack.hidden = true; noteCell = null; };
+    noteBack.addEventListener('click', function (event) {
+      if (event.target === noteBack || event.target.closest('[data-pay-note-cancel]')) { closeNote(); return; }
+      if (!noteCell) return;
+      var cell = noteCell;
+      if (event.target.closest('[data-pay-note-clear]')) {
+        postCell(cell, { note: '', carry: '0' }).then(closeNote);
+      } else if (event.target.closest('[data-pay-note-save]')) {
+        postCell(cell, {
+          note: noteBack.querySelector('[data-pay-note-text]').value,
+          carry: noteBack.querySelector('[data-pay-note-carry]').checked ? '1' : '0'
+        }).then(closeNote);
       }
     });
+    document.addEventListener('keydown', function (event) {
+      if (noteBack.hidden) return;
+      if (event.key === 'Escape') closeNote();
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) noteBack.querySelector('[data-pay-note-save]').click();
+    });
+    payBoard.addEventListener('change', function (event) {
+      if (!event.target.matches('[data-pay-date]')) return;
+      // A date typed or picked in the calendar; cleared — not paid.
+      var day = event.target.value.trim();
+      postCell(event.target.closest('[data-pay-tile]'), { paid: day ? '1' : '0', paid_on: day });
+    });
     payBoard.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter' && event.target.matches('[data-pay-note], [data-pay-date]')) { event.preventDefault(); event.target.blur(); }
+      if (event.key === 'Enter' && event.target.matches('[data-pay-date]')) { event.preventDefault(); event.target.blur(); }
     });
   }
+
+  // «Поделиться» under the bill (2026-11-17). The PDF file goes to the phone's share sheet (Telegram, WhatsApp…)
+  // where the browser can share files; the menu also has WhatsApp / Telegram with the bill as text, and «copy».
+  // Delegated: the bill is redrawn live after each input.
+  var shareFile = function (box) {
+    return fetch(box.dataset.pdf, { credentials: 'same-origin' })
+      .then(function (response) { return response.blob(); })
+      .then(function (blob) { return new File([blob], box.dataset.file, { type: 'application/pdf' }); });
+  };
+  var closeShare = function () {
+    document.querySelectorAll('[data-share-menu]').forEach(function (menu) {
+      menu.hidden = true;
+      var opener = menu.parentNode.querySelector('[data-share-open]');
+      if (opener) opener.setAttribute('aria-expanded', 'false');
+    });
+  };
+  document.addEventListener('click', function (event) {
+    var box = event.target.closest('[data-share]');
+    if (!box) { closeShare(); return; }
+    var menu = box.querySelector('[data-share-menu]');
+    if (event.target.closest('[data-share-open]')) {
+      var open = menu.hidden;
+      closeShare();
+      menu.hidden = !open;
+      event.target.closest('[data-share-open]').setAttribute('aria-expanded', open ? 'true' : 'false');
+      // Where files can't be shared (a desktop browser), «Отправить PDF…» would do nothing: hidden.
+      var probe = new File([''], 'a.pdf', { type: 'application/pdf' });
+      menu.querySelector('[data-share-file]').hidden = !(navigator.canShare && navigator.canShare({ files: [probe] }));
+      return;
+    }
+    if (event.target.closest('[data-share-file]')) {
+      shareFile(box).then(function (file) {
+        return navigator.share({ files: [file], title: box.dataset.file });
+      }).catch(function () {});
+      closeShare();
+      return;
+    }
+    var to = event.target.closest('[data-share-to]');
+    if (to) {
+      var text = encodeURIComponent(box.dataset.text);
+      to.href = to.dataset.shareTo === 'whatsapp'
+        ? 'https://wa.me/?text=' + text
+        : 'https://t.me/share/url?url=' + text;  // Telegram needs «url»: the message itself goes there
+      setTimeout(closeShare, 0);
+      return;
+    }
+    var copy = event.target.closest('[data-share-copy]');
+    if (copy && navigator.clipboard) {
+      navigator.clipboard.writeText(box.dataset.text).then(function () {
+        var label = copy.lastChild;
+        var was = label.textContent;
+        label.textContent = 'Скопировано';
+        copy.classList.add('is-done');
+        setTimeout(function () { label.textContent = was; copy.classList.remove('is-done'); closeShare(); }, 1200);
+      });
+    }
+  });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeShare(); });
+
+  // «Посмотреть»: the bill's PDF in a modal window, not a new tab (2026-11-17). Built once, on the first click.
+  var pdfView = null;
+  var closePdfView = function () {
+    if (!pdfView || pdfView.hidden) return;
+    pdfView.hidden = true;
+    pdfView.querySelector('iframe').src = 'about:blank';
+  };
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest('[data-pdf-view]');
+    if (!link) return;
+    event.preventDefault();
+    if (!pdfView) {
+      pdfView = document.createElement('div');
+      pdfView.className = 'pdf-view-back';
+      pdfView.innerHTML = '<div class="pdf-view" role="dialog" aria-modal="true"><div class="pdf-view-head"><h3></h3>' +
+        '<a data-pdf-download><svg class="icon"><use href="#i-download"/></svg>Скачать</a>' +
+        '<button type="button" class="pdf-view-close" aria-label="Закрыть">×</button></div><iframe title="Счёт PDF"></iframe></div>';
+      document.body.appendChild(pdfView);
+      pdfView.addEventListener('click', function (e) {
+        if (e.target === pdfView || e.target.closest('.pdf-view-close')) closePdfView();
+      });
+    }
+    var box = link.closest('[data-share]');
+    pdfView.querySelector('h3').textContent = link.dataset.title || 'Счёт';
+    var download = pdfView.querySelector('[data-pdf-download]');
+    download.href = box ? box.dataset.pdf : link.href.replace(/[&?]inline=1/, '');
+    if (box) download.setAttribute('download', box.dataset.file);
+    // The viewer's own toolbar and thumbnails off («Скачать» is in our head), the page fits the width.
+    pdfView.querySelector('iframe').src = link.href + '#toolbar=0&navpanes=0&view=FitH';
+    pdfView.hidden = false;
+  });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closePdfView(); });
 
   var monthForm = document.querySelector('[data-month-form]');
   var selectedPayer = null;
@@ -1949,58 +2075,98 @@
       save();
     });
 
-    // The service cards change places (2026-11-17): drag a card by its grip (mouse or finger), or «Выше» / «Ниже»
-    // in its «…» menu. The new order is stored at once (receipt_order); the cards themselves are not reloaded.
+    // The service cards change places (2026-11-17, variant Г of the user): «⇅ Порядок» folds the cards into short rows
+    // (#morder), dragged by the whole row (mouse or finger): the row rides under the pointer, the others slide aside
+    // (FLIP). «Готово» puts the cards in the same order, stores it (receipt_order) and redraws the bill on the right.
+    var section = monthForm.closest('.obj-month');
     function receiptCards() { return Array.prototype.slice.call(monthForm.querySelectorAll('.mreceipt[data-receipt-id]')); }
-    function storeOrder() {
+    function orderRows() { return Array.prototype.slice.call(monthForm.querySelectorAll('[data-order-row]')); }
+    function idsOf(items) { return items.map(function (item) { return item.dataset.receiptId; }).join(','); }
+    var orderBefore = '';
+    section.addEventListener('click', function (event) {
+      if (event.target.closest('[data-order-on]')) {
+        orderBefore = idsOf(receiptCards());
+        section.classList.add('is-ordering');
+        return;
+      }
+      if (!event.target.closest('[data-order-off]')) return;
+      section.classList.remove('is-ordering');
+      var ids = orderRows().map(function (row) { return row.dataset.receiptId; });
+      var cards = receiptCards(), after = cards[cards.length - 1].nextSibling, parent = cards[0].parentNode;
+      ids.forEach(function (id) {
+        var card = monthForm.querySelector('.mreceipt[data-receipt-id="' + id + '"]');
+        if (card) parent.insertBefore(card, after);
+      });
+      if (ids.join(',') === orderBefore) return;
       var body = new FormData();
-      body.append('order', receiptCards().map(function (card) { return card.dataset.receiptId; }).join(','));
+      body.append('order', ids.join(','));
       fetch(monthForm.dataset.orderUrl, {
         method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken(monthForm) }
+      }).then(function () { save(); });  // the bill on the right follows the new order
+    });
+    var SLIDE = 'transform .22s cubic-bezier(.2, .7, .3, 1)';
+    // Move rows in the page, then let each one (but `skip`) glide from where it was to where it is now.
+    function slide(mutate, skip) {
+      var rows = orderRows().filter(function (row) { return row !== skip; });
+      var was = rows.map(function (row) { return row.getBoundingClientRect().top; });
+      mutate();
+      rows.forEach(function (row, i) {
+        var shift = was[i] - row.getBoundingClientRect().top;
+        if (!shift) return;
+        row.style.transition = 'none';
+        row.style.transform = 'translateY(' + shift + 'px)';
+        row.getBoundingClientRect();  // apply the start position before the transition
+        row.style.transition = SLIDE;
+        row.style.transform = '';
       });
     }
-    monthForm.addEventListener('click', function (event) {
-      var item = event.target.closest('[data-receipt-move]');
-      if (!item) return;
-      var card = item.closest('.mreceipt');
-      var cards = receiptCards(), at = cards.indexOf(card);
-      var other = cards[item.dataset.receiptMove === 'up' ? at - 1 : at + 1];
-      var menu = item.closest('details');
-      if (menu) menu.removeAttribute('open');
-      if (!other) return;
-      if (item.dataset.receiptMove === 'up') other.before(card); else other.after(card);
-      storeOrder();
-    });
     var moving = null;
     monthForm.addEventListener('pointerdown', function (event) {
-      var grip = event.target.closest('[data-receipt-grip]');
-      if (!grip || (event.button !== undefined && event.button > 0)) return;
+      var row = event.target.closest('[data-order-row]');
+      if (!row || (event.button !== undefined && event.button > 0)) return;
       event.preventDefault();
-      moving = { card: grip.closest('.mreceipt'), before: receiptCards().map(function (c) { return c.dataset.receiptId; }).join(',') };
-      moving.card.classList.add('is-moving');
-      grip.setPointerCapture(event.pointerId);
+      moving = { row: row, startY: event.clientY, home: row.getBoundingClientRect().top + window.scrollY, dy: 0 };
+      row.style.transition = 'none';
+      row.classList.add('is-moving');
+      document.body.classList.add('is-dragging');
+      row.setPointerCapture(event.pointerId);
     });
+    // The row stays exactly under the pointer: its offset = how far the pointer went − how far its slot moved.
+    function follow(clientY) {
+      var slot = moving.row.getBoundingClientRect().top + window.scrollY - moving.dy;
+      moving.dy = clientY - moving.startY - (slot - moving.home);
+      moving.row.style.transform = 'translateY(' + moving.dy + 'px)';
+    }
     monthForm.addEventListener('pointermove', function (event) {
       if (!moving) return;
-      // The card steps over a neighbour once the pointer passes the neighbour's middle.
-      receiptCards().some(function (other) {
-        if (other === moving.card) return false;
-        var r = other.getBoundingClientRect(), middle = r.top + r.height / 2;
-        var above = other.compareDocumentPosition(moving.card) & Node.DOCUMENT_POSITION_FOLLOWING;  // the card is below it
-        if (above && event.clientY < middle) { other.before(moving.card); return true; }
-        if (!above && event.clientY > middle) { other.after(moving.card); return true; }
-        return false;
-      });
+      follow(event.clientY);
+      // A neighbour gives way once the dragged row's middle passes the neighbour's resting middle;
+      // a quick flick passes several rows at once.
+      var rest = function (row) {
+        var box = row.getBoundingClientRect(), m = new DOMMatrixReadOnly(getComputedStyle(row).transform);
+        return box.top - m.m42 + box.height / 2;
+      };
+      for (var step = 0; step < 50; step++) {
+        var r = moving.row.getBoundingClientRect(), middle = r.top + r.height / 2;
+        var rows = orderRows(), at = rows.indexOf(moving.row);
+        var prev = rows[at - 1], next = rows[at + 1];
+        if (prev && middle < rest(prev)) slide(function () { prev.before(moving.row); }, moving.row);
+        else if (next && middle > rest(next)) slide(function () { next.after(moving.row); }, moving.row);
+        else break;
+        follow(event.clientY);
+      }
     });
-    function dropCard() {
+    function dropRow() {
       if (!moving) return;
-      moving.card.classList.remove('is-moving');
-      var now = receiptCards().map(function (c) { return c.dataset.receiptId; }).join(',');
-      if (now !== moving.before) storeOrder();
+      var row = moving.row;
+      row.style.transition = SLIDE;
+      row.style.transform = '';  // glides into its new slot
+      document.body.classList.remove('is-dragging');
+      setTimeout(function () { row.classList.remove('is-moving'); row.style.transition = ''; }, 220);
       moving = null;
     }
-    monthForm.addEventListener('pointerup', dropCard);
-    monthForm.addEventListener('pointercancel', dropCard);
+    monthForm.addEventListener('pointerup', dropRow);
+    monthForm.addEventListener('pointercancel', dropRow);
 
     // «н×0,6» in a night field of «По расходу»: a small window «Ночь дешевле дня» — type the weight, «Сохранить»
     // stores it on the service and the bills recount (2026-11-16).
@@ -2156,6 +2322,25 @@
 
   // «Счётчик: Да» → the object's meters with a tick. The ticks decide the hidden layout radios
   // (common / own / both → «Делим»), the count in the head, and which tariff rows show (night too).
+  // A switched-off meter row of the service window: nothing in it is typed or opened — only its switch works
+  // (CSS takes the mouse away; this stops Tab + typing).
+  function inOffRow(el) {
+    var row = el.closest && el.closest('.rform .mrow');
+    var box = row && row.querySelector('input[name=meter_ids]');
+    return !!(box && !box.checked && !el.closest('.payer-pays'));
+  }
+  document.addEventListener('beforeinput', function (event) { if (inOffRow(event.target)) event.preventDefault(); }, true);
+  document.addEventListener('focusin', function (event) {
+    if (!inOffRow(event.target)) return;
+    if (event.target.tagName === 'INPUT' && event.target.type === 'text') event.target.readOnly = true;  // still sent, not typed
+    event.target.blur();
+  });
+  // Switched on again: its fields can be typed in.
+  document.addEventListener('change', function (event) {
+    if (!(event.target.matches && event.target.matches('.rform .mrow input[name=meter_ids]')) || !event.target.checked) return;
+    event.target.closest('.mrow').querySelectorAll('input[readonly]').forEach(function (input) { input.readOnly = false; });
+  });
+
   function updatePicks(form) {
     var block = form.querySelector('[data-meter-picks]');
     if (!block) return;

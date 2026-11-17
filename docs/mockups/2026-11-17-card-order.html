@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Порядок услуг — варианты</title>
+<style>
+  /* Mockup (2026-11-17): how to change the order of the service cards on the object page. Project styles inside. */
+  :root { --primary: #34495e; --accent: #148f77; --accent-soft: #e3f3ef; --text: #2c3338; --muted: #6b7680;
+    --border: #e3e7ea; --bg: #f4f6f8; --surface: #fff; --r: 12px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 22px; color: var(--primary); }
+  .lead { margin: 0 0 22px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 18px; max-width: 1400px; }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+  .variant { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+  .variant h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 16px; }
+  .letter { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 13px; }
+  .variant > p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+  .pros { margin: 10px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--muted); }
+  .pros li::before { content: '+ '; color: var(--accent); font-weight: 700; }
+  .pros li.minus::before { content: '− '; color: #c0392b; }
+
+  /* A service card as on the object page */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .card { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--r); transition: transform .22s cubic-bezier(.2,.7,.3,1), box-shadow .15s; }
+  .ico { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;
+    border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+  .ico svg { width: 17px; height: 17px; }
+  .name { font-weight: 700; }
+  .tag { padding: 2px 8px; border-radius: 999px; background: #eceeef; color: #4b5258; font-size: 11.5px; font-weight: 600; }
+  .grow { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .more, .arrow { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0;
+    border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--muted); cursor: pointer; }
+  .more svg, .arrow svg { width: 16px; height: 16px; }
+  .body { height: 26px; margin: 8px 0 0 42px; border-radius: 6px; background: repeating-linear-gradient(90deg, #f1f3f5 0 60%, transparent 60% 64%); }
+  .card.tall { flex-wrap: wrap; }
+  .card.tall .body { flex-basis: 100%; height: 60px; }
+
+  /* A — a visible grip strip inside the card */
+  .va .card { padding-left: 34px; }
+  .va .grip { position: absolute; top: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center;
+    width: 26px; border-right: 1px solid var(--border); border-radius: var(--r) 0 0 var(--r); background: #f7f9fa;
+    color: #8a959e; cursor: grab; }
+  .va .grip:hover { background: var(--accent-soft); color: var(--accent); }
+  .va .grip svg { width: 16px; height: 16px; }
+
+  /* B — the whole head is the handle */
+  .vb .card { cursor: grab; }
+  .vb .card:hover { border-color: #c9d3da; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  .vb .hint { display: none; align-items: center; gap: 4px; color: var(--accent); font-size: 12px; font-weight: 600; }
+  .vb .card:hover .hint { display: inline-flex; }
+  .vb .hint svg { width: 14px; height: 14px; }
+
+  /* C — up / down arrows right in the head */
+  .vc .arrows { display: inline-flex; gap: 4px; }
+  .vc .arrow:hover { border-color: var(--accent); color: var(--accent); }
+  .vc .arrow[disabled] { opacity: .35; cursor: default; }
+
+  /* D — «Порядок услуг»: a mode where the cards fold into short rows with big handles */
+  .vd .bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .vd .bar b { color: var(--primary); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--border);
+    border-radius: 8px; background: #fff; color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn svg { width: 15px; height: 15px; }
+  .btn.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .vd .row { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px 0 6px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; cursor: grab;
+    transition: transform .22s cubic-bezier(.2,.7,.3,1), box-shadow .15s; }
+  .vd .row:hover { border-color: var(--accent); }
+  .vd .row .handle { display: flex; align-items: center; justify-content: center; width: 28px; height: 34px; border-radius: 7px;
+    background: var(--bg); color: #6b7680; }
+  .vd .row .handle svg { width: 18px; height: 18px; }
+  .vd .row .num { width: 18px; color: var(--muted); font-size: 12px; text-align: right; }
+  .vd .row .sum { margin-left: auto; color: var(--muted); font-size: 13px; }
+  .vd .mode-on .cards-view { display: none; }
+  .vd .mode-off .rows-view { display: none; }
+  .vd .rows-view .list { gap: 6px; }
+
+  .dragging { z-index: 5; border-color: var(--accent) !important; box-shadow: 0 14px 32px rgba(0,0,0,.16); cursor: grabbing; }
+  .rec { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft);
+    color: var(--accent); font-size: 11px; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Порядок услуг на странице объекта</h1>
+<p class="lead">Сейчас ручка — бледные точки слева от иконки, видны только при наведении. Четыре варианта. Во всех можно
+  потаскать карточки мышью (в «В» — стрелками); счёт справа идёт в том же порядке.</p>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="grip" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></symbol>
+  <symbol id="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  <symbol id="down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+  <symbol id="sort" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M21 16l-4 4-4-4"/></symbol>
+  <symbol id="more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></symbol>
+  <symbol id="bolt" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></symbol>
+  <symbol id="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9H3z"/><path d="M9 20v-6h6v6"/></symbol>
+  <symbol id="drop" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-6.5-12z"/></symbol>
+  <symbol id="bin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 7h16M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+</svg>
+
+<div class="grid">
+  <section class="variant va">
+    <h2><span class="letter">А</span>Полоска-ручка всегда видна</h2>
+    <p>Слева у каждой карточки серая полоска с точками во всю высоту шапки. За неё тянут.</p>
+    <div class="list" data-list></div>
+    <ul class="pros"><li>сразу видно, что карточки можно двигать</li><li>промахнуться трудно — ручка широкая</li>
+      <li class="minus">полоска на каждой карточке, хотя порядок меняют редко</li></ul>
+  </section>
+
+  <section class="variant vb">
+    <h2><span class="letter">Б</span>Тянем за шапку карточки</h2>
+    <p>Значка нет. Наводите на шапку — появляется «⇅ перетащите», курсор-рука. Тянуть можно за любое пустое место шапки.</p>
+    <div class="list" data-list></div>
+    <ul class="pros"><li>ничего лишнего на экране</li><li>большая область захвата</li>
+      <li class="minus">без наведения не догадаться (на телефоне — тем более)</li></ul>
+  </section>
+
+  <section class="variant vc">
+    <h2><span class="letter">В</span>Стрелки ↑ ↓ в шапке</h2>
+    <p>Рядом с «…» две маленькие кнопки. Нажали — карточка плавно меняется местами с соседней.</p>
+    <div class="list" data-list></div>
+    <ul class="pros"><li>понятно без объяснений, удобно на телефоне</li><li>не нужно тянуть длинную карточку</li>
+      <li class="minus">поднять пятую на первое место — четыре нажатия</li><li class="minus">ещё две кнопки на каждой карточке</li></ul>
+  </section>
+
+  <section class="variant vd">
+    <h2><span class="letter">Г</span>Кнопка «Порядок услуг» <span class="rec">советую</span></h2>
+    <p>Над карточками кнопка «⇅ Порядок». Нажали — карточки сворачиваются в короткие строки с крупной ручкой, их легко
+      перетащить. «Готово» — обратно.</p>
+    <div class="mode-off" data-mode>
+      <div class="bar"><b>Услуги и показания</b>
+        <button class="btn" type="button" data-mode-on><svg><use href="#sort"/></svg>Порядок</button></div>
+      <div class="cards-view"><div class="list" data-list data-static></div></div>
+      <div class="rows-view">
+        <div class="list" data-rows></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn primary" type="button" data-mode-off>Готово</button></div>
+      </div>
+    </div>
+    <ul class="pros"><li>длинные карточки («Электричество» со счётчиками) не мешают — строки короткие</li>
+      <li>кнопка одна, видна всегда; на карточках ничего не прибавляется</li>
+      <li class="minus">лишнее нажатие: «Порядок» → перетащить → «Готово»</li></ul>
+  </section>
+</div>
+
+<script>
+  var SERVICES = [
+    { name: 'Коммунальные услуги', ico: 'home', tag: 'по долям', sum: '5 200,00 ₽' },
+    { name: 'Электричество', ico: 'bolt', tag: 'по показаниям', sum: '6 575,80 ₽', tall: true },
+    { name: 'Вода холодная', ico: 'drop', tag: 'по показаниям', sum: '15 325,00 ₽' },
+    { name: 'Вывоз мусора', ico: 'bin', tag: 'по м²', sum: '1 069,20 ₽' }
+  ];
+  function icon(id) { return '<svg><use href="#' + id + '"/></svg>'; }
+  function card(s, variant) {
+    var el = document.createElement('div');
+    el.className = 'card' + (s.tall ? ' tall' : '');
+    var left = variant === 'a' ? '<span class="grip" data-handle title="Перетащите">' + icon('grip') + '</span>' : '';
+    var hint = variant === 'b' ? '<span class="hint">' + icon('sort') + 'перетащите</span>' : '';
+    var arrows = variant === 'c' ? '<span class="arrows"><button class="arrow" type="button" data-up title="Выше">' + icon('up') +
+      '</button><button class="arrow" type="button" data-down title="Ниже">' + icon('down') + '</button></span>' : '';
+    el.innerHTML = left + '<span class="ico">' + icon(s.ico) + '</span><span class="grow"><span class="name">' + s.name +
+      '</span><span class="tag">' + s.tag + '</span>' + hint + '</span>' + arrows +
+      '<span class="more">' + icon('more') + '</span>' + (s.tall ? '<div class="body"></div>' : '');
+    if (variant === 'b') el.setAttribute('data-handle', '');
+    return el;
+  }
+  function row(s, i) {
+    var el = document.createElement('div');
+    el.className = 'row';
+    el.setAttribute('data-handle', '');
+    el.innerHTML = '<span class="handle">' + icon('grip') + '</span><span class="ico">' + icon(s.ico) + '</span><span class="name">' +
+      s.name + '</span><span class="sum">' + s.sum + '</span>';
+    return el;
+  }
+  document.querySelectorAll('.variant').forEach(function (section) {
+    var v = section.classList.contains('va') ? 'a' : section.classList.contains('vb') ? 'b' : section.classList.contains('vc') ? 'c' : 'd';
+    section.querySelectorAll('[data-list]').forEach(function (list) { SERVICES.forEach(function (s) { list.appendChild(card(s, v === 'd' ? '' : v)); }); });
+    var rows = section.querySelector('[data-rows]');
+    if (rows) SERVICES.forEach(function (s, i) { rows.appendChild(row(s, i)); });
+  });
+
+  // FLIP: let items glide from where they were.
+  function slide(list, mutate, skip) {
+    var items = Array.prototype.slice.call(list.children).filter(function (el) { return el !== skip; });
+    var was = items.map(function (el) { return el.getBoundingClientRect().top; });
+    mutate();
+    items.forEach(function (el, i) {
+      var d = was[i] - el.getBoundingClientRect().top; if (!d) return;
+      el.style.transition = 'none'; el.style.transform = 'translateY(' + d + 'px)';
+      el.getBoundingClientRect(); el.style.transition = ''; el.style.transform = '';
+    });
+  }
+  // Arrows (C)
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-up],[data-down]'); if (!b) return;
+    var el = b.closest('.card'), list = el.parentNode;
+    var other = b.hasAttribute('data-up') ? el.previousElementSibling : el.nextElementSibling; if (!other) return;
+    slide(list, function () { if (b.hasAttribute('data-up')) other.before(el); else other.after(el); });
+  });
+  // Mode (D)
+  document.addEventListener('click', function (e) {
+    var on = e.target.closest('[data-mode-on]'), off = e.target.closest('[data-mode-off]');
+    if (!on && !off) return;
+    var box = e.target.closest('[data-mode]');
+    if (off) {  // the cards follow the rows' order
+      var names = Array.prototype.map.call(box.querySelectorAll('[data-rows] .name'), function (n) { return n.textContent; });
+      var list = box.querySelector('[data-static]');
+      names.forEach(function (n) { Array.prototype.forEach.call(list.children, function (c) { if (c.querySelector('.name').textContent === n) list.appendChild(c); }); });
+    }
+    box.className = on ? 'mode-on' : 'mode-off';
+  });
+  // Dragging (A, B, D): the item rides under the pointer, the others slide aside.
+  var drag = null;
+  document.addEventListener('pointerdown', function (e) {
+    var h = e.target.closest('[data-handle]'); if (!h || e.target.closest('button, .more')) return;
+    var el = h.classList.contains('card') || h.classList.contains('row') ? h : h.closest('.card');
+    if (!el || el.closest('[data-static]')) return;
+    e.preventDefault();
+    drag = { el: el, list: el.parentNode, startY: e.clientY, home: el.getBoundingClientRect().top + scrollY };
+    el.style.transition = 'none'; el.classList.add('dragging');
+  });
+  function follow(y) {
+    var slot = drag.el.getBoundingClientRect().top + scrollY - (drag.dy || 0);
+    drag.dy = y - drag.startY - (slot - drag.home);
+    drag.el.style.transform = 'translateY(' + drag.dy + 'px)';
+  }
+  document.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    follow(e.clientY);
+    var rest = function (el) { var b = el.getBoundingClientRect(), m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return b.top - m.m42 + b.height / 2; };
+    for (var i = 0; i < 20; i++) {
+      var r = drag.el.getBoundingClientRect(), mid = r.top + r.height / 2;
+      var prev = drag.el.previousElementSibling, next = drag.el.nextElementSibling;
+      if (prev && mid < rest(prev)) slide(drag.list, function () { prev.before(drag.el); }, drag.el);
+      else if (next && mid > rest(next)) slide(drag.list, function () { next.after(drag.el); }, drag.el);
+      else break;
+      follow(e.clientY);
+    }
+  });
+  document.addEventListener('pointerup', function () {
+    if (!drag) return;
+    var el = drag.el; el.style.transition = ''; el.style.transform = ''; el.classList.remove('dragging'); drag = null;
+  });
+</script>
+</body>
+</html>
