@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>По счётчикам — кто платит</title>
+<style>
+/* Макет 2026-11-18: окно «Услуги», начисление «По счётчикам» — как сажать арендаторов на счётчики. Варианты 1–5.
+   Стили — как в 2026-11-18-service-window.html. Тариф — у счётчика (окно объекта), здесь только показан. */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1;
+  --bg: #f5f6f7; --surface: #fff; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680;
+  --warm: #fffbe6; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 40px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.page { max-width: 1060px; margin: 0 auto; }
+
+/* вкладки вариантов и пояснение */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: rgba(255,255,255,.85); font: 600 13px var(--font); color: var(--text); cursor: pointer; }
+.tabs button.is-on { background: var(--accent); color: #fff; }
+.tabs .rec { font-weight: 400; opacity: .85; }
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.about div { background: #fff; border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+.about b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.about .plus b { color: var(--accent); }
+.about .minus b { color: #c0392b; }
+
+/* окно (как в макете окна услуг) */
+.win { background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; overflow: hidden; min-height: 640px; }
+.win-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border); }
+.win-head h1 { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary); }
+.win-head h1 span { color: var(--muted); font-weight: 400; }
+.x { color: var(--muted); font-size: 22px; }
+.win-body { flex: 1; display: grid; grid-template-columns: 240px 1fr; }
+.nav { border-right: 1px solid var(--border); padding: 12px; }
+.nav-cap { font-size: 12px; color: var(--muted); padding: 4px 10px 6px; }
+.nav-sep { height: 1px; background: var(--border); margin: 10px 10px 12px; }
+.nav-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: var(--radius); color: var(--text); }
+.nav-item.is-mode .i { color: var(--muted); }
+.nav-item.is-mode.is-on { color: var(--accent); font-weight: 600; }
+.nav-item.is-mode.is-on .i { color: var(--accent); }
+.nav-item.is-active { background: #eceef0; font-weight: 600; }
+.pane { min-width: 0; }
+.top { border-bottom: 1px solid var(--border); padding: 0 32px; }
+.top-line { display: flex; align-items: center; gap: 8px; height: 52px; }
+.top-line .name { font-size: 15px; font-weight: 600; color: var(--primary); }
+.top-line .prov { font-size: 13px; color: var(--muted); }
+.top-line .saved { margin-left: auto; font-size: 12px; color: var(--muted); }
+.body { padding: 20px 32px 32px; display: flex; flex-direction: column; gap: 24px; }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+.sec > h3 { margin: 0; display: flex; align-items: center; gap: 8px; height: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.cp { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 12px 14px; border-radius: var(--radius); background: #f1f3f5; font-size: 13.5px; }
+.cp > .i { color: var(--accent); margin: 0 2px; }
+.ex-link { color: var(--accent); font-size: 13px; }
+.add-link { color: var(--accent); font-weight: 600; font-size: 13px; }
+.badge-auto { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; background: #e3f1f6; color: #1f6280;
+  font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+
+/* серая панель со строками 40px (как «Делим и кто платит») */
+.gp { padding: 6px 14px; border-radius: var(--radius); background: #f1f3f5; font-size: 13.5px; }
+.gp-row { display: grid; align-items: center; gap: 10px; min-height: 40px; }
+.gp-row + .gp-row { border-top: 1px solid #e3e6e9; }
+.gp-row.is-owner { color: var(--muted); }
+.gp-row.is-off { color: var(--muted); }
+.no { width: 22px; height: 22px; border-radius: 50%; background: #fff; color: var(--muted); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.who { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.who .t { font-weight: 600; }
+.sub { font-size: 12px; color: var(--muted); }
+.r { text-align: right; }
+.tariff { font-size: 13px; text-align: right; white-space: nowrap; }
+.sw { position: relative; width: 30px; height: 18px; border-radius: 9px; background: #cfd5db; justify-self: end; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.sw.on { background: var(--accent); }
+.sw.on::after { transform: translateX(12px); }
+.split-top { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.split-top > .i { color: var(--accent); margin: 0 2px; }
+.how { display: flex; gap: 16px; }
+.how span { color: var(--muted); padding: 2px 0; border-bottom: 2px solid transparent; }
+.how span.on { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+
+/* меню-кнопка (своё меню, как везде) */
+.pick { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 30px; padding: 0 10px;
+  border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 13px; white-space: nowrap; overflow: visible; cursor: pointer; }
+.pick .v { overflow: hidden; text-overflow: ellipsis; }
+.pick .chev { color: var(--muted); font-size: 10px; }
+.pick.muted .v { color: var(--muted); }
+.pick.focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 4; min-width: 230px; padding: 6px; background: #fff;
+  border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); }
+.menu div { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+.menu div.sel { background: #eceef1; font-weight: 600; }
+.menu div small { color: var(--muted); font-weight: 400; }
+.menu .sep { height: 1px; padding: 0; margin: 4px 6px; background: var(--border); border-radius: 0; }
+
+/* вариант 3: опрос */
+.seg-track { display: inline-flex; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; gap: 2px; }
+.seg-track button { height: 30px; padding: 0 14px; border: 0; background: none; border-radius: 6px; font: 13px var(--font); color: var(--text); cursor: pointer; }
+.seg-track button.is-on { background: var(--accent); color: #fff; font-weight: 600; }
+.q-row { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.q-row .q { width: 110px; color: var(--muted); }
+
+/* вариант 4: перетащить */
+.drop { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.zone { border: 1px dashed #c3c9cf; border-radius: var(--radius); padding: 10px; min-height: 130px; display: flex; flex-direction: column; gap: 6px; background: #fafbfc; }
+.zone.owner { background: #f1f3f5; }
+.zone h4 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.zone .empty { color: #aab2ba; font-size: 12px; margin: auto 0; text-align: center; }
+.chip { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  font-size: 13px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.chip .grip { margin-left: auto; color: #c3c9cf; letter-spacing: -2px; }
+
+/* вариант 5: матрица */
+.mx { border: 1px solid var(--border); border-radius: var(--radius); }
+.mx-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 110px 110px; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; }
+.mx-row + .mx-row { border-top: 1px solid var(--border); }
+.mx-row.head { min-height: 34px; background: var(--bg); font-size: 12px; color: var(--muted); }
+.mx-row.head span { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { justify-self: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #c3c9cf; background: #fff; }
+.dot.on { border: 5px solid var(--accent); }
+.hint { margin: 0; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="tabs" id="tabs">
+    <button data-v="1">1 · Счётчик → кто платит</button>
+    <button data-v="2">2 · Арендатор → его счётчик</button>
+    <button data-v="3" class="is-on">3 · Сначала вопрос <span class="rec">(советую)</span></button>
+    <button data-v="4">4 · Перетащить</button>
+    <button data-v="5">5 · Таблица-точки</button>
+  </div>
+  <div class="about" id="about"></div>
+
+  <div class="win">
+    <div class="win-head"><h1>Услуги <span>· Королёва 61</span></h1><span class="x">×</span></div>
+    <div class="win-body">
+      <nav class="nav" id="nav"></nav>
+      <section class="pane">
+        <div class="top"><div class="top-line"><span id="svcIcon"></span><span class="name">Вода горячая</span><span class="prov">· АО «ТЭК СПб»</span><span class="saved">Сохранено</span></div></div>
+        <div class="body" id="body"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var I = {
+    hot: ['#e74c3c', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'],
+    cold: ['#2e86de', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'],
+    el: ['#0e9aa7', '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'],
+    home: ['#34495e', '<path d="M3 11 12 4l9 7M5 10v10h14V10"/>'],
+    receipt: ['', '<path d="M7 3h10v18l-2.5-1.5L12 21l-2.5-1.5L7 21zM10 8h4M10 12h4"/>'],
+    fixed: ['', '<path d="M5 9h14M5 15h14"/>'],
+    area: ['', '<path d="M4 4h16v16H4zM4 4l16 16"/>'],
+    meters: ['', '<path d="M4 16a8 8 0 1 1 16 0M12 16l4-5"/>'],
+    formula: ['', '<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>'],
+    gauge: ['', '<path d="M12 14l3.5-3.5"/><path d="M3.3 17a9.5 9.5 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.5"/>'],
+    people: ['', '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/>']
+  };
+  var ic = function (k, color) { var x = I[k]; var c = color === false ? '' : x[0];
+    return '<svg class="i" viewBox="0 0 24 24"' + (c ? ' style="color:' + c + '"' : '') + '>' + x[1] + '</svg>'; };
+  document.getElementById('svcIcon').innerHTML = ic('hot');
+
+  // левое меню — как в окне услуг: «По счётчикам» выбрано
+  var MODES = [['receipt', 'По квитанции'], ['fixed', 'Фиксированная сумма'], ['area', 'По тарифу'], ['meters', 'По счётчикам'], ['formula', 'Своя формула']];
+  var SVC = [['home', 'Коммунальные услуги'], ['el', 'Электричество'], ['hot', 'Вода горячая'], ['cold', 'Вода холодная']];
+  document.getElementById('nav').innerHTML = '<div class="nav-cap">Начисление</div>' +
+    MODES.map(function (m) { return '<div class="nav-item is-mode' + (m[0] === 'meters' ? ' is-on' : '') + '">' + ic(m[0]) + m[1] + '</div>'; }).join('') +
+    '<div class="nav-sep"></div><div class="nav-cap">Услуги объекта · 4</div>' +
+    SVC.map(function (s) { return '<div class="nav-item' + (s[1] === 'Вода горячая' ? ' is-active' : '') + '">' + ic(s[0]) + s[1] + '</div>'; }).join('');
+
+  var T = [{ id: 'e', name: 'Салон «Эгоист»', share: 45 }, { id: 'z', name: 'Кофе «Жаркофф»', share: 55 }];
+  // счётчики горячей воды объекта (тариф — у счётчика)
+  var M = [{ id: 1, no: '250352064' }, { id: 2, no: '250338183' }, { id: 3, no: '250311470', note: 'в подсобке' }];
+  var TAR = '80,24 ₽/м³';
+  var meterName = function (m) { return '<span class="who">' + ic('hot') + '<span class="t">№ ' + m.no + '</span>' + (m.note ? '<span class="sub">' + m.note + '</span>' : '') + '</span>'; };
+  var pick = function (v, cls, menu) { return '<span class="pick' + (cls ? ' ' + cls : '') + '"><span class="v">' + v + '</span><span class="chev">▾</span>' + (menu || '') + '</span>'; };
+  var block = function (title, body) { return '<div class="sec"><h3>' + title + '</h3>' + body + '</div>'; };
+  var how = '<div class="split-top">' + ic('people', false) + '<div class="how"><span class="on">по долям</span><span>поровну</span><span>по м²</span></div></div>';
+  var tail = '<a class="ex-link">См. пример на странице объекта</a>';
+  var charge = block('Как начисляется · по счётчикам', '<div class="cp">' + ic('gauge', false) + '<span>Показания вводите <b>каждый месяц</b>, тариф — у счётчика.</span></div>');
+
+  var ABOUT = {
+    1: ['Строка — счётчик, как сейчас в коде. Видно все счётчики вида; у каждого меню «Кто платит» и переключатель «в услуге».',
+        'Думаешь «от счётчика», а платят люди. При общем счётчике ниже ещё и «Делим» — две разные логики в одном блоке.'],
+    2: ['Строка — арендатор, ровно как «Делим и кто платит» у квитанции: тот же вид, те же 40px. Вопрос «чей счётчик у Салона?» понятен.',
+        'Счётчик, который никому не выбран, не виден в строках — нужна строка «Остаётся на вас» со списком свободных.'],
+    3: ['Сначала один вопрос «У каждого свой / Один общий». Дальше — знакомые строки арендаторов: счётчики подобраны сами, их можно поправить. Общий — выбрал счётчик, и «Делим» как у квитанции.',
+        'На один клик больше. Смесь «общий + свои» в одной услуге невозможна — так и задумано (общая вода — отдельная услуга).'],
+    4: ['Наглядно: арендаторы — корзинки, счётчики — карточки, перетащил — готово. Хорошо, когда счётчиков много.',
+        'На телефоне перетаскивать неудобно; нужна ещё и запасная кнопка «Переместить». Ленивому арендодателю — лишняя игра.'],
+    5: ['Всё видно сразу: строки — счётчики, колонки — арендаторы и «Общий», одна точка в строке. Быстро для 5–10 счётчиков.',
+        'Таблица выглядит «для бухгалтера»; при 4+ арендаторах колонки не влезают в окно.']
+  };
+
+  var V = {};
+  // 1 — строка-счётчик, меню «Кто платит»
+  V[1] = function () {
+    var cols = 'grid-template-columns: minmax(0,1fr) 110px 170px 30px';
+    var menu = '<div class="menu"><div>Общий <small>делим ниже</small></div><div class="sep"></div><div class="sel">Салон «Эгоист» <span>✓</span></div><div>Кофе «Жаркофф»</div></div>';
+    var rows = '<div class="gp-row sub" style="' + cols + ';min-height:28px"><span>Счётчик</span><span class="r">Тариф</span><span>Кто платит</span><span class="r">Вкл.</span></div>' +
+      M.map(function (m, i) {
+        var on = i < 2;
+        return '<div class="gp-row' + (on ? '' : ' is-off') + '" style="' + cols + '">' + meterName(m) + '<span class="tariff">' + TAR + '</span>' +
+          (on ? pick(T[i].name, i === 0 ? 'focus' : '', i === 0 ? menu : '') : pick('—', 'muted')) + '<span class="sw' + (on ? ' on' : '') + '"></span></div>';
+      }).join('');
+    return charge + block('Счётчики и кто платит', '<div class="gp">' + rows + '</div><div><a class="add-link">+ Подключить счётчик</a></div>') + tail;
+  };
+  // 2 — строка-арендатор, меню «Его счётчик»
+  V[2] = function () {
+    var cols = 'grid-template-columns: 22px minmax(0,1fr) 190px 110px 30px';
+    var menu = '<div class="menu"><div class="sel">№ 250352064 <span>✓</span></div><div>№ 250338183 <small>у Кофе</small></div><div>№ 250311470 <small>в подсобке</small></div><div class="sep"></div><div>Нет своего счётчика</div></div>';
+    var rows = T.map(function (t, i) {
+      return '<div class="gp-row" style="' + cols + '"><span class="no">' + (i + 1) + '</span><span class="who"><span class="t">' + t.name + '</span></span>' +
+        pick(ic('hot') + ' № ' + M[i].no, i === 0 ? 'focus' : '', i === 0 ? menu : '') + '<span class="tariff">' + TAR + '</span><span class="sw on"></span></div>';
+    }).join('') +
+      '<div class="gp-row is-owner" style="' + cols + '"><span></span><span class="who">Остаётся на вас</span>' + pick(ic('hot') + ' № 250311470', '') + '<span class="tariff">' + TAR + '</span><span></span></div>';
+    return charge + block('Кто платит', '<div class="gp">' + rows + '</div>') + tail;
+  };
+  // 3 — сначала вопрос, потом знакомые строки
+  var mode3 = 'own';
+  V[3] = function () {
+    var q = '<div class="q-row"><span class="q">Счётчики</span><div class="seg-track"><button data-q="own"' + (mode3 === 'own' ? ' class="is-on"' : '') + '>У каждого свой</button>' +
+      '<button data-q="common"' + (mode3 === 'common' ? ' class="is-on"' : '') + '>Один общий</button></div></div>';
+    var body;
+    if (mode3 === 'own') {
+      var cols = 'grid-template-columns: 22px minmax(0,1fr) 190px 110px 30px';
+      body = '<div class="gp">' + T.map(function (t, i) {
+        return '<div class="gp-row" style="' + cols + '"><span class="no">' + (i + 1) + '</span><span class="who"><span class="t">' + t.name + '</span></span>' +
+          pick(ic('hot') + ' № ' + M[i].no) + '<span class="tariff">' + TAR + '</span><span class="sw on"></span></div>';
+      }).join('') + '<div class="gp-row is-owner" style="' + cols + '"><span></span><span class="who">Остаётся на вас</span>' + pick(ic('hot') + ' № 250311470') +
+        '<span class="tariff">' + TAR + '</span><span></span></div></div>';
+      return charge + block('Кто платит<span class="badge-auto">подобрали сами — проверьте</span>', q + body) + tail;
+    }
+    var cols2 = 'grid-template-columns: 22px minmax(0,1fr) 90px 110px 30px';
+    body = '<div class="gp"><div class="gp-row" style="grid-template-columns: 22px minmax(0,1fr) 190px 110px 30px"><span>' + ic('gauge', false).replace('<svg', '<svg style="color:var(--accent)"') +
+      '</span><span class="who">Общий счётчик</span>' + pick(ic('hot') + ' № 250311470', 'focus') + '<span class="tariff">' + TAR + '</span><span></span></div>' +
+      how + T.map(function (t, i) {
+        return '<div class="gp-row" style="' + cols2 + '"><span class="no">' + (i + 1) + '</span><span class="who"><span class="t">' + t.name + '</span></span>' +
+          '<span class="sub r">' + t.share + '%</span><span class="r"><b>—</b></span><span class="sw on"></span></div>';
+      }).join('') + '<div class="gp-row is-owner" style="' + cols2 + '"><span></span><span class="who">Остаётся на вас</span><span></span><span class="r">—</span><span></span></div></div>';
+    return charge + block('Кто платит', q + body) + tail;
+  };
+  // 4 — перетащить карточки счётчиков
+  V[4] = function () {
+    var chip = function (m) { return '<div class="chip">' + ic('hot') + '№ ' + m.no + '<span class="grip">⋮⋮</span></div>'; };
+    var zone = function (title, list, owner) { return '<div class="zone' + (owner ? ' owner' : '') + '"><h4>' + title + '</h4>' +
+      (list.length ? list.map(chip).join('') : '<span class="empty">перетащите счётчик сюда</span>') + '</div>'; };
+    return charge + block('Кто платит · перетащите счётчики', '<div class="drop">' + zone('<span class="no">1</span>Салон «Эгоист»', [M[0]]) +
+      zone('<span class="no">2</span>Кофе «Жаркофф»', [M[1]]) + zone('Остаётся на вас', [M[2]], true) + '</div>' +
+      '<p class="hint">Тариф у всех — ' + TAR + ' (у счётчика, в окне объекта).</p>') + tail;
+  };
+  // 5 — матрица точек
+  V[5] = function () {
+    var who = [0, 1, 2];
+    return charge + block('Кто платит', '<div class="mx"><div class="mx-row head"><span style="text-align:left">Счётчик · ' + TAR + '</span>' +
+      T.map(function (t) { return '<span>' + t.name + '</span>'; }).join('') + '<span>На вас</span></div>' +
+      M.map(function (m, i) {
+        return '<div class="mx-row">' + meterName(m) + [0, 1, 2].map(function (c) { return '<span class="dot' + (who[i] === c ? ' on' : '') + '"></span>'; }).join('') + '</div>';
+      }).join('') + '</div><div><a class="add-link">+ Подключить счётчик</a></div>') + tail;
+  };
+
+  var cur = '3';
+  function render() {
+    document.getElementById('body').innerHTML = V[cur]();
+    document.getElementById('about').innerHTML = '<div class="plus"><b>Плюс</b>' + ABOUT[cur][0] + '</div><div class="minus"><b>Минус</b>' + ABOUT[cur][1] + '</div>';
+    document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.v === cur); });
+  }
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-v]'))) { cur = t.dataset.v; return render(); }
+    if ((t = e.target.closest('[data-q]'))) { mode3 = t.dataset.q; return render(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
