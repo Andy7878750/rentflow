@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Арендатор и счётчик — варианты</title>
+<style>
+/* Макет 2026-11-18: как посадить арендатора на счётчик — варианты А–Д. Только показ. */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1;
+  --bg: #f5f6f7; --surface: #fff; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680;
+  --warm: #fffbe6; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #eef0f2; padding: 24px 16px 48px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.wrap { max-width: 900px; margin: 0 auto; }
+h1 { margin: 0 0 4px; font-size: 20px; color: var(--primary); }
+.lead { margin: 0 0 16px; color: var(--muted); }
+
+/* вкладки вариантов */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.tabs button { height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 18px; background: #fff;
+  font: 600 13px var(--font); color: var(--text); cursor: pointer; }
+.tabs button.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs .rec { font-weight: 400; opacity: .8; }
+
+.v { display: none; }
+.v.is-on { display: block; }
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.about div { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; }
+.about b { display: block; margin-bottom: 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+.plus b { color: var(--accent); }
+.minus b { color: #c0392b; }
+.where { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+
+/* окно */
+.win { background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.18); overflow: hidden; }
+.win.small { max-width: 680px; overflow: visible; }
+.win-head { display: flex; align-items: center; height: 52px; padding: 0 20px; border-bottom: 1px solid var(--border); }
+.win-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--primary); }
+.win-head h2 span { color: var(--muted); font-weight: 400; }
+.win-head .x { margin-left: auto; color: var(--muted); font-size: 22px; }
+.win-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+.sec { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.sec-head { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; background: var(--bg); border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.sec-body { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+/* поля */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 12px; align-items: end; }
+.fl label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; white-space: nowrap; }
+.box { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: #fff; white-space: nowrap; overflow: hidden; }
+.box.num { justify-content: flex-end; gap: 8px; }
+.box .u { color: var(--muted); font-size: 13px; }
+.box .chev { color: var(--muted); font-size: 11px; }
+.box.is-focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.new-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; background: #e3f1f6; color: #1f6280; font-size: 10px; font-weight: 600; }
+.seg { display: flex; height: 38px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; gap: 2px; }
+.seg span { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; white-space: nowrap; }
+.seg span.on { background: var(--accent); color: #fff; font-weight: 600; }
+
+/* открытое меню */
+.menu-anchor { position: relative; }
+.menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 3; width: 100%; min-width: 220px; padding: 6px; background: #fff;
+  border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); }
+.menu div { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; }
+.menu div.sel { background: #eceef1; font-weight: 600; }
+.menu div small { color: var(--muted); font-weight: 400; }
+.menu .ck { color: var(--primary); }
+
+/* строки-таблица */
+.rows { border: 1px solid var(--border); border-radius: var(--radius); }
+.row { display: grid; align-items: center; gap: 12px; min-height: 48px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: 0; }
+.row.head { min-height: 32px; background: var(--bg); font-size: 12px; color: var(--muted); }
+.nm { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.nm .t { font-weight: 600; }
+.sub { font-size: 12px; color: var(--muted); }
+.r { text-align: right; }
+.tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 11px; background: #eceef0; font-size: 12px; color: var(--text); white-space: nowrap; }
+.tag.common { color: var(--muted); }
+.mini { height: 32px; font-size: 13px; }
+.no { width: 22px; height: 22px; border-radius: 50%; background: var(--bg); color: var(--muted); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* плашки */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.tile { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 72px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius); }
+.tile .ic { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.tile .ln { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.tile .who { margin-top: 2px; }
+
+/* чекбоксы */
+.cb { width: 18px; height: 18px; border: 1.5px solid #c3c9cf; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; }
+.cb.on { background: var(--accent); border-color: var(--accent); }
+.row.locked { color: var(--muted); }
+.row.locked .t { font-weight: 400; }
+
+/* подсказка Д */
+.hint { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: var(--radius); background: var(--accent-soft); }
+.hint p { margin: 0; font-size: 13.5px; }
+.hint .map { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); gap: 4px 10px; align-items: center; font-size: 13px; }
+.hint .arrow { color: var(--muted); text-align: center; }
+.hint .btns { display: flex; gap: 8px; justify-content: flex-end; }
+.btn { height: 34px; padding: 0 14px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font: 600 13px var(--font); color: var(--text); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.link { border: 0; background: none; color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Арендатор и счётчик — где привязывать</h1>
+  <p class="lead">Пять вариантов. Объект «Королёва 61»: арендаторы Салон «Эгоист» и Кофе «Жаркофф», по два счётчика света и воды.</p>
+
+  <div class="tabs" id="tabs">
+    <button data-v="a" class="is-on">А · В окне счётчика <span class="rec">(советую)</span></button>
+    <button data-v="b">Б · В окне арендатора</button>
+    <button data-v="c">В · В окне услуги</button>
+    <button data-v="d">Г · Таблица счётчиков</button>
+    <button data-v="e">Д · Подсказка сама <span class="rec">(вместе с А)</span></button>
+  </div>
+
+  <!-- А -->
+  <section class="v is-on" id="v-a">
+    <div class="about"><div class="plus"><b>Плюс</b>Всё про счётчик — в одном окне: что меряет, №, начальное, тариф и кто платит. На плашке сразу видно чей.</div>
+      <div class="minus"><b>Минус</b>Чтобы посадить двух арендаторов на шесть счётчиков — шесть раз открыть окно (это лечит Д).</div></div>
+    <p class="where">Окно объекта → «Счётчики» → ✎ на плашке. Новая строка «Кто платит» внизу окна счётчика.</p>
+    <div class="win small">
+      <div class="win-head"><h2>Счётчик <span>· Электричество</span></h2><span class="x">×</span></div>
+      <div class="win-body">
+        <div class="grid">
+          <div class="fl"><label>Что меряет</label><div class="box">Электричество<span class="chev">▾</span></div></div>
+          <div class="fl"><label>№ счётчика</label><div class="box">59010166</div></div>
+          <div class="fl"><label>&nbsp;</label><div class="seg"><span class="on">Однотарифный</span><span>День / ночь</span></div></div>
+          <div class="fl"><label>Начальное</label><div class="box num">3 820<span class="u">кВт·ч</span></div></div>
+          <div class="fl"><label>Тариф</label><div class="box num">9,6<span class="u">₽/кВт·ч</span></div></div>
+          <div class="fl menu-anchor"><label>Кто платит<span class="new-tag">новое</span></label><div class="box is-focus">Кофе «Жаркофф»<span class="chev">▾</span></div>
+            <div class="menu">
+              <div>Общий <small>платите вы</small></div>
+              <div>Салон «Эгоист»</div>
+              <div class="sel">Кофе «Жаркофф» <span class="ck">✓</span></div>
+            </div></div>
+        </div>
+        <div style="height:120px"></div>
+      </div>
+    </div>
+    <p class="where" style="margin-top:16px">И так выглядят плашки в окне объекта — «чей» последней строкой:</p>
+    <div class="win"><div class="win-body"><div class="tiles" id="tilesA"></div></div></div>
+  </section>
+
+  <!-- Б -->
+  <section class="v" id="v-b">
+    <div class="about"><div class="plus"><b>Плюс</b>Привычно: «вот арендатор — вот его счётчики». Новому арендатору сразу отмечаешь его счётчики.</div>
+      <div class="minus"><b>Минус</b>Счётчик принадлежит помещению, а настраивается в арендаторе. Уже пробовали 2026-11-13 и отказались.</div></div>
+    <p class="where">Окно объекта → «Кто пользуется» → ✎ у арендатора. Блок «Его счётчики» с галочками; чужие — заперты.</p>
+    <div class="win small">
+      <div class="win-head"><h2>Арендатор <span>· Салон «Эгоист»</span></h2><span class="x">×</span></div>
+      <div class="win-body">
+        <div class="grid">
+          <div class="fl"><label>Имя</label><div class="box">Салон «Эгоист»</div></div>
+          <div class="fl"><label>Доля</label><div class="box num">45<span class="u">%</span></div></div>
+          <div class="fl"><label>Телефон</label><div class="box">+7 921 000-00-00</div></div>
+        </div>
+        <div class="sec"><div class="sec-head">Его счётчики · 2</div><div class="sec-body">
+          <div class="rows" id="rowsB"></div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- В -->
+  <section class="v" id="v-c">
+    <div class="about"><div class="plus"><b>Плюс</b>Так сейчас в коде. Арендатора сажаешь там же, где решаешь, как считать услугу.</div>
+      <div class="minus"><b>Минус</b>Тариф теперь у счётчика (в окне объекта), а «чей» — в окне услуги: про один счётчик помнить два окна.</div></div>
+    <p class="where">Окно услуг → услуга «По счётчикам» → «Счётчики услуги», колонка «Кто платит».</p>
+    <div class="win">
+      <div class="win-head"><h2>Услуги <span>· Королёва 61 · Вода горячая</span></h2><span class="x">×</span></div>
+      <div class="win-body"><div class="rows" id="rowsC"></div></div>
+    </div>
+  </section>
+
+  <!-- Г -->
+  <section class="v" id="v-d">
+    <div class="about"><div class="plus"><b>Плюс</b>Все счётчики объекта на одном экране — за минуту рассадить всех арендаторов.</div>
+      <div class="minus"><b>Минус</b>Ещё один экран, о котором надо знать. Новичок может его не найти.</div></div>
+    <p class="where">Меню «Счётчики» → «Все счётчики» (или блок на странице объекта): у каждой строки меню «Кто платит».</p>
+    <div class="win">
+      <div class="win-head"><h2>Счётчики <span>· Королёва 61</span></h2><span class="x">×</span></div>
+      <div class="win-body"><div class="rows" id="rowsD"></div></div>
+    </div>
+  </section>
+
+  <!-- Д -->
+  <section class="v" id="v-e">
+    <div class="about"><div class="plus"><b>Плюс</b>Ленивому арендодателю — один клик «Да»: приложение само угадывает, когда счётчиков вида столько же, сколько арендаторов.</div>
+      <div class="minus"><b>Минус</b>Угадывает по порядку — может перепутать; поэтому всегда «Поправить», и без А (или Г) не обойтись.</div></div>
+    <p class="where">Окно объекта → блок «Счётчики», над плашками, пока счётчики ни к кому не привязаны.</p>
+    <div class="win">
+      <div class="win-head"><h2>Изменить объект <span>· Королёва 61</span></h2><span class="x">×</span></div>
+      <div class="win-body"><div class="sec"><div class="sec-head">Счётчики</div><div class="sec-body">
+        <div class="hint">
+          <p><b>Похоже, у каждого арендатора свои счётчики.</b> Так?</p>
+          <div class="map" id="mapE"></div>
+          <div class="btns"><button class="btn link">Поправить</button><button class="btn primary">Да, так</button></div>
+        </div>
+        <div class="tiles" id="tilesE"></div>
+      </div></div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var K = {
+    electricity: ['Электричество', 'кВт·ч', '#0e9aa7', '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'],
+    water: ['Вода холодная', 'м³', '#2e86de', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'],
+    hot_water: ['Вода горячая', 'м³', '#e74c3c', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>']
+  };
+  var T = { e: 'Салон «Эгоист»', z: 'Кофе «Жаркофф»' };
+  var M = [
+    { kind: 'electricity', no: '087346912', t: '9,6 / 4,2', dn: true, who: 'e' },
+    { kind: 'electricity', no: '59010166', t: '9,6', who: 'z' },
+    { kind: 'hot_water', no: '250352064', t: '80,24', who: 'e' },
+    { kind: 'hot_water', no: '250338183', t: '80,24', who: 'z' },
+    { kind: 'water', no: '545575', t: '72,57', who: 'e' },
+    { kind: 'water', no: '317718', t: '72,57', who: '' }
+  ];
+  var ic = function (k, round) { var x = K[k];
+    return round ? '<span class="ic" style="background:color-mix(in srgb,' + x[2] + ' 12%,#fff);color:' + x[2] + '"><svg class="i" viewBox="0 0 24 24">' + x[3] + '</svg></span>'
+                 : '<svg class="i" viewBox="0 0 24 24" style="color:' + x[2] + '">' + x[3] + '</svg>'; };
+  var who = function (w) { return w ? '<span class="tag">' + T[w] + '</span>' : '<span class="tag common">Общий</span>'; };
+  var tariff = function (m) { return m.t + ' ₽/' + K[m.kind][1]; };
+  function tiles(list, showWho) {
+    return list.map(function (m) {
+      return '<div class="tile">' + ic(m.kind, true) + '<span style="min-width:0"><div class="t" style="font-weight:600">' + K[m.kind][0] +
+        (m.dn ? ' <span class="sub">· день / ночь</span>' : '') + '</div><div class="ln">№ ' + m.no + ' · ' + tariff(m) + '</div>' +
+        (showWho ? '<div class="who">' + who(m.who) + '</div>' : '') + '</span></div>';
+    }).join('');
+  }
+  document.getElementById('tilesA').innerHTML = tiles(M, true);
+
+  // Б — счётчики арендатора галочками; чужие заперты
+  var colsB = 'grid-template-columns: 18px 22px minmax(0,1fr) 120px 150px';
+  document.getElementById('rowsB').innerHTML = M.map(function (m, i) {
+    var mine = m.who === 'e', other = m.who && !mine;
+    return '<div class="row' + (other ? ' locked' : '') + '" style="' + colsB + '"><span class="cb' + (mine ? ' on' : '') + '">' + (mine ? '✓' : other ? '🔒' : '') + '</span>' +
+      '<span class="no">' + (i + 1) + '</span><span class="nm">' + ic(m.kind) + '<span class="t">' + K[m.kind][0] + '</span></span>' +
+      '<span class="sub">№ ' + m.no + '</span><span class="sub r">' + (other ? 'у ' + T[m.who] : mine ? '' : 'свободен') + '</span></div>';
+  }).join('');
+
+  // В — строки счётчиков в услуге, меню «Кто платит»
+  var colsC = 'grid-template-columns: minmax(0,1fr) 120px 130px 190px';
+  document.getElementById('rowsC').innerHTML = '<div class="row head" style="' + colsC + '"><span>Счётчик</span><span>Номер</span><span class="r">Тариф</span><span>Кто платит</span></div>' +
+    M.filter(function (m) { return m.kind === 'hot_water'; }).map(function (m) {
+      return '<div class="row" style="' + colsC + '"><span class="nm">' + ic(m.kind) + '<span class="t">' + K[m.kind][0] + '</span></span>' +
+        '<span class="sub">№ ' + m.no + '</span><span class="r">' + tariff(m) + '</span>' +
+        '<span class="box mini">' + (m.who ? T[m.who] : 'Общий') + '<span class="chev">▾</span></span></div>';
+    }).join('');
+
+  // Г — таблица всех счётчиков объекта
+  var colsD = 'grid-template-columns: 22px minmax(0,1fr) 120px 130px 190px';
+  document.getElementById('rowsD').innerHTML = '<div class="row head" style="' + colsD + '"><span></span><span>Счётчик</span><span>Номер</span><span class="r">Тариф</span><span>Кто платит</span></div>' +
+    M.map(function (m, i) {
+      return '<div class="row" style="' + colsD + '"><span class="no">' + (i + 1) + '</span><span class="nm">' + ic(m.kind) + '<span class="t">' + K[m.kind][0] + '</span>' +
+        (m.dn ? '<span class="sub">день / ночь</span>' : '') + '</span><span class="sub">№ ' + m.no + '</span><span class="r">' + tariff(m) + '</span>' +
+        '<span class="box mini"' + (m.who ? '' : ' style="color:var(--muted)"') + '>' + (m.who ? T[m.who] : 'Общий') + '<span class="chev">▾</span></span></div>';
+    }).join('');
+
+  // Д — подсказка: по порядку, сколько арендаторов — столько счётчиков вида
+  var guess = [['electricity', 0, 'e'], ['electricity', 1, 'z'], ['hot_water', 2, 'e'], ['hot_water', 3, 'z'], ['water', 4, 'e'], ['water', 5, 'z']];
+  document.getElementById('mapE').innerHTML = guess.map(function (g) { var m = M[g[1]];
+    return '<span class="nm">' + ic(m.kind) + '<span>' + K[m.kind][0] + ' <span class="sub">№ ' + m.no + '</span></span></span><span class="arrow">→</span><span>' + T[g[2]] + '</span>';
+  }).join('');
+  document.getElementById('tilesE').innerHTML = tiles(M.map(function (m) { return Object.assign({}, m, { who: '' }); }), true);
+
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-v]'); if (!b) return;
+    document.querySelectorAll('#tabs button').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+    document.querySelectorAll('.v').forEach(function (v) { v.classList.toggle('is-on', v.id === 'v-' + b.dataset.v); });
+  });
+})();
+</script>
+</body>
+</html>
