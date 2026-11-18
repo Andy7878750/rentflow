@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Делим и кто платит — варианты</title>
+<style>
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1;
+  --bg: #f5f6f7; --panel: #f1f3f5; --surface: #fff; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680;
+  --warm: #fffbe6; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 24px 16px; }
+.page { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.ctl { display: flex; gap: 8px; align-items: center; color: #fff; font-size: 13px; }
+.ctl button { height: 32px; padding: 0 14px; border: 0; border-radius: 6px; background: rgba(255,255,255,.2); color: #fff; font: 13px var(--font); cursor: pointer; }
+.ctl button.is-on { background: #fff; color: var(--primary); font-weight: 600; }
+.card { background: var(--surface); border-radius: 12px; padding: 20px 32px 24px; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+.card > .vt { font-size: 15px; font-weight: 600; color: var(--primary); margin: 0 0 2px; }
+.card > .vd { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+.sec > h3 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted);
+  display: flex; align-items: center; gap: 6px; min-height: 22px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* общие строки */
+.lines { border: 1px solid var(--border); border-radius: var(--radius); }
+.line { display: grid; grid-template-columns: minmax(0, 1fr) 90px 110px 44px; align-items: center; gap: 12px;
+  min-height: 46px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.line:last-child { border-bottom: 0; }
+.line .who { white-space: nowrap; overflow: hidden; }
+.line .meta { color: var(--muted); font-size: 13px; text-align: right; }
+.line .sum { text-align: right; font-weight: 600; }
+.line.is-off .who, .line.is-off .sum { color: var(--muted); font-weight: 400; }
+.line.is-owner { color: var(--muted); background: var(--bg); }
+.line.is-owner .sum { color: var(--muted); }
+.switch { position: relative; width: 44px; height: 26px; border-radius: 13px; background: var(--border); cursor: pointer; border: 0; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s; }
+.switch.is-on { background: var(--accent); }
+.switch.is-on::after { transform: translateX(18px); }
+
+/* A — меню в подписи */
+.drop { position: relative; }
+.drop-btn { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px; margin-left: -6px; border: 0; border-radius: 6px;
+  background: none; font: 600 12px var(--font); letter-spacing: .03em; text-transform: uppercase; color: var(--accent); cursor: pointer; }
+.drop-btn:hover { background: var(--accent-soft); }
+.drop-menu { position: absolute; top: 26px; left: -6px; z-index: 5; min-width: 180px; padding: 4px; background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 6px 20px rgba(0,0,0,.12); text-transform: none; letter-spacing: 0; }
+.drop-menu button { display: flex; justify-content: space-between; width: 100%; height: 34px; padding: 0 10px; border: 0; background: none;
+  border-radius: 6px; font: 14px var(--font); color: var(--text); cursor: pointer; text-align: left; }
+.drop-menu button:hover { background: var(--bg); }
+.drop-menu button.is-on { color: var(--accent); font-weight: 600; }
+
+/* Б — столбцы-способы */
+.cols { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cols-row { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 120px) 44px; align-items: center; gap: 0 12px;
+  min-height: 46px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.cols-row:last-child { border-bottom: 0; }
+.cols-head { min-height: 36px; background: var(--bg); font-size: 12px; color: var(--muted); }
+.cols-head button { height: 28px; border: 0; background: none; border-radius: 6px; font: 12px var(--font); color: var(--muted); cursor: pointer; text-align: right; padding: 0 8px; }
+.cols-head button:hover { background: #fff; }
+.cols-head button.is-on { background: var(--accent); color: #fff; font-weight: 600; }
+.cols-row .c { text-align: right; font-size: 13px; color: var(--muted); padding: 0 8px; align-self: stretch; display: flex; align-items: center; justify-content: flex-end; }
+.cols-row .c.is-on { color: var(--text); font-weight: 600; background: var(--accent-soft); }
+.cols-head .c.is-on { background: none; }
+.cols-row .who { white-space: nowrap; overflow: hidden; }
+.cols-row.is-off .who, .cols-row.is-off .c { color: var(--muted); font-weight: 400; }
+
+/* В — фраза в серой панели */
+.cp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-height: 62px; padding: 12px 14px; border-radius: var(--radius);
+  background: var(--panel); font-size: 13.5px; }
+.cp > .i { color: var(--accent); }
+.pick { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: #fff; font: 600 14px var(--font); color: var(--text); cursor: pointer; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: #fff; font: 14px var(--font); color: var(--muted); cursor: pointer; text-decoration: line-through; }
+.chip.is-on { border-color: var(--accent); color: var(--text); text-decoration: none; }
+.chip .ck { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
+.chip.is-on .ck { background: var(--accent); border-color: var(--accent); }
+.res { display: flex; flex-direction: column; gap: 4px; padding: 0 2px; font-size: 13px; }
+.res div { display: flex; justify-content: space-between; }
+.res .muted { color: var(--muted); }
+
+/* Г — галочки слева, способ строкой текста */
+.line.is-check { grid-template-columns: 22px minmax(0, 1fr) 90px 110px; cursor: pointer; }
+.cbox { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #c3c9cf; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+.is-check:not(.is-off) .cbox { background: var(--accent); border-color: var(--accent); }
+.how { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+.how button { border: 0; background: none; padding: 2px 0; font: 13px var(--font); color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+.how button:hover { color: var(--text); }
+.how button.is-on { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+.how .lbl { color: var(--muted); }
+
+/* Г в стиле В — всё в серой панели, без рамок */
+.gp { padding: 12px 14px; border-radius: var(--radius); background: var(--panel); font-size: 13.5px; }
+.gp-top { display: flex; align-items: center; gap: 10px; min-height: 38px; }
+.gp-top > .i { color: var(--accent); }
+.gp-top.fi { padding-left: 13px; /* 12 + рамка списка 1px */ gap: 12px; font-size: 13.5px; }
+.gp-top.fi > .i { margin-right: 4px; } /* иконка = столбец галочки (22px), способы — ровно над именами */
+.gp-top.fi .how button { font-size: 13.5px; }
+.gp .how { gap: 4px 16px; font-size: 13.5px; }
+.gp .how button { font-size: 13.5px; }
+.gp-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) 90px 110px; align-items: center; gap: 10px; min-height: 38px;
+  padding-left: 28px; cursor: pointer; user-select: none; }
+.gp-row .who { white-space: nowrap; overflow: hidden; }
+.gp-row .meta { color: var(--muted); font-size: 13px; text-align: right; }
+.gp-row .sum { text-align: right; font-weight: 600; }
+.gp-row.is-off .who, .gp-row.is-off .sum { color: var(--muted); font-weight: 400; }
+.gp-row:not(.is-off) .cbox { background: var(--accent); border-color: var(--accent); }
+.gp-row .cbox { background: #fff; }
+.gp-row.is-owner { cursor: default; color: var(--muted); border-top: 1px solid #dfe3e7; margin-top: 4px; }
+.gp-row.is-owner .sum { color: var(--muted); }
+
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="ctl">Начисление для примера:
+    <button data-mode="receipt" class="is-on">По квитанции</button><button data-mode="fixed">Фиксированная 12 000 ₽</button><button data-mode="area">По тарифу 13,37 ₽/м²</button>
+  </div>
+  <div class="card" id="vF"></div>
+  <div class="card" id="vE"></div>
+  <div class="card" id="vA"></div>
+  <div class="card" id="vB"></div>
+  <div class="card" id="vC"></div>
+  <div class="card" id="vD"></div>
+</div>
+
+<script>
+(function () {
+  var T = [ { id: 'e', name: 'Салон «Эгоист»', area: 49.5, share: 45 }, { id: 'z', name: 'Кофе «Жаркофф»', area: 60.5, share: 55 } ];
+  var AREA = 110, SUM = 12000, TARIFF = 13.37;
+  var SPLITS = [['shares', 'по долям'], ['equal', 'поровну'], ['area', 'по м²'], ['usage', 'по расходу']];
+  var mode = 'receipt', split = 'shares', pays = { e: true, z: false }, openA = false;
+
+  var money = function (n) { return (Math.round(n * 100) / 100).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽'; };
+  var num = function (n) { return n.toLocaleString('ru-RU', { maximumFractionDigits: 2 }); };
+  var splitName = function (v) { return SPLITS.filter(function (x) { return x[0] === v; })[0][1]; };
+  var splits = function () { return mode === 'fixed' ? SPLITS.slice(0, 3) : SPLITS; };
+
+  // доля арендатора (0..1) при способе sp; выключенный — его доля на собственника
+  function part(t, sp) { return sp === 'equal' ? 1 / T.length : sp === 'area' ? t.area / AREA : sp === 'usage' ? (t.id === 'e' ? 0.38 : 0.62) : t.share / 100; }
+  function meta(t, sp) { return sp === 'equal' ? '1/' + T.length : sp === 'area' ? num(t.area) + ' м²' : sp === 'usage' ? 'по счётчику' : t.share + '%'; }
+  function amount(t, sp) {
+    if (mode === 'area') return t.area * TARIFF;
+    return mode === 'fixed' ? SUM * part(t, sp) : null;
+  }
+  function owner() {
+    if (mode === 'area') return null;
+    var rest = T.filter(function (t) { return !pays[t.id]; });
+    if (!rest.length) return null;
+    var p = rest.reduce(function (a, t) { return a + part(t, split); }, 0);
+    return mode === 'fixed' ? money(SUM * p) : Math.round(p * 100) + '% суммы';
+  }
+  function sumCell(t, sp) {
+    if (!pays[t.id]) return 'не платит';
+    var a = amount(t, sp); return a == null ? '' : money(a);
+  }
+  var ownerLine = function (cls) { var o = owner(); return o ? '<div class="' + cls + ' is-owner"><span class="who">Остаётся на вас</span><span class="meta"></span><span class="sum">' + o + '</span><span></span></div>' : ''; };
+
+  function head(t, d) { return '<p class="vt">' + t + '</p><p class="vd">' + d + '</p>'; }
+
+  // ── A
+  function A() {
+    var h = head('А · Способ — в подписи блока', 'Подпись сама и есть выбор: «ДЕЛИМ ПО ДОЛЯМ ▾». Ниже только арендаторы. Самый короткий.');
+    var title = mode === 'area' ? 'Кто платит · каждый за свои м²' :
+      'Делим <span class="drop"><button class="drop-btn" data-a-open>' + splitName(split) + ' ▾</button>' +
+      (openA ? '<div class="drop-menu">' + splits().map(function (x) {
+        return '<button data-split="' + x[0] + '"' + (x[0] === split ? ' class="is-on"' : '') + '>' + cap(x[1]) + (x[0] === split ? '<span>✓</span>' : '') + '</button>'; }).join('') + '</div>' : '') + '</span>';
+    h += '<div class="sec"><h3>' + title + '</h3><div class="lines">' + T.map(function (t) {
+      var on = pays[t.id];
+      return '<div class="line' + (on ? '' : ' is-off') + '"><span class="who">' + t.name + '</span><span class="meta">' + (mode === 'area' ? num(t.area) + ' м²' : meta(t, split)) +
+        '</span><span class="sum">' + sumCell(t, split) + '</span><button class="switch' + (on ? ' is-on' : '') + '" data-pay="' + t.id + '"></button></div>';
+    }).join('') + ownerLine('line') + '</div></div>';
+    return h;
+  }
+  // ── Б
+  function B() {
+    var h = head('Б · Способы — столбцами таблицы', 'Сразу видно, сколько выйдет каждому при любом способе. Нажали на столбец — выбрали.');
+    if (mode === 'area') return h + '<div class="sec"><h3>Кто платит · каждый за свои м²</h3>' + simpleLines() + '</div>';
+    var sp = splits().filter(function (x) { return x[0] !== 'usage'; });
+    var cols = 'minmax(0, 1fr) repeat(' + sp.length + ', 120px) 44px';
+    h += '<div class="sec"><h3>Делим и кто платит</h3><div class="cols">' +
+      '<div class="cols-row cols-head" style="grid-template-columns:' + cols + '"><span>Арендатор</span>' + sp.map(function (x) {
+        return '<span class="c"><button data-split="' + x[0] + '"' + (x[0] === split ? ' class="is-on"' : '') + '>' + cap(x[1]) + '</button></span>'; }).join('') + '<span></span></div>' +
+      T.map(function (t) { var on = pays[t.id];
+        return '<div class="cols-row' + (on ? '' : ' is-off') + '" style="grid-template-columns:' + cols + '"><span class="who">' + t.name + '</span>' + sp.map(function (x) {
+          var a = amount(t, x[0]);
+          return '<span class="c' + (x[0] === split ? ' is-on' : '') + '">' + (on ? (a == null ? meta(t, x[0]) : money(a)) : '—') + '</span>'; }).join('') +
+          '<button class="switch' + (on ? ' is-on' : '') + '" data-pay="' + t.id + '"></button></div>'; }).join('') + '</div>' +
+      (owner() ? '<p class="note">Остаётся на вас: ' + owner() + '</p>' : '') + (mode === 'receipt' ? '<p class="note">«По расходу» — когда к услуге подключены счётчики.</p>' : '') + '</div>';
+    return h;
+  }
+  // ── В
+  function C() {
+    var h = head('В · Одна фраза в серой панели', 'Продолжает панель «Как начисляется»: «Делим [по долям ▾] между [✓ Эгоист] [✓ Жаркофф]». Итог — строками ниже, без рамки.');
+    var phrase = mode === 'area' ? '<span>Платят</span>' : '<span>Делим</span><button class="pick" data-cycle>' + splitName(split) + ' ▾</button><span>между</span>';
+    h += '<div class="sec"><h3>' + (mode === 'area' ? 'Кто платит' : 'Делим и кто платит') + '</h3><div class="cp">' +
+      '<svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/></svg>' + phrase +
+      T.map(function (t) { return '<button class="chip' + (pays[t.id] ? ' is-on' : '') + '" data-pay="' + t.id + '"><span class="ck">✓</span>' + t.name + '</button>'; }).join('') + '</div>' +
+      '<div class="res">' + T.filter(function (t) { return pays[t.id]; }).map(function (t) {
+        return '<div><span>' + t.name + ' <span class="muted">· ' + (mode === 'area' ? num(t.area) + ' м² × ' + num(TARIFF) + ' ₽' : meta(t, split)) + '</span></span><b>' + (sumCell(t, split) || '') + '</b></div>'; }).join('') +
+      (owner() ? '<div class="muted"><span>Остаётся на вас</span><span>' + owner() + '</span></div>' : '') + '</div></div>';
+    return h;
+  }
+  // ── Г
+  function D() {
+    var h = head('Г · Галочки слева, способ — строкой ссылок', 'Как список дел: отметил, кто платит. Способ — тихая строка над списком, выбранный подчёркнут акцентом.');
+    h += '<div class="sec"><h3>' + (mode === 'area' ? 'Кто платит · каждый за свои м²' : 'Делим и кто платит') + '</h3>' +
+      (mode === 'area' ? '' : '<div class="how">' + splits().map(function (x) {
+        return '<button data-split="' + x[0] + '"' + (x[0] === split ? ' class="is-on"' : '') + '>' + cap(x[1]) + '</button>'; }).join('') + '</div>') +
+      '<div class="lines">' + T.map(function (t) { var on = pays[t.id];
+        return '<div class="line is-check' + (on ? '' : ' is-off') + '" data-pay="' + t.id + '"><span class="cbox">✓</span><span class="who">' + t.name + '</span><span class="meta">' +
+          (mode === 'area' ? num(t.area) + ' м²' : meta(t, split)) + '</span><span class="sum">' + sumCell(t, split) + '</span></div>'; }).join('') +
+      (owner() ? '<div class="line is-check is-owner" style="cursor:default"><span></span><span class="who">Остаётся на вас</span><span class="meta"></span><span class="sum">' + owner() + '</span></div>' : '') +
+      '</div></div>';
+    return h;
+  }
+  // ── Г в стиле В
+  function E() {
+    var h = head('Г в стиле В · Серая панель, галочки, способ строкой', 'Та же серая панель, что у «Как начисляется». Наверху способ — строкой, ниже арендаторы с галочками, без рамок.');
+    var top = mode === 'area' ? '<span>Каждый платит за свои м²</span>' :
+      '<span>Делим</span><div class="how">' + splits().map(function (x) {
+        return '<button data-split="' + x[0] + '"' + (x[0] === split ? ' class="is-on"' : '') + '>' + splitName(x[0]) + '</button>'; }).join('') + '</div>';
+    h += '<div class="sec"><h3>' + (mode === 'area' ? 'Кто платит' : 'Делим и кто платит') + '</h3><div class="gp">' +
+      '<div class="gp-top"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/></svg>' + top + '</div>' +
+      T.map(function (t) { var on = pays[t.id];
+        return '<div class="gp-row' + (on ? '' : ' is-off') + '" data-pay="' + t.id + '"><span class="cbox">✓</span><span class="who">' + t.name + '</span><span class="meta">' +
+          (mode === 'area' ? num(t.area) + ' м²' : meta(t, split)) + '</span><span class="sum">' + sumCell(t, split) + '</span></div>'; }).join('') +
+      (owner() ? '<div class="gp-row is-owner"><span></span><span class="who">Остаётся на вас</span><span class="meta"></span><span class="sum">' + owner() + '</span></div>' : '') +
+      '</div></div>';
+    return h;
+  }
+  // ── Г с иконкой: белый список с рамкой (как Г), строка способа — с иконкой (как В)
+  function F() {
+    var h = head('Г с иконкой', 'Список Г в рамке; строка способа начинается с иконки акцентом. «Остаётся на вас» — всегда, высота не прыгает.');
+    var top = mode === 'area' ? '<span>Каждый платит за свои м²</span>' :
+      '<div class="how">' + splits().map(function (x) {
+        return '<button data-split="' + x[0] + '"' + (x[0] === split ? ' class="is-on"' : '') + '>' + splitName(x[0]) + '</button>'; }).join('') + '</div>';
+    h += '<div class="sec"><h3>' + (mode === 'area' ? 'Кто платит' : 'Делим и кто платит') + '</h3>' +
+      '<div class="gp-top fi"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/></svg>' + top + '</div>' +
+      '<div class="lines">' + T.map(function (t) { var on = pays[t.id];
+        return '<div class="line is-check' + (on ? '' : ' is-off') + '" data-pay="' + t.id + '"><span class="cbox">✓</span><span class="who">' + t.name + '</span><span class="meta">' +
+          (mode === 'area' ? num(t.area) + ' м²' : meta(t, split)) + '</span><span class="sum">' + sumCell(t, split) + '</span></div>'; }).join('') +
+      '<div class="line is-check is-owner" style="cursor:default"><span></span><span class="who">Остаётся на вас</span><span class="meta"></span><span class="sum">' + (owner() || '—') + '</span></div>' +
+      '</div></div>';
+    return h;
+  }
+  function simpleLines() {
+    return '<div class="lines">' + T.map(function (t) { var on = pays[t.id];
+      return '<div class="line' + (on ? '' : ' is-off') + '"><span class="who">' + t.name + '</span><span class="meta">' + num(t.area) + ' м²</span><span class="sum">' + sumCell(t) +
+        '</span><button class="switch' + (on ? ' is-on' : '') + '" data-pay="' + t.id + '"></button></div>'; }).join('') + '</div>';
+  }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function render() {
+    if (mode === 'fixed' && split === 'usage') split = 'shares';
+    document.getElementById('vF').innerHTML = F(); document.getElementById('vE').innerHTML = E(); document.getElementById('vA').innerHTML = A(); document.getElementById('vB').innerHTML = B();
+    document.getElementById('vC').innerHTML = C(); document.getElementById('vD').innerHTML = D();
+  }
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-mode]'))) { mode = t.dataset.mode;
+      document.querySelectorAll('[data-mode]').forEach(function (b) { b.classList.toggle('is-on', b === t); }); return render(); }
+    if (e.target.closest('[data-a-open]')) { openA = !openA; return render(); }
+    if ((t = e.target.closest('[data-split]'))) { split = t.dataset.split; openA = false; return render(); }
+    if (e.target.closest('[data-cycle]')) { var s = splits().map(function (x) { return x[0]; }); split = s[(s.indexOf(split) + 1) % s.length]; return render(); }
+    if ((t = e.target.closest('[data-pay]'))) { pays[t.dataset.pay] = !pays[t.dataset.pay]; return render(); }
+    if (openA) { openA = false; render(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>

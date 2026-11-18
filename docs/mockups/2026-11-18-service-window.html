@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Окно услуг — макет</title>
+<style>
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1;
+  --bg: #f5f6f7; --surface: #fff; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680;
+  --warm: #fffbe6; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; min-height: 100vh;
+  display: flex; align-items: center; justify-content: center; padding: 24px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* окно */
+.win { width: 1060px; height: 720px; max-width: 100%; background: var(--surface); border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; overflow: hidden; }
+.win-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; border-bottom: 1px solid var(--border); }
+.win-head h1 { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary); }
+.win-head h1 span { color: var(--muted); font-weight: 400; }
+.x { width: 32px; height: 32px; border: 0; background: none; border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 22px; line-height: 1; }
+.x:hover { background: var(--bg); }
+.win-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px 1fr; }
+
+/* левое меню */
+.nav { border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; }
+.nav-cap { font-size: 12px; color: var(--muted); padding: 4px 10px 6px; }
+.nav-sep { height: 1px; background: var(--border); margin: 10px 10px 12px; }
+.nav-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: var(--radius);
+  cursor: pointer; color: var(--text); user-select: none; }
+.nav-item:hover { background: var(--bg); }
+.nav-item .fade { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.nav-item.is-active { background: #eceef0; font-weight: 600; }
+.nav-item.is-mode .i { color: var(--muted); }
+.nav-item.is-mode.is-on { color: var(--accent); font-weight: 600; }
+.nav-item.is-mode.is-on .i { color: var(--accent); }
+.nav-item .check { color: var(--accent); font-size: 14px; }
+.nav-item.is-add { color: var(--accent); font-weight: 600; }
+
+/* правая часть */
+.pane { overflow-y: auto; container-type: inline-size; }
+.top { position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid var(--border); padding: 0 32px; }
+.top-line { display: flex; align-items: center; gap: 8px; height: 52px; }
+.top-line .name { font-size: 15px; font-weight: 600; color: var(--primary); white-space: nowrap; }
+.top-line .prov { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.head-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px;
+  color: var(--accent); cursor: pointer; border: 0; background: none; padding: 0; }
+.head-icon:hover { background: var(--accent-soft); }
+.head-icon svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.saved { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; transition: color .2s; }
+.saved.is-on { color: var(--accent); }
+.top-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 0 14px; }
+
+.body { padding: 20px 32px 32px; display: flex; flex-direction: column; gap: 24px; }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+.cp { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 12px 14px; border-radius: var(--radius);
+  background: #f1f3f5; font-size: 13.5px; }
+.cp > .i { color: var(--accent); margin: 0 2px; } /* та же колонка 22px, что у номеров ниже */
+.cp b { font-weight: 600; }
+.cp .num-wrap { width: 180px; margin-left: 4px; }
+.cp .num-wrap input { font-size: 15px; }
+.cp .num-wrap.w-tariff { width: 130px; }
+.cp .num-wrap.w-vol { width: 130px; margin-left: 0; }
+.cp .op { color: var(--muted); }
+.cp .cp-total { margin-left: auto; font-size: 15px; font-weight: 600; white-space: nowrap; }
+/* «На странице объекта» — копия карточки «Ввода за месяц» */
+.pv-card { width: 50%; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; pointer-events: none; user-select: none; }
+.pv-head { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; background: var(--bg); border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.pv-head .badge { text-transform: none; letter-spacing: 0; }
+.pv-row { display: grid; grid-template-columns: minmax(0, 1fr) 140px; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px; }
+.pv-who { display: flex; flex-direction: column; min-width: 0; }
+.pv-name { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }
+.pv-name .fade { white-space: nowrap; overflow: hidden; }
+.pv-pen svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+.pv-sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.pv-field { position: relative; height: 38px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--warm);
+  display: flex; align-items: center; justify-content: flex-end; padding-right: 30px; }
+.pv-ph { color: #b3bac1; font-size: 14px; }
+.pv-sum { text-align: right; font-weight: 600; }
+.sec > h3 { display: flex; align-items: center; gap: 8px; height: 20px; } /* = высота метки: с меткой и без — одинаково */
+/* метка-предупреждение (.badge-warn): светлый оранжевый фон, иконка, обычный регистр */
+.badge-warn { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 10px;
+  background: #fff4e5; color: #b9770e; font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; cursor: help; }
+/* метка-пример: серая, тихая; суммы от примера — бледные */
+.badge-sample { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; background: #eceef0;
+  color: var(--muted); font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.gp-row .sum.is-sample, .gp-row.is-owner.can-pass:not(.is-off) .sum.is-sample { color: #b3bac1; font-weight: 400; }
+.badge-warn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+/* выбор единицы — своё выпадающее меню, как .select-menu в формах: ✓ у выбранного, × у своих, «+ свой вариант…» внизу */
+.sel-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: 220px; padding: 6px; background: #fff;
+  border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); }
+.sel-menu ul { margin: 0; padding: 0; list-style: none; }
+.sel-row { display: flex; align-items: center; border-radius: 8px; }
+.sel-row:hover { background: var(--bg); }
+.sel-row.is-selected { background: #eceef1; }
+.sel-opt { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 0; background: none;
+  font: 14px var(--font); color: var(--text); text-align: left; cursor: pointer; }
+.sel-opt .ck { visibility: hidden; color: var(--primary); width: 16px; height: 16px; }
+.sel-row.is-selected .sel-opt { font-weight: 600; }
+.sel-row.is-selected .ck { visibility: visible; }
+.sel-remove { width: 24px; height: 24px; margin-right: 8px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: #fff;
+  color: #c0392b; cursor: pointer; font-size: 14px; line-height: 1; }
+.sel-remove:hover { border-color: #c0392b; background: #fdecea; }
+.sel-add { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 4px 0 12px; border-top: 1px solid var(--border); color: var(--accent); }
+.sel-add .plus { font-weight: 700; }
+.sel-add input { flex: 1; min-width: 0; height: 32px; border: 0; outline: none; font: 14px var(--font); background: none; }
+.sel-add input::placeholder { color: #9aa3ab; }
+.sel-add-btn { border: 0; background: none; color: var(--accent); font: 700 13px var(--font); cursor: pointer; padding: 4px 6px; }
+.sel-add-btn:hover { text-decoration: underline; }
+.unit-pick { position: relative; }
+.pick { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; width: 100px; height: 38px; padding: 0 10px 0 12px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: #fff; font: 600 14px var(--font); color: var(--text); cursor: pointer; }
+.pick:hover { border-color: #c3c9cf; }
+.pick .chev { color: var(--muted); font-size: 11px; font-weight: 400; }
+.pick-menu { position: absolute; top: 42px; left: 0; z-index: 5; min-width: 140px; padding: 4px; background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 6px 20px rgba(0,0,0,.12); display: flex; flex-direction: column; }
+.pick-menu button { display: flex; justify-content: space-between; align-items: center; height: 34px; padding: 0 10px; border: 0; background: none;
+  border-radius: 6px; font: 14px var(--font); color: var(--text); cursor: pointer; text-align: left; }
+.pick-menu button:hover { background: var(--bg); }
+.pick-menu button.is-on { color: var(--accent); font-weight: 600; }
+.pick-menu button:last-child { color: var(--accent); }
+/* своя единица: та же ширина и вид, что у выбора (100px), крестик — на месте стрелки ▾ */
+.unit-own { position: relative; display: inline-block; width: 100px; }
+.unit-own input { width: 100%; height: 38px; padding: 0 30px 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font: 600 14px var(--font); color: var(--text); outline: none; background: #fff; }
+.unit-own input::placeholder { font-weight: 400; color: #9aa3ab; }
+.unit-own input:placeholder-shown { background: var(--warm); }
+.unit-own input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.unit-x { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border: 0; background: none;
+  display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; border-radius: 4px; padding: 0; }
+.num-wrap input::placeholder { font-weight: 400; color: #9aa3ab; }
+.unit-x:hover { background: var(--bg); }
+/* «Делим и кто платит» — строка способов с иконкой; иконка над галочками, способы над именами */
+/* всё в одной серой панели (как «Как начисляется»), строки 32px без рамок */
+.gp { padding: 6px 14px; border-radius: var(--radius); background: #f1f3f5; font-size: 13.5px; }
+.split-top { display: flex; align-items: center; gap: 10px; min-height: 34px; }
+.split-top > .i { color: var(--accent); margin: 0 2px; } /* = столбец номера 22px: способы ровно над именами */
+.gp-row .no { width: 22px; height: 22px; border-radius: 50%; background: #fff; color: var(--muted); font-size: 12px;
+  display: inline-flex; align-items: center; justify-content: center; }
+/* маленький переключатель под строку 32px */
+.sw { position: relative; width: 30px; height: 18px; padding: 0; border: 0; border-radius: 9px; background: #cfd5db; cursor: pointer; justify-self: end; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s; }
+.sw.is-on { background: var(--accent); }
+.sw.is-on::after { transform: translateX(12px); }
+.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gp-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 90px 110px 30px; align-items: center; gap: 10px; min-height: 32px; }
+.gp-row .who { min-width: 0; white-space: nowrap; overflow: hidden; }
+.gp-row .meta { color: var(--muted); font-size: 13px; text-align: right; }
+.gp-row .sum { text-align: right; font-weight: 600; }
+.gp-row.is-off .who, .gp-row.is-off .sum { color: var(--muted); font-weight: 400; }
+.gp-row.is-owner { cursor: default; color: var(--muted); border-top: 1px solid #dde1e5; }
+.gp-row.is-owner .sum { color: var(--muted); font-weight: 400; }
+.gp-row.is-owner.can-pass:not(.is-off) .who, .gp-row.is-owner.can-pass:not(.is-off) .sum { color: var(--text); }
+.how { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.how button { border: 0; background: none; padding: 2px 0; font: 13.5px var(--font); color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+.how button:hover { color: var(--text); }
+.how button.is-on { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+.line.is-check { grid-template-columns: 22px minmax(0, 1fr) 90px 110px; cursor: pointer; user-select: none; }
+.cbox { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #c3c9cf; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+.line.is-check:not(.is-off) .cbox { background: var(--accent); border-color: var(--accent); }
+.line.is-off .sum { color: var(--muted); font-weight: 400; }
+.line.is-owner { cursor: default; color: var(--muted); background: var(--bg); }
+.line.is-owner .sum { color: var(--muted); }
+.sec > h3 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.fs { border: 1px solid var(--border); border-radius: 12px; }
+.fs-head { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; background: var(--bg);
+  border-bottom: 1px solid var(--border); border-radius: 12px 12px 0 0; }
+.fs-head h3 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.fs-body { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.sum-line { font-size: 15px; font-weight: 600; }
+.sum-line b { color: var(--accent); }
+.hint { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* поля */
+.fl label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.fl input { width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font: 14px var(--font); color: var(--text); background: #fff; outline: none; }
+.fl input:focus, .num-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.num-line { display: flex; align-items: center; gap: 12px; }
+.num-wrap { position: relative; width: 160px; }
+.num-wrap input { width: 100%; height: 38px; padding: 0 30px 0 12px; text-align: right; border: 1px solid var(--border);
+  border-radius: var(--radius); font: 600 14px var(--font); outline: none; background: #fff; }
+.num-wrap input:placeholder-shown { background: var(--warm); }
+.num-unit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
+.num-line .muted { color: var(--muted); font-size: 13px; }
+
+.seg-track { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; gap: 2px; }
+.seg-track button { flex: 1; height: 32px; border: 0; background: none; border-radius: 6px; font: 13px var(--font); color: var(--text); cursor: pointer; }
+.seg-track button:hover { background: #fff; }
+.seg-track button.is-on { background: var(--accent); color: #fff; font-weight: 600; }
+
+/* строки «кто платит» / счётчики */
+.lines { border: 1px solid var(--border); border-radius: var(--radius); }
+.line { display: grid; grid-template-columns: minmax(0, 1fr) 90px 110px 44px; align-items: center; gap: 12px;
+  min-height: 46px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.line:last-child { border-bottom: 0; }
+.line.is-meter { grid-template-columns: minmax(0, 1fr) 110px 90px; }
+.line .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.line .who .fade { white-space: nowrap; overflow: hidden; }
+.line .sub { font-size: 12px; color: var(--muted); }
+.line .meta { color: var(--muted); font-size: 13px; text-align: right; }
+.line .sum { text-align: right; font-weight: 600; }
+.line .sum.off { color: var(--muted); font-weight: 400; }
+.line.is-off .who { color: var(--muted); }
+.line .tariff { font-size: 13px; text-align: right; }
+.line .tariff.none { color: var(--muted); }
+.line .go { font-size: 13px; text-align: right; color: var(--accent); text-decoration: none; }
+.switch { position: relative; width: 44px; height: 26px; border-radius: 13px; background: var(--border); cursor: pointer; border: 0; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s; }
+.switch.is-on { background: var(--accent); }
+.switch.is-on::after { transform: translateX(18px); }
+.add-link { color: var(--accent); font-weight: 600; font-size: 13px; text-decoration: none; }
+
+.placeholder { border: 1px dashed var(--border); border-radius: var(--radius); padding: 12px; color: var(--muted); font-size: 13px; background: var(--bg); }
+.placeholder code { font: 600 13px var(--font); color: var(--text); }
+
+/* превью — кусок «Ввода за месяц» */
+.prev-cap { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted);
+  display: grid; grid-template-columns: minmax(0, 1fr) 64px 90px 76px; gap: 0 8px; }
+.prev-cap.is-flex { display: flex; align-items: center; }
+.prev-cap span { text-transform: none; letter-spacing: 0; color: var(--text); text-align: right; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; background: var(--accent); color: #fff; }
+.pr { display: grid; grid-template-columns: minmax(0, 1fr) 64px 90px 76px; align-items: center; gap: 0 8px; min-height: 40px; }
+.pr .nm { font-weight: 600; }
+.pr .nm small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
+.pr .v { text-align: right; color: var(--muted); }
+.pr .in { height: 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--warm); }
+.pr .in.wide { grid-column: 2 / 4; justify-self: end; width: 120px; }
+.pr .tot { grid-column: 3 / 5; text-align: right; font-weight: 600; }
+.pr .use { text-align: right; }
+.pr .use span { display: inline-block; padding: 2px 8px; border-radius: 10px; background: var(--bg); font-size: 12px; color: var(--muted); }
+.prev-group { margin: 0 -8px; padding: 8px; border-radius: var(--radius); }
+.prev-group .gname { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; padding: 0 0 4px; }
+.prev-group .pr { padding-left: 26px; }
+.prev-group .pr .nm { font-size: 12px; font-weight: 400; }
+.bill-line { display: flex; justify-content: space-between; gap: 16px; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 13px; }
+.bill-line .muted { color: var(--muted); }
+
+@container (max-width: 560px) { .top-edit { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="win" role="dialog" aria-label="Услуги объекта">
+  <div class="win-head">
+    <h1>Услуги <span>· Королёва 61</span></h1>
+    <button class="x" aria-label="Закрыть">×</button>
+  </div>
+  <div class="win-body">
+    <nav class="nav" id="nav"></nav>
+    <section class="pane" id="pane"></section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var ICON = {
+    electricity: ['#0e9aa7', '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'],
+    water:       ['#2e86de', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'],
+    hot_water:   ['#e74c3c', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'],
+    heating:     ['#e67e22', '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-6 2 1 3 2 3 4 1-2 1-5 0-8z"/>'],
+    management:  ['#34495e', '<path d="M3 11 12 4l9 7M5 10v10h14V10"/>'],
+    drain:       ['#7f8c8d', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/><path d="M9 14h6"/>'],
+    eco:         ['#7f8c8d', '<path d="M5 19C5 9 11 5 20 4c-1 9-5 15-15 15zM5 19l7-7"/>'],
+    trash:       ['#7f8c8d', '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'],
+    custom:      ['#7f8c8d', '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/>'],
+    // начисления
+    m_receipt:   ['', '<path d="M7 3h10v18l-2.5-1.5L12 21l-2.5-1.5L7 21zM10 8h4M10 12h4"/>'],
+    m_fixed:     ['', '<path d="M5 9h14M5 15h14"/>'],
+    m_area:      ['', '<path d="M4 4h16v16H4zM4 4l16 16"/>'],
+    m_meters:    ['', '<path d="M4 16a8 8 0 1 1 16 0M12 16l4-5"/>'],
+    m_formula:   ['', '<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>']
+  };
+  function icon(kind) { var k = ICON[kind] || ICON.custom;
+    return '<svg class="i" viewBox="0 0 24 24"' + (k[0] ? ' style="color:' + k[0] + '"' : '') + '>' + k[1] + '</svg>'; }
+  var PEN = '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg>';
+
+  var TENANTS = [
+    { id: 'e', name: 'Салон «Эгоист»', area: 49.5, share: 45 },
+    { id: 'z', name: 'Кофе «Жаркофф»', area: 60.5, share: 55 }
+  ];
+  var tname = function (id) { return TENANTS.filter(function (t) { return t.id === id; })[0].name; };
+  var METERS = {
+    'el-e': { kind: 'electricity', no: '087346912', who: 'e', dn: true, tariff: null, unit: 'кВт·ч' },
+    'el-z': { kind: 'electricity', no: '59010166', who: 'z', tariff: null, unit: 'кВт·ч' },
+    'hw-e': { kind: 'hot_water', no: '250352064', who: 'e', tariff: 80.24, unit: 'м³' },
+    'hw-z': { kind: 'hot_water', no: '250338183', who: 'z', tariff: 80.24, unit: 'м³' },
+    'cw-e': { kind: 'water', no: '545575', who: 'e', tariff: 72.57, unit: 'м³' },
+    'cw-z': { kind: 'water', no: '317718', who: 'z', tariff: 72.57, unit: 'м³' }
+  };
+  var SERVICES = [
+    { id: 1, kind: 'management', name: 'Коммунальные услуги', prov: 'УК «Сервис Недвижимость»', mode: 'receipt', split: 'shares' },
+    { id: 2, kind: 'electricity', name: 'Электричество', prov: '', mode: 'formula', formula: 'Сумма квитанции × свой расход ÷ общий расход', meters: ['el-e', 'el-z'] },
+    { id: 3, kind: 'hot_water', name: 'Вода горячая', prov: 'АО «ТЭК СПб»', mode: 'meters', meters: ['hw-e', 'hw-z'] },
+    { id: 4, kind: 'water', name: 'Вода холодная', prov: 'ГУП «Водоканал»', mode: 'meters', meters: ['cw-e', 'cw-z'] },
+    { id: 5, kind: 'heating', name: 'Подогрев воды', prov: 'АО «ТЭК СПб»', mode: 'formula', formula: 'Расход гор. воды × 0,06 × 5 563,66 ₽' },
+    { id: 6, kind: 'drain', name: 'Водоотведение', prov: 'ГУП «Водоканал»', mode: 'formula', formula: '(Хол. вода + Гор. вода) × 85 ₽' },
+    { id: 7, kind: 'eco', name: 'Экология', prov: 'ГУП «Водоканал»', mode: 'formula', formula: '(Хол. вода + Гор. вода) × 42,50 ₽' },
+    { id: 8, kind: 'trash', name: 'Утилизация мусора', prov: 'АО «НЭО»', mode: 'area', tariff: 13.37, split: 'area', pays: { e: true, z: false } },
+    { id: 9, kind: 'heating', name: 'Отопление/Подогрев', prov: 'АО «ТЭК СПб»', mode: 'formula', formula: '0,06 × 5 563,66 ₽ · по долям' }
+  ];
+  SERVICES.forEach(function (s) { s.pays = s.pays || { e: true, z: true }; s.split = s.split || 'shares'; });
+
+  var MODES = [['receipt', 'По квитанции'], ['fixed', 'Фиксированная сумма'], ['area', 'По тарифу'], ['meters', 'По счётчикам'], ['formula', 'Своя формула']];
+  var MODE_HINT = {
+    receipt: 'Сумма из квитанции за весь объект делится между арендаторами.',
+    fixed: 'Одна и та же сумма каждый месяц.',
+    area: 'Тариф × м² того, кто платит. Новый тариф — с текущего месяца, прошлые месяцы по старому.',
+    meters: 'Расход × тариф счётчика. Тариф и арендатор — у самого счётчика, в окне объекта.',
+    formula: 'Сумма считается по вашей формуле из тарифов и показаний.'
+  };
+  var SPLITS = [['shares', 'По долям'], ['equal', 'Поровну'], ['area', 'По м²']];  // «по расходу» — не стандарт, это формула
+
+  var current = SERVICES[7], editing = false;
+  var money = function (n) { n = Math.round(n * 100 + 1e-6) / 100;
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽'; };
+  var num = function (n) { return n.toLocaleString('ru-RU', { maximumFractionDigits: 2 }); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var payersOf = function (s) { return TENANTS.filter(function (t) { return s.pays[t.id]; }); };
+  var PROP_AREA = 110;  // площадь объекта
+  // Единицы: базовые + свои варианты владельца (как «свой вариант…» у типа объекта и вида счётчика)
+  var UNITS = ['м²', 'чел.', 'м³'];
+  var OWN_UNITS = ['кг'];
+  var unitText = function (s) { return s.unit || 'м²'; };
+  // м² и объём не вписан — берём площадь объекта
+  var volume = function (s) { return s.volume != null ? s.volume : (unitText(s) === 'м²' ? PROP_AREA : null); };
+  var areaTotal = function (s) { return (s.tariff || 0) * (volume(s) || 0); };
+  var unitOpen = false, unitNew = '';
+  var CHECK = '<svg class="i ck" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>';
+  function unitPick(s) {
+    var k = unitText(s);
+    var row = function (u, own) {
+      return '<li class="sel-row' + (u === k ? ' is-selected' : '') + '"><button type="button" class="sel-opt" data-unit="' + esc(u) + '"><span>' + esc(u) + '</span>' + CHECK + '</button>' +
+        (own ? '<button type="button" class="sel-remove" data-unit-del="' + esc(u) + '" title="Удалить вариант">×</button>' : '') + '</li>';
+    };
+    return '<span class="unit-pick"><button type="button" class="pick" data-unit-open>' + esc(k) + ' <span class="chev">▾</span></button>' +
+      (unitOpen ? '<div class="sel-menu"><ul>' + UNITS.map(function (u) { return row(u, false); }).join('') +
+        OWN_UNITS.map(function (u) { return row(u, true); }).join('') + '</ul>' +
+        '<div class="sel-add"><span class="plus">+</span><input data-f="unitNew" value="' + esc(unitNew) + '" placeholder="свой вариант…" maxlength="10" aria-label="Своя единица">' +
+        (unitNew.trim() ? '<button type="button" class="sel-add-btn" data-unit-add>Добавить</button>' : '') + '</div></div>' : '') +
+      '</span>';
+  }
+  function addUnit() {
+    var u = unitNew.trim(); if (!u) return;
+    if (UNITS.indexOf(u) < 0 && OWN_UNITS.indexOf(u) < 0) OWN_UNITS.push(u);
+    current.unit = u; current.volume = null; unitNew = ''; unitOpen = false;
+    renderPane(); saved(); var v = document.querySelector('[data-f="volume"]'); if (v) v.focus();
+  }
+
+  function renderNav() {
+    var h = '<div class="nav-cap">Начисление</div>';
+    MODES.forEach(function (m) {
+      var on = !!current.isNew && current.mode === m[0];
+      h += '<div class="nav-item is-mode' + (on ? ' is-on' : '') + '" data-mode="' + m[0] + '">' + icon('m_' + m[0]) +
+        '<span class="fade">' + m[1] + '</span>' + (on ? '<span class="check">✓</span>' : '') + '</div>';
+    });
+    h += '<div class="nav-sep"></div><div class="nav-cap">Услуги объекта · ' +
+      SERVICES.filter(function (s) { return s.name; }).length + '</div>';
+    SERVICES.forEach(function (s) {
+      if (s.isNew && !s.name) return;  // безымянная новая — ещё не услуга
+      h += '<div class="nav-item' + (s === current ? ' is-active' : '') + '" data-svc="' + s.id + '">' +
+        icon(s.kind) + '<span class="fade">' + esc(s.name) + '</span></div>';
+    });
+    document.getElementById('nav').innerHTML = h;
+  }
+
+  function sumLine(s) {
+    var who = payersOf(s).map(function (t) { return t.name; }).join(' и ');
+    if (s.mode === 'area') return who ? 'Платит ' + who + ' — <b>' + money(areaTotal(s)) + '</b> в месяц. Вводить ничего не надо.'
+                                      : 'Никто не платит — включите арендатора ниже.';
+    if (s.mode === 'fixed') return s.fixed ? '<b>' + money(s.fixed) + '</b> в месяц. Вводить ничего не надо.' : 'Укажите сумму в месяц.';
+    if (s.mode === 'receipt') return 'Каждый месяц вводите сумму из квитанции.';
+    if (s.mode === 'meters') return 'Каждый месяц вводите показания ' + (s.meters || []).length + ' счётчиков.';
+    return 'Считается само по формуле.';
+  }
+
+  var CP_ICON = {
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    ruler: '<path d="M3 15.5 15.5 3 21 8.5 8.5 21z"/><path d="m7 12 2 2M10 9l1.5 1.5M13 6l2 2"/>',
+    gauge: '<path d="M12 14l3.5-3.5"/><path d="M3.3 17a9.5 9.5 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.5"/>'
+  };
+  function cp(ic, inner) {
+    return '<div class="cp"><svg class="i" viewBox="0 0 24 24">' + CP_ICON[ic] + '</svg>' + inner + '</div>';
+  }
+  function block(title, body) {  // без рамки: подпись капсом + содержимое
+    return '<div class="sec"><h3>' + title + '</h3>' + body + '</div>';
+  }
+  function seg(items, value) {
+    return '<div class="seg-track" data-seg="split">' + items.map(function (x) {
+      return '<button type="button" data-v="' + x[0] + '"' + (x[0] === value ? ' class="is-on"' : '') + '>' + x[1] + '</button>'; }).join('') + '</div>';
+  }
+  function payLines(s, byArea) {
+    return '<div class="lines">' + TENANTS.map(function (t) {
+      var on = !!s.pays[t.id];
+      var meta = byArea ? num(t.area) + ' м²' : (s.split === 'equal' ? '' : s.split === 'area' ? num(t.area) + ' м²' : t.share + '%');
+      var sum = on ? (byArea ? money(t.area * (s.tariff || 0)) : '') : 'не платит';
+      return '<div class="line' + (on ? '' : ' is-off') + '"><span class="who"><span class="fade">' + esc(t.name) + '</span></span>' +
+        '<span class="meta">' + meta + '</span><span class="sum' + (on ? '' : ' off') + '">' + sum + '</span>' +
+        '<button type="button" class="switch' + (on ? ' is-on' : '') + '" data-pay="' + t.id + '" aria-label="Платит"></button></div>';
+    }).join('') + '</div>';
+  }
+  // «Г с иконкой»: строка способов с иконкой + список с галочками + «Остаётся на вас» всегда (высота не прыгает)
+  var AREA_ALL = TENANTS.reduce(function (a, t) { return a + t.area; }, 0);
+  function part(t, sp) { return sp === 'equal' ? 1 / TENANTS.length : sp === 'area' ? t.area / AREA_ALL : t.share / 100; }
+  function splitRow(s) {
+    var top = '<div class="how">' + SPLITS.map(function (x) {
+        return '<button type="button" data-split="' + x[0] + '"' + (x[0] === s.split ? ' class="is-on"' : '') + '>' + x[1].toLowerCase() + '</button>'; }).join('') + '</div>';
+    return '<div class="split-top"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/></svg>' + top + '</div>';
+  }
+  var SAMPLE = 5800;  // пример суммы квитанции — только чтобы показать деление
+  function payCheck(s) {
+    var sp = s.split;
+    // вес арендатора и сумма за весь объект (null — сумма станет известна из квитанции)
+    // По тарифу = как Фиксированная, только сумма за объект считается сама: тариф × объём
+    var w = function (t) { return part(t, sp); };
+    var total = s.mode === 'area' ? areaTotal(s) : (s.mode === 'fixed' && s.fixed) ? s.fixed : null;
+    var on = TENANTS.filter(function (t) { return s.pays[t.id]; }), off = TENANTS.filter(function (t) { return !s.pays[t.id]; });
+    var sum = function (list) { return list.reduce(function (a, t) { return a + w(t); }, 0); };
+    var wAll = sum(TENANTS), wOn = sum(on), wOff = sum(off);
+    // галочка «Остаётся на вас» появляется, только когда что-то остаётся; снята — остаток делят платящие
+    var canPass = off.length > 0 && on.length > 0;
+    var ownerTakes = !canPass || s.ownerTakes !== false;
+    var shareOf = function (t) { return !s.pays[t.id] ? 0 : ownerTakes ? w(t) / wAll : w(t) / wOn; };
+    var ownShare = ownerTakes ? wOff / wAll : 0;
+    // суммы ещё нет (по квитанции) — считаем от примера, суммы бледные
+    var sample = total == null; if (sample) total = SAMPLE;
+    var sc = sample ? ' is-sample' : '';
+    var fmt = function (k) { return money(total * k); };
+    // переключает только сам переключатель, не строка
+    var SW = function (isOn, attr, label) { return '<button type="button" class="sw' + (isOn ? ' is-on' : '') + '" ' + attr +
+      ' role="switch" aria-checked="' + isOn + '" aria-label="' + esc(label) + '"></button>'; };
+    return TENANTS.map(function (t, i) {
+      var isOn = !!s.pays[t.id], k = shareOf(t);
+      var meta = sp === 'area' ? num(t.area) + ' м²' :
+        sp === 'equal' ? '1/' + (isOn && !ownerTakes ? on.length : TENANTS.length) :
+        (isOn ? Math.round(k * 100) : t.share) + '%';
+      return '<div class="gp-row' + (isOn ? '' : ' is-off') + '"><span class="no">' + (i + 1) + '</span><span class="who"><span class="fade">' +
+        esc(t.name) + '</span></span><span class="meta">' + meta + '</span><span class="sum' + (isOn ? sc : '') + '">' + (isOn ? money(total * k) : 'не платит') + '</span>' + SW(isOn, 'data-pay="' + t.id + '"', t.name + ' платит') + '</div>';
+    }).join('') +
+      '<div class="gp-row is-owner' + (canPass ? ' can-pass' : '') + (ownerTakes ? '' : ' is-off') + '">' +
+      '<span></span><span class="who">Остаётся на вас</span><span class="meta"></span>' +
+      '<span class="sum' + (off.length && ownerTakes ? sc : '') + '">' + (off.length && ownerTakes ? fmt(ownShare) : '—') + '</span>' + (canPass ? SW(ownerTakes, 'data-owner', 'Остаток на вас') : '<span></span>') + '</div>';
+  }
+  function meterLines(s, withTariff) {
+    if (!(s.meters || []).length) return '<div><a class="add-link" href="#">+ Подключить счётчик</a></div>';
+    return '<div class="lines">' + s.meters.map(function (id) {
+      var m = METERS[id];
+      var t = !withTariff ? '<span></span>' : m.tariff ? '<span class="tariff">' + num(m.tariff) + ' ₽/' + m.unit + '</span>'
+                                                       : '<span class="tariff none">нет тарифа</span>';
+      return '<div class="line is-meter"><span class="who">' + icon(m.kind) + '<span><span class="fade">' + esc(tname(m.who)) + '</span>' +
+        '<div class="sub">№ ' + m.no + (m.dn ? ' · день/ночь' : '') + '</div></span></span>' + t +
+        '<a class="go" href="#" title="Изменить в окне объекта">✎ счётчик</a></div>';
+    }).join('') + '</div><div><a class="add-link" href="#">+ Подключить счётчик</a></div>';
+  }
+
+  // «На странице объекта»: кусок настоящей карточки «Ввода за месяц» (рамка, серая шапка КАПСОМ, строка услуги).
+  // Только показ — ничего не нажимается. По квитанции в поле бледно стоит тот же пример, что у «Делим».
+  function preview(s) {
+    if (s.mode === 'meters') return meterPreview(s);
+    var name = '<span class="pv-name"><span class="fade">' + esc(s.name || 'Новая услуга') + '</span>' +
+      '<span class="pv-pen">' + PEN + '</span></span>' + (s.prov ? '<span class="pv-sub fade">' + esc(s.prov) + '</span>' : '');
+    if (s.mode === 'receipt')
+      return '<div class="pv-card" aria-hidden="true"><div class="pv-head">Суммы из квитанций<span class="badge">за весь объект</span></div>' +
+        '<div class="pv-row"><span class="pv-who">' + name + '</span><span class="pv-field"><span class="pv-ph">' +
+        num(SAMPLE) + '</span><span class="num-unit">₽</span></span></div></div>';
+    var sum = s.mode === 'area' ? areaTotal(s) : (s.fixed || 0);
+    return '<div class="pv-card" aria-hidden="true"><div class="pv-head">Считается само</div>' +
+      '<div class="pv-row"><span class="pv-who">' + name + '</span><span class="pv-sum">' + money(sum) + '</span></div></div>';
+  }
+  function meterPreview(s) {
+    if (!s.meters || !s.meters.length) return '';
+    var kind = METERS[s.meters[0]].kind;
+    return '<div class="prev-cap">Показания счётчиков<span>Было</span><span>Стало</span><span>Расход</span></div>' +
+      '<div class="prev-group" style="background:color-mix(in srgb,' + ICON[kind][0] + ' 5%,#fff)">' +
+      '<div class="gname">' + icon(kind) + esc(s.name) + '</div>' +
+      s.meters.map(function (id) { var m = METERS[id];
+        return '<div class="pr"><span class="nm">' + esc(tname(m.who)) + '</span><span class="v">…</span><span class="in"></span>' +
+          '<span class="use"><span>— ' + m.unit + '</span></span></div>'; }).join('') + '</div>';
+  }
+
+  function renderPane() {
+    var s = current, h = '';
+    // неподвижная шапка
+    h += '<div class="top"><div class="top-line">' + icon(s.kind) + '<span class="name">' + esc(s.name || 'Новая услуга') + '</span>' +
+      (s.prov ? '<span class="prov">· ' + esc(s.prov) + '</span>' : '') +
+      '<button type="button" class="head-icon" data-edit title="Название и поставщик">' + PEN + '</button>' +
+      '<span class="saved" id="saved">Сохранено</span></div>' +
+      (editing ? '<div class="top-edit"><div class="fl"><label>Название в счёте</label><input data-f="name" value="' + esc(s.name) + '"></div>' +
+        '<div class="fl"><label>Поставщик</label><input data-f="prov" value="' + esc(s.prov) + '" placeholder="Например, АО «НЭО»"></div></div>' : '') +
+      '</div><div class="body">';
+
+    // как начисляется
+    // серая панель-ответ (как .charge-panel в окне услуги): иконка акцентом · текст · поле
+    var field = function (f, v) { return '<span class="num-wrap"><input data-f="' + f + '" value="' + (v ? num(v) : '') +
+      '" placeholder="0,00"><span class="num-unit">₽</span></span>'; };
+    var b;
+    if (s.mode === 'receipt') b = cp('calendar', '<span>Сумму из квитанции вводите <b>каждый месяц</b> на странице объекта.</span>');
+    if (s.mode === 'fixed') b = cp('lock', '<span class="cp-label">Сумма в месяц</span>' + field('fixed', s.fixed));
+    // как в квитанции: Тариф (₽ за единицу) × Объём услуг = Размер платы. Единицу выбираем; м² — объём сам = площадь объекта.
+    if (s.mode === 'area') {
+      var u = unitText(s), vol = volume(s);
+      b = cp('ruler', '<span class="cp-label">Тариф</span>' +
+        '<span class="num-wrap w-tariff"><input data-f="tariff" value="' + (s.tariff ? num(s.tariff) : '') + '" placeholder="0,00"><span class="num-unit">₽</span></span>' +
+        '<span>за</span>' + unitPick(s) +
+        '<span class="op">×</span><span class="num-wrap w-vol"><input data-f="volume" value="' + (vol ? num(vol) : '') + '" placeholder="0"' +
+        ' title="Объём услуг" style="padding-right:' + (u ? 18 + u.length * 8 : 12) + 'px"><span class="num-unit">' + esc(u) + '</span></span>' +
+        '<span class="cp-total">= ' + money((s.tariff || 0) * (vol || 0)) + '</span>');
+    }
+    if (s.mode === 'meters') b = cp('gauge', '<span>Показания вводите <b>каждый месяц</b>, тариф — у счётчика.</span>');
+    if (s.mode === 'formula') b = '<div class="placeholder">Сейчас: <code>' + esc(s.formula || '—') + '</code> · окно формулы встанет сюда, упростим позже</div>';
+    // По тарифу: всегда метка-предупреждение сразу после подписи
+    var warn = s.mode === 'area' ? '<span class="badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
+      '<svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg>Не для счётчиков</span>' : '';
+    h += block('Как начисляется · ' + MODES.filter(function (m) { return m[0] === s.mode; })[0][1] + warn, b);
+
+    // делим и кто платит
+    if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
+      h += block('Делим и кто платит' + (s.mode === 'receipt' ? '<span class="badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''),
+        '<div class="gp">' + splitRow(s) + payCheck(s) + '</div>');
+    } else if (s.mode === 'meters') {
+      h += block('Кто платит · по своим счётчикам', meterLines(s, true));
+    }
+
+    var pv = s.mode !== 'formula' ? preview(s) : '';
+    if (pv) h += block('На странице объекта' + (s.mode === 'receipt' ? '<span class="badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), pv);
+    h += '</div>';
+    document.getElementById('pane').innerHTML = h;
+  }
+
+  function render() { renderNav(); renderPane(); }
+  function saved() {
+    var el = document.getElementById('saved'); if (!el) return;
+    el.textContent = 'Сохранено ✓'; el.classList.add('is-on');
+    clearTimeout(saved.t); saved.t = setTimeout(function () { el.textContent = 'Сохранено'; el.classList.remove('is-on'); }, 1200);
+  }
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-svc]'))) { current = SERVICES.filter(function (s) { return s.id === +t.dataset.svc; })[0];
+      editing = false; render(); document.getElementById('pane').scrollTop = 0; return; }
+    if ((t = e.target.closest('[data-mode]'))) {
+      // верхнее меню: всегда новая услуга этого начисления (безымянную новую не плодим — меняем ей начисление)
+      if (!(current.isNew && !current.name)) {
+        current = { id: Date.now(), isNew: true, kind: 'custom', name: '', prov: '', split: 'shares', pays: { e: true, z: true }, meters: [] };
+        SERVICES.push(current);
+      }
+      current.mode = t.dataset.mode; editing = true;
+      render(); document.getElementById('pane').scrollTop = 0; document.querySelector('[data-f="name"]').focus(); return; }
+    if (e.target.closest('[data-edit]')) { editing = !editing; renderPane(); return; }
+    if (e.target.closest('[data-unit-open]')) { unitOpen = !unitOpen; return renderPane(); }
+    if ((t = e.target.closest('[data-unit-del]'))) { var d = t.dataset.unitDel;
+      OWN_UNITS = OWN_UNITS.filter(function (u) { return u !== d; });
+      if (current.unit === d) { current.unit = 'м²'; current.volume = null; }
+      return renderPane(); }
+    if (e.target.closest('[data-unit-add]')) return addUnit();
+    if ((t = e.target.closest('[data-unit]'))) { var k = t.dataset.unit; unitOpen = false;
+      if (k !== unitText(current)) { current.unit = k; current.volume = null; }
+      renderPane(); saved();
+      var nx = document.querySelector('[data-f="volume"]'); if (nx) nx.focus(); return; }
+    if ((t = e.target.closest('[data-goto-mode]'))) { e.preventDefault(); current.mode = t.dataset.gotoMode; render(); return saved(); }
+    if (unitOpen && !e.target.closest('.sel-menu')) { unitOpen = false; renderPane(); }
+    if ((t = e.target.closest('[data-split]'))) { current.split = t.dataset.split;
+      renderPane(); return saved(); }
+    if (e.target.closest('[data-owner]')) { current.ownerTakes = current.ownerTakes === false; renderPane(); return saved(); }
+    if ((t = e.target.closest('[data-pay]'))) { current.pays[t.dataset.pay] = !current.pays[t.dataset.pay]; renderPane(); return saved(); }
+    if (e.target.closest('a[href="#"]')) e.preventDefault();
+  });
+  // Пересчёт прямо при вводе: перерисовали — вернули фокус, набранный текст и курсор.
+  // На blur ничего не перерисовываем — иначе клик в соседнее поле теряется.
+  var NUMS = { tariff: 1, fixed: 1, volume: 1 };
+  function store(f, v) {
+    if (f === 'unitNew') { unitNew = v; return; }
+    var raw = v.replace(/\s/g, '').replace(',', '.');
+    current[f] = f === 'volume' ? (raw === '' ? null : parseFloat(raw) || 0) : NUMS[f] ? parseFloat(raw) || 0 : v;
+  }
+  document.addEventListener('input', function (e) {
+    var f = e.target.dataset.f; if (!f) return;
+    var v = e.target.value, pos = e.target.selectionStart;
+    store(f, v); render();
+    var el = document.querySelector('[data-f="' + f + '"]');
+    if (el) { el.value = v; el.focus(); try { el.setSelectionRange(pos, pos); } catch (x) {} }
+  });
+  document.addEventListener('change', function (e) {
+    var f = e.target.dataset.f; if (!f) return;
+    if (NUMS[f] && current[f] != null && e.target.value !== '') e.target.value = num(current[f]);  // 1470.7 → 1 470,7
+    saved();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.dataset.f === 'unitNew') {
+      if (e.key === 'Enter') { e.preventDefault(); addUnit(); }
+      if (e.key === 'Escape') { unitOpen = false; unitNew = ''; renderPane(); }
+      return;
+    }
+    if (e.key === 'Enter' && e.target.dataset.f) e.target.blur();
+  });
+  render();
+})();
+</script>
+</body>
+</html>
