@@ -303,13 +303,15 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     { id: 'z', name: 'Кофе «Жаркофф»', area: 60.5, share: 55 }
   ];
   var tname = function (id) { return TENANTS.filter(function (t) { return t.id === id; })[0].name; };
+  // счётчики помещения — арендаторы к ним пока не привязаны (как привязывать — решаем отдельно, 2026-11-18)
+  var KIND_NAME = { electricity: 'Электричество', water: 'Вода холодная', hot_water: 'Вода горячая', heating: 'Отопление' };
   var METERS = {
-    'el-e': { kind: 'electricity', no: '087346912', who: 'e', dn: true, tariff: null, unit: 'кВт·ч' },
-    'el-z': { kind: 'electricity', no: '59010166', who: 'z', tariff: null, unit: 'кВт·ч' },
-    'hw-e': { kind: 'hot_water', no: '250352064', who: 'e', tariff: 80.24, unit: 'м³' },
-    'hw-z': { kind: 'hot_water', no: '250338183', who: 'z', tariff: 80.24, unit: 'м³' },
-    'cw-e': { kind: 'water', no: '545575', who: 'e', tariff: 72.57, unit: 'м³' },
-    'cw-z': { kind: 'water', no: '317718', who: 'z', tariff: 72.57, unit: 'м³' }
+    'el-e': { kind: 'electricity', no: '087346912', dn: true, tariff: null, unit: 'кВт·ч' },
+    'el-z': { kind: 'electricity', no: '59010166', tariff: null, unit: 'кВт·ч' },
+    'hw-e': { kind: 'hot_water', no: '250352064', tariff: 80.24, unit: 'м³' },
+    'hw-z': { kind: 'hot_water', no: '250338183', tariff: 80.24, unit: 'м³' },
+    'cw-e': { kind: 'water', no: '545575', tariff: 72.57, unit: 'м³' },
+    'cw-z': { kind: 'water', no: '317718', tariff: 72.57, unit: 'м³' }
   };
   var SERVICES = [
     { id: 1, kind: 'management', name: 'Коммунальные услуги', prov: 'УК «Сервис Недвижимость»', mode: 'receipt', split: 'shares' },
@@ -329,7 +331,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     receipt: 'Сумма из квитанции за весь объект делится между арендаторами.',
     fixed: 'Одна и та же сумма каждый месяц.',
     area: 'Тариф × м² того, кто платит. Новый тариф — с текущего месяца, прошлые месяцы по старому.',
-    meters: 'Расход × тариф счётчика. Тариф и арендатор — у самого счётчика, в окне объекта.',
+    meters: 'Расход × тариф счётчика. Тариф — у самого счётчика, в окне объекта.',
     formula: 'Сумма считается по вашей формуле из тарифов и показаний.'
   };
   var SPLITS = [['shares', 'По долям'], ['equal', 'Поровну'], ['area', 'По м²']];  // «по расходу» — не стандарт, это формула
@@ -471,7 +473,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
       var m = METERS[id];
       var t = !withTariff ? '<span></span>' : m.tariff ? '<span class="tariff">' + num(m.tariff) + ' ₽/' + m.unit + '</span>'
                                                        : '<span class="tariff none">нет тарифа</span>';
-      return '<div class="line is-meter"><span class="who">' + icon(m.kind) + '<span><span class="fade">' + esc(tname(m.who)) + '</span>' +
+      return '<div class="line is-meter"><span class="who">' + icon(m.kind) + '<span><span class="fade">' + esc(KIND_NAME[m.kind]) + '</span>' +
         '<div class="sub">№ ' + m.no + (m.dn ? ' · день/ночь' : '') + '</div></span></span>' + t +
         '<a class="go" href="#" title="Изменить в окне объекта">✎ счётчик</a></div>';
     }).join('') + '</div><div><a class="add-link" href="#">+ Подключить счётчик</a></div>';
@@ -498,7 +500,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
       '<div class="prev-group" style="background:color-mix(in srgb,' + ICON[kind][0] + ' 5%,#fff)">' +
       '<div class="gname">' + icon(kind) + esc(s.name) + '</div>' +
       s.meters.map(function (id) { var m = METERS[id];
-        return '<div class="pr"><span class="nm">' + esc(tname(m.who)) + '</span><span class="v">…</span><span class="in"></span>' +
+        return '<div class="pr"><span class="nm">№ ' + esc(m.no) + '</span><span class="v">…</span><span class="in"></span>' +
           '<span class="use"><span>— ' + m.unit + '</span></span></div>'; }).join('') + '</div>';
   }
 
@@ -542,7 +544,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
       h += block('Делим и кто платит' + (s.mode === 'receipt' ? '<span class="badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''),
         '<div class="gp">' + splitRow(s) + payCheck(s) + '</div>');
     } else if (s.mode === 'meters') {
-      h += block('Кто платит · по своим счётчикам', meterLines(s, true));
+      h += block('Счётчики услуги', meterLines(s, true));
     }
 
     // пример «На странице объекта» — не блоком, а ссылкой; по нажатию — маленькое окно поверх

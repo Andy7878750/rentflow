@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Окно счётчика — макет</title>
+<style>
+/* Макет 2026-11-18: окно объекта, блок «Счётчики» + маленькое окно «Счётчик» с новым полем «Тариф».
+   Тариф теперь у счётчика (в коде пока у услуги — ReceiptTariff m:<pk>; перенести потом). */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1;
+  --bg: #f5f6f7; --surface: #fff; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680;
+  --warm: #fffbe6; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; min-height: 100vh;
+  display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* окно объекта (фон) */
+.win { width: 880px; max-width: 100%; background: var(--surface); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden; }
+.win-head { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border); }
+.win-head h1 { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary); }
+.win-head h1 span { color: var(--muted); font-weight: 400; }
+.x { width: 32px; height: 32px; border: 0; background: none; border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 22px; line-height: 1; }
+.x:hover { background: var(--bg); }
+.win-body { padding: 20px 24px 24px; }
+
+/* блок в рамке, серая шапка КАПСОМ */
+.form-section { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.form-section + .form-section { margin-top: 12px; }
+.fs-head { display: flex; align-items: center; height: 38px; padding: 0 16px; background: var(--bg); border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.fs-body { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+/* плашки счётчиков */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.tile { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 72px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius); }
+.tile .ic { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.tile .nm, .tile .ln { white-space: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
+.tile .nm { font-weight: 600; }
+.tile .nm small { font-weight: 400; color: var(--muted); }
+.tile .ln { font-size: 12px; color: var(--muted); }
+.tile .ln b { color: var(--text); font-weight: 600; }
+.tile .ln .none { color: #c0392b; }
+.tile .acts { display: flex; gap: 2px; }
+.tile .acts button { width: 26px; height: 26px; border: 0; background: none; border-radius: 6px; color: #aab2ba; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center; }
+.tile .acts button:hover { background: var(--bg); color: var(--text); }
+.tile .acts svg { width: 14px; height: 14px; }
+.tile-add { border: 1px dashed #c3c9cf; color: var(--accent); font-weight: 600; justify-content: center; display: flex; cursor: pointer; background: none; font: 600 13px var(--font); }
+.tile-add:hover { background: var(--accent-soft); }
+
+/* маленькое окно поверх */
+.back { position: fixed; inset: 0; background: rgba(30,40,50,.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.back[hidden] { display: none; }
+.sub { width: 620px; max-width: 100%; background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden; }
+.sub-head { display: flex; align-items: center; height: 52px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--border); }
+.sub-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--primary); }
+.sub-head .x { margin-left: auto; }
+.sub-body { padding: 16px 20px 20px; }
+
+/* сетка полей: 3 → 2 → 1 колонка */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 12px; align-items: end; }
+.fl label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; white-space: nowrap; }
+.fl label .req { color: #c0392b; }
+.fl input, .pick { width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font: 14px var(--font); color: var(--text); outline: none; background: #fff; }
+.fl input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pick { display: flex; align-items: center; justify-content: space-between; cursor: pointer; text-align: left; }
+.pick .chev { color: var(--muted); font-size: 11px; }
+.num-wrap { position: relative; }
+.num-wrap input { text-align: right; padding-right: 64px; }
+.num-wrap input.short { padding-right: 58px; }
+.num-wrap input:placeholder-shown { background: var(--warm); }
+.num-wrap input::placeholder { color: #9aa3ab; }
+.num-unit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; white-space: nowrap; }
+.seg-track { display: flex; height: 38px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; gap: 2px; }
+.seg-track button { flex: 1; border: 0; background: none; border-radius: 6px; font: 13px var(--font); color: var(--text); cursor: pointer; white-space: nowrap; }
+.seg-track button.is-on { background: var(--accent); color: #fff; font-weight: 600; }
+.note { margin: 0; font-size: 12px; color: var(--muted); }
+.is-night[hidden] { display: none; }
+/* «новое» — подсветка нового поля в макете */
+.new-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; background: #e3f1f6; color: #1f6280; font-size: 10px; font-weight: 600; vertical-align: 1px; }
+
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.btn { height: 38px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font: 600 14px var(--font); color: var(--text); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { margin-right: auto; border: 0; color: #c0392b; background: none; padding: 0 4px; font-weight: 400; }
+</style>
+</head>
+<body>
+
+<div class="win">
+  <div class="win-head"><h1>Изменить объект <span>· Королёва 61</span></h1><button class="x" aria-label="Закрыть">×</button></div>
+  <div class="win-body">
+    <section class="form-section">
+      <div class="fs-head">Счётчики</div>
+      <div class="fs-body"><div class="tiles" id="tiles"></div></div>
+    </section>
+  </div>
+</div>
+
+<div class="back" id="back" hidden>
+  <div class="sub" role="dialog" aria-modal="true">
+    <div class="sub-head"><h2 id="subTitle">Новый счётчик</h2><button class="x" data-close aria-label="Закрыть">×</button></div>
+    <div class="sub-body">
+      <div class="grid">
+        <div class="fl"><label>Что меряет <span class="req">*</span></label>
+          <button type="button" class="pick" id="kind"><span id="kindLabel">Электричество</span><span class="chev">▾</span></button></div>
+        <div class="fl"><label>№ счётчика</label><input id="serial" placeholder="не указан" autocomplete="off"></div>
+        <div class="fl"><label>&nbsp;</label>
+          <div class="seg-track" id="dn"><button type="button" data-dn="0" class="is-on">Однотарифный</button><button type="button" data-dn="1">День / ночь</button></div></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="fl"><label><span class="day-word">Начальное</span> <span class="req">*</span></label>
+          <div class="num-wrap"><input class="short" placeholder="0" id="sDay"><span class="num-unit" data-unit>кВт·ч</span></div></div>
+        <div class="fl is-night" hidden><label>Начальное · ночь <span class="req">*</span></label>
+          <div class="num-wrap"><input class="short" placeholder="0" id="sNight"><span class="num-unit" data-unit>кВт·ч</span></div></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="fl"><label><span class="tariff-word">Тариф</span> <span class="req">*</span><span class="new-tag">новое</span></label>
+          <div class="num-wrap"><input placeholder="0,00" id="tDay"><span class="num-unit">₽/<span data-unit>кВт·ч</span></span></div></div>
+        <div class="fl is-night" hidden><label>Тариф · ночь <span class="req">*</span></label>
+          <div class="num-wrap"><input placeholder="0,00" id="tNight"><span class="num-unit">₽/<span data-unit>кВт·ч</span></span></div></div>
+      </div>
+      <p class="note" style="margin-top:10px">Начальное — то, что на счётчике сейчас. Новый тариф действует с текущего месяца, прошлые месяцы — по старому.</p>
+      <div class="actions"><button class="btn danger" id="del" hidden>Удалить счётчик</button><button class="btn" data-close>Отмена</button><button class="btn primary" id="done">Готово</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KINDS = {
+    electricity: ['Электричество', 'кВт·ч', '#0e9aa7', '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'],
+    water: ['Вода холодная', 'м³', '#2e86de', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'],
+    hot_water: ['Вода горячая', 'м³', '#e74c3c', '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>']
+  };
+  var ORDER = ['electricity', 'water', 'hot_water'];
+  // счётчики помещения — без арендаторов (кто платит — решим отдельно)
+  var METERS = [
+    { kind: 'electricity', no: '087346912', dn: true, start: '12 450', sn: '6 210', t: 9.6, tn: 4.2 },
+    { kind: 'electricity', no: '59010166', dn: false, start: '3 820', t: 9.6 },
+    { kind: 'hot_water', no: '250352064', start: '112', t: 80.24 },
+    { kind: 'hot_water', no: '250338183', start: '87', t: null },
+    { kind: 'water', no: '545575', start: '204', t: 72.57 },
+    { kind: 'water', no: '317718', start: '161', t: 72.57 }
+  ];
+  var num = function (n) { return n.toLocaleString('ru-RU', { maximumFractionDigits: 2 }); };
+  var PEN = '<svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg>';
+  var X = '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  var editing = null, kind = 'electricity', dn = false;
+
+  function tiles() {
+    document.getElementById('tiles').innerHTML = METERS.map(function (m, i) {
+      var k = KINDS[m.kind];
+      var tariff = m.t == null ? '<span class="none">нет тарифа</span>' :
+        '<b>' + num(m.t) + (m.dn && m.tn ? ' / ' + num(m.tn) : '') + ' ₽</b>/' + k[1];
+      return '<div class="tile"><span class="ic" style="background:color-mix(in srgb,' + k[2] + ' 12%,#fff);color:' + k[2] + '">' +
+        '<svg class="i" viewBox="0 0 24 24">' + k[3] + '</svg></span>' +
+        '<span style="min-width:0"><div class="nm">' + k[0] + (m.dn ? ' <small>· день / ночь</small>' : '') + '</div>' +
+        '<div class="ln">№ ' + m.no + '</div><div class="ln">' + tariff + '</div></span>' +
+        '<span class="acts"><button data-edit="' + i + '" title="Изменить">' + PEN + '</button><button title="Удалить">' + X + '</button></span></div>';
+    }).join('') + '<button class="tile tile-add" data-add>+ Добавить счётчик</button>';
+  }
+
+  function setKind(k) {
+    kind = k; var u = KINDS[k][1];
+    document.getElementById('kindLabel').textContent = KINDS[k][0];
+    document.querySelectorAll('[data-unit]').forEach(function (el) { el.textContent = u; });
+  }
+  function setDn(v) {
+    dn = v;
+    document.querySelectorAll('[data-dn]').forEach(function (b) { b.classList.toggle('is-on', (b.dataset.dn === '1') === v); });
+    document.querySelectorAll('.is-night').forEach(function (el) { el.hidden = !v; });
+    document.querySelector('.day-word').textContent = v ? 'Начальное · день' : 'Начальное';
+    document.querySelector('.tariff-word').textContent = v ? 'Тариф · день' : 'Тариф';
+  }
+  function open(i) {
+    editing = i; var m = i == null ? null : METERS[i];
+    document.getElementById('subTitle').textContent = m ? 'Счётчик · ' + KINDS[m.kind][0] : 'Новый счётчик';
+    document.getElementById('del').hidden = !m;
+    setKind(m ? m.kind : 'electricity'); setDn(!!(m && m.dn));
+    document.getElementById('serial').value = m ? m.no : '';
+    document.getElementById('sDay').value = m ? m.start : '';
+    document.getElementById('sNight').value = m && m.sn ? m.sn : '';
+    document.getElementById('tDay').value = m && m.t != null ? num(m.t) : '';
+    document.getElementById('tNight').value = m && m.tn != null ? num(m.tn) : '';
+    document.getElementById('back').hidden = false;
+  }
+  function close() { document.getElementById('back').hidden = true; }
+  var parse = function (v) { v = v.replace(/\s/g, '').replace(',', '.'); return v === '' ? null : parseFloat(v); };
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if (e.target.closest('[data-add]')) return open(null);
+    if ((t = e.target.closest('[data-edit]'))) return open(+t.dataset.edit);
+    if (e.target.closest('[data-close]') || e.target.id === 'back') return close();
+    if ((t = e.target.closest('[data-dn]'))) return setDn(t.dataset.dn === '1');
+    if (e.target.closest('#kind')) { var i = (ORDER.indexOf(kind) + 1) % ORDER.length; return setKind(ORDER[i]); }  // в макете: нажатие — следующий вид
+    if (e.target.closest('#done')) {
+      var m = editing == null ? {} : METERS[editing];
+      m.kind = kind; m.dn = dn; m.no = document.getElementById('serial').value || '—';
+      m.t = parse(document.getElementById('tDay').value); m.tn = dn ? parse(document.getElementById('tNight').value) : null;
+      m.start = document.getElementById('sDay').value || '0'; m.sn = dn ? document.getElementById('sNight').value : '';
+      if (editing == null) METERS.push(m);
+      tiles(); close();
+    }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  tiles(); open(0);
+})();
+</script>
+</body>
+</html>
