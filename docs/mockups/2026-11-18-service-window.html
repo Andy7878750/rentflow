@@ -138,7 +138,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .num-wrap input::placeholder { font-weight: 400; color: #9aa3ab; }
 .unit-x:hover { background: var(--bg); }
 /* «Делим и кто платит» — строка способов с иконкой; иконка над галочками, способы над именами */
-/* всё в одной серой панели (как «Как начисляется»), строки 32px без рамок */
+/* всё в одной серой панели (как «Как начисляется»), строки 40px без рамок (32 + 4px сверху и снизу) */
 .gp { padding: 6px 14px; border-radius: var(--radius); background: #f1f3f5; font-size: 13.5px; }
 .split-top { display: flex; align-items: center; gap: 10px; min-height: 34px; }
 .split-top > .i { color: var(--accent); margin: 0 2px; } /* = столбец номера 22px: способы ровно над именами */
@@ -151,7 +151,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .sw.is-on { background: var(--accent); }
 .sw.is-on::after { transform: translateX(12px); }
 .sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.gp-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 90px 110px 30px; align-items: center; gap: 10px; min-height: 32px; }
+.gp-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 90px 110px 30px; align-items: center; gap: 10px; min-height: 40px; }
 .gp-row .who { min-width: 0; white-space: nowrap; overflow: hidden; }
 .gp-row .meta { color: var(--muted); font-size: 13px; text-align: right; }
 .gp-row .sum { text-align: right; font-weight: 600; }
@@ -219,6 +219,19 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .switch.is-on { background: var(--accent); }
 .switch.is-on::after { transform: translateX(18px); }
 .add-link { color: var(--accent); font-weight: 600; font-size: 13px; text-decoration: none; }
+/* «См. пример на странице объекта» — ссылка вместо блока; пример — в маленьком окне поверх */
+.ex-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0;
+  color: var(--accent); font: 13px var(--font); cursor: pointer; }
+.ex-link:hover { text-decoration: underline; }
+.ex-link svg { width: 15px; height: 15px; }
+.ex-back { position: fixed; inset: 0; z-index: 20; background: rgba(30,40,50,.35); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.ex-win { width: 480px; max-width: 100%; background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden; }
+.ex-head { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--border); }
+.ex-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--primary); }
+.ex-head .x { margin-left: auto; }
+.ex-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ex-body .pv-card { width: 100%; }
+.ex-note { margin: 0; font-size: 13px; color: var(--muted); }
 
 .placeholder { border: 1px dashed var(--border); border-radius: var(--radius); padding: 12px; color: var(--muted); font-size: 13px; background: var(--bg); }
 .placeholder code { font: 600 13px var(--font); color: var(--text); }
@@ -532,12 +545,20 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
       h += block('Кто платит · по своим счётчикам', meterLines(s, true));
     }
 
+    // пример «На странице объекта» — не блоком, а ссылкой; по нажатию — маленькое окно поверх
     var pv = s.mode !== 'formula' ? preview(s) : '';
-    if (pv) h += block('На странице объекта' + (s.mode === 'receipt' ? '<span class="badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), pv);
+    if (pv) h += '<button type="button" class="ex-link" data-example><svg class="i" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>См. пример на странице объекта</button>';
     h += '</div>';
+    if (pv && exampleOpen) h += '<div class="ex-back" data-ex-close><div class="ex-win" role="dialog" aria-modal="true" aria-label="На странице объекта">' +
+      '<div class="ex-head"><h2>На странице объекта</h2>' + (s.mode === 'receipt' ? '<span class="badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : '') +
+      '<button type="button" class="x" data-ex-close aria-label="Закрыть">×</button></div>' +
+      '<div class="ex-body"><p class="ex-note">' + (s.mode === 'receipt' ? 'Каждый месяц вы вводите сюда сумму из квитанции.' :
+        s.mode === 'meters' ? 'Каждый месяц вы вводите сюда показания счётчиков.' : 'Сумма считается сама — вводить ничего не нужно.') + '</p>' + pv + '</div></div></div>';
+    else exampleOpen = false;
     document.getElementById('pane').innerHTML = h;
   }
 
+  var exampleOpen = false;
   function render() { renderNav(); renderPane(); }
   function saved() {
     var el = document.getElementById('saved'); if (!el) return;
@@ -557,6 +578,9 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
       }
       current.mode = t.dataset.mode; editing = true;
       render(); document.getElementById('pane').scrollTop = 0; document.querySelector('[data-f="name"]').focus(); return; }
+    if (e.target.closest('[data-example]')) { exampleOpen = true; return renderPane(); }
+    if ((t = e.target.closest('[data-ex-close]')) && (t.classList.contains('x') || e.target === t)) { exampleOpen = false; return renderPane(); }
+    if (e.target.closest('.ex-win')) return;
     if (e.target.closest('[data-edit]')) { editing = !editing; renderPane(); return; }
     if (e.target.closest('[data-unit-open]')) { unitOpen = !unitOpen; return renderPane(); }
     if ((t = e.target.closest('[data-unit-del]'))) { var d = t.dataset.unitDel;
@@ -597,6 +621,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     saved();
   });
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && exampleOpen) { exampleOpen = false; return renderPane(); }
     if (e.target.dataset.f === 'unitNew') {
       if (e.key === 'Enter') { e.preventDefault(); addUnit(); }
       if (e.key === 'Escape') { unitOpen = false; unitNew = ''; renderPane(); }
