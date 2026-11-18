@@ -4664,3 +4664,170 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   pointer-events: none;
   transform: translateY(-50%);
 }
+
+/* ---------- Compact month input (/properties/<id>/input/, 2026-11-18) ----------
+   Three blocks in the frame of .form-section: sums · meter readings · «считается само».
+   One grid for all of them (.mread): name · было · the field · расход — the fields of every block on one line. */
+.mi .form-section { margin: 0; }
+/* Name · было · the field · расход — the same columns in all three blocks; the field 90px (2026-11-18: 30% shorter).
+   A day / night meter: day over night. */
+.mi .mread { grid-template-columns: minmax(0, 1fr) 64px 90px 76px; }
+.mi .mread.is-dn .mread-ins { flex-direction: column; }
+.mi-body { padding: 4px 16px 6px; font-size: 14px; }
+.mi-body .mread-head { padding: 8px 0 2px; border-bottom: 0; }
+.mi .mread-in .num-input,
+.mi-field .num-wrap,
+.mi-field .num-input { width: 100%; max-width: none; }
+.mi-field .num-wrap { display: block; }
+.mi .mread.is-dn .mread-prev,
+.mi .mread.is-dn .mread-use { display: flex; flex-direction: column; gap: 22px; }
+.mi-usage-note { font-size: 12px; }
+
+/* Each service's meters on a light tint of its own colour (electricity turquoise, hot water red…), so the groups
+   stand apart; the columns stay where the other blocks have them (negative margin = the inner padding).
+   Inside a group no lines: the tenants (12px) stand under the service's name, past its icon; even spacing. */
+.mi-meters {
+  margin: 8px -8px 0;
+  padding: 8px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--rk, var(--color-text-muted)) 5%, #fff);
+}
+.mi-meters .mread { padding: 4px 0; border-bottom: 0; }
+.mi-meters .mread-who { padding-left: 30px; font-size: 12px; }
+.mi-meters .mread-meta { font-size: 11px; }
+
+/* The service's name: the icon in its colour, the name larger than the tenants', the red dot while missing. */
+.mi-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 4px;
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+.mi-group .receipt-icon { width: 22px; height: 22px; background: none; color: var(--rk, var(--color-text-muted)); }
+.mi-group .receipt-icon svg { width: 18px; height: 18px; }
+.mi-group.is-missing .missing-dot { display: inline-block; }
+
+.mi-total {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mi .num-wrap.is-long .num-input { padding-right: 46px; }  /* «Гкал», «кВт·ч» — not over the number */
+/* A receipt's sum needs «16 854,97 ₽» — wider than a reading: it grows to the left, the right edge stays common. */
+.mi .mread .mi-field { grid-column: 2 / 4; justify-self: end; width: 120px; }
+/* «Считается само»: the sums at the block's right edge (under «Расход»), 2026-11-18. */
+.mi .mread .mi-total { grid-column: 3 / 5; }
+/* «Было / Стало / Расход» in the grey head of the meters block, over the same columns as the rows. */
+.mi .form-section-head.mi-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 90px 76px;
+  column-gap: 10px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.mi-cols > span { color: var(--color-text); font-size: 12px; font-weight: 600; letter-spacing: normal; text-transform: none; text-align: right; }
+/* The meters block: the same 8px white gap above, between and below the coloured groups. */
+.mi-body:has(> .mi-meters) { padding-top: 8px; padding-bottom: 8px; }
+.mi-body > .mi-meters:first-child { margin-top: 0; }
+
+/* ---------- Whose bill: its own block over the bill (2026-11-18) ----------
+   Moved here from the left column: there it sat next to the object's input and looked like «typing for this tenant».
+   A light card of its own (2026-11-18: not dark); one row per payer: the name and their sum;
+   the selected — the accent fill. The switch and the bill stay on screen together (.obj-side is sticky). */
+.obj-side {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+/* The column never runs off the screen: the switch always stays in sight, a long bill scrolls inside its card. */
+.obj-side { max-height: calc(100vh - 60px); }  /* 20px on top + the page's bottom padding */
+.obj-side .obj-bill { position: static; flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.obj-side .bill-switch { flex-shrink: 0; }
+.bill-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.bill-switch-cap {
+  padding: 2px 10px 6px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.bill-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.bill-tab:hover { background: var(--color-bg); }
+.bill-tab.is-active { background: var(--color-accent); color: #fff; }
+.bill-tab .fade { min-width: 0; overflow: hidden; }
+.bill-tab-sum { flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 400; }
+
+/* The object's card on the left stays on screen too (the divider moves to the input's side). */
+.obj-info { position: sticky; top: 20px; align-self: start; border-right: 0; }
+.obj-month { border-left: 1px solid var(--color-border); }
+@container objpage (max-width: 1080px) {
+  .obj-info { position: static; }
+  .obj-month { border-left: 0; }
+}
+
+/* The tenants on the left are information now, not links: rows as close as text lines. */
+.payer-list .payer { padding: 6px 20px; }
+.payer-list { padding-bottom: 6px; }  /* the last row to the card's edge = the 12px between rows */
+.payer-list .payer { cursor: default; }
+.payer-list .payer:hover { background: none; }
+/* «за весь объект» right after the sums' caption: these are the object's receipts, not a tenant's. */
+.mi .form-section-head.mi-head { justify-content: flex-start; gap: 8px; }
+.mi-head .badge { background: var(--color-accent); color: #fff; text-transform: none; letter-spacing: normal; font-weight: 600; }  /* the accent: noticed at once */
+@container objpage (max-width: 820px) {
+  .obj-side { position: static; max-height: none; }
+  .obj-side .obj-bill { overflow: visible; }
+}
+
+/* Object page, the left card: «АРЕНДАТОРЫ ✎» — just the icon, right after the caption (2026-11-18). */
+.card-block-head.head-start { justify-content: flex-start; gap: 6px; }
+.head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -1px 0;
+  border-radius: 6px;
+  color: var(--color-accent);
+}
+.head-icon .icon { width: 14px; height: 14px; }
+.head-icon:hover { background: var(--color-accent-soft); color: var(--color-accent-hover); }
+/* «⇅ Порядок» on the compact input: only the rows to drag are shown. */
+.obj-month.is-ordering .mi .form-section,
+.obj-month.mi.is-ordering .form-section { display: none; }
+
+/* A service's name and ✎ right after it (the service window), as «АРЕНДАТОРЫ ✎» (2026-11-18). */
+.mi-name { display: flex; align-items: center; gap: 6px; min-width: 0; }  /* ✎ 10px after the word, as «АРЕНДАТОРЫ ✎» */
+.mi-name > .fade { min-width: 0; }
+.mi-name label { cursor: text; }
+.mi-group .head-icon { margin-left: -2px; }

@@ -51,16 +51,16 @@
 
         {% include "properties/_contacts.html" %}
 
-        {# Each block has a small caption with its own link on the right: «Услуги ✎ изменить». #}
-        <div class="card-block-head" data-card-skip>
+        {# Each block has a small caption and just an icon right after it: «УСЛУГИ ✎» / «+» (2026-11-18, as on the object page). #}
+        <div class="card-block-head head-start" data-card-skip>
           <span>Услуги</span>
           {% if property.receipts.all %}
-            <a href="{% url 'property_detail' property.pk %}#receipts" class="setup-link" title="Изменить услуги">
-              <svg class="icon"><use href="#i-edit"/></svg>изменить
+            <a href="{% url 'property_detail' property.pk %}#receipts" class="head-icon" title="Изменить услуги" aria-label="Изменить услуги">
+              <svg class="icon"><use href="#i-edit"/></svg>
             </a>
           {% else %}
-            <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link" title="Добавить услугу">
-              <svg class="icon"><use href="#i-plus"/></svg>добавить
+            <a href="{% url 'receipt_create' property.pk %}" data-modal class="head-icon" title="Добавить услугу" aria-label="Добавить услугу">
+              <svg class="icon"><use href="#i-plus"/></svg>
             </a>
           {% endif %}
         </div>
@@ -80,11 +80,11 @@
         {% endif %}
 
         {% if not property.is_owner_used %}
-          <div class="card-block-head" data-card-skip>
+          <div class="card-block-head head-start" data-card-skip>
             <span>Арендаторы</span>
-            <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
-               title="{% if property.tenants.all %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
-              {% if property.tenants.all %}<svg class="icon"><use href="#i-edit"/></svg>изменить{% else %}<svg class="icon"><use href="#i-plus"/></svg>добавить{% endif %}
+            <a href="{% url 'property_tenants' property.pk %}" data-modal class="head-icon"
+               title="{% if property.tenants.all %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}" aria-label="{% if property.tenants.all %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
+              <svg class="icon"><use href="{% if property.tenants.all %}#i-edit{% else %}#i-plus{% endif %}"/></svg>
             </a>
           </div>
         {% endif %}

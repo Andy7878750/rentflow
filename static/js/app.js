@@ -2004,10 +2004,6 @@
         var fresh = el.id && doc.getElementById(el.id);
         if (fresh) el.replaceWith(fresh);
       });
-      document.querySelectorAll('.mreceipt').forEach(function (card) {
-        var fresh = doc.getElementById(card.id);
-        if (fresh) card.classList.toggle('is-missing', fresh.classList.contains('is-missing'));
-      });
       // «Стало» below «было»: the field turns red (the value stays as typed).
       monthForm.querySelectorAll('.mread .num-input[name]').forEach(function (input) {
         var fresh = doc.querySelector('.mread .num-input[name="' + input.name + '"]');
@@ -2079,30 +2075,26 @@
     // (#morder), dragged by the whole row (mouse or finger): the row rides under the pointer, the others slide aside
     // (FLIP). «Готово» puts the cards in the same order, stores it (receipt_order) and redraws the bill on the right.
     var section = monthForm.closest('.obj-month');
-    function receiptCards() { return Array.prototype.slice.call(monthForm.querySelectorAll('.mreceipt[data-receipt-id]')); }
     function orderRows() { return Array.prototype.slice.call(monthForm.querySelectorAll('[data-order-row]')); }
     function idsOf(items) { return items.map(function (item) { return item.dataset.receiptId; }).join(','); }
     var orderBefore = '';
     section.addEventListener('click', function (event) {
       if (event.target.closest('[data-order-on]')) {
-        orderBefore = idsOf(receiptCards());
+        orderBefore = idsOf(orderRows());
         section.classList.add('is-ordering');
         return;
       }
       if (!event.target.closest('[data-order-off]')) return;
       section.classList.remove('is-ordering');
       var ids = orderRows().map(function (row) { return row.dataset.receiptId; });
-      var cards = receiptCards(), after = cards[cards.length - 1].nextSibling, parent = cards[0].parentNode;
-      ids.forEach(function (id) {
-        var card = monthForm.querySelector('.mreceipt[data-receipt-id="' + id + '"]');
-        if (card) parent.insertBefore(card, after);
-      });
       if (ids.join(',') === orderBefore) return;
       var body = new FormData();
       body.append('order', ids.join(','));
+      // The compact input (2026-11-18) groups the services by what is typed: after a new order the page is drawn again,
+      // so the groups and the bill on the right follow it.
       fetch(monthForm.dataset.orderUrl, {
         method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken(monthForm) }
-      }).then(function () { save(); });  // the bill on the right follows the new order
+      }).then(function () { location.reload(); });
     });
     var SLIDE = 'transform .22s cubic-bezier(.2, .7, .3, 1)';
     // Move rows in the page, then let each one (but `skip`) glide from where it was to where it is now.

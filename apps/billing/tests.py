@@ -696,8 +696,8 @@ class ReceiptViewTests(TestCase):
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
         self.assertContains(page, f'name="curn-{two.pk}"')
         self.assertNotContains(page, f'name="curn-{one.pk}"')
-        self.assertContains(page, '/ 5 ₽/кВт·ч')  # a single-rate meter: one price
-        self.assertContains(page, '/ 6 / 3 ₽/кВт·ч')
+        self.assertContains(page, '· 5 ₽/кВт·ч')  # a single-rate meter: one price
+        self.assertContains(page, '· 6 / 3 ₽/кВт·ч')
 
     def test_usage_row_shows_last_months_usage_until_this_ones_is_typed(self):
         meter = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
@@ -730,7 +730,7 @@ class ReceiptViewTests(TestCase):
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11')
         self.assertContains(page, f'name="cur-{one.pk}"')
         self.assertContains(page, f'name="use-{two.pk}"')
-        self.assertContains(page, 'Стало / расход')
+        self.assertContains(page, 'за&nbsp;мес.')  # a «Расход» meter: no «было», the field is the month's usage (2026-11-18)
         receipt = Receipt.objects.get(name='Свет')
         self.assertEqual(services.used(receipt, Reading.objects.get(meter=one)), (Decimal('10'), None))
         self.assertEqual(services.used(receipt, Reading.objects.get(meter=two))[0], Decimal('7'))
@@ -827,7 +827,6 @@ class MonthPageTests(TestCase):
         self.assertEqual(stranger.position, 1, "another owner's service is not touched")
 
         page = self.client.get(reverse('property_detail', args=[self.prop.pk])).content.decode()
-        self.assertLess(page.index(f'id="mreceipt-{own.pk}"'), page.index(f'id="mreceipt-{self.receipt.pk}"'))
         self.assertIn('data-order-on', page)  # «⇅ Порядок» (variant Г): folded rows in the same order
         self.assertLess(page.index(f'data-order-row data-receipt-id="{own.pk}"'),
                         page.index(f'data-order-row data-receipt-id="{self.receipt.pk}"'))

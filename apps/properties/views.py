@@ -179,6 +179,8 @@ def object_page_context(request, property_obj, month):
         'property': property_obj,
         'bill': bill,
         'selected_tenant': selected,
+        'owner_tab': bool(bill.owner.lines) or property_obj.is_owner_used,  # «На вас» in the bill's switch
+        'input': billing_services.month_input(bill),  # the month's input: sums · readings · «считается само»
         'free_percent': max(100 - occupied, 0),
         'missing_kinds': [(kind, kind.label) for kind in billing_services.missing_kinds(property_obj)],
         'month': services.month_param(month),

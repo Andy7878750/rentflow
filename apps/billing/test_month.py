@@ -417,3 +417,27 @@ class ObjectMetersTariffTests(TestCase):
         self.assertEqual(services.missing_tariffs(receipt, [light], {key: (Decimal('7'), None)}), [key])
         self.assertEqual(services.missing_tariffs(receipt, [light], {key: (Decimal('7'), Decimal('3'))}), [])
         self.assertEqual(services.missing_tariffs(receipt, [light], {'electricity': (Decimal('7'), Decimal('3'))}), [])
+
+
+class MonthInputTests(TestCase):
+    """The compact input page (month_input): sums to type, each meter once, the rest «считается само»."""
+
+    setUp = ObjectMetersTariffTests.setUp
+    meter = ObjectMetersTariffTests.meter
+    save = ObjectMetersTariffTests.save
+
+    def test_sums_meters_and_auto(self):
+        cold = self.meter('water', 'Вода холодная', 'м³', self.viktor)
+        water = self.save('water', [cold], {'water': (Decimal('45.5'), None)})
+        rent = services.save_receipt(services.new_receipt(self.prop, 'management'))
+        guard = services.new_receipt(self.prop, 'custom')
+        guard.name, guard.amount_mode, guard.fixed_amount = 'Охрана', Receipt.AmountMode.FIXED, Decimal('500')
+        services.save_receipt(guard)
+        services.save_month_input(self.prop, SEPT, {f'amount-{rent.pk}': '4 200'})
+
+        page = services.month_input(services.month_bill(self.prop, SEPT))
+
+        self.assertEqual([(row.field, row.value) for row in page.sums], [(f'amount-{rent.pk}', Decimal('4200'))])
+        self.assertEqual([(entry.receipt.pk, [m.pk for m, _ in rows]) for entry, rows in page.meters],
+                         [(water.pk, [cold.pk])])
+        self.assertEqual([entry.receipt.name for entry in page.auto], ['Охрана'])

@@ -87,4 +87,4 @@ class RateTests(TestCase):
         window = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
         self.assertContains(window, 'name="charge" value="rate" checked')
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
-        self.assertContains(page, '2 чел. × 150 ₽')
+        self.assertContains(page, '300,00&nbsp;₽')  # «Считается само» on the object page (2026-11-18): 2 чел. × 150 ₽

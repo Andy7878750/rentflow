@@ -22,11 +22,12 @@
     {% include "properties/_contacts.html" %}
 
     {# Captions as on the card; services are edited in the middle column, so only «добавить» while there are none. #}
-    <div class="card-block-head">
+    {# On the object page only an icon right after the caption (2026-11-18): ✎ — change, + — add. #}
+    <div class="card-block-head head-start">
       <span>Услуги</span>
       {% if not bill.entries %}
-        <a href="{% url 'receipt_create' property.pk %}" data-modal class="setup-link" title="Добавить услугу">
-          <svg class="icon"><use href="#i-plus"/></svg>добавить
+        <a href="{% url 'receipt_create' property.pk %}" data-modal class="head-icon" title="Добавить услугу" aria-label="Добавить услугу">
+          <svg class="icon"><use href="#i-plus"/></svg>
         </a>
       {% endif %}
     </div>
@@ -38,205 +39,220 @@
     </div>
 
     {% if not property.is_owner_used %}
-      <div class="card-block-head">
+      <div class="card-block-head head-start">
         <span>Арендаторы</span>
-        <a href="{% url 'property_tenants' property.pk %}" data-modal class="setup-link"
-           title="{% if bill.payers %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
-          {% if bill.payers %}<svg class="icon"><use href="#i-edit"/></svg>изменить{% else %}<svg class="icon"><use href="#i-plus"/></svg>добавить{% endif %}
+        <a href="{% url 'property_tenants' property.pk %}" data-modal class="head-icon"
+           title="{% if bill.payers %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}" aria-label="{% if bill.payers %}Изменить арендаторов{% else %}Добавить арендатора{% endif %}">
+          <svg class="icon"><use href="{% if bill.payers %}#i-edit{% else %}#i-plus{% endif %}"/></svg>
         </a>
       </div>
     {% endif %}
 
-    <nav class="payer-list" id="obj-payers" data-live aria-label="Чей счёт показать">
+    {% comment %}The tenants and their shares — information only. Whose bill is shown is switched in the bill itself
+       (2026-11-18): a switch here, next to the object's input, made it easy to think one types for that tenant.{% endcomment %}
+    <div class="payer-list" id="obj-payers" data-live>
       {% for payer in bill.payers %}
-        <a href="?month={{ month }}&tenant={{ payer.tenant.pk }}" class="payer{% if payer.tenant.pk == selected_tenant %} is-active{% endif %}" data-payer="{{ payer.tenant.pk }}">
+        <div class="payer">
           <span class="fade">{{ payer.tenant.name }}</span>
           <span class="payer-share">{% if property.share_unit == 'area' and payer.tenant.area is not None %}{{ payer.tenant.area|floatformat:"-2" }} м²{% else %}доля {{ payer.tenant.share_percent|floatformat:"-2" }}%{% endif %}</span>
-        </a>
+        </div>
       {% endfor %}
       {% if bill.owner.lines or property.is_owner_used %}
-        <a href="?month={{ month }}&tenant=0" class="payer{% if not bill.payers or selected_tenant == 0 %} is-active{% endif %}" data-payer="0">
+        <div class="payer">
           <span>Остаётся на вас</span>
           <span class="payer-share">{{ bill.owner.total|floatformat:"2g" }}&nbsp;₽</span>
-        </a>
+        </div>
       {% endif %}
       {# Fully let objects need no note; only what is not let is worth a word. #}
       {% if property.is_owner_used %}<p class="payer-note">Пользуется собственник</p>
       {% elif not bill.payers %}<p class="payer-note">Арендаторов пока нет</p>
       {% elif free_percent %}<p class="payer-note">Свободно {{ free_percent|floatformat:"-2" }}%</p>{% endif %}
-    </nav>
+    </div>
   </aside>
 
-  {# ---------- 2. The month's receipts: amounts and readings ---------- #}
-  <section class="obj-month" id="receipts">
-    <div class="section-head">
-      <div>
-        <h2>Услуги и показания</h2>
-        <div class="month-switch month-switch-sm">
-          <a href="?month={{ prev_month }}" class="icon-button" aria-label="Предыдущий месяц"><svg class="icon"><use href="#i-chevron-left"/></svg></a>
-          <span class="month-label">{{ month_label }}</span>
-          <a href="?month={{ next_month }}" class="icon-button" aria-label="Следующий месяц"><svg class="icon"><use href="#i-chevron-right"/></svg></a>
+  {% comment %}---------- 2. The month's input (2026-11-18, the compact variant became the only one) ----------
+     Not the service cards, but what to type this month: the receipts' sums («за весь объект»), the meters' readings
+     (each meter once, a tinted group per service) and «Считается само». ✎ after a name opens the service window.{% endcomment %}
+  {% block month_column %}
+<section class="obj-month mi" id="receipts">
+  <div class="section-head">
+    <div>
+      <h2>Ввод за месяц</h2>
+      <div class="month-switch month-switch-sm">
+        <a href="?month={{ prev_month }}" class="icon-button" aria-label="Предыдущий месяц"><svg class="icon"><use href="#i-chevron-left"/></svg></a>
+        <span class="month-label">{{ month_label }}</span>
+        <a href="?month={{ next_month }}" class="icon-button" aria-label="Следующий месяц"><svg class="icon"><use href="#i-chevron-right"/></svg></a>
+      </div>
+    </div>
+    {% if bill.entries %}
+    <div class="section-actions">
+      {% if bill.entries|length > 1 %}
+        <button type="button" class="btn btn-ghost btn-auto btn-sm order-on" data-order-on title="Поменять услуги местами">
+          <svg class="icon"><use href="#i-sort"/></svg>Порядок
+        </button>
+        <button type="button" class="btn btn-primary btn-auto btn-sm order-off" data-order-off>Готово</button>
+      {% endif %}
+      <a href="{% url 'receipt_create' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm order-add">
+        <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if bill.entries %}
+  <form method="post" action="{% url 'month_save' property.pk %}" class="month-form" data-month-form data-order-url="{% url 'receipt_order' property.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="month" value="{{ month }}">
+
+    {% comment %}«⇅ Порядок» (2026-11-17, variant Г): the services as short rows, dragged by the whole row (app.js); the order
+       is the bill's order and the order of the blocks below. data-live — the sums stay fresh.{% endcomment %}
+    {% if bill.entries|length > 1 %}
+      <div class="morder" id="morder" data-live>
+        <p class="morder-hint">Перетащите услуги в нужном порядке — так же они пойдут в счёт арендатора.</p>
+        {% for entry in bill.entries %}
+          <div class="morder-row" data-order-row data-receipt-id="{{ entry.receipt.pk }}">
+            <span class="morder-grip" aria-hidden="true"><svg class="icon"><use href="#i-grip"/></svg></span>
+            <span class="receipt-icon rk-{{ entry.receipt.kind }}"><svg class="icon"><use href="#i-r-{{ entry.receipt.kind }}"/></svg></span>
+            <span class="morder-name fade">{{ entry.receipt.name }}</span>
+            {% if entry.receipt.provider %}<span class="morder-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
+            <span class="morder-sum">{% if entry.total is not None %}{{ entry.total|floatformat:"2g" }}&nbsp;{{ entry.receipt.currency_symbol }}{% else %}—{% endif %}</span>
+          </div>
+        {% endfor %}
+        <div class="morder-done"><button type="button" class="btn btn-primary btn-auto btn-sm" data-order-off>Готово</button></div>
+      </div>
+    {% endif %}
+
+    {% if input.sums %}
+      <div class="form-section">
+        <div class="form-section-head mi-head"><h2>Суммы из квитанций</h2><span class="badge">за весь объект</span></div>
+        <div class="mi-body">
+          {% for row in input.sums %}
+            <div class="mread">
+              <div class="mread-who">
+                <span class="mi-name"><label for="{{ row.field }}" class="fade">{{ row.entry.receipt.name }}</label><a href="{% url 'receipt_edit' row.entry.receipt.pk %}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ row.entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
+                {% if row.sub %}<span class="mread-meta fade">{{ row.sub }}</span>{% endif %}
+              </div>
+              <span class="mi-field"><span class="num-wrap{% if row.unit|length > 1 %} is-long{% endif %}"><input type="text" inputmode="decimal" class="num-input" id="{{ row.field }}" name="{{ row.field }}"
+                    value="{{ row.value|num }}" placeholder="0">{% if row.unit %}<span class="num-unit">{{ row.unit }}</span>{% endif %}</span></span>
+              <span></span>
+            </div>
+          {% endfor %}
         </div>
       </div>
-      {% if bill.entries %}
-        <div class="section-actions">
-          {% if bill.entries|length > 1 %}
-            <button type="button" class="btn btn-ghost btn-auto btn-sm order-on" data-order-on title="Поменять услуги местами">
-              <svg class="icon"><use href="#i-sort"/></svg>Порядок
-            </button>
-            <button type="button" class="btn btn-primary btn-auto btn-sm order-off" data-order-off>Готово</button>
-          {% endif %}
-          <a href="{% url 'receipt_create' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm order-add">
-            <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
-          </a>
-        </div>
-      {% endif %}
-    </div>
+    {% endif %}
 
-    {% if bill.entries %}
-      <p class="month-hint">Введите суммы и показания за {{ month_name }} — счета справа посчитаются сами.</p>
-
-      <form method="post" action="{% url 'month_save' property.pk %}" class="month-form" data-month-form data-order-url="{% url 'receipt_order' property.pk %}">
-        {% csrf_token %}
-        <input type="hidden" name="month" value="{{ month }}">
-
-        {% comment %}«⇅ Порядок» (2026-11-17, variant Г of the user): the cards fold into these short rows, dragged by the
-           whole row; «Готово» puts the cards in the same order (app.js). data-live — the sums stay fresh.{% endcomment %}
-        {% if bill.entries|length > 1 %}
-          <div class="morder" id="morder" data-live>
-            <p class="morder-hint">Перетащите услуги в нужном порядке — так же они пойдут в счёт арендатора.</p>
-            {% for entry in bill.entries %}
-              <div class="morder-row" data-order-row data-receipt-id="{{ entry.receipt.pk }}">
-                <span class="morder-grip" aria-hidden="true"><svg class="icon"><use href="#i-grip"/></svg></span>
-                <span class="receipt-icon rk-{{ entry.receipt.kind }}"><svg class="icon"><use href="#i-r-{{ entry.receipt.kind }}"/></svg></span>
-                <span class="morder-name fade">{{ entry.receipt.name }}</span>
-                {% if entry.receipt.provider %}<span class="morder-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
-                <span class="morder-sum">{% if entry.total is not None %}{{ entry.total|floatformat:"2g" }}&nbsp;{{ entry.receipt.currency_symbol }}{% else %}—{% endif %}</span>
-              </div>
-            {% endfor %}
-            <div class="morder-done"><button type="button" class="btn btn-primary btn-auto btn-sm" data-order-off>Готово</button></div>
-          </div>
-        {% endif %}
-
-        {% for entry in bill.entries %}
-          {% with receipt=entry.receipt %}
-          <article class="mreceipt{% if entry.total is None %} is-missing{% endif %}" id="mreceipt-{{ receipt.pk }}" data-receipt-id="{{ receipt.pk }}">
-            <header class="mreceipt-head">
+    {% if input.meters %}
+      <div class="form-section">
+        {# The columns' captions right in the grey head, over their columns (2026-11-18, variant А). #}
+        <div class="form-section-head mi-cols"><h2>Показания счётчиков</h2><span>Было</span><span>Стало</span><span>Расход</span></div>
+        <div class="mi-body">
+          {% for entry, rows in input.meters %}
+            {% with receipt=entry.receipt %}
+            <div class="mi-meters rk-{{ receipt.kind }}">
+            <div class="mi-group{% if entry.total is None %} is-missing{% endif %}" id="mi-g-{{ receipt.pk }}" data-live>
               <span class="receipt-icon rk-{{ receipt.kind }}"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
-              <div class="receipt-body">
-                <div class="receipt-title">
-                  <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="fade">{{ receipt.name }}</a>
-                  <span class="missing-dot" title="За месяц ещё не введено" aria-hidden="true"></span>
-                  {% if receipt.amount_mode == 'formula' %}<span class="tag">своя формула{% if receipt.split != 'meters' %} · {{ receipt.get_split_display|lower }}{% endif %}</span>
-                  {% else %}<span class="tag">{{ receipt.get_split_display|lower }}</span>{% endif %}
-                  {% if receipt.metered and receipt.layout == 'common' %}<span class="tag tag-muted">общий счётчик</span>{% elif receipt.metered and receipt.layout == 'both' %}<span class="tag tag-muted">общий + свои</span>{% endif %}
+              <span class="fade">{{ receipt.name }}</span><a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a>
+              <span class="missing-dot" title="Ещё не всё введено" aria-hidden="true"></span>
+            </div>
+            {% for meter, reading in rows %}
+              {% with unit=meter.unit|default:receipt.unit dn=meter.two_zones mode=meter.mode %}
+              <div class="mread{% if dn %} is-dn{% endif %}">
+                <div class="mread-who">
+                  <span class="fade">{{ meter.who }}</span>
+                  <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} · {{ meter.tariff_text }}{% endif %}</span>
                 </div>
-                {% if receipt.provider %}<p class="receipt-meta fade">{{ receipt.provider }}</p>{% endif %}
-              </div>
-              {% if receipt.split != 'owner' %}
-                <label class="coef" title="Умножает сумму арендатора: например, 1,2 — НДС 20% или ваша надбавка">
-                  <span>коэф. ×</span>
-                  <input type="text" inputmode="decimal" class="num-input num-input-coef" name="coef-{{ receipt.pk }}" value="{{ receipt.coefficient|num }}" aria-label="Коэффициент для «{{ receipt.name }}»">
-                </label>
-              {% endif %}
-              <details class="dropdown" data-dropdown>
-                <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с услугой">
-                  <svg class="icon"><use href="#i-more"/></svg>
-                </summary>
-                <div class="dropdown-menu" role="menu">
-                  <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="dropdown-item" role="menuitem">
-                    <svg class="icon"><use href="#i-edit"/></svg>Настроить
-                  </a>
-                  <a href="{% url 'receipt_delete' receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
-                    <svg class="icon"><use href="#i-trash"/></svg>Удалить
-                  </a>
-                </div>
-              </details>
-            </header>
-
-            {% if receipt.metered or receipt.split == 'usage' or receipt.amount_mode == 'formula' %}
-              {% if receipt.amount_mode == 'formula' %}{% include "properties/_month_formula.html" %}
-              {% elif receipt.split == 'usage' %}{% include "properties/_month_sum.html" %}{% endif %}
-              {% if entry.readings or receipt.metered %}
-              {% comment %}One row per meter (2026-11-15): who pays · «№ 222 / 9,6 ₽/кВт·ч» under it · «было» as plain text
-                 (last month's «стало», or the start reading) · the field for today's reading · the usage.
-                 «Расход» services: the field is the month's usage; the last column shows last month's until it is typed.
-                 A red dot only at the service's name while something is missing. The tariff is changed only in the service window.{% endcomment %}
-              {% comment %}«Было / стало» or «Расход» is each meter's own (2026-11-16). The head: all by usage — Расход · Прошлый;
-                 mixed — «Стало / расход» over the fields.{% endcomment %}
-              {% with all_usage=entry.all_usage %}
-              <div class="mreads{% if all_usage %} is-usage{% endif %}">
-                <div class="mread mread-head" aria-hidden="true">
-                  <span></span><span>{% if not all_usage %}Было{% endif %}</span><span>{% if all_usage %}Расход{% elif entry.some_usage %}Стало / расход{% else %}Стало{% endif %}</span><span>{% if all_usage %}Прошлый{% else %}Расход{% endif %}</span>
-                </div>
-                {% for meter, reading in entry.readings %}
-                  {% with unit=meter.unit|default:receipt.unit dn=meter.two_zones mode=meter.mode %}
-                  {# A day / night meter: day and night in the same row, «д» / «н» inside the fields (stacked on a narrow card). #}
-                  <div class="mread{% if dn %} is-dn{% endif %}">
-                    <div class="mread-who">
-                      <span class="fade">{{ meter.who }}{% if meter.name != receipt.name %}<span class="mread-kind">·&nbsp;{{ meter.name }}</span>{% endif %}</span>
-                      <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} / {{ meter.tariff_text }}{% endif %}</span>
-                    </div>
-                    <span class="mread-prev">{% if mode != 'usage' %}<span>{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}</span>{% endif %}{% endif %}</span>
-                    <span class="mread-ins">
-                      {% if mode == 'usage' %}
-                        <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="use-{{ meter.pk }}"
-                               value="{{ reading.usage|num }}" placeholder=" " aria-label="{{ meter.who }}: расход{% if dn %} днём{% endif %} за {{ month_name }}"></label>
-                        {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in" data-zone="н">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="usen-{{ meter.pk }}"
-                               value="{{ reading.usage_night|num }}" placeholder=" " aria-label="{{ meter.who }}: расход ночью за {{ month_name }}">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
-                      {% else %}
-                        <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="cur-{{ meter.pk }}"
-                               value="{{ reading.current|num }}" placeholder=" " aria-label="{{ meter.who }}: показание{% if dn %} днём{% endif %} сейчас"></label>
-                        {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in" data-zone="н">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="curn-{{ meter.pk }}"
-                               value="{{ reading.current_night|num }}" placeholder=" " aria-label="{{ meter.who }}: показание ночью сейчас">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
-                      {% endif %}
-                    </span>
-                    <span class="mread-use">
-                      {% if mode == 'usage' %}
-                        {% if reading.bad %}<span id="use-live-{{ meter.pk }}" data-live class="bad-dot" title="Расход не может быть меньше нуля" aria-label="Расход не может быть меньше нуля"></span>{% else %}<span id="use-live-{{ meter.pk }}" data-live{% if reading.usage is not None or reading.last_usage is not None %} class="badge{% if reading.usage is None %} mread-last{% endif %}"{% endif %}>{% if reading.usage is not None %}{{ reading.usage|num }} {{ unit }}{% elif reading.last_usage is not None %}{{ reading.last_usage|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
-                        {% if dn %}{% if reading.bad_night %}<span id="usen-live-{{ meter.pk }}" data-live class="bad-dot" title="Расход не может быть меньше нуля" aria-label="Расход не может быть меньше нуля"></span>{% else %}<span id="usen-live-{{ meter.pk }}" data-live{% if reading.usage_night is not None or reading.last_usage_night is not None %} class="badge{% if reading.usage_night is None %} mread-last{% endif %}"{% endif %}>{% if reading.usage_night is not None %}{{ reading.usage_night|num }} {{ unit }}{% elif reading.last_usage_night is not None %}{{ reading.last_usage_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}{% endif %}
-                      {% else %}
-                        {% if reading.bad %}<span id="cons-{{ meter.pk }}" data-live class="bad-dot" title="Стало меньше, чем было — проверьте показание" aria-label="Стало меньше, чем было — проверьте показание"></span>{% else %}<span id="cons-{{ meter.pk }}" data-live{% if reading.consumption is not None %} class="badge"{% endif %}>{% if reading.consumption is not None %}{{ reading.consumption|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
-                        {% if dn %}{% if reading.bad_night %}<span id="consn-{{ meter.pk }}" data-live class="bad-dot" title="Стало меньше, чем было — проверьте показание" aria-label="Стало меньше, чем было — проверьте показание"></span>{% else %}<span id="consn-{{ meter.pk }}" data-live{% if reading.consumption_night is not None %} class="badge"{% endif %}>{% if reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}{% endif %}
-                      {% endif %}
-                    </span>
-                  </div>
-                  {% endwith %}
-                {% endfor %}
+                <span class="mread-prev">
+                  {% if mode == 'usage' %}<span class="mi-usage-note">за&nbsp;мес.</span>
+                  {% else %}<span>{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}</span>{% endif %}{% endif %}
+                </span>
+                <span class="mread-ins">
+                  {% if mode == 'usage' %}
+                    <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="use-{{ meter.pk }}"
+                           value="{{ reading.usage|num }}" placeholder=" " aria-label="{{ meter.who }}: расход{% if dn %} днём{% endif %} за {{ month_name }}"></label>
+                    {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in" data-zone="н">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="usen-{{ meter.pk }}"
+                           value="{{ reading.usage_night|num }}" placeholder=" " aria-label="{{ meter.who }}: расход ночью за {{ month_name }}">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
+                  {% else %}
+                    <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="cur-{{ meter.pk }}"
+                           value="{{ reading.current|num }}" placeholder=" " aria-label="{{ meter.who }}: показание{% if dn %} днём{% endif %} сейчас"></label>
+                    {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in" data-zone="н">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="curn-{{ meter.pk }}"
+                           value="{{ reading.current_night|num }}" placeholder=" " aria-label="{{ meter.who }}: показание ночью сейчас">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
+                  {% endif %}
+                </span>
+                <span class="mread-use">
+                  {% if mode == 'usage' %}
+                    <span id="use-live-{{ meter.pk }}" data-live{% if reading.bad %} class="bad-dot" title="Расход не может быть меньше нуля"{% elif reading.usage is not None %} class="badge"{% elif reading.last_usage is not None %} class="badge mread-last"{% endif %}>{% if reading.bad %}{% elif reading.usage is not None %}{{ reading.usage|num }} {{ unit }}{% elif reading.last_usage is not None %}{{ reading.last_usage|num }} {{ unit }}{% else %}—{% endif %}</span>
+                    {% if dn %}<span id="usen-live-{{ meter.pk }}" data-live{% if reading.bad_night %} class="bad-dot" title="Расход не может быть меньше нуля"{% elif reading.usage_night is not None %} class="badge"{% elif reading.last_usage_night is not None %} class="badge mread-last"{% endif %}>{% if reading.bad_night %}{% elif reading.usage_night is not None %}{{ reading.usage_night|num }} {{ unit }}{% elif reading.last_usage_night is not None %}{{ reading.last_usage_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
+                  {% else %}
+                    <span id="cons-{{ meter.pk }}" data-live{% if reading.bad %} class="bad-dot" title="Стало меньше, чем было — проверьте показание"{% elif reading.consumption is not None %} class="badge"{% endif %}>{% if reading.bad %}{% elif reading.consumption is not None %}{{ reading.consumption|num }} {{ unit }}{% else %}—{% endif %}</span>
+                    {% if dn %}<span id="consn-{{ meter.pk }}" data-live{% if reading.bad_night %} class="bad-dot" title="Стало меньше, чем было — проверьте показание"{% elif reading.consumption_night is not None %} class="badge"{% endif %}>{% if reading.bad_night %}{% elif reading.consumption_night is not None %}{{ reading.consumption_night|num }} {{ unit }}{% else %}—{% endif %}</span>{% endif %}
+                  {% endif %}
+                </span>
               </div>
               {% endwith %}
-              {% endif %}
-            {% else %}
-              {% include "properties/_month_sum.html" %}
-            {% endif %}
-          </article>
-          {% endwith %}
-        {% endfor %}
-
-        <div class="month-actions">
-          <button type="submit" class="btn btn-ghost btn-auto btn-sm" data-month-submit>Сохранить</button>
-          <span class="save-status" data-save-status aria-live="polite"></span>
+            {% endfor %}
+            </div>
+            {% endwith %}
+          {% endfor %}
         </div>
-      </form>
-    {% else %}
-      <div class="receipts-start">
-        <h2>Какие услуги оплачиваете по объекту?</h2>
-        <p>Нажмите на каждую — и один раз выберите, как её делить. Дальше останется только вводить суммы и показания.</p>
-        {% include "billing/_kind_chips.html" %}
       </div>
     {% endif %}
-  </section>
+
+    {% if input.auto %}
+      <div class="form-section">
+        <div class="form-section-head"><h2>Считается само</h2></div>
+        <div class="mi-body" id="mi-auto" data-live>
+          {% for entry in input.auto %}
+            <div class="mread">
+              <div class="mread-who">
+                <span class="mi-name"><span class="fade">{{ entry.receipt.name }}</span><a href="{% url 'receipt_edit' entry.receipt.pk %}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
+                {% if entry.receipt.provider %}<span class="mread-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
+              </div>
+              <span></span>
+              <span class="mi-total">{% if entry.total is not None %}{{ entry.total|floatformat:"2g" }}&nbsp;{{ entry.receipt.currency_symbol }}{% else %}—{% endif %}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="month-actions">
+      <button type="submit" class="btn btn-ghost btn-auto btn-sm" data-month-submit>Сохранить</button>
+      <span class="save-status" data-save-status aria-live="polite"></span>
+    </div>
+  </form>
+  {% else %}
+    <div class="receipts-start">
+      <h2>Какие услуги оплачиваете по объекту?</h2>
+      <p>Нажмите на каждую — и один раз выберите, как её делить. Дальше останется только вводить суммы и показания.</p>
+      {% include "billing/_kind_chips.html" %}
+    </div>
+  {% endif %}
+</section>
+  {% endblock %}
  </div>
 
-  {# ---------- 3. The bill of the selected payer ---------- #}
-  <aside class="obj-bill" id="obj-bill" data-live>
-    {% for payer in bill.payers %}
-      {% include "billing/_bill.html" with title=payer.tenant.name active=payer.tenant.pk|stringformat:'s' %}
-    {% endfor %}
-    {% if bill.owner.lines or property.is_owner_used or not bill.payers %}
-      {% include "billing/_bill.html" with payer=bill.owner title="Остаётся на вас" active="0" %}
+  {# ---------- 3. Whose bill (its own block) and the bill of the selected payer; the column stays on screen ---------- #}
+  <div class="obj-side">
+    {% if bill.payers|length > 1 or bill.payers and owner_tab %}
+      <nav class="bill-switch" id="bill-switch" data-live aria-label="Чей счёт показать">
+        <span class="bill-switch-cap">Чей счёт</span>
+        {% for payer in bill.payers %}
+          <a href="?month={{ month }}&tenant={{ payer.tenant.pk }}" class="bill-tab{% if payer.tenant.pk == selected_tenant %} is-active{% endif %}" data-payer="{{ payer.tenant.pk }}" title="{{ payer.tenant.name }}"><span class="fade">{{ payer.tenant.name }}</span><span class="bill-tab-sum">{{ payer.total|floatformat:"2g" }}&nbsp;₽</span></a>
+        {% endfor %}
+        {% if owner_tab %}
+          <a href="?month={{ month }}&tenant=0" class="bill-tab{% if selected_tenant == 0 %} is-active{% endif %}" data-payer="0"><span class="fade">Остаётся на вас</span><span class="bill-tab-sum">{{ bill.owner.total|floatformat:"2g" }}&nbsp;₽</span></a>
+        {% endif %}
+      </nav>
     {% endif %}
-  </aside>
+    <aside class="obj-bill" id="obj-bill" data-live>
+      {% for payer in bill.payers %}
+        {% include "billing/_bill.html" with title=payer.tenant.name active=payer.tenant.pk|stringformat:'s' %}
+      {% endfor %}
+      {% if bill.owner.lines or property.is_owner_used or not bill.payers %}
+        {% include "billing/_bill.html" with payer=bill.owner title="Остаётся на вас" active="0" %}
+      {% endif %}
+    </aside>
+  </div>
 </div>
 </div>
 {% endblock %}

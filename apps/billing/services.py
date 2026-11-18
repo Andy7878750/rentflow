@@ -1917,6 +1917,61 @@ def month_bill(property_obj, month):
     )
 
 
+@dataclass
+class SumRow:
+    """A number typed in by hand this month: a receipt's sum or a formula's «каждый месяц» number."""
+
+    entry: object
+    sub: str          # under the name: the provider, or what the number is
+    field: str        # the posted name: amount-<receipt> / fnum-<number>
+    value: object
+    unit: str
+
+
+@dataclass
+class MonthInput:
+    """The compact input page (2026-11-18): what to type this month, not the services one by one."""
+
+    sums: list = field(default_factory=list)     # [SumRow]
+    meters: list = field(default_factory=list)   # [(entry, [(meter, Reading)])] — each meter once
+    auto: list = field(default_factory=list)     # [entry] counted by themselves: fixed, by area, formulas
+
+
+def month_input(bill):
+    """Regroup the month's entries for the compact page: sums to type, meter readings, the rest.
+    A meter is shown once (one meter — one field), in the first service that takes its readings;
+    a formula only reads meters, so it never shows them."""
+    result = MonthInput()
+    seen = set()
+
+    def add_meters(entry):
+        rows = [(meter, reading) for meter, reading in entry.readings if meter.pk not in seen]
+        seen.update(meter.pk for meter, _ in rows)
+        if rows:
+            result.meters.append((entry, rows))
+
+    for entry in bill.entries:
+        receipt = entry.receipt
+        if receipt.amount_mode == Receipt.AmountMode.FORMULA:
+            numbers = getattr(entry, 'month_numbers', [])
+            for number, value in numbers:
+                result.sums.append(SumRow(entry, number.label, f'fnum-{number.pk}', value, number.unit))
+            if not numbers:
+                result.auto.append(entry)
+            continue
+        if receipt.metered:
+            add_meters(entry)
+            continue
+        if receipt.amount_mode in (Receipt.AmountMode.FIXED, Receipt.AmountMode.RATE):
+            result.auto.append(entry)
+        else:
+            amount = entry.amount.amount if entry.amount else None
+            result.sums.append(SumRow(entry, receipt.provider, f'amount-{receipt.pk}', amount, receipt.currency_symbol))
+        if by_usage(receipt):
+            add_meters(entry)
+    return result
+
+
 @transaction.atomic
 def save_month_input(property_obj, month, data):
     """Store the monthly input posted from the object page.
