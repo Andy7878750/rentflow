@@ -151,7 +151,7 @@
             {# Meters of several kinds in one service: the group is neutral, each row has its own kind's icon. #}
             <div class="mi-meters rk-{% if entry.mixed %}custom{% else %}{{ receipt.kind }}{% endif %}{% if entry.mixed %} is-mixed{% endif %}">
             <div class="mi-group{% if entry.total is None %} is-missing{% endif %}" id="mi-g-{{ receipt.pk }}" data-live>
-              <span class="receipt-icon rk-{% if entry.mixed %}custom{% else %}{{ receipt.kind }}{% endif %}"><svg class="icon"><use href="#{% if entry.mixed %}i-gauge{% else %}i-r-{{ receipt.kind }}{% endif %}"/></svg></span>
+              <span class="receipt-icon rk-{% if entry.mixed %}custom{% else %}{{ receipt.kind }}{% endif %}"><svg class="icon"><use href="#{% if entry.mixed or receipt.kind == 'custom' %}i-gauge{% else %}i-r-{{ receipt.kind }}{% endif %}"/></svg></span>
               <span class="fade">{{ receipt.name }}</span><a href="{% url 'service_window' property.pk %}?svc={{ receipt.pk }}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a>
               <span class="missing-dot" title="Ещё не всё введено" aria-hidden="true"></span>
             </div>

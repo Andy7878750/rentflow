@@ -4692,6 +4692,8 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--rk, var(--color-text-muted)) 5%, #fff);
 }
+/* Meters under an own name (a group of their own) and mixed ones — plain grey (2026-11-20, the user's wish) */
+.mi-meters.rk-custom { background: #f1f2f4; }
 .mi-meters .mread { padding: 4px 0; border-bottom: 0; }
 .mi-meters .mread-who { padding-left: 30px; font-size: 12px; }
 .mi-meters .mread-meta { font-size: 11px; }

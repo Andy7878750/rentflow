@@ -304,8 +304,9 @@ METER_KINDS = [
     (Receipt.Kind.GAS, 'Газ', 'м³'),
     (Receipt.Kind.HEATING, 'Отопление', 'Гкал'),
 ]
-# The «Что за счётчик» menu offers only these; gas and heating meters keep their names when a template sets them.
-MENU_METER_KINDS = {Receipt.Kind.ELECTRICITY, Receipt.Kind.WATER, Receipt.Kind.HOT_WATER}
+# The «Что меряет» menu offers only these (gas too since 2026-11-20); the rest — the owner's own names, and every own
+# name is a group of its own (meter_kind_key «custom:<имя>»): a service «По счётчикам» takes one group.
+MENU_METER_KINDS = {Receipt.Kind.ELECTRICITY, Receipt.Kind.WATER, Receipt.Kind.HOT_WATER, Receipt.Kind.GAS}
 # The name of a meter nobody named — not offered in the menu as the owner's own variant.
 DEFAULT_METER_NAME = 'Счётчик'
 # Services whose meters are of another kind: sewage is counted on the water meters, etc.

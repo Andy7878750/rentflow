@@ -34,7 +34,12 @@
     return '<svg class="icon ' + (cls || '') + '" aria-hidden="true"><use href="#i-r-' + esc(kind || 'custom') + '"/></svg>';
   }
   function kindIcon(kind) { return '<span class="sv-kind rk-' + esc(kind || 'custom') + '">' + sprite(kind) + '</span>'; }
-  function meterIcon(kind) { return '<span class="sv-mkind mk-' + esc(kind || 'custom') + '">' + sprite(kind) + '</span>'; }
+  // a meter under an own name — the gauge (its group is grey), not the «document» of an own service
+  function meterIcon(kind) {
+    kind = kind || 'custom';
+    var icon = kind === 'custom' ? '<svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg>' : sprite(kind);
+    return '<span class="sv-mkind mk-' + esc(kind) + '">' + icon + '</span>';
+  }
   function num(n) { return n == null ? '' : Number(n).toLocaleString('ru-RU', { maximumFractionDigits: 3 }); }
   function money(n) {
     n = Math.round(n * 100 + 1e-6) / 100;
