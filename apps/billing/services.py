@@ -1442,6 +1442,8 @@ def bill_groups(payer):
             text = _SPLIT_GROUP.get(split, '')
             if split == Receipt.Split.SHARES and payer.tenant.share_percent is not None:
                 text += f' {fmt_number(payer.tenant.share_percent)}%'
+            if split == Receipt.Split.AREA and payer.tenant.area is not None:
+                text += f' {fmt_number(payer.tenant.area)}{NBSP}м²'  # по м² — in м², not % (2026-11-20)
             if text:
                 title += ' · ' + text
         groups.append({'title': title, 'lines': common, 'total': sum((line.amount for line in common), Decimal('0'))})
@@ -1698,8 +1700,9 @@ def _usage_split(receipt, entry, payers, owner):
 
 
 def meter_payer_text(meter, tenants):
-    """Who pays by the meter, for its row on the object page: the tenant, «Платите вы», or a common one divided —
-    «Общий · Салон 45% · Кофе 55%» (whoever doesn't pay is left out; the rest — «вы N%»)."""
+    """Who pays by the meter, for its row on the object page: the tenant, «Платите вы», or a common one divided, as it
+    is divided: «Общий · Салон 45% · Кофе 55%», «Общий · по м² · Салон 120 м² · Кофе 80 м²», «Общий · поровну · Салон 1/3 ·
+    Кофе 1/3 · вы 1/3» (whoever doesn't pay is left out; the owner's part — «вы …»)."""
     if meter.tenant_id:
         return meter.tenant.name
     if meter.vacant:
@@ -1708,8 +1711,20 @@ def meter_payer_text(meter, tenants):
         return 'Общий'
     off = {tenant.pk for tenant in meter.excluded.all()}
     paying = [tenant for tenant in tenants if tenant.pk not in off]
-    if meter.split == Receipt.Split.EQUAL and not off:
-        return 'Общий · поровну'
+    if meter.split == Receipt.Split.EQUAL:
+        if not off:
+            return 'Общий · поровну'
+        count = len(tenants) if meter.owner_takes else len(paying)
+        parts = [f'{tenant.name} 1/{count}' for tenant in paying]
+        if meter.owner_takes and paying:
+            parts.append(f'вы {len(off)}/{count}')
+        return 'Общий · поровну · ' + ' · '.join(parts)
+    if meter.split == Receipt.Split.AREA:
+        parts = [f'{tenant.name} {fmt_number(tenant.area or 0)}{NBSP}м²' for tenant in paying]
+        rest = (tenants[0].property.area or 0) - sum((tenant.area or 0 for tenant in paying), Decimal('0'))
+        if meter.owner_takes and rest > 0:
+            parts.append(f'вы {fmt_number(rest)}{NBSP}м²')
+        return 'Общий · по м² · ' + ' · '.join(parts)
     lines = _split(Decimal('100'), Receipt(currency='RUB'), paying, tenants[0].property, all_tenants=tenants,
                    how=meter.split, owner_takes=meter.owner_takes)
     parts = [f'{tenant.name} {fmt_number(lines[tenant.pk].amount)}%' for tenant in paying if tenant.pk in lines]

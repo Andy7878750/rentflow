@@ -79,6 +79,17 @@ class MeterTariffTests(TestCase):
         meter.save()
         self.assertEqual(self.totals(OCT), ({'Виктор': Decimal('100.00'), 'Владислав': 0}, 0))
 
+    def test_common_meter_payer_text_as_it_is_divided(self):
+        tenants = [self.viktor, self.vlad]
+        meter = self.meter(split='shares')
+        self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · Виктор 45% · Владислав 55%')
+        meter.split = 'area'
+        self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · по м² · Виктор 27\xa0м² · Владислав 33\xa0м²')
+        meter.excluded.set([self.vlad])
+        self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · по м² · Виктор 27\xa0м² · вы 33\xa0м²')
+        meter.split = 'equal'
+        self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · поровну · Виктор 1/2 · вы 1/2')
+
     def test_tenant_and_common_meters_in_one_service(self):
         own = self.meter(self.viktor)
         common = self.meter(split='equal')

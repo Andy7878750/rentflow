@@ -145,6 +145,20 @@
       r.owner = Math.max(0, 1 - given);
       return r;
     }
+    function partText(how, r, t) {
+      if (how === 'area') return t.area != null ? num(t.area) + ' м²' : '— м²';
+      if (how === 'equal') return '1/' + (r.takes ? T.length : T.length - r.off);
+      return Math.round(r.k[t.id] * 1000) / 10 + '%';
+    }
+    function ownerPartText(how, r) {
+      if (r.owner <= 0.00001) return '—';
+      if (how === 'area') {
+        var area = S.property.area || T.reduce(function (a, t) { return a + (t.area || 0); }, 0);
+        return num(Math.round(r.owner * area * 100) / 100) + ' м²';
+      }
+      if (how === 'equal') return r.off + '/' + T.length;
+      return Math.round(r.owner * 1000) / 10 + '%';
+    }
     function splitTop(how, attr) {
       return '<div class="sv-split-top">' + svg(CP_ICON.people) + '<div class="sv-how">' + SPLITS.map(function (x) {
         return '<button type="button" ' + attr + '="' + x[0] + '"' + (x[0] === how ? ' class="is-on"' : '') + '>' + x[1] + '</button>';
@@ -238,7 +252,7 @@
       if (m.who === 'common') {
         var how = m.split || 'shares', r = shares(how, m.excluded, m.owner_takes);
         var paying = T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; });
-        var parts = paying.slice(0, 3).map(function (t) { return esc(t.name) + ' ' + Math.round(r.k[t.id] * 1000) / 10 + '%'; });
+        var parts = paying.slice(0, 3).map(function (t) { return esc(t.name) + ' ' + partText(how, r, t); });
         if (paying.length > 3) parts.push('ещё ' + (paying.length - 3));
         return 'Делим ' + SPLITS.filter(function (x) { return x[0] === how; })[0][1] + (parts.length ? ' · ' + parts.join(' · ') : '') +
           ' · <button type="button" class="sv-link" data-meter="' + m.id + '">изменить</button>';
@@ -279,9 +293,9 @@
       var body = splitTop(d.split, 'data-msplit') + T.map(function (t, i) {
         var on = d.excluded.indexOf(t.id) < 0;
         return '<div class="sv-gp-row sv-mshare' + (on ? '' : ' is-off') + '"><span class="sv-no">' + (i + 1) + '</span><span class="sv-who fade">' + esc(t.name) + '</span>' +
-          '<span class="sv-pc">' + (on ? Math.round(r.k[t.id] * 1000) / 10 + '%' : 'не платит') + '</span>' + sw(on, 'data-mpay="' + t.id + '"', t.name + ' платит') + '</div>';
+          '<span class="sv-pc">' + (on ? partText(d.split, r, t) : 'не платит') + '</span>' + sw(on, 'data-mpay="' + t.id + '"', t.name + ' платит') + '</div>';
       }).join('') + '<div class="sv-gp-row sv-mshare is-owner' + (r.canPass && r.takes ? ' is-live' : '') + '"><span></span><span class="sv-who">Остаётся на вас</span>' +
-        '<span class="sv-pc">' + (r.owner > 0.00001 ? Math.round(r.owner * 1000) / 10 + '%' : '—') + '</span>' +
+        '<span class="sv-pc">' + ownerPartText(d.split, r) + '</span>' +
         (r.canPass ? sw(r.takes, 'data-mowner', 'Остаток на вас') : '<span></span>') + '</div>';
       return '<div class="sv-back" data-meter-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Общий счётчик — делим">' +
         '<div class="sv-mw-head">' + meterIcon(m.kind) + '<b>№ ' + esc(m.serial || '—') + '</b><span class="sv-sub">общий — делим</span>' +
