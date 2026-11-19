@@ -1,4 +1,4 @@
-/* «Услуги · <объект>» (2026-11-19): every service of the object in one window, saved by itself.
+/* «Услуги · <объект>» (2026-11-19): every service of the object in one window, saved by «Сохранить» only (2026-11-20).
    Left: «Начисление» — a click starts a NEW service charged so; «Услуги объекта» — the ready ones.
    Right: the chosen service. The server gives the state (svc-state) and takes one service per change. */
 (function () {
@@ -58,10 +58,13 @@
     var T = S.tenants;
     var current = null, editing = false, unitOpen = false, unitNew = '', addedUnits = [];
     var meterOpen = null, draft = null, exampleOpen = false, dirty = false, confirmDelete = false;
+    // changed — there are changes not saved yet; asking — «Сохранить изменения?» before leaving this service;
+    // pickOpen — the meter whose «Кто платит» menu is open; snap — the meters as they were (to undo «Не сохранять»).
+    var changed = false, asking = null, pickOpen = null, snap = copy(S.meters);
     // After «Сохранить» or «Удалить» — a new service «По квитанции», ready for its name (the user's wish, 2026-11-19).
     function nextNew() {
       startNew('receipt');
-      unitOpen = false; exampleOpen = false; meterOpen = null; confirmDelete = false;
+      unitOpen = false; exampleOpen = false; meterOpen = null; confirmDelete = false; pickOpen = null;
       render(); pane.scrollTop = 0;
       var input = pane.querySelector('[data-f="name"]'); if (input) input.focus();
     }
@@ -73,13 +76,34 @@
 
     function startNew(mode) {
       current = { id: null, isNew: true, kind: 'custom', name: '', provider: '', mode: mode, split: 'shares', excluded: [],
-                  owner_takes: true, fixed: null, rate: null, unit: 'м²', volume: null, meters: [] };
-      if (mode === 'meters') {
-        // All the object's free meters switched on: the lazy landlord just names the service.
-        current.meters = S.meters.filter(function (m) { return !m.service; }).map(function (m) { return m.id; });
-        if (S.start && S.start.meter) current.meters = [S.start.meter];
+                  owner_takes: true, fixed: null, rate: null, unit: 'м²', volume: null, meters: [], group: null, autoName: false };
+      changed = false; snap = copy(S.meters);
+      if (mode === 'meters' && S.start && S.start.meter) {
+        var m = byId(S.meters, S.start.meter);
+        if (m && !busyGroup(m.group)) pickGroup(m.group);
       }
       editing = true;
+    }
+    // «По счётчикам» (2026-11-20): one service — one kind of meters. A group is busy when its meters are in another service.
+    function groupOf(key) { return S.groups.filter(function (g) { return g.key === key; })[0]; }
+    function busyGroup(key) {
+      var g = groupOf(key);
+      if (!g) return null;
+      var other = S.meters.filter(function (m) { return g.meters.indexOf(m.id) >= 0 && m.service && m.service !== current.id; })[0];
+      return other ? other.service : null;
+    }
+    function pickGroup(key) {
+      var g = groupOf(key);
+      current.group = key; current.meters = g.meters.slice(); current.kind = g.kind;
+      // A meter in no service yet: «кто платит» is not chosen (the owner when there are no tenants).
+      S.meters.forEach(function (m) { if (g.meters.indexOf(m.id) >= 0 && !m.service) m.who = T.length ? '' : 'owner'; });
+      if (!String(current.name || '').trim() || current.autoName) { current.name = g.name; current.autoName = true; }
+    }
+    function mark() { changed = true; status('Есть несохранённые изменения'); }
+    // Leaving the service with changes not saved: ask first (go — what to do after).
+    function leave(go) {
+      if (!changed) { go(); return; }
+      asking = go; renderPane();
     }
 
     // ---------- the left menu ----------
@@ -185,27 +209,64 @@
     function block(title, body) { return '<div class="sv-sec"><h3>' + title + '</h3>' + body + '</div>'; }
 
     // ---------- «По счётчикам» (вариант 6): все счётчики объекта, кто платит — в окне счётчика ----------
-    function meterPayer(m) {
-      if (m.who === 'common') return 'Общий · ' + SPLITS.filter(function (x) { return x[0] === m.split; })[0][1];
-      if (m.who === 'owner') return 'Вы';
-      return tname(m.who) || 'Общий · по долям';
+    function payerName(m) {
+      if (m.who === 'common') return 'Общий — делим';
+      if (m.who === 'owner') return 'Платите вы';
+      return tname(m.who);
     }
-    function meterList(s) {
-      var rows = S.meters.map(function (m) {
-        var taken = m.service && m.service !== s.id;
-        var on = !taken && s.meters.indexOf(m.id) >= 0;
-        var cls = taken ? ' is-taken' : on ? ' is-click' : ' is-off';
-        return '<div class="sv-gp-row sv-mrow' + cls + '"' + (on ? ' data-meter="' + m.id + '" tabindex="0"' : '') + '>' +
-          '<span class="sv-who">' + meterIcon(m.kind) + '<span class="sv-t">№ ' + esc(m.serial || '—') + '</span>' +
-          '<span class="sv-sub fade">' + esc(m.name) + (m.dn ? ' · день / ночь' : '') + '</span></span>' +
-          '<span class="sv-tariff">' + (m.tariff ? esc(m.tariff) : '<span class="sv-none">нет тарифа</span>') + '</span>' +
-          '<span class="sv-payer"><span class="fade">' + (taken ? 'в «' + esc(m.service_name) + '»' : on ? esc(meterPayer(m)) : '—') + '</span>' +
-          (on ? '<svg class="icon sv-chev-r"><use href="#i-chevron-right"/></svg>' : '') + '</span>' +
-          (taken ? '<span></span>' : sw(on, 'data-meter-on="' + m.id + '"', 'Счётчик № ' + (m.serial || '') + ' в услуге')) + '</div>';
+    function groupTiles(s) {
+      var tiles = S.groups.map(function (g) {
+        var busy = busyGroup(g.key);
+        var list = g.meters.map(function (id) { return '№ ' + (byId(S.meters, id).serial || '—'); }).join(', ');
+        var n = g.meters.length, word = n === 1 ? 'счётчик' : n < 5 ? 'счётчика' : 'счётчиков';
+        if (busy) {
+          var svc = byId(S.services, busy);
+          return '<button type="button" class="sv-tile is-busy" data-svc="' + busy + '">' + meterIcon(g.kind) +
+            '<span class="sv-tile-t"><b class="fade">' + esc(g.name) + '</b><span class="fade">уже в «' + esc(svc ? svc.name : '') + '» · открыть</span></span></button>';
+        }
+        return '<button type="button" class="sv-tile' + (s.group === g.key ? ' is-on' : '') + '" data-group="' + esc(g.key) + '">' + meterIcon(g.kind) +
+          '<span class="sv-tile-t"><b class="fade">' + esc(g.name) + '</b><span class="fade">' + n + ' ' + word + ' · ' + esc(list) + '</span></span></button>';
       }).join('');
-      if (!S.meters.length) rows = '<div class="sv-gp-row"><span class="sv-who">У объекта пока нет счётчиков</span></div>';
-      return '<div class="sv-gp"><div class="sv-gp-row sv-mrow sv-head"><span>Счётчик</span><span class="sv-r">Тариф</span><span>Кто платит</span><span class="sv-r">Вкл.</span></div>' +
-        rows + '</div><div><a href="' + esc(S.urls.object) + '" data-modal class="sv-add-link">+ Добавить счётчик объекта</a></div>';
+      if (!S.groups.length) tiles = '<p class="sv-note">У объекта пока нет счётчиков.</p>';
+      return '<div class="sv-tiles">' + tiles + '</div>';
+    }
+    // «Кто платит» (вариант Б, 2026-11-20): a table — Счётчик | Кто платит | Ввод показаний; under each row the place
+    // for one line («Делим по долям…» / «Остаётся на вас») is always kept: nothing jumps.
+    function meterNote(m) {
+      if (m.who === 'common') {
+        var how = m.split || 'shares', r = shares(how, m.excluded, m.owner_takes);
+        var parts = T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; }).map(function (t) { return esc(t.name) + ' ' + Math.round(r.k[t.id] * 1000) / 10 + '%'; });
+        return 'Делим ' + SPLITS.filter(function (x) { return x[0] === how; })[0][1] + (parts.length ? ' · ' + parts.join(' · ') : '') +
+          ' · <button type="button" class="sv-link" data-meter="' + m.id + '">изменить</button>';
+      }
+      if (m.who === 'owner' && T.length) return 'В счета арендаторам не попадает — «Остаётся на вас»';
+      return '';
+    }
+    function payerMenu(m) {
+      var opt = function (v, label) {
+        var sel = String(m.who) === String(v);
+        return '<li class="sv-sel-row' + (sel ? ' is-selected' : '') + '"><button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':' + v + '">' +
+          '<span>' + esc(label) + '</span>' + svg(CP_ICON.check, 'sv-ck') + '</button></li>';
+      };
+      return '<div class="sv-sel-menu sv-payer-menu"><ul>' + T.map(function (t) { return opt(t.id, t.name); }).join('') +
+        (T.length ? '<li class="sv-sel-sep"></li>' + opt('common', 'Общий — делим') : '') + opt('owner', 'Платите вы') + '</ul></div>';
+    }
+    function meterTable(s) {
+      if (!s.group) return '<div class="sv-mt-ph">Сначала выберите, что считаем</div>';
+      var rows = s.meters.map(function (id) {
+        var m = byId(S.meters, id), empty = m.who === '' || m.who == null;
+        return '<div class="sv-mt-row"><div class="sv-mt-line">' + meterIcon(m.kind) +
+          '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="fade' + (m.tariff ? '' : ' sv-none') + '">' +
+          esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span></span>' +
+          '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '">' +
+          '<span class="fade">' + (empty ? 'Выберите' : esc(payerName(m))) + '</span><svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
+          (pickOpen === m.id ? payerMenu(m) : '') + '</span>' +
+          '<div class="sv-seg sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
+          '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div>' +
+          '</div><div class="sv-mt-note">' + meterNote(m) + '</div></div>';
+      }).join('');
+      return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>' +
+        '<div><a href="' + esc(S.urls.object) + '" data-modal class="sv-add-link">+ Добавить счётчик объекта</a></div>';
     }
     function meterWindow() {
       var m = byId(S.meters, meterOpen), d = draft, body;
@@ -279,13 +340,13 @@
         '<span class="sv-name">' + esc(s.name || 'Новая услуга') + '</span>' +
         (s.provider ? '<span class="sv-prov fade">· ' + esc(s.provider) + '</span>' : '') +
         '<button type="button" class="head-icon" data-edit title="Название и поставщик" aria-label="Название и поставщик"><svg class="icon"><use href="#i-edit"/></svg></button>' +
-        '<span class="sv-saved" data-saved>' + (s.id ? 'Сохранено' : 'Введите название — услуга сохранится сама') + '</span>' +
+        '<span class="sv-saved" data-saved>' + (changed ? 'Есть несохранённые изменения' : s.id ? 'Сохранено' : '') + '</span>' +
         (s.id ? '<button type="button" class="head-icon sv-del" data-delete title="Удалить услугу" aria-label="Удалить услугу">' +
           '<svg class="icon"><use href="#i-trash"/></svg></button>' : '') + '</div>' +
         // The same fields as everywhere (properties/_field.html): the label over a 38px box.
-        (editing ? '<div class="sv-top-edit"><div class="field fl"><label for="sv-name">Название в счёте</label>' +
+        (editing ? '<div class="sv-top-edit"><div class="field fl"><label for="sv-name">Название в счёте <span class="req">*</span></label>' +
           '<input type="text" id="sv-name" data-f="name" value="' + esc(s.name) + '" placeholder=" " maxlength="100" autocomplete="off"></div>' +
-          '<div class="field fl"><label for="sv-provider">Поставщик</label>' +
+          '<div class="field fl"><label for="sv-provider">Поставщик <span class="req">*</span></label>' +
           '<input type="text" id="sv-provider" data-f="provider" value="' + esc(s.provider) + '" placeholder=" " maxlength="150" autocomplete="off"></div></div>' : '') +
         '</div><div class="sv-body">';
 
@@ -297,7 +358,7 @@
         b = cp('area', '<span>Тариф</span>' + field('rate', s.rate, '₽', 'w-tariff') + '<span>за</span>' + unitPick(s) +
           '<span class="sv-op">×</span>' + field('volume', v, s.unit, 'w-vol', '0') + '<span class="sv-cp-total">= ' + money(t) + '</span>');
       }
-      if (s.mode === 'meters') b = cp('meters', '<span>Показания вводите <b>каждый месяц</b>, тариф — у счётчика (в окне объекта).</span>');
+      if (s.mode === 'meters') b = cp('meters', '<span>Каждый платит по своему счётчику: <b>расход</b> <span class="sv-op">×</span> <b>тариф счётчика</b>. Общий счётчик — делим.</span>');
       if (s.mode === 'formula') {
         b = cp('meters', '<span class="fade sv-formula">' + esc(s.formula || 'Формула ещё не собрана') + '</span>' +
           '<a href="' + esc(s.id ? s.edit_url : S.urls.formula_new) + '" data-modal class="btn btn-primary btn-auto btn-sm">' + (s.id ? 'Изменить формулу' : 'Собрать формулу') + '</a>');
@@ -308,7 +369,9 @@
       if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
         h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (s.mode === 'meters') {
-        h += block('Счётчики объекта', meterList(s));
+        if (s.isNew) h += block('Что считаем', groupTiles(s));
+        var todo = s.meters.filter(function (id) { var m = byId(S.meters, id); return m.who === '' || m.who == null; }).length;
+        h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));
       }
       if (s.mode !== 'formula') {
         h += '<button type="button" class="sv-ex-link" data-example>' + svg(CP_ICON.eye) + 'См. пример на странице объекта</button>';
@@ -331,23 +394,36 @@
           '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-del-close>Отмена</button>' +
           '<button type="button" class="btn btn-danger btn-auto" data-del-yes>Удалить</button></div></div></div>';
       }
+      if (asking) {
+        h += '<div class="sv-back" data-ask-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Сохранить изменения?">' +
+          '<div class="sv-mw-head"><b>Сохранить изменения?</b><button type="button" class="sv-x" data-ask-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
+          '<div class="sv-mw-body"><p class="sv-note">В «' + esc(s.name || 'Новая услуга') + '» есть несохранённые изменения.</p></div>' +
+          '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-ask-drop>Не сохранять</button>' +
+          '<button type="button" class="btn btn-primary btn-auto" data-ask-save>Сохранить</button></div></div></div>';
+      }
       if (meterOpen != null) h += meterWindow();
       pane.innerHTML = h;
     }
     function render() { renderNav(); renderPane(); }
 
     // ---------- saving ----------
-    var timer = null, saving = false, again = false, closed = false, afterSave = null;
+    var saving = false, closed = false, afterSave = null;
     // «Сохранить»: send now (or wait for the save on its way), then go on.
     function saveThen(next) {
-      if (!String(current.name || '').trim()) {
+      var s = current, need = !String(s.name || '').trim() ? 'name' : !String(s.provider || '').trim() ? 'provider' : null;
+      if (need) {
         editing = true; renderPane();
-        status('Введите название услуги', 'is-error');
-        pane.querySelector('[data-f="name"]').focus();
+        status(need === 'name' ? 'Введите название услуги' : 'Введите поставщика', 'is-error');
+        pane.querySelector('[data-f="' + need + '"]').focus();
         return;
       }
+      if (s.mode === 'meters') {
+        if (!s.group) { status('Выберите, что считаем', 'is-error'); return; }
+        var todo = s.meters.map(function (id) { return byId(S.meters, id); }).filter(function (m) { return m.who === '' || m.who == null; })[0];
+        if (todo) { status('Выберите, кто платит по № ' + (todo.serial || '—'), 'is-error'); return; }
+      }
       afterSave = next;
-      save(true);
+      save();
     }
     function removeCurrent() {
       var gone = current;
@@ -374,18 +450,16 @@
                    excluded: s.excluded, owner_takes: s.owner_takes, fixed: s.fixed, rate: s.rate, unit: s.unit,
                    volume: s.mode === 'area' ? volume(s) : null };
       if (s.mode === 'meters') {
-        data.meters = S.meters.map(function (m) {
-          return { id: m.id, on: s.meters.indexOf(m.id) >= 0, who: m.who, split: m.split, excluded: m.excluded, owner_takes: m.owner_takes };
+        data.group = s.group;
+        data.meters = s.meters.map(function (id) {
+          var m = byId(S.meters, id);
+          return { id: m.id, who: m.who, input: m.input, split: m.split, excluded: m.excluded, owner_takes: m.owner_takes };
         });
       }
       return data;
     }
-    function save(now) {
-      if (!current || !String(current.name || '').trim()) return;
-      clearTimeout(timer);
-      timer = null;
-      if (!now) { timer = setTimeout(function () { timer = null; save(true); }, 500); return; }
-      if (saving) { again = true; return; }
+    function save() {
+      if (!current || saving) return;
       saving = true;
       status('Сохраняем…');
       var sent = current;
@@ -398,12 +472,12 @@
       }).then(function (answer) {
         saving = false;
         if (!answer.ok) { afterSave = null; status(answer.json.error || 'Не сохранено', 'is-error'); done(); return; }
-        dirty = true;
+        dirty = true; changed = false;
         var fresh = answer.json;
         S.services = fresh.services;
         S.own_units = fresh.own_units;
         // The meters: who uses which (the window keeps its own choices of who pays).
-        fresh.meters.forEach(function (m) { var mine = byId(S.meters, m.id); if (mine) { mine.service = m.service; mine.service_name = m.service_name; } });
+        S.meters = fresh.meters; S.groups = fresh.groups; snap = copy(S.meters);
         if (sent.isNew) { sent.id = fresh.selected; sent.isNew = false; }
         var saved = byId(S.services, sent.id);
         if (saved) { sent.kind = saved.kind; sent.edit_url = saved.edit_url; sent.delete_url = saved.delete_url; }
@@ -412,7 +486,6 @@
         status('Сохранено ✓', 'is-on');
         clearTimeout(status.t);
         status.t = setTimeout(function () { status('Сохранено'); }, 1500);
-        if (again) { again = false; save(true); return; }
         done();
         if (afterSave) { var next = afterSave; afterSave = null; next(); }
       }).catch(function () { saving = false; afterSave = null; status('Нет связи — не сохранено', 'is-error'); done(); });
@@ -421,21 +494,38 @@
     // ---------- clicks ----------
     box.addEventListener('click', function (e) {
       var t;
+      // «Сохранить изменения?» — before leaving a service with changes not saved
+      if (asking) {
+        if (e.target.closest('[data-ask-save]')) { var go = asking; asking = null; saveThen(go); return; }
+        if (e.target.closest('[data-ask-drop]')) { var drop = asking; asking = null; S.meters = copy(snap); changed = false; drop(); return; }
+        if ((t = e.target.closest('[data-ask-close]')) && (e.target === t || t.tagName === 'BUTTON')) { asking = null; renderPane(); }
+        return;
+      }
       if ((t = e.target.closest('[data-svc]'))) {
-        save(true);
-        current = copy(byId(S.services, +t.dataset.svc));
-        editing = false; unitOpen = false; exampleOpen = false; meterOpen = null;
-        render(); pane.scrollTop = 0; return;
+        var id = +t.dataset.svc;
+        leave(function () {
+          current = copy(byId(S.services, id)); changed = false; snap = copy(S.meters);
+          editing = false; unitOpen = false; exampleOpen = false; meterOpen = null; pickOpen = null;
+          render(); pane.scrollTop = 0;
+        });
+        return;
       }
       if ((t = e.target.closest('[data-mode]'))) {
-        if (current && current.isNew && !current.name) { current.mode = t.dataset.mode; }
-        else { save(true); startNew(t.dataset.mode); }
-        if (current.mode === 'meters' && !current.meters.length) {
-          current.meters = S.meters.filter(function (m) { return !m.service; }).map(function (m) { return m.id; });
-        }
-        editing = true; exampleOpen = false; meterOpen = null;
-        render(); pane.scrollTop = 0;
-        var input = pane.querySelector('[data-f="name"]'); if (input) input.focus();
+        var mode = t.dataset.mode;
+        var start = function () {
+          startNew(mode);
+          editing = true; exampleOpen = false; meterOpen = null; pickOpen = null;
+          render(); pane.scrollTop = 0;
+          var input = pane.querySelector('[data-f="name"]'); if (input) input.focus();
+        };
+        if (current && current.isNew) {
+          // a new one not saved yet: only the way of charging changes; the name and the supplier stay
+          var keep = { name: current.autoName ? '' : current.name, provider: current.provider };
+          S.meters = copy(snap); startNew(mode); current.name = keep.name; current.provider = keep.provider;
+          changed = !!(keep.name || keep.provider);
+          editing = true; exampleOpen = false; meterOpen = null; pickOpen = null;
+          render(); pane.scrollTop = 0;
+        } else leave(start);
         return;
       }
       if (!current) return;
@@ -452,7 +542,7 @@
         if (e.target.closest('[data-meter-done]')) {
           var m = byId(S.meters, meterOpen);
           m.who = draft.who; m.split = draft.split; m.excluded = draft.excluded; m.owner_takes = draft.owner_takes;
-          meterOpen = null; renderPane(); save(); return;
+          meterOpen = null; renderPane(); mark(); return;
         }
         if ((t = e.target.closest('[data-meter-close]')) && (e.target === t || t.tagName === 'BUTTON')) { meterOpen = null; return renderPane(); }
         if ((t = e.target.closest('[data-who-kind]'))) {
@@ -481,15 +571,26 @@
       if ((t = e.target.closest('[data-unit]'))) {
         unitOpen = false;
         if (t.dataset.unit !== current.unit) { current.unit = t.dataset.unit; current.volume = null; }
-        renderPane(); save();
+        renderPane(); mark();
         var vol = pane.querySelector('[data-f="volume"]'); if (vol) vol.focus();
         return;
       }
       if (unitOpen && !e.target.closest('.sv-sel-menu')) { unitOpen = false; renderPane(); }
-      if ((t = e.target.closest('[data-split]'))) { current.split = t.dataset.split; renderPane(); return save(); }
-      if (e.target.closest('[data-owner]')) { current.owner_takes = current.owner_takes === false; renderPane(); return save(); }
-      if ((t = e.target.closest('[data-pay]'))) { toggle(current.excluded, +t.dataset.pay); renderPane(); return save(); }
-      if ((t = e.target.closest('[data-meter-on]'))) { toggle(current.meters, +t.dataset.meterOn); renderPane(); return save(); }
+      if ((t = e.target.closest('[data-split]'))) { current.split = t.dataset.split; renderPane(); return mark(); }
+      if (e.target.closest('[data-owner]')) { current.owner_takes = current.owner_takes === false; renderPane(); return mark(); }
+      if ((t = e.target.closest('[data-pay]'))) { toggle(current.excluded, +t.dataset.pay); renderPane(); return mark(); }
+      if ((t = e.target.closest('[data-group]'))) { S.meters = copy(snap); pickGroup(t.dataset.group); pickOpen = null; renderPane(); return mark(); }
+      if ((t = e.target.closest('[data-who-set]'))) {
+        var p = t.dataset.whoSet.split(':'), mm = byId(S.meters, +p[0]);
+        mm.who = /^[0-9]+$/.test(p[1]) ? +p[1] : p[1];
+        if (mm.who === 'common' && !mm.split) mm.split = 'shares';
+        pickOpen = null; renderPane(); return mark();
+      }
+      if ((t = e.target.closest('[data-pick]'))) { pickOpen = pickOpen === +t.dataset.pick ? null : +t.dataset.pick; return renderPane(); }
+      if (pickOpen != null) { pickOpen = null; renderPane(); }
+      if ((t = e.target.closest('[data-input]'))) {
+        var q = t.dataset.input.split(':'); byId(S.meters, +q[0]).input = q[1]; renderPane(); return mark();
+      }
       if ((t = e.target.closest('[data-meter]'))) { openMeter(+t.dataset.meter); }
     });
     function toggle(list, id) { var i = list.indexOf(id); if (i < 0) list.push(id); else list.splice(i, 1); }
@@ -504,7 +605,7 @@
       if (!u) return;
       if (S.units.indexOf(u) < 0 && S.own_units.indexOf(u) < 0 && addedUnits.indexOf(u) < 0) addedUnits.push(u);
       current.unit = u; current.volume = null; unitNew = ''; unitOpen = false;
-      renderPane(); save();
+      renderPane(); mark();
       var vol = pane.querySelector('[data-f="volume"]'); if (vol) vol.focus();
     }
 
@@ -516,8 +617,8 @@
       var v = e.target.value, pos = e.target.selectionStart;
       if (f === 'unitNew') unitNew = v;
       else current[f] = NUMS[f] ? parse(v) : v;
-      if (f === 'name' || f === 'provider') { save(); if (f === 'name' && current.isNew) renderNav(); }
-      else if (NUMS[f]) save();
+      if (f === 'name') current.autoName = false;
+      if (f !== 'unitNew') changed = true;
       renderPane();
       var el = pane.querySelector('[data-f="' + f + '"]');
       if (el) { el.value = v; el.focus(); try { el.setSelectionRange(pos, pos); } catch (x) { /* number inputs */ } }
@@ -532,10 +633,9 @@
         if (e.key === 'Escape') { e.stopPropagation(); unitOpen = false; unitNew = ''; renderPane(); }
         return;
       }
-      if (e.key === 'Escape' && (meterOpen != null || exampleOpen || unitOpen || confirmDelete)) {
-        e.stopPropagation(); meterOpen = null; exampleOpen = false; unitOpen = false; confirmDelete = false; renderPane(); return;
+      if (e.key === 'Escape' && (meterOpen != null || exampleOpen || unitOpen || confirmDelete || asking || pickOpen != null)) {
+        e.stopPropagation(); meterOpen = null; exampleOpen = false; unitOpen = false; confirmDelete = false; asking = null; pickOpen = null; renderPane(); return;
       }
-      if (e.key === 'Enter' && e.target.dataset && e.target.dataset.meter) { e.preventDefault(); openMeter(+e.target.dataset.meter); return; }
       if (e.key === 'Enter' && e.target.dataset && e.target.dataset.f) {
         // Enter — the next field (as everywhere), the last one just leaves.
         e.preventDefault();
@@ -550,8 +650,7 @@
       dialog.addEventListener('close', function onClose() {
         dialog.removeEventListener('close', onClose);
         closed = true;
-        if (timer) save(true);  // the last change is still waiting: send it, then show it
-        else if (!saving && dirty) window.location.reload();
+        if (!saving && dirty) window.location.reload();
       });
     }
 

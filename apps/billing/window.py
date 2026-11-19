@@ -1,6 +1,7 @@
 """The service window «Услуги · <объект>» (2026-11-19): the object's services on the left, the chosen one on the right,
-saved by itself on every change. The page draws everything from window_state(); every change comes back as one
-service (save_service)."""
+saved by the «Сохранить» button only. The page draws everything from window_state(); «Сохранить» sends one service
+(save_service). «По счётчикам» (2026-11-20): one service — one kind of meters (a group); who pays and «Было / стало |
+Расход» — per meter."""
 
 from datetime import date
 from decimal import Decimal
@@ -84,6 +85,8 @@ def window_state(property_obj, selected=None, today=None):
         service = owner_of.get(meter.pk)
         meters.append({
             'id': meter.pk, 'kind': meter.kind or 'custom', 'name': meter.name, 'serial': meter.serial,
+            'group': services.meter_kind_key(meter),
+            'input': meter.input_mode or Receipt.InputMode.READINGS,
             'unit': services.meter_unit(meter), 'dn': meter.day_night,
             'tariff': _meter_tariff_text(meter, today),
             'who': meter.tenant_id or ('owner' if meter.vacant else 'common'),
@@ -93,6 +96,14 @@ def window_state(property_obj, selected=None, today=None):
             'service': service.pk if service else None,
             'service_name': service.name if service else '',
         })
+    groups = []  # the kinds of the object's meters: a service «По счётчикам» takes one of them
+    for meter in meters:
+        group = next((g for g in groups if g['key'] == meter['group']), None)
+        if group is None:
+            group = {'key': meter['group'], 'kind': meter['kind'], 'unit': meter['unit'], 'meters': [],
+                     'name': next((name for value, name, _ in services.METER_KINDS if value == meter['group']), meter['name'])}
+            groups.append(group)
+        group['meters'].append(meter['id'])
     own_units = sorted({r.rate_unit for r in Receipt.objects.filter(property__owner=property_obj.owner)
                         if r.rate_unit and r.rate_unit not in BASE_UNITS})
     return {
@@ -101,6 +112,7 @@ def window_state(property_obj, selected=None, today=None):
         'tenants': [{'id': t.pk, 'name': t.name, 'share': _number(t.share_percent or Decimal('0')),
                      'area': _number(t.area)} for t in tenants],
         'meters': meters,
+        'groups': groups,
         'services': [service_state(receipt) for receipt in receipts],
         'units': BASE_UNITS, 'own_units': own_units,
         'modes': MODES,
@@ -127,6 +139,7 @@ def service_state(receipt):
         'fixed': _number(receipt.fixed_amount),
         'rate': _number(receipt.rate), 'unit': unit, 'volume': _number(volume),
         'meters': [meter.pk for meter in receipt.meters.all()] if mode == 'meters' else [],
+        'group': next((services.meter_kind_key(m) for m in receipt.meters.all()), None) if mode == 'meters' else None,
         'formula': _formula_text(receipt) if mode == 'formula' else '',
         'edit_url': reverse('receipt_edit', args=[receipt.pk]),
         'delete_url': reverse('receipt_delete', args=[receipt.pk]),
@@ -163,10 +176,13 @@ def save_service(property_obj, data, today=None):
     name = (data.get('name') or '').strip()[:100]
     if not name:
         raise WindowError('Введите название услуги.')
+    provider = (data.get('provider') or '').strip()[:150]
+    if not provider:
+        raise WindowError('Введите поставщика.')
     mode = data.get('mode')
     if mode not in dict(MODES) or mode == 'formula' and mode_of(receipt) != 'formula':
         raise WindowError('Такое начисление здесь пока не задаётся.')
-    receipt.name, receipt.provider = name, (data.get('provider') or '').strip()[:150]
+    receipt.name, receipt.provider = name, provider
     if mode == 'formula':
         receipt.save(update_fields=['name', 'provider'] if receipt.pk else None)
         return receipt
@@ -196,17 +212,20 @@ def save_service(property_obj, data, today=None):
 
 
 def _save_meters(receipt, data, today):
-    """«По счётчикам»: the switched-on meters and who pays by each — a tenant, the owner, or common (divided)."""
+    """«По счётчикам» (2026-11-20): every meter of one kind (data['group']) and, per meter, who pays — a tenant,
+    the owner, or common (divided) — and what is typed each month («Было / стало» or «Расход»)."""
     property_obj = receipt.property
     tenants = set(property_obj.tenants.values_list('pk', flat=True))
     busy = services.busy_meters(receipt)
+    group = data.get('group')
+    meters = [m for m in property_obj.meters.all() if services.meter_kind_key(m) == group]
+    if not group or not meters:
+        raise WindowError('Выберите, что считаем.')
+    if any(meter.pk in busy for meter in meters):
+        raise WindowError('Эти счётчики уже в другой услуге.')
     rows = {int(row['id']): row for row in data.get('meters') or [] if str(row.get('id', '')).isdigit()}
-    on = []
-    for meter in property_obj.meters.filter(pk__in=list(rows)):
-        row = rows[meter.pk]
-        if meter.pk in busy or not row.get('on'):
-            continue
-        on.append(meter)
+    for meter in meters:
+        row = rows.get(meter.pk) or {}
         who = row.get('who')
         if property_obj.is_owner_used or who == 'owner':
             meter.tenant, meter.vacant, meter.split = None, not property_obj.is_owner_used, ''
@@ -216,20 +235,25 @@ def _save_meters(receipt, data, today):
             meter.owner_takes = bool(row.get('owner_takes', True))
         elif str(who).isdigit() and int(who) in tenants:
             meter.tenant_id, meter.vacant, meter.split = int(who), False, ''
+        else:
+            raise WindowError(f'Выберите, кто платит по счётчику № {meter.serial or meter.pk}.')
+        if row.get('input') in Receipt.InputMode.values:
+            meter.input_mode = row['input']
         meter.save()
         if meter.split:
             meter.excluded.set(_tenant_ids(property_obj, row.get('excluded')))
+    receipt.kind = meters[0].kind if meters[0].kind in Receipt.Kind.values else Receipt.Kind.CUSTOM
     receipt.metered = True
     receipt.amount_mode = Receipt.AmountMode.MONTHLY
     receipt.layout = Receipt.Layout.COMMON if property_obj.is_owner_used else Receipt.Layout.TENANTS
     receipt.split = Receipt.Split.OWNER if property_obj.is_owner_used else Receipt.Split.METERS
-    receipt.zones = 2 if any(meter.day_night for meter in on) else 1
-    receipt.unit = services.meter_unit(on[0]) if on else (receipt.unit or 'ед.')
+    receipt.zones = 2 if any(meter.day_night for meter in meters) else 1
+    receipt.unit = services.meter_unit(meters[0]) or receipt.unit or 'ед.'
     receipt.fixed_amount = receipt.rate = receipt.volume = None
     receipt.rate_unit = ''
     services.normalize(receipt)
     receipt.save()
-    receipt.meters.set(on)
+    receipt.meters.set(meters)
     receipt.excluded.clear()
     services.release_free_meters(property_obj)
     return receipt
