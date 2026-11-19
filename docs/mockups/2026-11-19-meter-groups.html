@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>По счётчикам — группы</title>
+<style>
+/* Макет 2026-11-19: окно услуг, «По счётчикам» — группы по арендаторам (идея пользователя) + правила автораскладки.
+   Размеры — как у настоящего окна (services.css): окно 1060, шапка 56, меню 260, поля 32, блоки через 24. */
+:root { --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1; --bg: #f5f6f7; --border: #e1e4e8; --text: #2c3338;
+  --muted: #6b7680; --warm: #fff8e6; --warm-b: #ecd9a8; --warm-t: #9a7b2f; --danger: #c0392b; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 60px; }
+.page { max-width: 1060px; margin: 0 auto; }
+button { font: inherit; color: inherit; }
+/* панель «попробовать» над окном — не часть интерфейса */
+.demo { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding: 10px 14px; background: rgba(255,255,255,.9);
+  border-radius: var(--radius); font-size: 13px; }
+.demo b { margin-right: 4px; }
+.demo button { height: 30px; padding: 0 12px; border: 1px solid var(--border); border-radius: 15px; background: #fff; cursor: pointer; }
+.demo button:hover { border-color: var(--accent); color: var(--accent); }
+.demo .msg { flex-basis: 100%; color: var(--muted); min-height: 18px; }
+.demo .msg b { color: var(--accent); font-weight: 600; }
+
+.win { height: 720px; display: flex; flex-direction: column; background: #fff; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden; }
+.win-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 24px; border-bottom: 1px solid var(--border); }
+.win-head h1 { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary); }
+.win-head h1 span { color: var(--muted); font-weight: 400; }
+.x { width: 32px; height: 32px; border: 0; background: none; border-radius: 6px; font-size: 20px; color: var(--muted); cursor: pointer; }
+.win-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+nav { border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; }
+.cap { font-size: 12px; color: var(--muted); padding: 4px 10px 6px; }
+.sep { height: 1px; background: var(--border); margin: 10px 10px 12px; }
+.ni { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: var(--radius); font-size: 14px; cursor: pointer; }
+.ni:hover { background: var(--bg); }
+.ni.on { background: #eceef0; font-weight: 600; }
+.ni .dot { width: 18px; text-align: center; color: var(--muted); }
+svg.i { width: 18px; height: 18px; flex-shrink: 0; }
+
+.pane { position: relative; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+.top { position: sticky; top: 0; z-index: 3; background: #fff; border-bottom: 1px solid var(--border); padding: 0 32px; }
+.top-line { display: flex; align-items: center; gap: 8px; height: 52px; }
+.top-line .nm { font-size: 15px; font-weight: 600; color: var(--primary); }
+.top-line .pv { font-size: 13px; color: var(--muted); }
+.top-line .saved { margin-left: auto; font-size: 12px; color: var(--accent); }
+.body { flex: 1 0 auto; padding: 20px 32px 32px; display: flex; flex-direction: column; gap: 24px; }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+h3 { margin: 0; display: flex; align-items: center; gap: 8px; height: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e5; color: #b9770e; font-size: 11px; text-transform: none; letter-spacing: 0; display: inline-flex; align-items: center; }
+.cp { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 12px 14px; border-radius: var(--radius); background: #f1f3f5; font-size: 13.5px; }
+.cp .acc { color: var(--accent); }
+
+/* группы: все одной ширины, шапка 40, плашки 34 через 8 */
+.grp { border: 1px solid var(--border); border-radius: var(--radius); }
+.grp-h { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; font-weight: 600; }
+.grp-h .meta { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 400; }
+.grp-h .lnk { color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; }
+.grp-b { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }
+.grp.todo { border-color: var(--warm-b); background: var(--warm); }
+.grp.todo .grp-h { color: var(--warm-t); }
+.grp.common { background: #fafbfc; }
+.grp.mini .grp-h { font-weight: 400; color: var(--muted); }
+.grp.mini .grp-h b { color: var(--text); font-weight: 600; }
+.others { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: var(--radius); background: var(--bg); font-size: 13px; color: var(--muted); cursor: pointer; }
+.others .chev { margin-left: auto; font-size: 10px; }
+.others-list { display: flex; flex-direction: column; padding: 0 14px 8px; margin-top: -8px; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); font-size: 13px; color: var(--muted); }
+.others-list div { display: flex; align-items: center; gap: 8px; height: 30px; }
+.others-list div span:last-child { margin-left: auto; }
+
+.chip { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.chip:hover { border-color: #c3c9cf; }
+.chip b { font-weight: 600; }
+.chip .sub { color: var(--muted); font-size: 12px; }
+.chip .chev { color: var(--muted); font-size: 10px; }
+.chip.nt .sub { color: var(--danger); }
+.chip.add { border-style: dashed; color: var(--accent); font-weight: 600; }
+.chip.new { box-shadow: 0 0 0 3px rgba(20,143,119,.25); }
+.add-link { color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 6; width: 250px; padding: 6px; background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); font-weight: 400; color: var(--text); }
+.menu.right { left: auto; right: 0; }
+.menu .o { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+.menu .o:hover { background: var(--bg); }
+.menu .o.sel { background: #eceef1; font-weight: 600; }
+.menu .o small { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; }
+.menu .o.acc { color: var(--accent); font-weight: 600; }
+.menu .o.del { color: var(--danger); }
+.menu .ms { height: 1px; margin: 4px 6px; background: var(--border); }
+.menu .mc { padding: 6px 12px 2px; font-size: 11px; color: var(--muted); }
+
+.foot { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 12px 32px; border-top: 1px solid var(--border); background: #fff; }
+.foot .del { color: var(--danger); font-size: 14px; cursor: pointer; }
+.btn { height: 38px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font-weight: 600; cursor: pointer; }
+.btn.pri { background: var(--accent); border-color: var(--accent); color: #fff; }
+.foot .btn.pri { margin-left: auto; }
+
+/* маленькое окно поверх (новый счётчик / делим) */
+.shade { position: absolute; inset: 0; z-index: 10; background: rgba(44,51,56,.35); display: flex; align-items: center; justify-content: center; }
+.sub-win { width: 560px; background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+.sub-win .sh { display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 12px 0 24px; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--primary); }
+.sub-win .sb { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.sub-win .sf { display: flex; justify-content: flex-end; gap: 8px; padding: 0 24px 20px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.f { position: relative; height: 38px; border: 1px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; padding: 0 12px; font-size: 14px; }
+.f label { position: absolute; top: -8px; left: 8px; padding: 0 4px; background: #fff; font-size: 11px; color: var(--muted); }
+.f.warm { background: var(--warm); }
+.f .u { margin-left: auto; padding-left: 10px; border-left: 1px solid var(--border); height: 100%; display: flex; align-items: center; color: var(--muted); font-size: 13px; }
+.seg { display: flex; height: 38px; padding: 3px; border-radius: var(--radius); background: #eceef0; }
+.seg span { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.seg span.on { background: var(--accent); color: #fff; font-weight: 600; }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+.trow { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.trow .pc { margin-left: auto; font-weight: 600; }
+.sw { width: 34px; height: 20px; border-radius: 10px; background: var(--accent); position: relative; }
+.sw::after { content: ''; position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.sw.off { background: #c9ced3; } .sw.off::after { right: auto; left: 2px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="demo">
+    <b>Попробуйте:</b> добавить счётчик на странице объекта →
+    <button data-demo="el">Электричество</button>
+    <button data-demo="hot">Вода горячая</button>
+    <button data-demo="gas">Газ</button>
+    <div class="msg" id="msg">Плашки нажимаются: меню «Перенести к…». «+ счётчик» — свободные счётчики или новый.</div>
+  </div>
+  <div class="win">
+    <div class="win-head"><h1>Услуги <span>· Тест Круг</span></h1><button class="x">×</button></div>
+    <div class="win-body">
+      <nav id="nav"></nav>
+      <div class="pane" id="pane"></div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var DROP = '<path fill="currentColor" d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/>';
+  var IC = { el: ['#0e9aa7', '<path fill="currentColor" d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>', 'Электричество', 'кВт·ч'],
+             cold: ['#2e86c1', DROP, 'Вода холодная', 'м³'], hot: ['#c0392b', DROP, 'Вода горячая', 'м³'],
+             gas: ['#8e44ad', '<path fill="currentColor" d="M12 2c1 3 5 5.5 5 10.5A5 5 0 0 1 7 12.5c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3 0-6 1-9z"/>', 'Газ', 'м³'] };
+  var ic = function (k) { return '<svg class="i" viewBox="0 0 24 24" style="color:' + IC[k][0] + '">' + IC[k][1] + '</svg>'; };
+  var T = [{ id: 'v', name: 'Виктор' }, { id: 'w', name: 'Влад' }, { id: 'a', name: 'Аптека Вита' }];
+  // svc — в какой услуге счётчик ('' — ни в какой); who — арендатор · 'common' · 'owner' · '' (не выбрано)
+  var M = [
+    { id: 1, k: 'el', no: '258369-2', tar: '6,9 / 9,8 ₽/кВт·ч', svc: 'el', who: 'v' },
+    { id: 2, k: 'el', no: '789654', tar: '9,6 ₽/кВт·ч', svc: 'el', who: 'w' },
+    { id: 3, k: 'el', no: '100200', tar: '9,6 ₽/кВт·ч', svc: 'el', who: 'common' },
+    { id: 4, k: 'el', no: '555123', tar: '', svc: 'el', who: '' },
+    { id: 8, k: 'cold', no: '258741', tar: '55,9 ₽/м³', svc: '', who: '' },
+    { id: 5, k: 'cold', no: '789655', tar: '55,9 ₽/м³', svc: 'cold', who: 'common' },
+    { id: 6, k: 'hot', no: '789874-9', tar: '70,5 ₽/м³', svc: 'hot', who: 'v' },
+    { id: 7, k: 'hot', no: '258963', tar: '70,5 ₽/м³', svc: 'hot', who: 'w' }
+  ];
+  var S = [{ id: 'el', k: 'el', name: 'Электричество', prov: 'Мосэнергосбыт' }, { id: 'cold', k: 'cold', name: 'Вода холодная', prov: 'Мосводоканал' },
+           { id: 'hot', k: 'hot', name: 'Горячая вода', prov: 'МОЭК' }];
+  var cur = 'el', open = null, othersOpen = false, sub = null, nextId = 10, seq = 1000;
+  var svcOf = function (id) { return S.filter(function (s) { return s.id === id; })[0]; };
+  var meter = function (id) { return M.filter(function (m) { return m.id === id; })[0]; };
+  var tName = function (id) { return T.filter(function (t) { return t.id === id; })[0].name; };
+
+  function nav() {
+    var modes = ['По квитанции', 'Фиксированная', 'По тарифу', 'По счётчикам', 'Своя формула'];
+    return '<div class="cap">Начисление</div>' + modes.map(function (m) { return '<div class="ni"><span class="dot">+</span>' + m + '</div>'; }).join('') +
+      '<div class="sep"></div><div class="cap">Услуги объекта</div>' +
+      S.map(function (s) { return '<div class="ni' + (s.id === cur ? ' on' : '') + '" data-svc="' + s.id + '">' + ic(s.k) + s.name + '</div>'; }).join('');
+  }
+  function chipMenu(m) {
+    var o = function (v, label) { return '<div class="o' + (m.who === v ? ' sel' : '') + '" data-set="' + m.id + ':' + v + '">' + label + (m.who === v ? '<small>✓</small>' : '') + '</div>'; };
+    return '<div class="menu"><div class="mc">Перенести к</div>' + T.map(function (t) { return o(t.id, t.name); }).join('') +
+      '<div class="ms"></div>' + o('common', 'Общие — делим') + o('owner', 'Платите вы') +
+      '<div class="ms"></div><div class="o" data-edit="' + m.id + '">Изменить счётчик</div><div class="o del" data-set="' + m.id + ':out">Убрать из услуги</div></div>';
+  }
+  function chip(m) {
+    return '<span class="chip' + (m.tar ? '' : ' nt') + (m.fresh ? ' new' : '') + '" data-open="' + m.id + '">' + ic(m.k) + '<b>№ ' + m.no + '</b><span class="sub">' + (m.tar || 'нет тарифа') +
+      '</span><span class="chev">▾</span>' + (open === m.id ? chipMenu(m) : '') + '</span>';
+  }
+  function addMenu(to) {
+    var free = M.filter(function (m) { return !m.svc; });
+    var k = svcOf(cur).k;
+    var same = free.filter(function (m) { return m.k === k; }), other = free.filter(function (m) { return m.k !== k; });
+    var row = function (m) { return '<div class="o" data-take="' + m.id + ':' + to + '">' + ic(m.k) + '№ ' + m.no + '<small>' + (m.tar || 'нет тарифа') + '</small></div>'; };
+    return '<div class="menu">' + (free.length ? (same.length ? '<div class="mc">Свободные счётчики</div>' + same.map(row).join('') : '') +
+      (other.length ? (same.length ? '<div class="ms"></div>' : '') + '<div class="mc">Другие виды</div>' + other.map(row).join('') : '') + '<div class="ms"></div>' : '') +
+      '<div class="o acc" data-new="' + to + '">+ Новый счётчик</div></div>';
+  }
+  function addBtn(to, asLink) {
+    var key = 'add:' + to;
+    return asLink ? '<span class="add-link" style="position:relative" data-open="' + key + '">+ счётчик' + (open === key ? addMenu(to).replace('class="menu"', 'class="menu right"') : '') + '</span>'
+      : '<span class="chip add" data-open="' + key + '">+ счётчик' + (open === key ? addMenu(to) : '') + '</span>';
+  }
+  function pane() {
+    var s = svcOf(cur);
+    var mine = M.filter(function (m) { return m.svc === cur; });
+    var by = function (w) { return mine.filter(function (m) { return m.who === w; }); };
+    var todo = by(''), h = '';
+    if (todo.length) h += '<div class="grp todo"><div class="grp-h">Не выбрано, кто платит<span class="meta">' + todo.length + ' — услуга не посчитается</span></div><div class="grp-b">' + todo.map(chip).join('') + '</div></div>';
+    T.forEach(function (t) {
+      var list = by(t.id);
+      if (!list.length) h += '<div class="grp mini"><div class="grp-h"><b>' + t.name + '</b>· нет счётчиков<span class="meta">' + addBtn(t.id, true) + '</span></div></div>';
+      else h += '<div class="grp"><div class="grp-h">' + t.name + '</div><div class="grp-b">' + list.map(chip).join('') + addBtn(t.id) + '</div></div>';
+    });
+    var common = by('common');
+    if (common.length) h += '<div class="grp common"><div class="grp-h">Общие — делим<span class="meta">по долям · Виктор 50% · Влад 30% · Аптека 20% · <span class="lnk" data-split>изменить</span></span></div><div class="grp-b">' + common.map(chip).join('') + addBtn('common') + '</div></div>';
+    else h += '<div class="grp mini"><div class="grp-h"><b>Общие — делим</b>· нет<span class="meta">' + addBtn('common', true) + '</span></div></div>';
+    var owner = by('owner');
+    if (owner.length) h += '<div class="grp common"><div class="grp-h">Платите вы</div><div class="grp-b">' + owner.map(chip).join('') + '</div></div>';
+    var busy = M.filter(function (m) { return m.svc && m.svc !== cur; });
+    if (busy.length) {
+      h += '<div class="others" data-others>' + busy.length + ' ' + (busy.length < 5 ? 'счётчика' : 'счётчиков') + ' в других услугах<span class="chev">' + (othersOpen ? '▴' : '▾') + '</span></div>';
+      if (othersOpen) h += '<div class="others-list">' + busy.map(function (m) { return '<div>' + ic(m.k) + '№ ' + m.no + '<span>в «' + svcOf(m.svc).name + '»</span></div>'; }).join('') + '</div>';
+    }
+    return '<div class="top"><div class="top-line">' + ic(s.k) + '<span class="nm">' + s.name + '</span><span class="pv">· ' + s.prov + '</span><span class="saved">Сохранено</span></div></div>' +
+      '<div class="body"><div class="sec"><h3>Как начисляется</h3><div class="cp"><span class="acc">' + ic(s.k) + '</span><span>Каждый платит по своему счётчику: <b>расход × тариф счётчика</b>. Общие — делим.</span></div></div>' +
+      '<div class="sec"><h3>Кто платит' + (todo.length ? '<span class="warn">не всё выбрано</span>' : '') + '</h3>' + h + '</div></div>' +
+      '<div class="foot"><span class="del">Удалить услугу</span><button class="btn pri">Сохранить</button></div>' + (sub ? subWin() : '');
+  }
+  function subWin() {
+    if (sub.type === 'split') return '<div class="shade" data-close><div class="sub-win"><div class="sh">Общие — делим<button class="x" data-close>×</button></div><div class="sb">' +
+      '<div class="seg"><span class="on">По долям</span><span>Поровну</span><span>По м²</span></div>' +
+      [['Виктор', '50%', 1], ['Влад', '30%', 1], ['Аптека Вита', '20%', 1]].map(function (r) { return '<div class="trow"><span class="sw"></span>' + r[0] + '<span class="pc">' + r[1] + '</span></div>'; }).join('') +
+      '</div><div class="sf"><button class="btn" data-close>Отмена</button><button class="btn pri" data-close>Готово</button></div></div></div>';
+    var k = sub.k, u = IC[k][3];
+    var to = sub.to === 'common' ? 'Общие — делим' : tName(sub.to);
+    return '<div class="shade"><div class="sub-win"><div class="sh">Новый счётчик · ' + to + '<button class="x" data-close>×</button></div><div class="sb">' +
+      '<div class="g3"><div class="f"><label>Что меряет</label>' + IC[k][2] + '<span class="u">▾</span></div><div class="f warm"><label>№ счётчика</label></div>' +
+      '<div class="seg"><span class="on">Однотарифный</span><span>День / ночь</span></div></div>' +
+      '<div class="g2"><div class="f warm"><label>Начальное</label><span class="u">' + u + '</span></div><div class="f warm"><label>Тариф</label><span class="u">₽/' + u + '</span></div></div>' +
+      '<p class="note">То же окно, что «+ Добавить счётчик» в окне объекта. Счётчик сразу у «' + to + '».</p></div>' +
+      '<div class="sf"><button class="btn" data-close>Отмена</button><button class="btn pri" data-create>Добавить</button></div></div></div>';
+  }
+  function render() {
+    document.getElementById('nav').innerHTML = nav();
+    var p = document.getElementById('pane'), top = p.scrollTop;
+    p.innerHTML = pane(); p.scrollTop = top;
+  }
+  function say(t) { document.getElementById('msg').innerHTML = t; }
+  // правила автораскладки: та же услуга вида, ровно одна, «По счётчикам» → «Не выбрано»; иначе — вне услуг
+  function demo(k) {
+    M.forEach(function (m) { m.fresh = false; });
+    var m = { id: nextId++, k: k, no: String(seq++), tar: '', who: '', svc: '', fresh: true };
+    var fit = S.filter(function (s) { return s.k === k; });
+    if (fit.length === 1) { m.svc = fit[0].id; cur = fit[0].id; say('Положили в <b>«' + fit[0].name + '»</b> — услуга этого вида одна и «По счётчикам». Кто платит — пока «Не выбрано».'); }
+    else if (fit.length > 1) say('Услуг этого вида ' + fit.length + ' — не угадываем: счётчик свободный, его видно в «+ счётчик».');
+    else say('Услуги «' + IC[k][2] + '» нет — счётчик свободный («Общий»). На плашке в окне объекта — «Создать услугу». В «+ счётчик» он в «Другие виды».');
+    M.push(m); open = null; render();
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-demo],[data-svc],[data-set],[data-take],[data-new],[data-create],[data-edit],[data-split],[data-others],[data-close],[data-open]');
+    if (!t) { if (open !== null) { open = null; render(); } return; }
+    var d = t.dataset, p;
+    if (d.demo) return demo(d.demo);
+    if (d.svc) { cur = d.svc; open = null; othersOpen = false; return render(); }
+    if (d.set) { p = d.set.split(':'); var m = meter(+p[0]); m.fresh = false;
+      if (p[1] === 'out') { m.svc = ''; m.who = ''; say('Счётчик убран из услуги — теперь свободный.'); } else m.who = p[1];
+      open = null; return render(); }
+    if (d.take) { p = d.take.split(':'); var mt = meter(+p[0]); mt.svc = cur; mt.who = p[1]; mt.fresh = false; open = null; return render(); }
+    if (d.new) { sub = { type: 'meter', to: d.new, k: svcOf(cur).k }; open = null; return render(); }
+    if (d.create !== undefined) { M.forEach(function (x) { x.fresh = false; }); M.push({ id: nextId++, k: sub.k, no: String(seq++), tar: '9,6 ₽/' + IC[sub.k][3], svc: cur, who: sub.to, fresh: true }); sub = null; return render(); }
+    if (d.edit !== undefined) { say('«Изменить счётчик» — окно счётчика (вариант А), то же, что в окне объекта.'); open = null; return render(); }
+    if (d.split !== undefined) { sub = { type: 'split' }; return render(); }
+    if (d.others !== undefined) { othersOpen = !othersOpen; return render(); }
+    if (d.close !== undefined) { if (t === e.target || t.tagName === 'BUTTON') { sub = null; render(); } return; }
+    if (d.open) { var key = isNaN(+d.open) ? d.open : +d.open; open = open === key ? null : key; return render(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
