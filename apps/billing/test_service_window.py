@@ -101,3 +101,61 @@ class MeterTariffTests(TestCase):
         receipt.rate, receipt.rate_unit = Decimal('2'), 'м²'
         receipt = services.save_receipt(receipt)
         self.assertEqual(services.rate_total(receipt, OCT)[0], Decimal('120.00'))
+
+
+class ServiceWindowViewTests(TestCase):
+    """The window itself: drawn from the state, every change saved as one service (JSON)."""
+
+    setUp = MeterTariffTests.setUp
+    meter = MeterTariffTests.meter
+
+    def post(self, **data):
+        self.client.force_login(self.user)
+        return self.client.post(reverse('service_save', args=[self.prop.pk]), json.dumps(data),
+                                content_type='application/json')
+
+    def test_window_opens_with_the_state(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('service_window', args=[self.prop.pk]), HTTP_X_MODAL='1')
+        self.assertContains(response, 'id="svc-state"')
+        self.assertContains(response, 'Услуги <span>· Королева 61</span>')
+
+    def test_new_fixed_service_with_one_tenant_off_and_the_rest_passed_on(self):
+        response = self.post(name='Интернет', mode='fixed', fixed='1 000', split='shares',
+                             excluded=[self.vlad.pk], owner_takes=False)
+        self.assertEqual(response.status_code, 200)
+        receipt = Receipt.objects.get(property=self.prop)
+        self.assertEqual((receipt.amount_mode, receipt.fixed_amount, receipt.owner_takes),
+                         (Receipt.AmountMode.FIXED, Decimal('1000'), False))
+        self.assertEqual(list(receipt.excluded.all()), [self.vlad])
+        self.assertEqual(response.json()['selected'], receipt.pk)
+
+    def test_no_name_no_service(self):
+        response = self.post(name=' ', mode='receipt')
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Receipt.objects.exists())
+
+    def test_by_meters_who_pays_by_each(self):
+        own, common, free = self.meter(), self.meter(), self.meter()
+        response = self.post(name='Свет и вода', mode='meters', meters=[
+            {'id': own.pk, 'on': True, 'who': self.viktor.pk},
+            {'id': common.pk, 'on': True, 'who': 'common', 'split': 'equal', 'excluded': [self.vlad.pk], 'owner_takes': False},
+            {'id': free.pk, 'on': False, 'who': 'owner'},
+        ])
+        self.assertEqual(response.status_code, 200)
+        receipt = Receipt.objects.get(property=self.prop)
+        self.assertEqual((receipt.metered, receipt.split), (True, Receipt.Split.METERS))
+        self.assertEqual(set(receipt.meters.all()), {own, common})
+        own.refresh_from_db()
+        common.refresh_from_db()
+        self.assertEqual(own.tenant, self.viktor)
+        self.assertEqual((common.split, common.owner_takes, list(common.excluded.all())), ('equal', False, [self.vlad]))
+        # The same meter can't go into a second service.
+        self.post(name='Ещё', mode='meters', meters=[{'id': own.pk, 'on': True, 'who': 'owner'}])
+        self.assertEqual(Receipt.objects.get(name='Ещё').meters.count(), 0)
+
+    def test_tariff_service_with_its_own_unit(self):
+        self.post(name='Вывоз мусора', mode='area', rate='13,37', unit='кг', volume='10', split='equal')
+        receipt = Receipt.objects.get(property=self.prop)
+        self.assertEqual((receipt.rate_unit, receipt.volume), ('кг', Decimal('10')))
+        self.assertEqual(services.rate_total(receipt, OCT)[0], Decimal('133.70'))

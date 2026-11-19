@@ -232,7 +232,7 @@ class ReceiptViewTests(TestCase):
     def test_object_page_offers_receipt_buttons(self):
         response = self.client.get(reverse('property_detail', args=[self.prop.pk]))
         self.assertContains(response, 'Какие услуги оплачиваете по объекту?')
-        self.assertContains(response, reverse('receipt_create', args=[self.prop.pk]) + '?kind=electricity')
+        self.assertContains(response, reverse('service_window', args=[self.prop.pk]))
 
     def test_create_form_is_prefilled_from_preset(self):
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч')
@@ -262,7 +262,7 @@ class ReceiptViewTests(TestCase):
 
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
         self.assertContains(page, 'Интернет')
-        self.assertContains(page, reverse('receipt_create', args=[self.prop.pk]))
+        self.assertContains(page, reverse('service_window', args=[self.prop.pk]))
 
     def test_metered_service_needs_ticked_meters_and_their_tariffs(self):
         url = reverse('receipt_create', args=[self.prop.pk])
@@ -470,8 +470,9 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, '5,5 ₽/кВт·ч')
         self.assertContains(response, '7,12\xa0₽/м²')
         self.assertContains(response, 'с начала')
-        self.assertContains(response, f'data-row-modal="{reverse("receipt_edit", args=[receipt.pk])}"')
-        self.assertContains(response, f'data-row-modal="{reverse("receipt_edit", args=[area.pk])}"')
+        window = reverse('service_window', args=[self.prop.pk])
+        self.assertContains(response, f'data-row-modal="{window}?svc={receipt.pk}"')
+        self.assertContains(response, f'data-row-modal="{window}?svc={area.pk}"')
         self.assertNotContains(response, stranger.name)
 
         # A new price starts this month; the page says since when and what it was before.
@@ -500,9 +501,9 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, '339 кВт·ч')
         self.assertContains(response, 'ноябрь 2026')
         self.assertContains(response, 'не в услуге')  # the water meter
-        self.assertContains(response, f'data-row-modal="{reverse("receipt_edit", args=[receipt.pk])}"')
-        # Not in a service: «Новая услуга» with the cold-water tile and this meter switched on.
-        new_url = reverse('receipt_create', args=[self.prop.pk]) + f'?kind=water&amp;meter={water.pk}'
+        self.assertContains(response, f'data-row-modal="{reverse("service_window", args=[self.prop.pk])}?svc={receipt.pk}"')
+        # Not in a service: the service window, a new service «По счётчикам» with this meter switched on.
+        new_url = reverse('service_window', args=[self.prop.pk]) + f'?meter={water.pk}'
         self.assertContains(response, f'data-row-modal="{new_url}"')
         self.assertContains(response, reverse('meter_remove', args=[water.pk]))
         window = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + f'?kind=water&meter={water.pk}',
@@ -652,7 +653,7 @@ class ReceiptViewTests(TestCase):
         response = self.client.get(reverse('property_edit', args=[self.prop.pk]), HTTP_X_MODAL='1')
         # × on this meter shows «Счётчик привязан к услуге» instead of deleting it (app.js); the free one has no mark.
         self.assertContains(response, 'data-services="«Электричество»"', count=1)
-        self.assertContains(response, f'data-service-url="{reverse("receipt_edit", args=[receipt.pk])}"')
+        self.assertContains(response, f'data-service-url="{reverse("service_window", args=[self.prop.pk])}?svc={receipt.pk}"')
 
     def test_ready_made_service_has_no_tile_switch(self):
         response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=internet', HTTP_X_MODAL='1')
@@ -1071,8 +1072,8 @@ class ServicesSectionTests(TestCase):
     def test_add_with_one_object_goes_straight_to_kinds(self):
         prop = make_property(self.user)
         response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
-        self.assertTemplateUsed(response, 'billing/_receipt_form.html')
-        self.assertContains(response, reverse('receipt_create', args=[prop.pk]) + '?kind=electricity')
+        self.assertTemplateUsed(response, 'billing/_service_window.html')
+        self.assertContains(response, reverse('service_save', args=[prop.pk]))
 
     def test_add_with_several_objects_asks_which(self):
         first = make_property(self.user)
@@ -1080,8 +1081,8 @@ class ServicesSectionTests(TestCase):
         Receipt.objects.create(property=first, name='Свет')
         response = self.client.get(reverse('receipt_add'), HTTP_X_MODAL='1')
         self.assertContains(response, 'К какому объекту?')
-        self.assertContains(response, reverse('receipt_create', args=[first.pk]))
-        self.assertContains(response, reverse('receipt_create', args=[second.pk]))
+        self.assertContains(response, reverse('service_window', args=[first.pk]))
+        self.assertContains(response, reverse('service_window', args=[second.pk]))
         self.assertContains(response, '1 услуга')
         self.assertContains(response, 'нет услуг')
 

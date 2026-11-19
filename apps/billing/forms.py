@@ -1,3 +1,5 @@
+from datetime import date
+
 from django import forms
 
 from apps.properties.models import Property
@@ -153,6 +155,11 @@ class MeterForm(forms.ModelForm):
         initial='0', required=False, empty_value=False,
     )
     owner = forms.CharField(required=False, widget=forms.HiddenInput)
+    # The meter's own tariff (2026-11-19): kept with history (MeterTariff) — a change starts this month.
+    tariff = LooseDecimalField(required=False, max_digits=10, decimal_places=4,
+                               widget=forms.TextInput(attrs={'inputmode': 'decimal', 'placeholder': '0,00'}))
+    tariff_night = LooseDecimalField(required=False, max_digits=10, decimal_places=4,
+                                     widget=forms.TextInput(attrs={'inputmode': 'decimal', 'placeholder': '0,00'}))
 
     class Meta:
         model = Meter
@@ -174,10 +181,18 @@ class MeterForm(forms.ModelForm):
 
         super().__init__(*args, **kwargs)
         add_blank_placeholders(self)
-        for name in ('initial', 'initial_night'):
+        for name in ('initial', 'initial_night', 'tariff', 'tariff_night'):
             self.fields[name].localize = True
             self.fields[name].widget.is_localized = True
             self.fields[name].error_messages['invalid'] = 'Введите число.'
+        meter = self.instance
+        if meter.pk and not self.is_bound:
+            now = services.meter_tariff_at(meter, services.first_of_month(date.today()))
+            day, night = (now.tariff, now.tariff_night) if now else (meter.tariff, meter.tariff_night)
+            if day is not None:
+                self.initial['tariff'] = services.fmt_number(day)
+            if night is not None:
+                self.initial['tariff_night'] = services.fmt_number(night)
         self.fields['kind'].required = False
         self.fields['name'].required = False
         self.fields['unit'].required = False
@@ -217,6 +232,7 @@ class MeterForm(forms.ModelForm):
                 self.add_error('initial_night', 'Укажите начальное показание ночью.')
         else:
             cleaned['initial_night'] = None
+            cleaned['tariff_night'] = None
         return cleaned
 
     @property

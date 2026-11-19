@@ -1,0 +1,7 @@
+{% extends "app/base.html" %}
+{% block title %}Услуги · {{ property.name }} — RentFlow{% endblock %}
+{% block app_content %}
+<div class="modal-page">
+  {% include "billing/_service_window.html" %}
+</div>
+{% endblock %}

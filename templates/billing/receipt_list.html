@@ -20,7 +20,7 @@
           <td class="svc-name"><div class="svc-name-cell">
             <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
             <span class="svc-name-body">
-              <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="fade">{{ receipt.name }}</a>
+              <a href="{% url 'service_window' receipt.property_id %}?svc={{ receipt.pk }}" data-modal class="fade">{{ receipt.name }}</a>
               {% if receipt.provider %}<span class="svc-meta fade">{{ receipt.provider }}</span>{% endif %}
             </span>
           </div></td>
@@ -42,7 +42,7 @@
                 <svg class="icon"><use href="#i-more"/></svg>
               </summary>
               <div class="dropdown-menu" role="menu">
-                <a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="dropdown-item" role="menuitem">
+                <a href="{% url 'service_window' receipt.property_id %}?svc={{ receipt.pk }}" data-modal class="dropdown-item" role="menuitem">
                   <svg class="icon"><use href="#i-edit"/></svg>Настроить
                 </a>
                 <a href="{% url 'receipt_delete' receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">

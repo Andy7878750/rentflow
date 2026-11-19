@@ -1,6 +1,6 @@
 {% comment %}One meter of the object: its fields live hidden in the object form; app.js shows them in a small
    window («Счётчик N») and one info row in «Счётчики». Who pays by it (`owner`) is ticked in the tenant window.{% endcomment %}
-<div class="item" data-item="meter"{% if mform.DELETE.value %} hidden{% endif %}{% if mform.instance.pk %}{% with in_services=mform.instance.receipts.all %}{% if in_services %} data-services="{% for service in in_services %}«{{ service.name }}»{% if not forloop.last %}, {% endif %}{% endfor %}" data-service-url="{% url 'receipt_edit' in_services.0.pk %}"{% endif %}{% endwith %}{% endif %}>
+<div class="item" data-item="meter"{% if mform.DELETE.value %} hidden{% endif %}{% if mform.instance.pk %}{% with in_services=mform.instance.receipts.all %}{% if in_services %} data-services="{% for service in in_services %}«{{ service.name }}»{% if not forloop.last %}, {% endif %}{% endfor %}" data-service-url="{% url 'service_window' mform.instance.property_id %}?svc={{ in_services.0.pk }}"{% endif %}{% endwith %}{% endif %}>
   {{ mform.id }}{{ mform.kind }}{{ mform.name }}{{ mform.unit }}{{ mform.owner }}
   <span class="visually-hidden">{{ mform.DELETE }}</span>
   <section class="form-section">
@@ -62,7 +62,20 @@
           </div>
         {% endif %}{% endfor %}
       </div>
-      <p class="form-note item-note">Начальное показание — то, что на счётчике сейчас. С него начнётся первый месяц.</p>
+      {# The meter's own tariff (2026-11-19): one field, or day + night; «₽/<unit>» inside the field. #}
+      <div class="item-grid">
+        <div class="field fl">
+          <label for="{{ mform.tariff.id_for_label }}">Тариф<span data-day-label> · день</span> <span class="req">*</span></label>
+          <div class="num-wrap mt-tariff"><span class="num-wrap-in">{{ mform.tariff }}</span><span class="num-unit">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
+          {% if mform.tariff.errors %}<ul class="errorlist">{% for error in mform.tariff.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+        <div class="field fl" data-night-field>
+          <label for="{{ mform.tariff_night.id_for_label }}">Тариф · ночь <span class="req">*</span></label>
+          <div class="num-wrap mt-tariff"><span class="num-wrap-in">{{ mform.tariff_night }}</span><span class="num-unit">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
+          {% if mform.tariff_night.errors %}<ul class="errorlist">{% for error in mform.tariff_night.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      </div>
+      <p class="form-note item-note">Начальное — то, что на счётчике сейчас. Новый тариф действует с текущего месяца, прошлые месяцы — по старому.</p>
     </div>
   </section>
 </div>

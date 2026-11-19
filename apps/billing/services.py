@@ -1697,6 +1697,28 @@ def _usage_split(receipt, entry, payers, owner):
     return True
 
 
+def meter_payer_text(meter, tenants):
+    """Who pays by the meter, for its row on the object page: the tenant, «Платите вы», or a common one divided —
+    «Общий · Салон 45% · Кофе 55%» (whoever doesn't pay is left out; the rest — «вы N%»)."""
+    if meter.tenant_id:
+        return meter.tenant.name
+    if meter.vacant:
+        return 'Платите вы'
+    if not meter.split or not tenants:
+        return 'Общий'
+    off = {tenant.pk for tenant in meter.excluded.all()}
+    paying = [tenant for tenant in tenants if tenant.pk not in off]
+    if meter.split == Receipt.Split.EQUAL and not off:
+        return 'Общий · поровну'
+    lines = _split(Decimal('100'), Receipt(currency='RUB'), paying, tenants[0].property, all_tenants=tenants,
+                   how=meter.split, owner_takes=meter.owner_takes)
+    parts = [f'{tenant.name} {fmt_number(lines[tenant.pk].amount)}%' for tenant in paying if tenant.pk in lines]
+    rest = Decimal('100') - sum((line.amount for line in lines.values()), Decimal('0'))
+    if rest > 0:
+        parts.append(f'вы {fmt_number(rest)}%')
+    return 'Общий · ' + ' · '.join(parts)
+
+
 def two_zones(receipt, meter):
     """Day and night: the meter is set so in the object window. The service's own «день / ночь» counts only for
     old services none of whose meters says it (2026-11-15: one day / night meter used to make all of them so)."""
@@ -1907,6 +1929,10 @@ def month_bill(property_obj, month):
                 meter.two_zones = two_zones(receipt, meter)
                 meter.mode = meter_mode(receipt, meter)
                 meter.tariff_text = meter_tariff_text(receipt, entry, meter)
+                meter.payer_text = meter_payer_text(meter, tenants)
+                meter.icon_kind = meter.kind if meter.kind in READY_METER_KINDS else 'custom'
+            # Meters of several kinds in one service (2026-11-19): each row with its own icon, the group neutral.
+            entry.mixed = len({meter.icon_kind for meter, _ in entry.readings}) > 1
             mark_negative(receipt, entry.readings)
             entry.modes = {meter.mode for meter, _ in entry.readings}
             entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}

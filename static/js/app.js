@@ -1035,6 +1035,11 @@
       var line = el('span', 'mt-line');
       line.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
       line.appendChild(startCell(item));
+      // Its tariff (2026-11-19): «9,6 / 4,2 ₽/кВт·ч», or a red «нет тарифа».
+      var day = val(item, 'tariff'), nightTariff = val(item, 'tariff_night');
+      var tariff = el('span', 'info-cell mt-tariff-cell' + (day ? '' : ' is-none'),
+        day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : 'нет тарифа');
+      line.appendChild(tariff);
       row.appendChild(line);
       var who = meterWho(item);
       var badge = el('span', 'who-badge mt-who ' + who.cls, who.text);
@@ -1110,10 +1115,9 @@
 
     function syncMeter(item) {
       var dn = isDayNight(item);
-      var night = item.querySelector('[data-night-field]');
-      if (night) night.hidden = !dn;
-      var dayLabel = item.querySelector('[data-day-label]');
-      if (dayLabel) dayLabel.hidden = !dn;
+      // The start reading and the tariff (2026-11-19): both have a night field and «· день» on the day one.
+      item.querySelectorAll('[data-night-field]').forEach(function (night) { night.hidden = !dn; });
+      item.querySelectorAll('[data-day-label]').forEach(function (dayLabel) { dayLabel.hidden = !dn; });
       var name = val(item, 'name');
       var label = item.querySelector('[data-msel-label]');
       if (label) label.textContent = name;
@@ -1127,6 +1131,7 @@
         unit = (known && known.dataset.unit) || 'кВт·ч';
         setVal(item, 'unit', unit);
       }
+      item.querySelectorAll('[data-tariff-unit]').forEach(function (span) { span.textContent = unit; });
       var fixed = val(item, 'kind') !== 'custom';
       item.querySelectorAll('[data-munit]').forEach(function (picker) {
         picker.querySelector('[data-munit-label]').textContent = unit;
@@ -1367,7 +1372,7 @@
     function check(item) {
       var empty = [];
       var need = item.dataset.item === 'meter'
-        ? ['initial'].concat(isDayNight(item) ? ['initial_night'] : [])
+        ? ['initial', 'tariff'].concat(isDayNight(item) ? ['initial_night', 'tariff_night'] : [])
         : ['name', 'share'];
       need.forEach(function (suffix) {
         var input = item.querySelector('input[name$="-' + suffix + '"]');
@@ -1585,6 +1590,7 @@
     initFades(root);
     initMeters(root);
     if (window.initFormula) window.initFormula(root);  // «Своя формула» (formula.js)
+    if (window.initServiceWindow) window.initServiceWindow(root);  // «Услуги · объект» (services.js)
   }
 
   // ---------- Service window ----------

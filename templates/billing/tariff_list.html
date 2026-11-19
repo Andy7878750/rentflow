@@ -18,12 +18,12 @@
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
-        {% url 'receipt_edit' row.receipt.pk as open_url %}
-        <tr data-row-modal="{{ open_url }}" title="Открыть услугу «{{ row.receipt.name }}» — тариф меняется там">
+        {% url 'service_window' row.receipt.property_id as window_url %}
+        <tr data-row-modal="{{ window_url }}?svc={{ row.receipt.pk }}" title="Открыть услугу «{{ row.receipt.name }}» — тариф меняется там">
           <td class="svc-name"><div class="svc-name-cell">
             <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ row.receipt.kind }}"/></svg></span>
             <span class="svc-name-body">
-              <a href="{{ open_url }}" data-modal class="fade">{{ row.receipt.name }}</a>
+              <a href="{{ window_url }}?svc={{ row.receipt.pk }}" data-modal class="fade">{{ row.receipt.name }}</a>
               {% if row.receipt.provider %}<span class="svc-meta fade">{{ row.receipt.provider }}</span>{% endif %}
             </span>
           </div></td>
@@ -43,7 +43,7 @@
                 <svg class="icon"><use href="#i-more"/></svg>
               </summary>
               <div class="dropdown-menu" role="menu">
-                <a href="{{ open_url }}" data-modal class="dropdown-item" role="menuitem">
+                <a href="{{ window_url }}?svc={{ row.receipt.pk }}" data-modal class="dropdown-item" role="menuitem">
                   <svg class="icon"><use href="#i-edit"/></svg>Изменить
                 </a>
                 <a href="{% url 'receipt_delete' row.receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">

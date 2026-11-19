@@ -4831,3 +4831,12 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .mi-name > .fade { min-width: 0; }
 .mi-name label { cursor: text; }
 .mi-group .head-icon { margin-left: -2px; }
+
+/* ---------- Meters of several kinds in one service (the service window, 2026-11-19) ----------
+   The group is neutral; each row has its kind's icon in the 30px gutter, so the names stay on one line with the rest. */
+.mread-name { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.mread-name > .fade { min-width: 0; overflow: hidden; }
+.mi-meters.is-mixed .mread-who { position: relative; }
+.mread-kind { position: absolute; left: 2px; top: 50%; transform: translateY(-50%); display: inline-flex; width: 18px; height: 18px;
+  color: var(--mk, var(--color-text-muted)); }
+.mread-kind svg { width: 16px; height: 16px; margin: 1px; }

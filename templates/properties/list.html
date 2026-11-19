@@ -55,11 +55,11 @@
         <div class="card-block-head head-start" data-card-skip>
           <span>Услуги</span>
           {% if property.receipts.all %}
-            <a href="{% url 'property_detail' property.pk %}#receipts" class="head-icon" title="Изменить услуги" aria-label="Изменить услуги">
+            <a href="{% url 'service_window' property.pk %}" data-modal class="head-icon" title="Изменить услуги" aria-label="Изменить услуги">
               <svg class="icon"><use href="#i-edit"/></svg>
             </a>
           {% else %}
-            <a href="{% url 'receipt_create' property.pk %}" data-modal class="head-icon" title="Добавить услугу" aria-label="Добавить услугу">
+            <a href="{% url 'service_window' property.pk %}" data-modal class="head-icon" title="Добавить услугу" aria-label="Добавить услугу">
               <svg class="icon"><use href="#i-plus"/></svg>
             </a>
           {% endif %}

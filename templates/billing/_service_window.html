@@ -1,0 +1,16 @@
+{% comment %}«Услуги · <объект>» (2026-11-19, макет docs/mockups/2026-11-18-service-window.html + вариант 6 «По счётчикам»).
+   Всё рисует static/js/services.js из svc-state; каждое изменение сохраняется само (service_save).{% endcomment %}
+<div class="modal-panel svcwin" data-svcwin>
+  <header class="svcwin-head">
+    <h1>Услуги <span>· {{ property.name }}</span></h1>
+    <a href="{% url 'property_detail' property.pk %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </a>
+  </header>
+  {% csrf_token %}
+  {{ state|json_script:"svc-state" }}
+  <div class="svcwin-body">
+    <nav class="svcwin-nav" data-svc-nav aria-label="Услуги объекта"></nav>
+    <section class="svcwin-pane" data-svc-pane></section>
+  </div>
+</div>

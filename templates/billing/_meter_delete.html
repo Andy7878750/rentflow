@@ -9,7 +9,7 @@
       Зайдите в услугу и выключите в ней этот счётчик — после этого его можно удалить.</p>
     <div class="confirm-actions">
       <a href="{% url 'meter_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Понятно</a>
-      <a href="{% url 'receipt_edit' in_services.0.pk %}" data-modal class="btn btn-primary btn-auto">Открыть услугу</a>
+      <a href="{% url 'service_window' meter.property_id %}?svc={{ in_services.0.pk }}" data-modal class="btn btn-primary btn-auto">Открыть услугу</a>
     </div>
   {% else %}
     <h1 class="confirm-title">Удалить счётчик «{{ meter.name }}»{% if meter.serial %} № {{ meter.serial }}{% endif %}?</h1>

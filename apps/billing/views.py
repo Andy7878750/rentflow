@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from urllib.parse import quote
 
@@ -15,7 +16,7 @@ from apps.properties import services as property_services
 from apps.properties.models import Property
 from apps.properties.views import modal_back_url, object_page_context
 
-from . import services
+from . import services, window
 from .forms import ReceiptForm
 from .models import Meter, Receipt
 
@@ -157,6 +158,34 @@ def _receipt_form(request, property_obj, receipt, own_tpl=None, start_meter=None
 
 
 @login_required
+def service_window(request, property_pk):
+    """«Услуги · <объект>» (2026-11-19): every service of the object in one window, saved by itself.
+    ?svc=<id> — open that service; ?mode=<way> — start a new one charged so; ?meter=<id> — a new one by this meter."""
+    property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
+    svc = request.GET.get('svc', '')
+    state = window.window_state(property_obj, selected=int(svc) if svc.isdigit() else None)
+    mode = request.GET.get('mode', '')
+    state['start'] = {'mode': mode if mode in dict(window.MODES) else None,
+                      'meter': int(request.GET['meter']) if request.GET.get('meter', '').isdigit() else None}
+    template = 'billing/_service_window.html' if request.headers.get('X-Modal') else 'billing/service_window.html'
+    return render(request, template, {'property': property_obj, 'state': state})
+
+
+@login_required
+@require_POST
+def service_save(request, property_pk):
+    """One change in the service window: the service as the window has it → saved; answers with the whole window."""
+    property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
+    try:
+        data = json.loads(request.body or b'{}')
+        receipt = window.save_service(property_obj, data)
+    except (ValueError, TypeError, KeyError) as error:
+        message = str(error) if isinstance(error, window.WindowError) else 'Не удалось сохранить.'
+        return JsonResponse({'error': message}, status=400)
+    return JsonResponse(window.window_state(property_obj, selected=receipt.pk))
+
+
+@login_required
 def receipt_create(request, property_pk):
     """«+ Добавить услугу»: templates on top, settings below; ?kind=water opens with «Вода» picked."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
@@ -241,9 +270,9 @@ def receipt_add(request):
     for property_obj in properties:
         property_obj.receipt_label = services.services_label(property_obj.receipt_count)
     if len(properties) == 1:
-        return receipt_create(request, properties[0].pk)
+        return service_window(request, properties[0].pk)
     template = 'billing/_receipt_add.html' if request.headers.get('X-Modal') else 'billing/receipt_add.html'
-    return render(request, template, {'properties': properties})
+    return render(request, template, {'properties': properties, 'pick_url': 'service_window'})
 
 
 @login_required

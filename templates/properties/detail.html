@@ -26,7 +26,7 @@
     <div class="card-block-head head-start">
       <span>Услуги</span>
       {% if not bill.entries %}
-        <a href="{% url 'receipt_create' property.pk %}" data-modal class="head-icon" title="Добавить услугу" aria-label="Добавить услугу">
+        <a href="{% url 'service_window' property.pk %}" data-modal class="head-icon" title="Добавить услугу" aria-label="Добавить услугу">
           <svg class="icon"><use href="#i-plus"/></svg>
         </a>
       {% endif %}
@@ -92,7 +92,7 @@
         </button>
         <button type="button" class="btn btn-primary btn-auto btn-sm order-off" data-order-off>Готово</button>
       {% endif %}
-      <a href="{% url 'receipt_create' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm order-add">
+      <a href="{% url 'service_window' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm order-add">
         <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
       </a>
     </div>
@@ -129,7 +129,7 @@
           {% for row in input.sums %}
             <div class="mread">
               <div class="mread-who">
-                <span class="mi-name"><label for="{{ row.field }}" class="fade">{{ row.entry.receipt.name }}</label><a href="{% url 'receipt_edit' row.entry.receipt.pk %}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ row.entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
+                <span class="mi-name"><label for="{{ row.field }}" class="fade">{{ row.entry.receipt.name }}</label><a href="{% url 'service_window' property.pk %}?svc={{ row.entry.receipt.pk }}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ row.entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
                 {% if row.sub %}<span class="mread-meta fade">{{ row.sub }}</span>{% endif %}
               </div>
               <span class="mi-field"><span class="num-wrap{% if row.unit|length > 1 %} is-long{% endif %}"><input type="text" inputmode="decimal" class="num-input" id="{{ row.field }}" name="{{ row.field }}"
@@ -148,17 +148,18 @@
         <div class="mi-body">
           {% for entry, rows in input.meters %}
             {% with receipt=entry.receipt %}
-            <div class="mi-meters rk-{{ receipt.kind }}">
+            {# Meters of several kinds in one service: the group is neutral, each row has its own kind's icon. #}
+            <div class="mi-meters rk-{% if entry.mixed %}custom{% else %}{{ receipt.kind }}{% endif %}{% if entry.mixed %} is-mixed{% endif %}">
             <div class="mi-group{% if entry.total is None %} is-missing{% endif %}" id="mi-g-{{ receipt.pk }}" data-live>
-              <span class="receipt-icon rk-{{ receipt.kind }}"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
-              <span class="fade">{{ receipt.name }}</span><a href="{% url 'receipt_edit' receipt.pk %}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a>
+              <span class="receipt-icon rk-{% if entry.mixed %}custom{% else %}{{ receipt.kind }}{% endif %}"><svg class="icon"><use href="#{% if entry.mixed %}i-gauge{% else %}i-r-{{ receipt.kind }}{% endif %}"/></svg></span>
+              <span class="fade">{{ receipt.name }}</span><a href="{% url 'service_window' property.pk %}?svc={{ receipt.pk }}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a>
               <span class="missing-dot" title="Ещё не всё введено" aria-hidden="true"></span>
             </div>
             {% for meter, reading in rows %}
               {% with unit=meter.unit|default:receipt.unit dn=meter.two_zones mode=meter.mode %}
               <div class="mread{% if dn %} is-dn{% endif %}">
                 <div class="mread-who">
-                  <span class="fade">{{ meter.who }}</span>
+                  <span class="mread-name">{% if entry.mixed %}<span class="mread-kind mk-{{ meter.icon_kind }}" title="{{ meter.name }}">{% include "billing/_meter_icon.html" with kind=meter.icon_kind %}</span>{% endif %}<span class="fade">{{ meter.payer_text|default:meter.who }}</span></span>
                   <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} · {{ meter.tariff_text }}{% endif %}</span>
                 </div>
                 <span class="mread-prev">
@@ -204,7 +205,7 @@
           {% for entry in input.auto %}
             <div class="mread">
               <div class="mread-who">
-                <span class="mi-name"><span class="fade">{{ entry.receipt.name }}</span><a href="{% url 'receipt_edit' entry.receipt.pk %}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
+                <span class="mi-name"><span class="fade">{{ entry.receipt.name }}</span><a href="{% url 'service_window' property.pk %}?svc={{ entry.receipt.pk }}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
                 {% if entry.receipt.provider %}<span class="mread-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
               </div>
               <span></span>

@@ -4,7 +4,7 @@ import datetime
 
 from django.db import transaction
 
-from apps.billing.services import resync_property
+from apps.billing.services import resync_property, save_meter_tariff
 from apps.tenants.services import apply_share
 
 from .models import Property, PropertyKind
@@ -159,3 +159,5 @@ def _save_meter_rows(property_obj, meter_formset, tenant_keys):
         meter.vacant = (not property_obj.is_owner_used and meter.tenant_id is None
                         and (owner == 'free' or owner.startswith(('pk:', 'new:'))))
         meter.save()
+        # Its tariff (2026-11-19, the meter's own): a new one starts this month, earlier months keep theirs.
+        save_meter_tariff(meter, meter_form.cleaned_data.get('tariff'), meter_form.cleaned_data.get('tariff_night'))
