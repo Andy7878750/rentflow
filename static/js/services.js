@@ -558,8 +558,8 @@
     // ---------- the start ----------
     if (S.start && S.start.mode) startNew(S.start.mode);
     else if (S.start && S.start.meter) startNew('meters');
-    else if (S.selected) current = copy(byId(S.services, S.selected) || S.services[0]);
-    else if (S.services.length) current = copy(S.services[0]);
+    else if (S.selected && byId(S.services, S.selected)) current = copy(byId(S.services, S.selected));
+    else startNew('receipt');  // opened without a service (2026-11-19): a new one «По квитанции», ready for its name
     render();
     if (editing) { var first = pane.querySelector('[data-f="name"]'); if (first) first.focus(); }
   };
