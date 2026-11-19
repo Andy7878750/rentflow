@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Окно счётчика — варианты</title>
+<style>
+/* Макет 2026-11-19: как заполнять счётчик (окно «Новый счётчик» в окне объекта). Варианты А–Г.
+   Поля как везде: подпись над полем, 38px, единица — серым блоком справа. */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1;
+  --bg: #f5f6f7; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680; --warm: #fff8e6; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 40px; }
+.page { max-width: 760px; margin: 0 auto; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: rgba(255,255,255,.85); font: 600 13px var(--font); color: var(--text); cursor: pointer; }
+.tabs button.is-on { background: var(--accent); color: #fff; }
+.tabs .rec { font-weight: 400; opacity: .85; }
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.about div { background: #fff; border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+.about b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.about .plus b { color: var(--accent); }
+.about .minus b { color: #c0392b; }
+.dn-switch { margin: 0 0 12px; color: #fff; font-size: 13px; }
+.dn-switch label { margin-right: 14px; cursor: pointer; }
+
+/* окно */
+.win { background: #fff; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.25); padding: 22px 24px 20px; }
+.win-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.win-head h1 { margin: 0; font-size: 20px; color: var(--primary); }
+.win-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.x { color: var(--muted); font-size: 22px; line-height: 1; }
+.sec { border: 1px solid var(--border); border-radius: 12px; }
+.sec-head { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 16px; background: var(--bg);
+  border-bottom: 1px solid var(--border); border-radius: 12px 12px 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .03em; color: var(--muted); }
+.sec-body { padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 10px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px; border-radius: 11px; background: #e3f1f6; color: #1f6280;
+  font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.grid { display: grid; gap: 10px 12px; align-items: end; }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fl label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; white-space: nowrap; }
+.req { color: #c0392b; }
+.inp, .pick { width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font: 14px var(--font); color: var(--text); background: #fff; display: flex; align-items: center; }
+.pick { justify-content: space-between; }
+.pick .chev { color: var(--muted); font-size: 11px; }
+.unit { display: flex; height: 38px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #fff; }
+.unit .v { flex: 1; min-width: 0; display: flex; align-items: center; padding: 0 12px; font-weight: 600; }
+.unit .v.empty { background: var(--warm); color: #b3bac1; font-weight: 400; }
+.unit .u { display: flex; align-items: center; padding: 0 10px; border-left: 1px solid var(--border); background: var(--bg); color: var(--muted);
+  font-size: 13px; font-weight: 600; white-space: nowrap; }
+.seg { display: flex; height: 38px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; gap: 2px; }
+.seg span { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.seg span.on { background: var(--accent); color: #fff; font-weight: 600; }
+.note { margin: 0; font-size: 12px; color: var(--muted); }
+.foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.btn { height: 38px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font: 600 14px var(--font); color: var(--text); }
+.btn.main { border: 2px solid var(--accent); color: var(--accent); }
+
+/* Б: таблица «День / Ночь × Начальное / Тариф» */
+.tbl { border: 1px solid var(--border); border-radius: var(--radius); }
+.tbl-row { display: grid; grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 12px; }
+.tbl-row + .tbl-row { border-top: 1px solid var(--border); }
+.tbl-row.head { padding: 0 12px; min-height: 30px; background: var(--bg); border-radius: var(--radius) var(--radius) 0 0; font-size: 12px; color: var(--muted); }
+.tbl-row .zone { color: var(--muted); font-size: 13px; }
+
+/* В: плашки вида */
+.kinds { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.kind { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 64px; border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 12px; cursor: pointer; }
+.kind svg { width: 20px; height: 20px; }
+.kind.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--accent-soft); font-weight: 600; }
+.kind.own { border-style: dashed; color: var(--accent); }
+
+/* Г: две части */
+.halves { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.halves .sec-body { gap: 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="tabs" id="tabs"></div>
+  <div class="dn-switch"><label><input type="radio" name="dn" value="0" checked> однотарифный</label><label><input type="radio" name="dn" value="1"> день / ночь</label> — переключите, чтобы сравнить</div>
+  <div class="about" id="about"></div>
+  <div class="win">
+    <div class="win-head"><div><h1>Новый счётчик</h1><p>Новый объект</p></div><span class="x">×</span></div>
+    <div id="body"></div>
+    <div class="foot"><span class="btn">Отмена</span><span class="btn main">Готово</span></div>
+  </div>
+</div>
+<script>
+(function () {
+  var dn = false, cur = 'B';
+  var BOLT = '<svg viewBox="0 0 24 24" fill="#0e9aa7"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
+  var DROP = function (c) { return '<svg viewBox="0 0 24 24" fill="' + c + '"><path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/></svg>'; };
+  var fl = function (label, inner) { return '<div class="fl"><label>' + label + '</label>' + inner + '</div>'; };
+  var unit = function (v, u) { return '<div class="unit"><span class="v' + (v ? '' : ' empty') + '">' + (v || '0') + '</span><span class="u">' + u + '</span></div>'; };
+  var kind = fl('Что меряет <span class="req">*</span>', '<div class="pick">Электричество<span class="chev">▾</span></div>');
+  var serial = fl('№ счётчика', '<div class="inp">123654-2</div>');
+  var seg = function (label) { return fl(label || '&nbsp;', '<div class="seg"><span data-dn="0"' + (dn ? '' : ' class="on"') + '>Однотарифный</span><span data-dn="1"' + (dn ? ' class="on"' : '') + '>День / ночь</span></div>'); };
+  var sec = function (title, body, badge) { return '<div class="sec"><div class="sec-head">' + title + (badge ? '<span class="badge">' + badge + '</span>' : '') + '</div><div class="sec-body">' + body + '</div></div>'; };
+  var NOTE = '<p class="note">Начальное — что на счётчике сейчас. Новый тариф — с текущего месяца.</p>';
+
+  var V = {
+    A: ['А · Ровная сетка (как сейчас, поправлено)',
+      'Ничего нового учить не надо: три поля в ряд, ниже — показание и тариф в тех же колонках. Пустого места справа нет — третья колонка занята.',
+      'День / ночь — четыре поля в два ряда, легко перепутать «начальное ночь» и «тариф день».',
+      function () {
+        var row2 = dn ? fl('Начальное · день <span class="req">*</span>', unit('12 500', 'кВт·ч')) + fl('Начальное · ночь <span class="req">*</span>', unit('', 'кВт·ч')) + '<div></div>' +
+                        fl('Тариф · день <span class="req">*</span>', unit('6,9', '₽/кВт·ч')) + fl('Тариф · ночь <span class="req">*</span>', unit('', '₽/кВт·ч')) + '<div></div>'
+                      : fl('Начальное <span class="req">*</span>', unit('12 500', 'кВт·ч')) + fl('Тариф <span class="req">*</span>', unit('6,9', '₽/кВт·ч')) + '<div></div>';
+        return sec('Счётчик', '<div class="grid g3">' + kind + serial + seg() + '</div><div class="grid g3">' + row2 + '</div>' + NOTE, 'Электричество');
+      }],
+    B: ['Б · Таблица день/ночь <span class="rec">(советую)</span>',
+      'Сверху — какой счётчик. Снизу — маленькая таблица: строки «День» и «Ночь», столбцы «Начальное» и «Тариф». День/ночь не плодит поля, а добавляет строку — сразу видно, что к чему.',
+      'Одна лишняя рамка (таблица внутри блока).',
+      function () {
+        var rows = (dn ? [['День', '12 500', '6,9'], ['Ночь', '', '']] : [['', '12 500', '6,9']]).map(function (r) {
+          return '<div class="tbl-row"><span class="zone">' + (r[0] || 'Всё время') + '</span>' + unit(r[1], 'кВт·ч') + unit(r[2], '₽/кВт·ч') + '</div>';
+        }).join('');
+        return sec('Счётчик', '<div class="grid g3">' + kind + serial + seg() + '</div>' +
+          '<div class="tbl"><div class="tbl-row head"><span></span><span>Начальное <span class="req">*</span></span><span>Тариф <span class="req">*</span></span></div>' + rows + '</div>' + NOTE, 'Электричество');
+      }],
+    C: ['В · Плашки вида',
+      'Вид счётчика — плашками с иконкой, как шаблоны услуг: один клик, видно цвет. Ниже две ровные половины: «Начальное» и «Тариф».',
+      'Окно выше на ~70px; свой вид — через плашку «+ Свой».',
+      function () {
+        var kinds = '<div class="kinds"><div class="kind on">' + BOLT + 'Электричество</div><div class="kind">' + DROP('#2e86c1') + 'Вода холодная</div>' +
+          '<div class="kind">' + DROP('#c0392b') + 'Вода горячая</div><div class="kind own">+ Свой</div></div>';
+        var row = dn ? fl('Начальное · день', unit('12 500', 'кВт·ч')) + fl('Тариф · день', unit('6,9', '₽/кВт·ч')) + fl('Начальное · ночь', unit('', 'кВт·ч')) + fl('Тариф · ночь', unit('', '₽/кВт·ч'))
+                     : fl('Начальное <span class="req">*</span>', unit('12 500', 'кВт·ч')) + fl('Тариф <span class="req">*</span>', unit('6,9', '₽/кВт·ч'));
+        return sec('Счётчик', kinds + '<div class="grid g2">' + serial + seg() + '</div><div class="grid g2">' + row + '</div>' + NOTE);
+      }],
+    D: ['Г · Две части',
+      'Два блока рядом: «Счётчик» (что, №, тариф/день-ночь) и «Показания и тариф». Каждая часть отвечает на свой вопрос.',
+      'Узко: в каждой части поля в одну колонку, окно выше; на телефоне части встают друг под друга.',
+      function () {
+        var left = sec('Счётчик', kind + serial + seg('Тарифы'));
+        var right = sec('Начальное и тариф', dn ? '<div class="grid g2">' + fl('Начальное · день', unit('12 500', 'кВт·ч')) + fl('Начальное · ночь', unit('', 'кВт·ч')) + '</div>' +
+          '<div class="grid g2">' + fl('Тариф · день', unit('6,9', '₽')) + fl('Тариф · ночь', unit('', '₽')) + '</div>'
+          : fl('Начальное <span class="req">*</span>', unit('12 500', 'кВт·ч')) + fl('Тариф <span class="req">*</span>', unit('6,9', '₽/кВт·ч')) + NOTE);
+        return '<div class="halves">' + left + right + '</div>';
+      }]
+  };
+  function render() {
+    document.getElementById('tabs').innerHTML = Object.keys(V).map(function (k) {
+      return '<button data-v="' + k + '"' + (k === cur ? ' class="is-on"' : '') + '>' + V[k][0] + '</button>'; }).join('');
+    document.getElementById('about').innerHTML = '<div class="plus"><b>Плюс</b>' + V[cur][1] + '</div><div class="minus"><b>Минус</b>' + V[cur][2] + '</div>';
+    document.getElementById('body').innerHTML = V[cur][3]();
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-v]'); if (t) { cur = t.dataset.v; return render(); }
+    t = e.target.closest('[data-dn]'); if (t) { dn = t.dataset.dn === '1'; document.querySelector('input[name=dn][value="' + (dn ? 1 : 0) + '"]').checked = true; render(); }
+  });
+  document.addEventListener('change', function (e) { if (e.target.name === 'dn') { dn = e.target.value === '1'; render(); } });
+  render();
+})();
+</script>
+</body>
+</html>
