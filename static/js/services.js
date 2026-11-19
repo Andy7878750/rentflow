@@ -275,8 +275,11 @@
         '<span class="sv-saved" data-saved>' + (s.id ? 'Сохранено' : 'Введите название — услуга сохранится сама') + '</span>' +
         (s.id && s.delete_url ? '<a href="' + esc(s.delete_url) + '" data-modal class="head-icon sv-del" title="Удалить услугу" aria-label="Удалить услугу">' +
           '<svg class="icon"><use href="#i-trash"/></svg></a>' : '') + '</div>' +
-        (editing ? '<div class="sv-top-edit"><div class="fl"><label>Название в счёте</label><input data-f="name" value="' + esc(s.name) + '" maxlength="100" autocomplete="off"></div>' +
-          '<div class="fl"><label>Поставщик</label><input data-f="provider" value="' + esc(s.provider) + '" placeholder="Например, АО «НЭО»" maxlength="150" autocomplete="off"></div></div>' : '') +
+        // The same fields as everywhere (properties/_field.html): the label over a 38px box.
+        (editing ? '<div class="sv-top-edit"><div class="field fl"><label for="sv-name">Название в счёте</label>' +
+          '<input type="text" id="sv-name" data-f="name" value="' + esc(s.name) + '" placeholder=" " maxlength="100" autocomplete="off"></div>' +
+          '<div class="field fl"><label for="sv-provider">Поставщик</label>' +
+          '<input type="text" id="sv-provider" data-f="provider" value="' + esc(s.provider) + '" placeholder=" " maxlength="150" autocomplete="off"></div></div>' : '') +
         '</div><div class="sv-body">';
 
       var b;
