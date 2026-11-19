@@ -149,6 +149,28 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .mw-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 20px; }
 .btn { height: 38px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font: 600 14px var(--font); color: var(--text); cursor: pointer; }
 .btn.main { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pc { font-size: 13px; color: var(--muted); text-align: right; white-space: nowrap; }
+.mw .gp-row:not(.is-off):not(.is-owner) .pc { color: var(--text); font-weight: 600; }
+.mw .gp-row.is-owner { border-top: 1px solid #dde1e5; }
+.mw .gp-row.is-owner.is-live .who, .mw .gp-row.is-owner.is-live .pc { color: var(--text); font-weight: 600; }
+.ex-link { align-self: flex-start; color: var(--accent); font-size: 13px; cursor: pointer; }
+/* пример «На странице объекта» — кусок «Ввода за месяц» */
+.mw.ex { width: 520px; }
+.prev-cap { display: grid; grid-template-columns: minmax(0,1fr) 64px 90px 76px; gap: 0 8px; font-size: 12px; color: var(--text); }
+.prev-cap span { text-align: right; }
+.prev-cap .l { text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.prev-group { margin: 0 -8px; padding: 8px; border-radius: var(--radius); }
+.prev-group .gname { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; padding: 0 0 4px; }
+.prev-group .gname .pen { color: var(--muted); font-weight: 400; font-size: 13px; }
+.pr { display: grid; grid-template-columns: 18px minmax(0,1fr) 64px 90px 76px; align-items: center; gap: 0 8px; min-height: 40px; }
+.pr .nm { min-width: 0; font-size: 12px; }
+.pr .nm .fade { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr .nm small { color: var(--muted); font-size: 11px; }
+.pr .nm em { font-style: normal; color: var(--muted); }
+.pr .v { text-align: right; color: var(--muted); }
+.pr .in { height: 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--warm); }
+.pr .use { text-align: right; }
+.pr .use span { display: inline-block; padding: 2px 8px; border-radius: 10px; background: var(--bg); font-size: 12px; color: var(--muted); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -168,7 +190,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     <div class="win-body">
       <nav class="nav" id="nav"></nav>
       <section class="pane">
-        <div class="top"><div class="top-line"><span id="svcIcon"></span><span class="name">Вода горячая</span><span class="prov">· АО «ТЭК СПб»</span><span class="saved">Сохранено</span></div></div>
+        <div class="top"><div class="top-line"><span id="svcIcon"></span><span class="name" id="svcName">Вода горячая</span><span class="prov" id="svcProv">· АО «ТЭК СПб»</span><span class="saved">Сохранено</span></div></div>
         <div class="body" id="body"></div>
       </section>
     </div>
@@ -296,23 +318,62 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
   // 6 — все счётчики объекта списком; клик по строке — маленькое окно «Кто платит» этого счётчика
   ABOUT[6] = ['Сразу видны ВСЕ счётчики объекта (вид услуги ещё неизвестен). Включил нужные, кликнул по строке — в маленьком окне один вопрос: «Один арендатор» или «Общий — делим». Главное окно не перегружено.',
     'Чтобы проверить, кто платит, надо открывать окно каждого счётчика (в списке видно только «Салон» / «Общий · по долям»). Счётчик, уже подключённый к другой услуге, здесь только показан.'];
+  // пример «всё в одной услуге»: свет и вода одной услугой «Свет и вода»; холодная — уже в другой услуге
   var M6 = [
-    { k: 'el', no: '011245', tar: '9,6 / 4,2 ₽/кВт·ч', svc: 'Электричество' },
-    { k: 'el', no: '011377', tar: '9,6 / 4,2 ₽/кВт·ч', svc: 'Электричество' },
-    { k: 'hot', no: '250352064', tar: TAR, on: true, own: 'e' },
-    { k: 'hot', no: '250338183', tar: TAR, on: true, own: 'z' },
-    { k: 'hot', no: '250311470', note: 'в подсобке', tar: TAR, on: true, own: null, how: 'по долям', pay: { e: true, z: true } },
-    { k: 'cold', no: '190044', tar: '' }
+    { k: 'el', no: '011245', tar: '9,6 / 4,2 ₽/кВт·ч', unit: 'кВт·ч', dn: true, prev: [251, 118], on: true, own: 'e' },
+    { k: 'el', no: '011377', tar: '9,6 / 4,2 ₽/кВт·ч', unit: 'кВт·ч', dn: true, prev: [1420, 610], on: true, own: 'z' },
+    { k: 'hot', no: '250352064', tar: TAR, unit: 'м³', prev: [41], on: true, own: 'e' },
+    { k: 'hot', no: '250338183', tar: TAR, unit: 'м³', prev: [67], on: true, own: 'z' },
+    { k: 'hot', no: '250311470', note: 'в подсобке', tar: TAR, unit: 'м³', prev: [12], on: true, own: null, how: 'по долям', pay: { e: true, z: true } },
+    { k: 'cold', no: '190044', tar: '', svc: 'Вода холодная' }
   ];
+  T[0].area = 54; T[1].area = 66;
   var HOW = ['по долям', 'поровну', 'по м²'];
-  var open6 = null, draft = null;
+  var open6 = null, draft = null, example6 = false;
   var tname = function (id) { return T.filter(function (t) { return t.id === id; })[0].name; };
+  // доли общего счётчика — та же логика, что «Делим и кто платит» в окне услуг:
+  // кто-то не платит → у «Остаётся на вас» появляется переключатель; выключен — остаток делят платящие
+  function shares(d) {
+    var w = function (t) { return d.how === 'поровну' ? 1 : d.how === 'по м²' ? t.area : t.share; };
+    var on = T.filter(function (t) { return d.pay[t.id]; }), off = T.filter(function (t) { return !d.pay[t.id]; });
+    var sum = function (l) { return l.reduce(function (a, t) { return a + w(t); }, 0); };
+    var canPass = on.length > 0 && off.length > 0, ownerTakes = !canPass || d.ownerTakes !== false;
+    var base = ownerTakes ? sum(T) : sum(on), r = {};
+    T.forEach(function (t) { r[t.id] = d.pay[t.id] ? Math.round(w(t) / base * 100) : 0; });
+    r.owner = ownerTakes ? Math.round(sum(off) / sum(T) * 100) : 0;
+    r.canPass = canPass; r.ownerTakes = ownerTakes; r.off = off.length;
+    return r;
+  }
   var payerText = function (m) {
     if (m.svc) return 'в «' + m.svc + '»';
     if (!m.on) return '—';
     if (m.own === null) return 'Общий · ' + m.how;
     return m.own === 'owner' ? 'Вы' : tname(m.own);
   };
+  var subPayer = function (m) {
+    if (m.own === null) { var s = shares(m);
+      return 'общий · ' + T.filter(function (t) { return m.pay[t.id]; }).map(function (t) { return t.name.split(' ')[0] + ' ' + s[t.id] + '%'; }).join(' · ') + (s.owner ? ' · вы ' + s.owner + '%' : ''); }
+    return m.own === 'owner' ? 'платите вы' : tname(m.own);
+  };
+  // «На странице объекта»: все счётчики услуги одной группой; у каждой строки своя иконка вида и своя единица
+  function example6Html() {
+    var list = M6.filter(function (m) { return m.on && !m.svc; });
+    var kinds = list.map(function (m) { return m.k; }).filter(function (k, i, a) { return a.indexOf(k) === i; });
+    var mixed = kinds.length > 1, bg = mixed ? '#34495e' : I[kinds[0]][0];
+    var rows = list.map(function (m) {
+      var parts = m.dn ? [['день', m.prev[0]], ['ночь', m.prev[1]]] : [['', m.prev[0]]];
+      return parts.map(function (p, j) {
+        return '<div class="pr">' + (j === 0 ? ic(m.k) : '<span></span>') +
+          '<span class="nm">' + (j === 0 ? '<span class="fade">№ ' + m.no + (p[0] ? ' <em>' + p[0] + '</em>' : '') + '</span><small class="fade">' + subPayer(m) + '</small>'
+                                         : '<em>' + p[0] + '</em>') + '</span>' +
+          '<span class="v">' + p[1].toLocaleString('ru-RU') + '</span><span class="in"></span><span class="use"><span>— ' + m.unit + '</span></span></div>';
+      }).join('');
+    }).join('');
+    return '<div class="ov" data-ex-close="1"><div class="mw ex"><div class="mw-head"><b>На странице объекта</b><span class="x" data-ex-close="1">×</span></div>' +
+      '<div class="mw-body"><div class="prev-cap"><span class="l">Показания счётчиков</span><span>Было</span><span>Стало</span><span>Расход</span></div>' +
+      '<div class="prev-group" style="background:color-mix(in srgb,' + bg + ' 5%,#fff)"><div class="gname">' +
+      (mixed ? ic('gauge', false) : ic(kinds[0])) + 'Свет и вода<span class="pen">✎</span></div>' + rows + '</div></div></div></div>';
+  }
   V[6] = function () {
     var cols = 'grid-template-columns: minmax(0,1fr) 130px 190px 30px';
     var rows = '<div class="gp-row sub" style="' + cols + ';min-height:28px"><span>Счётчик</span><span class="r">Тариф</span><span>Кто платит</span><span class="r">Вкл.</span></div>' +
@@ -324,7 +385,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
           '<span class="payer"><span class="v">' + payerText(m) + '</span>' + (m.on && !m.svc ? '<span class="chev">›</span>' : '') + '</span>' +
           (m.svc ? '<span></span>' : '<span class="sw' + (m.on ? ' on' : '') + '" data-sw="' + i + '"></span>') + '</div>';
       }).join('');
-    return charge + block('Счётчики объекта', '<div class="gp">' + rows + '</div>') + tail;
+    return charge + block('Счётчики объекта', '<div class="gp">' + rows + '</div>') + '<a class="ex-link" data-ex6="1">См. пример на странице объекта</a>';
   };
   function modal6() {
     var m = M6[open6], d = draft, rows;
@@ -337,15 +398,16 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
           (t.id === 'owner' ? '<span></span>' : '<span class="no">' + (i + 1) + '</span>') + '<span class="who"><span class="t">' + t.name + '</span></span><span class="ok">' + (sel ? '✓' : '') + '</span></div>';
       }).join('');
     } else {
-      var cols = 'grid-template-columns: 22px minmax(0,1fr) 50px 30px';
+      var cols = 'grid-template-columns: 22px minmax(0,1fr) 80px 30px', s = shares(d);
       rows = '<div class="split-top">' + ic('people', false) + '<div class="how">' + HOW.map(function (h) {
         return '<span data-how="' + h + '"' + (d.how === h ? ' class="on"' : '') + ' style="cursor:pointer">' + h + '</span>'; }).join('') + '</div></div>' +
         T.map(function (t, i) {
           var on = d.pay[t.id];
           return '<div class="gp-row' + (on ? '' : ' is-off') + '" style="' + cols + '"><span class="no">' + (i + 1) + '</span><span class="who"><span class="t">' + t.name + '</span></span>' +
-            '<span class="sub r">' + (d.how === 'поровну' ? '50%' : t.share + '%') + '</span><span class="sw' + (on ? ' on' : '') + '" data-pay="' + t.id + '"></span></div>';
-        }).join('') + '<div class="gp-row is-owner" style="' + cols + '"><span></span><span class="who">Остаётся на вас</span><span class="sub r">' +
-        (d.pay.e && d.pay.z ? '0%' : '—') + '</span><span></span></div>';
+            '<span class="pc">' + (on ? s[t.id] + '%' : 'не платит') + '</span><span class="sw' + (on ? ' on' : '') + '" data-pay="' + t.id + '"></span></div>';
+        }).join('') + '<div class="gp-row is-owner' + (s.canPass && s.ownerTakes ? ' is-live' : '') + '" style="' + cols + '"><span></span><span class="who">Остаётся на вас</span>' +
+        '<span class="pc">' + (s.off && s.ownerTakes ? s.owner + '%' : '—') + '</span>' +
+        (s.canPass ? '<span class="sw' + (s.ownerTakes ? ' on' : '') + '" data-owner6="1"></span>' : '<span></span>') + '</div>';
     }
     return '<div class="ov" data-close="1"><div class="mw"><div class="mw-head">' + ic(m.k) + '<b>№ ' + m.no + '</b><span class="sub">' + m.tar + '</span><span class="x" data-close="1">×</span></div>' +
       '<div class="mw-body"><div class="sec"><h3>Кто платит</h3>' + seg + '</div><div class="gp">' + rows + '</div></div>' +
@@ -357,6 +419,11 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     document.getElementById('body').innerHTML = V[cur]();
     var old = document.querySelector('.ov'); if (old) old.remove();
     if (cur === '6' && open6 !== null) document.querySelector('.win').insertAdjacentHTML('beforeend', modal6());
+    if (cur === '6' && example6) document.querySelector('.win').insertAdjacentHTML('beforeend', example6Html());
+    var six = cur === '6';
+    document.getElementById('svcIcon').innerHTML = six ? ic('gauge', false) : ic('hot');
+    document.getElementById('svcName').textContent = six ? 'Свет и вода' : 'Вода горячая';
+    document.getElementById('svcProv').textContent = six ? '' : '· АО «ТЭК СПб»';
     document.getElementById('about').innerHTML = '<div class="plus"><b>Плюс</b>' + ABOUT[cur][0] + '</div><div class="minus"><b>Минус</b>' + ABOUT[cur][1] + '</div>';
     document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.v === cur); });
   }
@@ -367,11 +434,14 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     // вариант 6
     if ((t = e.target.closest('[data-sw]'))) { var mm = M6[t.dataset.sw]; mm.on = !mm.on; if (mm.on && mm.own === undefined) { mm.own = 'owner'; } return render(); }
     if ((t = e.target.closest('[data-m]'))) { open6 = +t.dataset.m; var s = M6[open6];
-      draft = { own: s.own === undefined ? 'owner' : s.own, how: s.how || 'по долям', pay: s.pay ? Object.assign({}, s.pay) : { e: true, z: true } }; return render(); }
-    if ((t = e.target.closest('[data-own]'))) { draft.own = t.dataset.own === '1' ? 'e' : null; return render(); }
+      draft = { own: s.own === undefined ? 'owner' : s.own, how: s.how || 'по долям', pay: s.pay ? Object.assign({}, s.pay) : { e: true, z: true }, ownerTakes: s.ownerTakes }; return render(); }
+    if ((t = e.target.closest('[data-own]'))) { draft.own = t.dataset.own === '1' ? (draft.own || 'e') : null; return render(); }
     if ((t = e.target.closest('[data-t]'))) { draft.own = t.dataset.t; return render(); }
     if ((t = e.target.closest('[data-how]'))) { draft.how = t.dataset.how; return render(); }
     if ((t = e.target.closest('[data-pay]'))) { draft.pay[t.dataset.pay] = !draft.pay[t.dataset.pay]; return render(); }
+    if ((t = e.target.closest('[data-owner6]'))) { draft.ownerTakes = draft.ownerTakes === false; return render(); }
+    if ((t = e.target.closest('[data-ex6]'))) { example6 = true; return render(); }
+    if ((t = e.target.closest('[data-ex-close]')) && (e.target === t || t.classList.contains('x'))) { example6 = false; return render(); }
     if ((t = e.target.closest('[data-done]'))) { Object.assign(M6[open6], draft); open6 = null; return render(); }
     if ((t = e.target.closest('[data-close]')) && (e.target === t || t.classList.contains('x') || t.classList.contains('btn'))) { open6 = null; return render(); }
   });
