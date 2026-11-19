@@ -96,7 +96,9 @@
       var g = groupOf(key);
       current.group = key; current.meters = g.meters.slice(); current.kind = g.kind;
       // A meter in no service yet: «кто платит» is not chosen (the owner when there are no tenants).
-      S.meters.forEach(function (m) { if (g.meters.indexOf(m.id) >= 0 && !m.service) m.who = T.length ? '' : 'owner'; });
+      S.meters.forEach(function (m) {
+        if (g.meters.indexOf(m.id) >= 0 && !m.service) { m.who = T.length ? '' : 'owner'; m.input = 'readings'; }
+      });
       if (!String(current.name || '').trim() || current.autoName) { current.name = g.name; current.autoName = true; }
     }
     function mark() { changed = true; status('Есть несохранённые изменения'); }
@@ -235,7 +237,9 @@
     function meterNote(m) {
       if (m.who === 'common') {
         var how = m.split || 'shares', r = shares(how, m.excluded, m.owner_takes);
-        var parts = T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; }).map(function (t) { return esc(t.name) + ' ' + Math.round(r.k[t.id] * 1000) / 10 + '%'; });
+        var paying = T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; });
+        var parts = paying.slice(0, 3).map(function (t) { return esc(t.name) + ' ' + Math.round(r.k[t.id] * 1000) / 10 + '%'; });
+        if (paying.length > 3) parts.push('ещё ' + (paying.length - 3));
         return 'Делим ' + SPLITS.filter(function (x) { return x[0] === how; })[0][1] + (parts.length ? ' · ' + parts.join(' · ') : '') +
           ' · <button type="button" class="sv-link" data-meter="' + m.id + '">изменить</button>';
       }
@@ -254,7 +258,7 @@
     function meterTable(s) {
       if (!s.group) return '<div class="sv-mt-ph">Сначала выберите, что считаем</div>';
       var rows = s.meters.map(function (id) {
-        var m = byId(S.meters, id), empty = m.who === '' || m.who == null;
+        var m = byId(S.meters, id), empty = m.who === '' || m.who == null, note = meterNote(m);
         return '<div class="sv-mt-row"><div class="sv-mt-line">' + meterIcon(m.kind) +
           '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="fade' + (m.tariff ? '' : ' sv-none') + '">' +
           esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span></span>' +
@@ -263,10 +267,10 @@
           (pickOpen === m.id ? payerMenu(m) : '') + '</span>' +
           '<div class="sv-seg sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
           '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div>' +
-          '</div><div class="sv-mt-note">' + meterNote(m) + '</div></div>';
+          '</div>' + (note ? '<div class="sv-mt-note">' + note + '</div>' : '') + '</div>';
       }).join('');
       return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>' +
-        '<div><a href="' + esc(S.urls.object) + '" data-modal class="sv-add-link">+ Добавить счётчик объекта</a></div>';
+        '<div><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
     }
     function meterWindow() {
       var m = byId(S.meters, meterOpen), d = draft, body;
@@ -386,6 +390,7 @@
       }
       // The bottom bar repeats the top right corner: «Удалить услугу» on the left, «Сохранить» — the main button.
       h += '<div class="sv-foot">' + (s.id ? '<button type="button" class="subwin-delete" data-delete>Удалить услугу</button>' : '') +
+        '<button type="button" class="btn btn-ghost btn-auto sv-cancel" data-modal-close>Отмена</button>' +
         '<button type="button" class="btn btn-primary btn-auto" data-save-next>Сохранить</button></div>';
       if (confirmDelete) {
         h += '<div class="sv-back" data-del-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Удалить услугу">' +
@@ -494,6 +499,11 @@
     // ---------- clicks ----------
     box.addEventListener('click', function (e) {
       var t;
+      // Off to the object window: keep what is typed here; the window opened again picks it up (see «the start»).
+      if (e.target.closest('[data-svc-return]')) {
+        window.rentflowServiceDraft = { property: S.property.id, current: copy(current), meters: copy(S.meters), changed: changed };
+        return;
+      }
       // «Сохранить изменения?» — before leaving a service with changes not saved
       if (asking) {
         if (e.target.closest('[data-ask-save]')) { var go = asking; asking = null; saveThen(go); return; }
@@ -655,7 +665,24 @@
     }
 
     // ---------- the start ----------
-    if (S.start && S.start.mode) startNew(S.start.mode);
+    var draftBack = window.rentflowServiceDraft;
+    window.rentflowServiceDraft = null;
+    if (draftBack && draftBack.property === S.property.id) {
+      // Back from the object window: the service as it was typed, the meters' choices kept, new meters added.
+      var fresh = {};
+      S.meters.forEach(function (m) { fresh[m.id] = m; });
+      draftBack.meters.forEach(function (m) {
+        var f = fresh[m.id];
+        if (f) { f.who = m.who; f.input = m.input; f.split = m.split; f.excluded = m.excluded; f.owner_takes = m.owner_takes; }
+      });
+      current = draftBack.current; changed = draftBack.changed; editing = !!current.isNew;
+      if (current.mode === 'meters' && current.group && groupOf(current.group)) {
+        var added = groupOf(current.group).meters.filter(function (id) { return current.meters.indexOf(id) < 0; });
+        added.forEach(function (id) { var m = byId(S.meters, id); if (!m.service) { m.who = T.length ? '' : 'owner'; m.input = 'readings'; } });
+        current.meters = groupOf(current.group).meters.slice();
+        if (added.length) changed = true;
+      }
+    } else if (S.start && S.start.mode) startNew(S.start.mode);
     else if (S.start && S.start.meter) startNew('meters');
     else if (S.selected && byId(S.services, S.selected)) current = copy(byId(S.services, S.selected));
     else startNew('receipt');  // opened without a service (2026-11-19): a new one «По квитанции», ready for its name

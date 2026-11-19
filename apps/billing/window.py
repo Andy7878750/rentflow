@@ -119,6 +119,7 @@ def window_state(property_obj, selected=None, today=None):
         'selected': selected,
         'urls': {
             'save': reverse('service_save', args=[property_obj.pk]),
+            'window': reverse('service_window', args=[property_obj.pk]),
             'object': reverse('property_edit', args=[property_obj.pk]),
             'formula_new': reverse('receipt_create', args=[property_obj.pk]) + '?kind=custom',
         },

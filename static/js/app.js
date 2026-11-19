@@ -62,6 +62,7 @@
   function returnToService() {
     var back = serviceReturn;
     serviceReturn = null;
+    if (back.get) { openModal(back.get); return; }
     back.data.set('_redraw', '1');
     fetch(back.url, { method: 'POST', body: back.data, headers: { 'X-Modal': '1' }, credentials: 'same-origin' })
       .then(function (response) {
@@ -87,7 +88,10 @@
       event.preventDefault();
       var dropdown = link.closest('[data-dropdown]');
       if (dropdown) dropdown.removeAttribute('open');
-      if (link.hasAttribute('data-service-return')) {
+      if (link.hasAttribute('data-svc-return')) {
+        // the new service window (2026-11-20): after the object window — back to it (the draft is kept in services.js)
+        serviceReturn = { get: link.getAttribute('data-svc-return') };
+      } else if (link.hasAttribute('data-service-return')) {
         var form = link.closest('form');
         var kind = form.querySelector('input[name=kind]');
         serviceReturn = { url: form.action + (kind ? '?kind=' + encodeURIComponent(kind.value) : ''), data: new FormData(form) };
