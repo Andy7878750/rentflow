@@ -40,7 +40,7 @@
           </div>
         </div>
       </div>
-      <div class="item-grid">
+      <div class="item-grid mt-values">
         {% for field in mform %}{% if field.name == 'initial' or field.name == 'initial_night' %}
           <div class="field fl fl-unit"{% if field.name == 'initial_night' %} data-night-field{% endif %}>
             <label for="{{ field.id_for_label }}">{% if field.name == 'initial' %}Начальное<span data-day-label> · день</span>{% else %}Начальное · ночь{% endif %} <span class="req">*</span></label>
@@ -61,9 +61,8 @@
             {% if field.errors %}<ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
           </div>
         {% endif %}{% endfor %}
-      </div>
-      {# The meter's own tariff (2026-11-19): one field, or day + night; «₽/<unit>» inside the field. #}
-      <div class="item-grid">
+        {% comment %}The meter's own tariff (2026-11-19), in the same row: one tariff — start and tariff 50% / 50%;
+           day / night — four of 25%: start day · start night · tariff day · tariff night.{% endcomment %}
         <div class="field fl fl-unit">
           <label for="{{ mform.tariff.id_for_label }}">Тариф<span data-day-label> · день</span> <span class="req">*</span></label>
           <div class="unit-input">

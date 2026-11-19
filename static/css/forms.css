@@ -2324,3 +2324,9 @@ input.masked {
    The same box as «Начальное»: the number, then «₽/кВт·ч» in the grey unit block on the right. */
 .mt-line .mt-tariff-cell { white-space: nowrap; }
 .mt-line .mt-tariff-cell.is-none { color: var(--color-danger); }
+/* The start reading and the tariff in one row (2026-11-19, variant А): 50% / 50%, day / night — four of 25%. */
+.item-grid.mt-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.item-grid.mt-values:has([data-night-field]:not([hidden])) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 560px) {
+  .item-grid.mt-values:has([data-night-field]:not([hidden])) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
