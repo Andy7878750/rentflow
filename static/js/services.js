@@ -272,31 +272,21 @@
       return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>' +
         '<div><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
     }
+    // «изменить» under a common meter: only how it is divided (who pays by it is chosen in its row).
     function meterWindow() {
-      var m = byId(S.meters, meterOpen), d = draft, body;
-      var seg = '<div class="sv-seg"><button type="button" data-who-kind="one"' + (d.who !== 'common' ? ' class="is-on"' : '') + '>Один арендатор</button>' +
-        '<button type="button" data-who-kind="common"' + (d.who === 'common' ? ' class="is-on"' : '') + '>Общий — делим</button></div>';
-      if (d.who !== 'common') {
-        body = T.concat([{ id: 'owner', name: 'Никто — платите вы' }]).map(function (t, i) {
-          var sel = d.who === t.id;
-          return '<button type="button" class="sv-gp-row sv-pick-row' + (sel ? ' is-sel' : '') + (t.id === 'owner' ? ' is-owner' : '') + '" data-who="' + t.id + '">' +
-            (t.id === 'owner' ? '<span></span>' : '<span class="sv-no">' + (i + 1) + '</span>') + '<span class="sv-who fade">' + esc(t.name) + '</span>' +
-            '<span class="sv-ok">' + (sel ? svg(CP_ICON.check) : '') + '</span></button>';
-        }).join('');
-      } else {
-        var r = shares(d.split, d.excluded, d.owner_takes);
-        body = splitTop(d.split, 'data-msplit') + T.map(function (t, i) {
-          var on = d.excluded.indexOf(t.id) < 0;
-          return '<div class="sv-gp-row sv-mshare' + (on ? '' : ' is-off') + '"><span class="sv-no">' + (i + 1) + '</span><span class="sv-who fade">' + esc(t.name) + '</span>' +
-            '<span class="sv-pc">' + (on ? Math.round(r.k[t.id] * 1000) / 10 + '%' : 'не платит') + '</span>' + sw(on, 'data-mpay="' + t.id + '"', t.name + ' платит') + '</div>';
-        }).join('') + '<div class="sv-gp-row sv-mshare is-owner' + (r.canPass && r.takes ? ' is-live' : '') + '"><span></span><span class="sv-who">Остаётся на вас</span>' +
-          '<span class="sv-pc">' + (r.owner > 0.00001 ? Math.round(r.owner * 1000) / 10 + '%' : '—') + '</span>' +
-          (r.canPass ? sw(r.takes, 'data-mowner', 'Остаток на вас') : '<span></span>') + '</div>';
-      }
-      return '<div class="sv-back" data-meter-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Кто платит по счётчику">' +
-        '<div class="sv-mw-head">' + meterIcon(m.kind) + '<b>№ ' + esc(m.serial || '—') + '</b><span class="sv-sub">' + esc(m.tariff || 'нет тарифа') + '</span>' +
+      var m = byId(S.meters, meterOpen), d = draft;
+      var r = shares(d.split, d.excluded, d.owner_takes);
+      var body = splitTop(d.split, 'data-msplit') + T.map(function (t, i) {
+        var on = d.excluded.indexOf(t.id) < 0;
+        return '<div class="sv-gp-row sv-mshare' + (on ? '' : ' is-off') + '"><span class="sv-no">' + (i + 1) + '</span><span class="sv-who fade">' + esc(t.name) + '</span>' +
+          '<span class="sv-pc">' + (on ? Math.round(r.k[t.id] * 1000) / 10 + '%' : 'не платит') + '</span>' + sw(on, 'data-mpay="' + t.id + '"', t.name + ' платит') + '</div>';
+      }).join('') + '<div class="sv-gp-row sv-mshare is-owner' + (r.canPass && r.takes ? ' is-live' : '') + '"><span></span><span class="sv-who">Остаётся на вас</span>' +
+        '<span class="sv-pc">' + (r.owner > 0.00001 ? Math.round(r.owner * 1000) / 10 + '%' : '—') + '</span>' +
+        (r.canPass ? sw(r.takes, 'data-mowner', 'Остаток на вас') : '<span></span>') + '</div>';
+      return '<div class="sv-back" data-meter-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Общий счётчик — делим">' +
+        '<div class="sv-mw-head">' + meterIcon(m.kind) + '<b>№ ' + esc(m.serial || '—') + '</b><span class="sv-sub">общий — делим</span>' +
         '<button type="button" class="sv-x" data-meter-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
-        '<div class="sv-mw-body"><div class="sv-sec"><h3>Кто платит</h3>' + seg + '</div><div class="sv-gp sv-gp-fixed">' + body + '</div></div>' +
+        '<div class="sv-mw-body"><div class="sv-gp">' + body + '</div></div>' +
         '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-meter-close>Отмена</button>' +
         '<button type="button" class="btn btn-primary btn-auto" data-meter-done>Готово</button></div></div></div>';
     }
@@ -322,7 +312,7 @@
         var who = m.who === 'common' ? 'общий · ' + SPLITS.filter(function (x) { return x[0] === m.split; })[0][1] : m.who === 'owner' ? 'платите вы' : tname(m.who);
         var parts = m.dn ? ['день', 'ночь'] : [''];
         return parts.map(function (p, j) {
-          return '<div class="sv-pr">' + (j === 0 ? meterIcon(m.kind) : '<span></span>') + '<span class="sv-pr-nm">' +
+          return '<div class="sv-pr">' + (mixed && j === 0 ? meterIcon(m.kind) : '<span></span>') + '<span class="sv-pr-nm">' +
             (j === 0 ? '<span class="fade">№ ' + esc(m.serial || '—') + (p ? ' <em>' + p + '</em>' : '') + '</span><small class="fade">' + esc(who) + '</small>' : '<em>' + p + '</em>') +
             '</span><span class="sv-pr-v">…</span><span class="sv-pr-in"></span><span class="sv-pr-use"><span>— ' + esc(m.unit) + '</span></span></div>';
         }).join('');
@@ -408,6 +398,9 @@
       }
       if (meterOpen != null) h += meterWindow();
       pane.innerHTML = h;
+      // «Кто платит» near the bottom bar: the menu opens upwards
+      var menu = pane.querySelector('.sv-payer-menu'), foot = pane.querySelector('.sv-foot');
+      if (menu && foot && menu.getBoundingClientRect().bottom > foot.getBoundingClientRect().top - 8) menu.classList.add('is-up');
     }
     function render() { renderNav(); renderPane(); }
 
@@ -551,15 +544,10 @@
       if (meterOpen != null) {
         if (e.target.closest('[data-meter-done]')) {
           var m = byId(S.meters, meterOpen);
-          m.who = draft.who; m.split = draft.split; m.excluded = draft.excluded; m.owner_takes = draft.owner_takes;
+          m.split = draft.split; m.excluded = draft.excluded; m.owner_takes = draft.owner_takes;
           meterOpen = null; renderPane(); mark(); return;
         }
         if ((t = e.target.closest('[data-meter-close]')) && (e.target === t || t.tagName === 'BUTTON')) { meterOpen = null; return renderPane(); }
-        if ((t = e.target.closest('[data-who-kind]'))) {
-          draft.who = t.dataset.whoKind === 'common' ? 'common' : (draft.who !== 'common' ? draft.who : (T[0] ? T[0].id : 'owner'));
-          return renderPane();
-        }
-        if ((t = e.target.closest('[data-who]'))) { draft.who = t.dataset.who === 'owner' ? 'owner' : +t.dataset.who; return renderPane(); }
         if ((t = e.target.closest('[data-msplit]'))) { draft.split = t.dataset.msplit; return renderPane(); }
         if ((t = e.target.closest('[data-mpay]'))) { toggle(draft.excluded, +t.dataset.mpay); return renderPane(); }
         if (e.target.closest('[data-mowner]')) { draft.owner_takes = draft.owner_takes === false; return renderPane(); }

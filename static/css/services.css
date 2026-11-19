@@ -168,14 +168,6 @@
 .sv-seg button { flex: 1; height: 32px; border: 0; background: none; border-radius: 6px; font: 13px var(--font); color: var(--color-text); cursor: pointer; }
 .sv-seg button:hover { background: var(--color-bg); }
 .sv-seg button.is-on { background: var(--color-accent); color: #fff; font-weight: 600; }
-.sv-gp-fixed { min-height: 173px; }  /* the same height for «Один арендатор» and «Общий»: the window doesn't jump */
-.sv-pick-row { width: 100%; grid-template-columns: 22px minmax(0, 1fr) 18px; border: 0; border-radius: 0; background: none;
-  font: 13.5px var(--font); color: var(--color-text); text-align: left; cursor: pointer; padding: 0; }
-.sv-pick-row + .sv-pick-row { border-top: 1px solid #e3e6e9; }
-.sv-pick-row .sv-ok { color: var(--color-accent); display: inline-flex; }
-.sv-pick-row .sv-ok .sv-i { width: 16px; height: 16px; stroke-width: 2.4; }
-.sv-pick-row.is-sel .sv-who { color: var(--color-accent); font-weight: 600; }
-.sv-pick-row.is-owner .sv-who { color: var(--color-text-muted); }
 .sv-mshare { grid-template-columns: 22px minmax(0, 1fr) 80px 30px; }
 .sv-pc { font-size: 13px; color: var(--color-text-muted); text-align: right; white-space: nowrap; }
 .sv-mshare:not(.is-off):not(.is-owner) .sv-pc { color: var(--color-text); font-weight: 600; }
@@ -263,7 +255,11 @@
 .sv-mt-pick .sv-pick .fade { white-space: nowrap; overflow: hidden; }
 .sv-mt-pick .sv-pick.is-empty { background: var(--input-warm, #fff8e6); border-color: var(--input-warm-border, #ecd9a8); color: #9a7b2f; }
 .sv-mt-pick .sv-pick[aria-expanded="true"] { border-color: var(--color-accent); }
-.sv-payer-menu { width: 100%; max-height: 292px; overflow-y: auto; }  /* 7 tenants and more — it scrolls */
+/* «Кто платит»: wider than the field when names are long, every item in one line; 7 tenants and more — it scrolls */
+.sv-payer-menu { width: max-content; min-width: 100%; max-width: 320px; max-height: 292px; overflow-y: auto; }
+.sv-payer-menu .sv-sel-opt { white-space: nowrap; }
+.sv-payer-menu.is-up { top: auto; bottom: calc(100% + 6px); }
+.sv-payer-menu .sv-sel-opt span { overflow: hidden; text-overflow: ellipsis; }
 .sv-sel-sep { height: 1px; margin: 4px 6px; background: var(--color-border); }
 .sv-mt-seg button { height: 30px; flex: auto; padding: 0 8px; white-space: nowrap; }
 .sv-mt-note { height: 18px; margin-top: -4px; padding-left: 30px; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
