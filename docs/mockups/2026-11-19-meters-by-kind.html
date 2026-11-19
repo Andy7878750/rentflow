@@ -6,8 +6,8 @@
 <title>По счётчикам — по видам</title>
 <style>
 /* Макет 2026-11-19 (идея пользователя): «По счётчикам» = одна услуга на один вид счётчиков. Нажали «По счётчикам» →
-   выбираем вид (плашки: Электричество · 2 счётчика …) → название услуги пишется само → ниже раздаём счётчики этого вида
-   арендаторам / общим / собственнику. Все счётчики в одну услугу — нельзя. Размеры — как у настоящего окна (services.css). */
+   серая плашка «Как начисляется» → выбираем вид → название пишется само → раздаём счётчики. Сохранение — только кнопкой.
+   Место под появляющиеся строки занято заранее — ничего не прыгает. Как выбирать плательщика — варианты Б / В / Г. */
 :root { --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1; --bg: #f5f6f7; --border: #e1e4e8; --text: #2c3338;
   --muted: #6b7680; --warm: #fff8e6; --warm-b: #ecd9a8; --warm-t: #9a7b2f; --danger: #c0392b; --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -15,9 +15,11 @@
 body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 60px; }
 .page { max-width: 1060px; margin: 0 auto; }
 button { font: inherit; color: inherit; }
-.demo { margin-bottom: 12px; padding: 10px 14px; background: rgba(255,255,255,.9); border-radius: var(--radius); font-size: 13px; }
-.demo .msg { margin-top: 4px; color: var(--muted); min-height: 18px; }
-.demo .msg b { color: var(--accent); font-weight: 600; }
+.tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: rgba(255,255,255,.85); font-weight: 600; font-size: 13px; cursor: pointer; }
+.tabs button.on { background: var(--accent); color: #fff; }
+.demo { margin-bottom: 12px; padding: 10px 14px; background: rgba(255,255,255,.9); border-radius: var(--radius); font-size: 13px; min-height: 40px; }
+.demo b { color: var(--accent); font-weight: 600; }
 
 .win { height: 720px; display: flex; flex-direction: column; background: #fff; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden; }
 .win-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 24px; border-bottom: 1px solid var(--border); }
@@ -31,24 +33,29 @@ nav { border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; }
 .ni { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: var(--radius); font-size: 14px; cursor: pointer; }
 .ni:hover { background: var(--bg); }
 .ni.on { background: #eceef0; font-weight: 600; }
-.ni .dot { width: 18px; text-align: center; color: var(--muted); }
+.ni .nd { width: 18px; text-align: center; color: var(--muted); }
 .ni.mode-on { color: var(--accent); font-weight: 600; }
-.ni.mode-on .dot { color: var(--accent); }
+.ni.mode-on .nd { color: var(--accent); }
 svg.i { width: 18px; height: 18px; flex-shrink: 0; }
 
-.pane { position: relative; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+.pane { position: relative; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
 .top { position: sticky; top: 0; z-index: 3; background: #fff; border-bottom: 1px solid var(--border); padding: 0 32px; }
 .top-line { display: flex; align-items: center; gap: 8px; height: 52px; }
 .top-line .nm { font-size: 15px; font-weight: 600; color: var(--primary); }
 .top-line .pv { font-size: 13px; color: var(--muted); }
-.top-line .saved { margin-left: auto; font-size: 12px; color: var(--accent); }
 .edit { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 0 14px; }
 .body { flex: 1 0 auto; padding: 20px 32px 32px; display: flex; flex-direction: column; gap: 24px; }
 .sec { display: flex; flex-direction: column; gap: 8px; }
 h3 { margin: 0; display: flex; align-items: center; gap: 8px; height: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
 h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e5; color: #b9770e; font-size: 11px; text-transform: none; letter-spacing: 0; display: inline-flex; align-items: center; }
 
-/* «Что считаем»: плашки видов — 3 в ряд, 62px, как плашки «Начисление» */
+/* серая плашка «Как начисляется» — как .sv-cp в окне услуг */
+.cp { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 12px 14px; border-radius: var(--radius); background: #f1f3f5; font-size: 13.5px; }
+.cp > svg { color: var(--accent); margin: 0 2px; }
+.cp b { font-weight: 600; }
+.cp .op { color: var(--muted); }
+
+/* «Что считаем»: плашки видов — 3 в ряд, 62px */
 .kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .kind { display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; cursor: pointer; text-align: left; min-width: 0; }
 .kind:hover { border-color: #c3c9cf; }
@@ -61,34 +68,73 @@ h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e
 .kind.busy { background: var(--bg); border-color: var(--bg); }
 .kind.busy .tx b { color: var(--muted); }
 .kind.busy .tx span { color: var(--accent); }
-.empty { display: flex; align-items: center; justify-content: center; height: 120px; border: 1px dashed var(--border); border-radius: var(--radius); color: var(--muted); font-size: 13px; }
 
-/* «Кто платит»: строка на счётчик — № и тариф слева, выбор плательщика справа (.seg-track) */
-.mrows { border: 1px solid var(--border); border-radius: var(--radius); }
-.mrow { padding: 0 14px; }
+/* «Кто платит»: строка счётчика всегда 78px = 56 строка + 22 место под пояснение (пустое — тоже 22): не прыгает */
+.box { border: 1px solid var(--border); border-radius: var(--radius); }
+.ph { display: flex; align-items: center; justify-content: center; border: 1px dashed var(--border); border-radius: var(--radius); color: var(--muted); font-size: 13px; }
+.mrow { height: 78px; padding: 0 14px; }
 .mrow + .mrow { border-top: 1px solid var(--border); }
-.mline { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: center; gap: 12px; height: 56px; }
+.mline { display: grid; align-items: center; gap: 12px; height: 56px; }
+.mnote { padding-left: 26px; height: 22px; display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.mnote .lnk { color: var(--accent); font-weight: 600; cursor: pointer; }
 .mwho { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
 .mwho b { font-weight: 600; }
+.mwho .t { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
 .mwho .sub { font-size: 12px; color: var(--muted); }
 .mwho .sub.nt { color: var(--danger); }
-.mwho .t { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
-.seg { display: flex; height: 38px; padding: 3px; border-radius: var(--radius); background: #eceef0; }
-.seg span { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 8px; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
-.seg span:hover { background: rgba(255,255,255,.6); }
-.seg span.on { background: var(--accent); color: #fff; font-weight: 600; }
-.seg.todo { background: var(--warm); box-shadow: inset 0 0 0 1px var(--warm-b); }
-.seg .sp { flex: 0 0 1px; padding: 0; margin: 6px 3px; background: #cfd4d9; cursor: default; }
-.seg .sp:hover { background: #cfd4d9; }
-.mnote { display: flex; align-items: center; gap: 6px; margin: -6px 0 0 232px; padding-bottom: 12px; font-size: 12px; color: var(--muted); }
-.mnote .lnk { color: var(--accent); font-weight: 600; cursor: pointer; }
 .add-row { display: flex; align-items: center; height: 44px; padding: 0 14px; border-top: 1px solid var(--border); color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* Б: своё выпадающее меню в строке */
+.v-b .mline { grid-template-columns: minmax(0, 1fr) 280px; }
+
+.pick { position: relative; display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; cursor: pointer; font-size: 14px; }
+.pick.empty { background: var(--warm); border-color: var(--warm-b); color: var(--warm-t); }
+.pick.open { border-color: var(--accent); }
+.pick .chev { color: var(--muted); font-size: 10px; }
+.menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 6; padding: 6px; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); color: var(--text); }
+.menu .o { display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.menu .o:hover { background: var(--bg); }
+.menu .o.sel { background: #eceef1; font-weight: 600; }
+.menu .o small { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; }
+.menu .ms { height: 1px; margin: 4px 6px; background: var(--border); }
+
+/* В: таблица — столбец на каждого плательщика, кружок-выбор */
+.v-c .mline, .v-c .thead { grid-template-columns: 220px repeat(var(--n), minmax(0, 1fr)); }
+.thead { display: grid; align-items: center; gap: 12px; height: 36px; padding: 0 14px; background: #f1f3f5; border-radius: var(--radius) var(--radius) 0 0; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.thead span:not(:first-child) { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thead .gap { border-left: 1px solid #d5dade; }
+.cell { display: flex; align-items: center; justify-content: center; height: 100%; cursor: pointer; }
+.cell.gap { border-left: 1px solid var(--border); }
+.dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #c3c9cf; background: #fff; }
+.cell:hover .dot { border-color: var(--accent); }
+.cell.on .dot { border: 6px solid var(--accent); }
+.v-c .mrow.todo { background: var(--warm); }
+.v-c .mrow.todo .dot { border-color: var(--warm-b); }
+
+
+/* Г: от плательщика — строка на арендатора, в ней все счётчики вида; свой — заливка акцентом */
+.prow { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; }
+.prow + .prow { border-top: 1px solid var(--border); }
+.prow .pn { font-weight: 600; }
+.prow .pn small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+.prow .pn small .lnk { color: var(--accent); font-weight: 600; cursor: pointer; }
+.prow .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 17px; background: #fff; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.pill:hover { border-color: var(--accent); }
+.pill.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.pill.on svg { color: #fff !important; }
+.pill.else { color: #aab2ba; border-style: dashed; }
+.pill.else svg { opacity: .4; }
+.prow.todo { background: var(--warm); }
+.prow.todo .pn { color: var(--warm-t); }
 
 .foot { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 12px 32px; border-top: 1px solid var(--border); background: #fff; }
 .foot .del { color: var(--danger); font-size: 14px; cursor: pointer; }
+.foot .unsaved { font-size: 13px; color: var(--muted); margin-left: auto; }
 .btn { height: 38px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font-weight: 600; cursor: pointer; }
 .btn.pri { background: var(--accent); border-color: var(--accent); color: #fff; }
-.foot .btn.pri { margin-left: auto; }
+.btn.pri:disabled { background: #a9d3ca; border-color: #a9d3ca; cursor: default; }
+.foot .btn.pri { margin-left: 8px; }
 
 .f { position: relative; height: 38px; border: 1px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; padding: 0 12px; font-size: 14px; background: #fff; }
 .f label { position: absolute; top: -8px; left: 8px; padding: 0 4px; background: #fff; font-size: 11px; color: var(--muted); }
@@ -104,6 +150,9 @@ h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e
 .sub-win .sf { display: flex; justify-content: flex-end; gap: 8px; padding: 0 24px 20px; }
 .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.seg { display: flex; height: 38px; padding: 3px; border-radius: var(--radius); background: #eceef0; }
+.seg span { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.seg span.on { background: var(--accent); color: #fff; font-weight: 600; }
 .note { font-size: 12px; color: var(--muted); margin: 0; }
 .trow { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius); }
 .trow .pc { margin-left: auto; font-weight: 600; }
@@ -113,8 +162,8 @@ h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e
 </head>
 <body>
 <div class="page">
-  <div class="demo"><b>Шаг 0:</b> нажата «По счётчикам». Выберите, что считаем, — потом раздайте счётчики.
-    <div class="msg" id="msg"></div></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="demo" id="msg"></div>
   <div class="win">
     <div class="win-head"><h1>Услуги <span>· Тест Круг</span></h1><button class="x">×</button></div>
     <div class="win-body">
@@ -126,15 +175,15 @@ h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e
 <script>
 (function () {
   var DROP = '<path fill="currentColor" d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/>';
-  // вид: цвет, иконка, название услуги, единица
+  var GAUGE = '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 16a8 8 0 1 1 16 0M12 16l4-5"/>';
   var K = { el: ['#0e9aa7', '<path fill="currentColor" d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>', 'Электричество', 'кВт·ч'],
             cold: ['#2e86c1', DROP, 'Вода холодная', 'м³'], hot: ['#c0392b', DROP, 'Вода горячая', 'м³'],
-            meters: ['#148f77', '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 16a8 8 0 1 1 16 0M12 16l4-5"/>', 'По счётчикам', ''] };
+            meters: ['#148f77', GAUGE, 'По счётчикам', ''] };
   var ORDER = ['el', 'cold', 'hot'];
-  var ic = function (k) { return '<svg class="i" viewBox="0 0 24 24" style="color:' + K[k][0] + '">' + K[k][1] + '</svg>'; };
-  var soft = function (k) { return K[k][0] + '14'; };
+  var ic = function (k, col) { return '<svg class="i" viewBox="0 0 24 24" style="color:' + (col || K[k][0]) + '">' + K[k][1] + '</svg>'; };
   var T = [{ id: 'v', name: 'Виктор' }, { id: 'w', name: 'Влад' }, { id: 'a', name: 'Аптека Вита' }];
-  // svc — услуга счётчика ('' — нет); who — арендатор · 'common' · 'owner' · '' (не выбрано)
+  var PAYERS = T.map(function (t) { return [t.id, t.name]; }).concat([['common', 'Общий — делим'], ['owner', 'Платите вы']]);
+  var payerName = function (w) { return PAYERS.filter(function (p) { return p[0] === w; })[0][1]; };
   var M = [
     { id: 1, k: 'el', no: '258369-2', tar: '6,9 / 9,8 ₽/кВт·ч', dn: true, svc: '', who: '' },
     { id: 2, k: 'el', no: '789654', tar: '9,6 ₽/кВт·ч', svc: '', who: '' },
@@ -143,58 +192,94 @@ h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e
     { id: 6, k: 'hot', no: '789874-9', tar: '70,5 ₽/м³', svc: 'hot', who: 'v' },
     { id: 7, k: 'hot', no: '258963', tar: '70,5 ₽/м³', svc: 'hot', who: 'w' }
   ];
-  var S = [{ id: 'hot', k: 'hot', name: 'Вода горячая', prov: 'МОЭК' }];
-  var cur, sub = null, nextId = 10, seq = 1000, svcSeq = 1;
+  var S = [{ id: 'hot', k: 'hot', name: 'Вода горячая', prov: 'МОЭК', saved: true }];
+  var V = { b: 'Б · Меню в строке', c: 'В · Таблица', d: 'Г · От арендатора' };
+  var HELP = { b: 'В строке — поле «Кто платит ▾», как любое наше выпадающее меню. Пустое — бледно-жёлтое. Арендаторов может быть сколько угодно.',
+    c: 'Столбец на каждого: арендаторы | Общий · Вы. Один кружок в строке. Видно всё сразу; при 6+ арендаторах столбцы узкие.',
+    d: 'Строка на арендатора, в ней все счётчики вида. Нажал свой — залит акцентом; чужой — бледный пунктир, нажатие перенесёт его сюда.' };
+  var view = 'b', cur, open = null, sub = null, nextId = 10, seq = 1000, svcSeq = 1, msg = '';
   var svcOf = function (id) { return S.filter(function (s) { return s.id === id; })[0]; };
   var meter = function (id) { return M.filter(function (m) { return m.id === id; })[0]; };
   var ofKind = function (k) { return M.filter(function (m) { return m.k === k; }); };
   var plural = function (n) { return n + ' ' + (n === 1 ? 'счётчик' : n < 5 ? 'счётчика' : 'счётчиков'); };
-  function say(t) { document.getElementById('msg').innerHTML = t; }
+  var dirty = false;
 
-  function startNew() { var s = { id: 'n' + svcSeq++, k: '', name: '', prov: '', isNew: true }; S.push(s); cur = s.id; }
+  function startNew() { var s = { id: 'n' + svcSeq++, k: '', name: '', prov: '', saved: false }; S.push(s); cur = s.id; dirty = false; }
   function nav() {
     var c = svcOf(cur);
     var modes = ['По квитанции', 'Фиксированная', 'По тарифу', 'По счётчикам', 'Своя формула'];
     return '<div class="cap">Начисление</div>' + modes.map(function (m) {
-        var on = m === 'По счётчикам' && c.isNew && !c.k;
-        return '<div class="ni' + (on ? ' mode-on' : '') + '"' + (m === 'По счётчикам' ? ' data-newsvc' : '') + '><span class="dot">' + (on ? '✓' : '+') + '</span>' + m + '</div>';
+        var on = m === 'По счётчикам' && !c.saved;
+        return '<div class="ni' + (on ? ' mode-on' : '') + '"' + (m === 'По счётчикам' ? ' data-newsvc' : '') + '><span class="nd">' + (on ? '✓' : '+') + '</span>' + m + '</div>';
       }).join('') +
       '<div class="sep"></div><div class="cap">Услуги объекта</div>' +
-      S.filter(function (s) { return s.k; }).map(function (s) { return '<div class="ni' + (s.id === cur ? ' on' : '') + '" data-svc="' + s.id + '">' + ic(s.k) + s.name + '</div>'; }).join('');
+      S.filter(function (s) { return s.saved; }).map(function (s) { return '<div class="ni' + (s.id === cur ? ' on' : '') + '" data-svc="' + s.id + '">' + ic(s.k) + s.name + '</div>'; }).join('');
   }
-  // плашка вида: свободный — выбрать; уже в другой услуге — серая, клик открывает ту услугу
   function kindTile(k, s) {
     var list = ofKind(k), owner = list.filter(function (m) { return m.svc && m.svc !== s.id; })[0];
     if (owner) return '<button class="kind busy" data-svc="' + owner.svc + '"><span class="ico" style="background:#e9ecef">' + ic(k) + '</span><span class="tx"><b>' + K[k][2] + '</b><span>уже в услуге · открыть</span></span></button>';
-    return '<button class="kind' + (s.k === k ? ' sel' : '') + '" data-kind="' + k + '"><span class="ico" style="background:' + soft(k) + '">' + ic(k) + '</span><span class="tx"><b>' + K[k][2] + '</b><span>' +
+    return '<button class="kind' + (s.k === k ? ' sel' : '') + '" data-kind="' + k + '"><span class="ico" style="background:' + K[k][0] + '14">' + ic(k) + '</span><span class="tx"><b>' + K[k][2] + '</b><span>' +
       plural(list.length) + ' · № ' + list.map(function (m) { return m.no; }).join(', № ') + '</span></span></button>';
   }
-  function row(m) {
-    var opts = T.map(function (t) { return [t.id, t.name]; }).concat([['sp'], ['common', 'Общий'], ['owner', 'Вы']]);
-    var seg = '<div class="seg' + (m.who ? '' : ' todo') + '">' + opts.map(function (o) {
-      return o[0] === 'sp' ? '<span class="sp"></span>' : '<span' + (m.who === o[0] ? ' class="on"' : '') + ' data-who="' + m.id + ':' + o[0] + '">' + o[1] + '</span>';
-    }).join('') + '</div>';
-    var note = m.who === 'common' ? '<div class="mnote">Делим по долям · Виктор 50% · Влад 30% · Аптека 20% · <span class="lnk" data-split>изменить</span></div>'
-      : m.who === 'owner' ? '<div class="mnote">В счета арендаторам не попадает — «Остаётся на вас».</div>' : '';
-    return '<div class="mrow"><div class="mline"><span class="mwho">' + ic(m.k) + '<span class="t"><b>№ ' + m.no + '</b><span class="sub' + (m.tar ? '' : ' nt') + '">' +
-      (m.tar || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span></span></span>' + seg + '</div>' + note + '</div>';
+  function noteOf(m) {
+    return m.who === 'common' ? 'Делим по долям · Виктор 50% · Влад 30% · Аптека 20% · <span class="lnk" data-split>изменить</span>'
+      : m.who === 'owner' ? 'В счета арендаторам не попадает — «Остаётся на вас»' : '';
   }
+  function mwho(m) {
+    return '<span class="mwho">' + ic(m.k) + '<span class="t"><b>№ ' + m.no + '</b><span class="sub' + (m.tar ? '' : ' nt') + '">' + (m.tar || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span></span></span>';
+  }
+  // Б — меню в строке
+  function rowsB(list) {
+    return '<div class="box v-b">' + list.map(function (m) {
+      var menu = open === m.id ? '<div class="menu">' + PAYERS.map(function (p, i) {
+        return (i === T.length ? '<div class="ms"></div>' : '') + '<div class="o' + (m.who === p[0] ? ' sel' : '') + '" data-who="' + m.id + ':' + p[0] + '">' + p[1] + (m.who === p[0] ? '<small>✓</small>' : '') + '</div>';
+      }).join('') + '</div>' : '';
+      return '<div class="mrow"><div class="mline">' + mwho(m) + '<span class="pick' + (m.who ? '' : ' empty') + (open === m.id ? ' open' : '') + '" data-open="' + m.id + '"><span>' +
+        (m.who ? payerName(m.who) : 'Выберите, кто платит') + '</span><span class="chev">▾</span>' + menu + '</span></div><div class="mnote">' + noteOf(m) + '</div></div>';
+    }).join('') + addRow() + '</div>';
+  }
+  // В — таблица
+  function rowsC(list) {
+    var cols = [['v', 'Виктор'], ['w', 'Влад'], ['a', 'Аптека Вита'], ['common', 'Общий'], ['owner', 'Вы']];
+    var head = '<div class="thead"><span>Счётчик</span>' + cols.map(function (c) { return '<span' + (c[0] === 'common' ? ' class="gap"' : '') + '>' + c[1] + '</span>'; }).join('') + '</div>';
+    return '<div class="box v-c" style="--n:' + cols.length + '">' + head + list.map(function (m) {
+      return '<div class="mrow' + (m.who ? '' : ' todo') + '"><div class="mline">' + mwho(m) + cols.map(function (c) {
+        return '<span class="cell' + (m.who === c[0] ? ' on' : '') + (c[0] === 'common' ? ' gap' : '') + '" data-who="' + m.id + ':' + c[0] + '" title="' + c[1] + '"><span class="dot"></span></span>';
+      }).join('') + '</div><div class="mnote">' + noteOf(m) + '</div></div>';
+    }).join('') + addRow() + '</div>';
+  }
+  // Г — от арендатора
+  function rowsD(list) {
+    var todo = list.filter(function (m) { return !m.who; });
+    var rows = PAYERS.map(function (p) {
+      var small = p[0] === 'common' ? '<small>по долям · <span class="lnk" data-split>изменить</span></small>' : p[0] === 'owner' ? '<small>«Остаётся на вас»</small>' : '<small>&nbsp;</small>';
+      return '<div class="prow"><span class="pn">' + p[1] + small + '</span><span class="pills">' + list.map(function (m) {
+        var cls = m.who === p[0] ? ' on' : m.who ? ' else' : '';
+        return '<span class="pill' + cls + '" data-who="' + m.id + ':' + p[0] + '"' + (m.who && m.who !== p[0] ? ' title="Сейчас: ' + payerName(m.who) + '"' : '') + '>' + ic(m.k) + '№ ' + m.no + '</span>';
+      }).join('') + '</span></div>';
+    }).join('');
+    return '<div class="box">' + rows + addRow() + '</div>';
+  }
+  function addRow() { var k = svcOf(cur).k; return '<div class="add-row" data-new>+ Добавить счётчик «' + K[k][2] + '»</div>'; }
+  // высота «Кто платит» до выбора вида = как с двумя счётчиками в этом варианте, чтобы ничего не прыгало
+  function placeholderHeight() { return view === 'c' ? 36 + 2 * 78 + 44 + 2 : view === 'd' ? 5 * 56 + 44 + 2 : 2 * 78 + 44 + 2; }
+
   function pane() {
-    var s = svcOf(cur);
-    var kindsSec = '<div class="sec"><h3>Что считаем</h3><div class="kinds">' + ORDER.filter(function (k) { return ofKind(k).length; }).map(function (k) { return kindTile(k, s); }).join('') + '</div></div>';
-    var who = '';
+    var s = svcOf(cur), k = s.k || 'meters';
+    var cp = '<div class="sec"><h3>Как начисляется</h3><div class="cp">' + ic('meters') + '<span>Каждый платит по своему счётчику: <b>расход</b> <span class="op">×</span> <b>тариф счётчика</b>. Общий счётчик — делим.</span></div></div>';
+    var kinds = '<div class="sec"><h3>Что считаем</h3><div class="kinds">' + ORDER.filter(function (x) { return ofKind(x).length; }).map(function (x) { return kindTile(x, s); }).join('') + '</div></div>';
+    var who;
     if (s.k) {
       var list = ofKind(s.k), todo = list.filter(function (m) { return !m.who; }).length;
-      who = '<div class="sec"><h3>Кто платит' + (todo ? '<span class="warn">не выбрано: ' + todo + '</span>' : '') + '</h3><div class="mrows">' + list.map(row).join('') +
-        '<div class="add-row" data-new>+ Добавить счётчик «' + K[s.k][2] + '»</div></div></div>';
-    }
-    var k = s.k || 'meters';
-    var top = '<div class="top"><div class="top-line">' + ic(k) + '<span class="nm">' + (s.name || 'Новая услуга') + '</span><span class="pv">· ' + (s.prov || 'по счётчикам') + '</span>' +
-      '<span class="saved">' + (s.k ? 'Сохранено' : '') + '</span></div>' +
-      (s.isNew ? '<div class="edit"><div class="f' + (s.name ? '' : ' warm') + '"><label>Название в счёте</label><input data-name value="' + s.name + '" placeholder="' + (s.k ? '' : 'выберите, что считаем') + '"></div>' +
-        '<div class="f"><label>Поставщик</label><input data-prov value="' + s.prov + '"></div></div>' : '') + '</div>';
-    return top + '<div class="body">' + (s.isNew || !s.k ? kindsSec : '') + who + '</div>' +
-      '<div class="foot"><span class="del">' + (s.k ? 'Удалить услугу' : '') + '</span><button class="btn pri" data-savenext>Сохранить</button></div>' + (sub ? subWin() : '');
+      who = '<div class="sec"><h3>Кто платит' + (todo ? '<span class="warn">не выбрано: ' + todo + '</span>' : '') + '</h3>' +
+        (view === 'b' ? rowsB(list) : view === 'c' ? rowsC(list) : rowsD(list)) + '</div>';
+    } else who = '<div class="sec"><h3>Кто платит</h3><div class="ph" style="height:' + placeholderHeight() + 'px">Сначала выберите, что считаем</div></div>';
+    var top = '<div class="top"><div class="top-line">' + ic(k) + '<span class="nm">' + (s.name || 'Новая услуга') + '</span><span class="pv">· ' + (s.prov || 'по счётчикам') + '</span></div>' +
+      '<div class="edit"><div class="f' + (s.name ? '' : ' warm') + '"><label>Название в счёте</label><input data-name value="' + s.name + '" placeholder="' + (s.k ? '' : 'выберите, что считаем') + '"></div>' +
+      '<div class="f"><label>Поставщик</label><input data-prov value="' + s.prov + '"></div></div></div>';
+    return top + '<div class="body">' + cp + kinds + who + '</div>' +
+      '<div class="foot"><span class="del">' + (s.saved ? 'Удалить услугу' : '') + '</span><span class="unsaved">' + (dirty ? 'Есть несохранённые изменения' : '') + '</span>' +
+      '<button class="btn pri" data-save' + (s.k && s.name ? '' : ' disabled') + '>Сохранить</button></div>' + (sub ? subWin() : '');
   }
   function subWin() {
     if (sub.type === 'split') return '<div class="shade"><div class="sub-win"><div class="sh">Общий счётчик — делим<button class="x" data-close>×</button></div><div class="sb">' +
@@ -210,36 +295,44 @@ h3 .warn { height: 20px; padding: 0 8px; border-radius: 10px; background: #fff4e
       '<div class="sf"><button class="btn" data-close>Отмена</button><button class="btn pri" data-create>Добавить</button></div></div></div>';
   }
   function render() {
+    document.getElementById('tabs').innerHTML = Object.keys(V).map(function (x) { return '<button data-view="' + x + '"' + (x === view ? ' class="on"' : '') + '>' + V[x] + '</button>'; }).join('');
+    document.getElementById('msg').innerHTML = msg || HELP[view];
     document.getElementById('nav').innerHTML = nav();
     var p = document.getElementById('pane'), top = p.scrollTop;
     p.innerHTML = pane(); p.scrollTop = top;
   }
   function pickKind(k) {
     var s = svcOf(cur);
-    if (s.k) ofKind(s.k).forEach(function (m) { if (m.svc === s.id) { m.svc = ''; m.who = ''; } });  // сменили вид до сохранения
+    if (s.k) ofKind(s.k).forEach(function (m) { if (m.svc === s.id) { m.svc = ''; m.who = ''; } });
     s.k = k; s.name = K[k][2];
     ofKind(k).forEach(function (m) { m.svc = s.id; });
-    say('Название — <b>«' + s.name + '»</b> (можно переписать). Все ' + plural(ofKind(k).length) + ' этого вида — в услуге; осталось выбрать, кто платит.');
+    dirty = true;
+    msg = 'Название — <b>«' + s.name + '»</b> (можно переписать). Ничего не сохранено, пока не нажата «Сохранить».';
   }
   document.addEventListener('input', function (e) {
     var s = svcOf(cur);
-    if (e.target.matches('[data-name]')) { s.name = e.target.value; document.getElementById('nav').innerHTML = nav(); }
-    if (e.target.matches('[data-prov]')) s.prov = e.target.value;
+    if (e.target.matches('[data-name]')) { s.name = e.target.value; dirty = true; var p = document.getElementById('pane'); p.querySelector('.nm').textContent = s.name || 'Новая услуга';
+      p.querySelector('.unsaved').textContent = 'Есть несохранённые изменения'; p.querySelector('[data-save]').disabled = !(s.k && s.name); }
+    if (e.target.matches('[data-prov]')) { s.prov = e.target.value; dirty = true; }
   });
   document.addEventListener('click', function (e) {
     if (e.target.closest('input')) return;
-    var t = e.target.closest('[data-newsvc],[data-savenext],[data-svc],[data-kind],[data-who],[data-new],[data-create],[data-split],[data-close]');
-    if (!t) return;
+    var t = e.target.closest('[data-view],[data-newsvc],[data-save],[data-svc],[data-kind],[data-who],[data-open],[data-new],[data-create],[data-split],[data-close]');
+    if (!t) { if (open !== null) { open = null; render(); } return; }
     var d = t.dataset, p;
-    if (d.newsvc !== undefined || d.savenext !== undefined) {
-      S = S.filter(function (s) { return s.k; }); S.forEach(function (s) { s.isNew = false; });
-      startNew(); say(d.savenext !== undefined ? 'Сохранено. Открыта следующая новая услуга «По счётчикам».' : ''); return render();
+    if (d.view) { view = d.view; open = null; msg = ''; return render(); }
+    if (d.newsvc !== undefined) { S = S.filter(function (s) { return s.saved; }); M.forEach(function (m) { if (m.svc && !svcOf(m.svc)) { m.svc = ''; m.who = ''; } }); startNew(); msg = ''; return render(); }
+    if (d.save !== undefined) {
+      var s = svcOf(cur); if (!s.k || !s.name) return; s.saved = true; dirty = false;
+      msg = 'Сохранено: <b>«' + s.name + '»</b>. Открыта следующая новая услуга «По счётчикам».';
+      startNew(); return render();
     }
-    if (d.svc) { S = S.filter(function (s) { return s.k || s.id === d.svc; }); cur = d.svc; say(''); return render(); }
+    if (d.svc) { S = S.filter(function (s) { return s.saved || s.id === d.svc; }); M.forEach(function (m) { if (m.svc && !svcOf(m.svc)) { m.svc = ''; m.who = ''; } }); cur = d.svc; dirty = false; msg = ''; return render(); }
     if (d.kind) { pickKind(d.kind); return render(); }
-    if (d.who) { p = d.who.split(':'); meter(+p[0]).who = p[1]; return render(); }
+    if (d.who) { p = d.who.split(':'); meter(+p[0]).who = p[1]; open = null; dirty = true; return render(); }
+    if (d.open) { open = open === +d.open ? null : +d.open; return render(); }
     if (d.new !== undefined) { sub = { type: 'meter' }; return render(); }
-    if (d.create !== undefined) { var s = svcOf(cur); M.push({ id: nextId++, k: s.k, no: String(seq++), tar: '9,6 ₽/' + K[s.k][3], svc: s.id, who: '' }); sub = null; return render(); }
+    if (d.create !== undefined) { var sv = svcOf(cur); M.push({ id: nextId++, k: sv.k, no: String(seq++), tar: '9,6 ₽/' + K[sv.k][3], svc: sv.id, who: '' }); sub = null; dirty = true; return render(); }
     if (d.split !== undefined) { sub = { type: 'split' }; return render(); }
     if (d.close !== undefined) { sub = null; return render(); }
   });
