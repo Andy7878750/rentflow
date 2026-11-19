@@ -122,6 +122,33 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .dot { justify-self: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #c3c9cf; background: #fff; }
 .dot.on { border: 5px solid var(--accent); }
 .hint { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* вариант 6: список счётчиков + маленькое окно на счётчик */
+.win { position: relative; }
+.gp-row.is-click { cursor: pointer; margin: 0 -14px; padding: 0 14px; }
+.gp-row.is-click:hover { background: #e9ecef; }
+.gp-row.is-taken { color: var(--muted); }
+.gp-row.is-taken .t { font-weight: 400; }
+.payer { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; white-space: nowrap; }
+.payer .v { overflow: hidden; text-overflow: ellipsis; }
+.payer .chev { color: var(--muted); }
+.no-tar { color: #c0392b; }
+.ov { position: absolute; inset: 0; background: rgba(44,51,56,.35); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.mw { width: 440px; background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+.mw-head { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 20px; border-bottom: 1px solid var(--border); }
+.mw-head b { font-size: 15px; color: var(--primary); }
+.mw-head .sub { margin-left: 2px; }
+.mw-head .x { margin-left: auto; cursor: pointer; }
+.mw-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.mw-body .seg-track { display: flex; }
+.mw-body .seg-track button { flex: 1; }
+.mw .gp { min-height: 173px; }
+.pick-row { grid-template-columns: 22px minmax(0,1fr) 18px; cursor: pointer; }
+.pick-row .ok { color: var(--accent); font-weight: 700; text-align: right; }
+.pick-row.is-sel .t { color: var(--accent); }
+.mw-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 20px; }
+.btn { height: 38px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font: 600 14px var(--font); color: var(--text); cursor: pointer; }
+.btn.main { background: var(--accent); border-color: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -132,6 +159,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     <button data-v="3" class="is-on">3 · Сначала вопрос <span class="rec">(советую)</span></button>
     <button data-v="4">4 · Перетащить</button>
     <button data-v="5">5 · Таблица-точки</button>
+    <button data-v="6">6 · Список + окно счётчика <span class="rec">(идея пользователя)</span></button>
   </div>
   <div class="about" id="about"></div>
 
@@ -265,9 +293,70 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
       }).join('') + '</div><div><a class="add-link">+ Подключить счётчик</a></div>') + tail;
   };
 
-  var cur = '3';
+  // 6 — все счётчики объекта списком; клик по строке — маленькое окно «Кто платит» этого счётчика
+  ABOUT[6] = ['Сразу видны ВСЕ счётчики объекта (вид услуги ещё неизвестен). Включил нужные, кликнул по строке — в маленьком окне один вопрос: «Один арендатор» или «Общий — делим». Главное окно не перегружено.',
+    'Чтобы проверить, кто платит, надо открывать окно каждого счётчика (в списке видно только «Салон» / «Общий · по долям»). Счётчик, уже подключённый к другой услуге, здесь только показан.'];
+  var M6 = [
+    { k: 'el', no: '011245', tar: '9,6 / 4,2 ₽/кВт·ч', svc: 'Электричество' },
+    { k: 'el', no: '011377', tar: '9,6 / 4,2 ₽/кВт·ч', svc: 'Электричество' },
+    { k: 'hot', no: '250352064', tar: TAR, on: true, own: 'e' },
+    { k: 'hot', no: '250338183', tar: TAR, on: true, own: 'z' },
+    { k: 'hot', no: '250311470', note: 'в подсобке', tar: TAR, on: true, own: null, how: 'по долям', pay: { e: true, z: true } },
+    { k: 'cold', no: '190044', tar: '' }
+  ];
+  var HOW = ['по долям', 'поровну', 'по м²'];
+  var open6 = null, draft = null;
+  var tname = function (id) { return T.filter(function (t) { return t.id === id; })[0].name; };
+  var payerText = function (m) {
+    if (m.svc) return 'в «' + m.svc + '»';
+    if (!m.on) return '—';
+    if (m.own === null) return 'Общий · ' + m.how;
+    return m.own === 'owner' ? 'Вы' : tname(m.own);
+  };
+  V[6] = function () {
+    var cols = 'grid-template-columns: minmax(0,1fr) 130px 190px 30px';
+    var rows = '<div class="gp-row sub" style="' + cols + ';min-height:28px"><span>Счётчик</span><span class="r">Тариф</span><span>Кто платит</span><span class="r">Вкл.</span></div>' +
+      M6.map(function (m, i) {
+        var cls = m.svc ? ' is-taken' : (m.on ? ' is-click' : ' is-off');
+        return '<div class="gp-row' + cls + '" style="' + cols + '"' + (m.on && !m.svc ? ' data-m="' + i + '"' : '') + '>' +
+          '<span class="who">' + ic(m.k) + '<span class="t">№ ' + m.no + '</span>' + (m.note ? '<span class="sub">' + m.note + '</span>' : '') + '</span>' +
+          '<span class="tariff">' + (m.tar || '<span class="no-tar">нет тарифа</span>') + '</span>' +
+          '<span class="payer"><span class="v">' + payerText(m) + '</span>' + (m.on && !m.svc ? '<span class="chev">›</span>' : '') + '</span>' +
+          (m.svc ? '<span></span>' : '<span class="sw' + (m.on ? ' on' : '') + '" data-sw="' + i + '"></span>') + '</div>';
+      }).join('');
+    return charge + block('Счётчики объекта', '<div class="gp">' + rows + '</div>') + tail;
+  };
+  function modal6() {
+    var m = M6[open6], d = draft, rows;
+    var seg = '<div class="seg-track"><button data-own="1"' + (d.own !== null ? ' class="is-on"' : '') + '>Один арендатор</button>' +
+      '<button data-own="0"' + (d.own === null ? ' class="is-on"' : '') + '>Общий — делим</button></div>';
+    if (d.own !== null) {
+      rows = T.concat([{ id: 'owner', name: 'Никто — платите вы' }]).map(function (t, i) {
+        var sel = d.own === t.id;
+        return '<div class="gp-row pick-row' + (sel ? ' is-sel' : '') + (t.id === 'owner' ? ' is-owner' : '') + '" data-t="' + t.id + '">' +
+          (t.id === 'owner' ? '<span></span>' : '<span class="no">' + (i + 1) + '</span>') + '<span class="who"><span class="t">' + t.name + '</span></span><span class="ok">' + (sel ? '✓' : '') + '</span></div>';
+      }).join('');
+    } else {
+      var cols = 'grid-template-columns: 22px minmax(0,1fr) 50px 30px';
+      rows = '<div class="split-top">' + ic('people', false) + '<div class="how">' + HOW.map(function (h) {
+        return '<span data-how="' + h + '"' + (d.how === h ? ' class="on"' : '') + ' style="cursor:pointer">' + h + '</span>'; }).join('') + '</div></div>' +
+        T.map(function (t, i) {
+          var on = d.pay[t.id];
+          return '<div class="gp-row' + (on ? '' : ' is-off') + '" style="' + cols + '"><span class="no">' + (i + 1) + '</span><span class="who"><span class="t">' + t.name + '</span></span>' +
+            '<span class="sub r">' + (d.how === 'поровну' ? '50%' : t.share + '%') + '</span><span class="sw' + (on ? ' on' : '') + '" data-pay="' + t.id + '"></span></div>';
+        }).join('') + '<div class="gp-row is-owner" style="' + cols + '"><span></span><span class="who">Остаётся на вас</span><span class="sub r">' +
+        (d.pay.e && d.pay.z ? '0%' : '—') + '</span><span></span></div>';
+    }
+    return '<div class="ov" data-close="1"><div class="mw"><div class="mw-head">' + ic(m.k) + '<b>№ ' + m.no + '</b><span class="sub">' + m.tar + '</span><span class="x" data-close="1">×</span></div>' +
+      '<div class="mw-body"><div class="sec"><h3>Кто платит</h3>' + seg + '</div><div class="gp">' + rows + '</div></div>' +
+      '<div class="mw-foot"><button class="btn" data-close="1">Отмена</button><button class="btn main" data-done="1">Готово</button></div></div></div>';
+  }
+
+  var cur = '6';
   function render() {
     document.getElementById('body').innerHTML = V[cur]();
+    var old = document.querySelector('.ov'); if (old) old.remove();
+    if (cur === '6' && open6 !== null) document.querySelector('.win').insertAdjacentHTML('beforeend', modal6());
     document.getElementById('about').innerHTML = '<div class="plus"><b>Плюс</b>' + ABOUT[cur][0] + '</div><div class="minus"><b>Минус</b>' + ABOUT[cur][1] + '</div>';
     document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.v === cur); });
   }
@@ -275,6 +364,16 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
     var t;
     if ((t = e.target.closest('[data-v]'))) { cur = t.dataset.v; return render(); }
     if ((t = e.target.closest('[data-q]'))) { mode3 = t.dataset.q; return render(); }
+    // вариант 6
+    if ((t = e.target.closest('[data-sw]'))) { var mm = M6[t.dataset.sw]; mm.on = !mm.on; if (mm.on && mm.own === undefined) { mm.own = 'owner'; } return render(); }
+    if ((t = e.target.closest('[data-m]'))) { open6 = +t.dataset.m; var s = M6[open6];
+      draft = { own: s.own === undefined ? 'owner' : s.own, how: s.how || 'по долям', pay: s.pay ? Object.assign({}, s.pay) : { e: true, z: true } }; return render(); }
+    if ((t = e.target.closest('[data-own]'))) { draft.own = t.dataset.own === '1' ? 'e' : null; return render(); }
+    if ((t = e.target.closest('[data-t]'))) { draft.own = t.dataset.t; return render(); }
+    if ((t = e.target.closest('[data-how]'))) { draft.how = t.dataset.how; return render(); }
+    if ((t = e.target.closest('[data-pay]'))) { draft.pay[t.dataset.pay] = !draft.pay[t.dataset.pay]; return render(); }
+    if ((t = e.target.closest('[data-done]'))) { Object.assign(M6[open6], draft); open6 = null; return render(); }
+    if ((t = e.target.closest('[data-close]')) && (e.target === t || t.classList.contains('x') || t.classList.contains('btn'))) { open6 = null; return render(); }
   });
   render();
 })();
