@@ -208,14 +208,16 @@ def normalize(receipt):
     if receipt.amount_mode != Receipt.AmountMode.FIXED:
         receipt.fixed_amount = None
     if receipt.amount_mode != Receipt.AmountMode.RATE:
-        receipt.rate = receipt.persons = None
+        receipt.rate = receipt.persons = receipt.volume = None
+        receipt.rate_unit = ''
     else:
         if receipt.rate_base != Receipt.RateBase.PERSON:
             receipt.rate_base, receipt.persons = Receipt.RateBase.AREA, None
         if receipt.split in (Receipt.Split.USAGE, Receipt.Split.METERS):
             receipt.split = Receipt.Split.SHARES  # the sum is known from the tariff: «по расходу» makes no sense
-        if receipt.rate_base == Receipt.RateBase.AREA and receipt.split in (Receipt.Split.SHARES, Receipt.Split.EQUAL):
-            receipt.split = Receipt.Split.AREA  # a sum of the m² is split by the m² (or «Плачу сам»)
+        if (not receipt.rate_unit and receipt.rate_base == Receipt.RateBase.AREA
+                and receipt.split in (Receipt.Split.SHARES, Receipt.Split.EQUAL)):
+            receipt.split = Receipt.Split.AREA  # old window: a sum of the m² is split by the m² (or «Плачу сам»)
     if receipt.split != Receipt.Split.USAGE or receipt.night_weight == 1:
         receipt.night_weight = None  # only «по расходу» weighs the night; 1 is the same as empty
     if receipt.property.is_owner_used:
@@ -561,6 +563,48 @@ def tariff_at(rows, month):
     return current
 
 
+def meter_tariff_at(meter, month):
+    """The meter's own tariff row in force in the month (MeterTariff, prefetched `tariff_history`); None — none yet."""
+    rows = sorted(meter.tariff_history.all(), key=lambda row: row.valid_from)
+    return tariff_at(rows, month) or None
+
+
+def save_meter_tariff(meter, day, night, today=None):
+    """The tariff typed in the meter's window: a change starts this month (earlier months keep theirs), a change in the
+    same month corrects its row; the meter's first tariff counts from always. Empty — nothing changes."""
+    from .models import MeterTariff
+
+    if day is None:
+        return
+    night = night if meter.day_night else None
+    this_month = first_of_month(today or date.today())
+    rows = list(meter.tariff_history.order_by('valid_from'))
+    now = tariff_at(rows, this_month)
+    if now and now.tariff == day and now.tariff_night == night:
+        return
+    if now and now.valid_from == this_month:
+        now.tariff, now.tariff_night = day, night
+        now.save(update_fields=['tariff', 'tariff_night'])
+        return
+    has_past = meter.readings.filter(month__lt=this_month).exists()
+    MeterTariff.objects.create(meter=meter, valid_from=this_month if (rows or has_past) else SINCE_ALWAYS,
+                               tariff=day, tariff_night=night)
+
+
+def meter_price(receipt, entry, meter):
+    """(day, night) price of a meter in the entry's month: its own tariff (2026-11-19), else the service's for it
+    (ReceiptTariff, before), else the meter's / the service's old field."""
+    own = meter_tariff_at(meter, entry.month) if getattr(entry, 'month', None) else None
+    if own is not None:
+        return own.tariff, own.tariff_night
+    row = for_meter(entry.kind_tariffs, receipt, meter)
+    if row is not None:
+        return row.tariff, row.tariff_night
+    day = meter.tariff if meter.tariff is not None else entry.tariff
+    night = meter.tariff_night if meter.tariff_night is not None else entry.tariff_night
+    return day, night
+
+
 def kind_tariffs(receipt, month):
     """{key: ReceiptTariff} in force in the month (uses the prefetched receipt.tariffs)."""
     by_key = {}
@@ -870,11 +914,11 @@ def tariff_table(owner, today=None):
                     add(number.label, text(now.tariff if now else number.value), key_rows, note='в формуле',
                         before_text=lambda row, text=text: text(row.tariff))
             elif receipt.amount_mode == Receipt.AmountMode.RATE:
-                rate, persons = rate_at(receipt, month)
+                rate = rate_at(receipt, month)[0]
                 if rate is not None:
-                    per = 'чел.' if receipt.rate_base == Receipt.RateBase.PERSON else 'м²'
+                    per = rate_unit(receipt)
                     text = lambda value, per=per: f'{fmt_number(value)}{NBSP}{symbol}/{per}'  # noqa: E731
-                    add('За человека' if receipt.rate_base == Receipt.RateBase.PERSON else 'За м²', text(rate),
+                    add(f'За {per}' if receipt.rate_unit else 'За человека' if per == 'чел.' else 'За м²', text(rate),
                         history.get(rate_key(receipt), []), before_text=lambda row, text=text: text(row.tariff))
             elif receipt.metered:
                 seen = set()
@@ -1139,8 +1183,9 @@ def delete_receipt(receipt):
 
 
 def _layout_of(meters):
-    # A free meter (its tenant moved out) still counts as a tenant's one, not a common one.
-    return layout_for([{'tenant_id': m.tenant_id or ('free' if m.vacant else None)} for m in meters])
+    # A free meter (its tenant moved out) still counts as a tenant's one, not a common one; so does a common one divided
+    # between the tenants by its own split (the service window, 2026-11-19): each meter is counted on its own.
+    return layout_for([{'tenant_id': m.tenant_id or ('free' if m.vacant or m.split else None)} for m in meters])
 
 
 @transaction.atomic
@@ -1176,33 +1221,52 @@ def save_rate(receipt, today):
     key = rate_key(receipt)
     rows = list(receipt.tariffs.filter(key=key).order_by('valid_from'))
     now = tariff_at(rows, this_month)
-    if now and now.tariff == receipt.rate and now.quantity == receipt.persons:
+    if now and now.tariff == receipt.rate and now.quantity == receipt.persons and now.volume == receipt.volume:
         return
     if now and now.valid_from == this_month:
-        now.tariff, now.quantity = receipt.rate, receipt.persons
-        now.save(update_fields=['tariff', 'quantity'])
+        now.tariff, now.quantity, now.volume = receipt.rate, receipt.persons, receipt.volume
+        now.save(update_fields=['tariff', 'quantity', 'volume'])
         return
     has_past = receipt.monthly_amounts.filter(month__lt=this_month).exists() or receipt.created_at.date() < this_month
     valid_from = this_month if (rows or has_past) else SINCE_ALWAYS
-    ReceiptTariff.objects.create(receipt=receipt, key=key, valid_from=valid_from, tariff=receipt.rate, quantity=receipt.persons)
+    ReceiptTariff.objects.create(receipt=receipt, key=key, valid_from=valid_from, tariff=receipt.rate,
+                                 quantity=receipt.persons, volume=receipt.volume)
 
 
 def rate_at(receipt, month):
-    """(tariff, people) in force in the month: from the history, else as the service says now."""
+    """(tariff, people, volume) in force in the month: from the history, else as the service says now."""
     rows = sorted((row for row in receipt.tariffs.all() if row.key == rate_key(receipt)), key=lambda row: row.valid_from)
     row = tariff_at(rows, month) or (rows[0] if rows else None)
     if row is None:
-        return receipt.rate, receipt.persons
-    return row.tariff, row.quantity
+        return receipt.rate, receipt.persons, receipt.volume
+    return row.tariff, row.quantity, row.volume
+
+
+def rate_unit(receipt):
+    """«По тарифу»: what the tariff is per — the unit chosen in the window, else by the old «за м² / за человека»."""
+    return receipt.rate_unit or ('чел.' if receipt.rate_base == Receipt.RateBase.PERSON else 'м²')
 
 
 def rate_total(receipt, month, typed=False):
-    """(the month's sum, «45 м² × 7,12 ₽») of a «По площади» service; (None, why) while the area, the tariff
-    or the people are missing. typed — as the service window has it now (not saved yet), not from the history."""
-    rate, persons = (receipt.rate, receipt.persons) if typed or not receipt.pk else rate_at(receipt, month)
+    """(the month's sum, «45 м² × 7,12 ₽») of a «По тарифу» service; (None, why) while the area, the tariff
+    or the volume are missing. typed — as the service window has it now (not saved yet), not from the history."""
+    if typed or not receipt.pk:
+        rate, persons, volume = receipt.rate, receipt.persons, receipt.volume
+    else:
+        rate, persons, volume = rate_at(receipt, month)
     symbol = receipt.currency_symbol
     if rate is None:
         return None, 'не указан тариф'
+    if receipt.rate_unit:
+        # The window of 2026-11-19: «Тариф ₽ за [ед.] × [объём]»; м² with no volume — the object's area.
+        unit = receipt.rate_unit
+        if volume is None and unit == 'м²':
+            volume = receipt.property.area
+            if not volume:
+                return None, 'у объекта не указана площадь'
+        if not volume:
+            return None, 'не указан объём'
+        return money(volume * rate), f'{fmt_number(volume)}{NBSP}{unit} × {fmt_number(rate)}{NBSP}{symbol}'
     if receipt.rate_base == Receipt.RateBase.PERSON:
         if not persons:
             return None, 'не указано, сколько человек'
@@ -1499,6 +1563,7 @@ class MonthEntry:
     kind_tariffs: dict = field(default_factory=dict)  # {key: ReceiptTariff} in force this month
     tariff_lines: list = field(default_factory=list)  # «Электричество 7,5 / 3,2 ₽ за кВт·ч» for the object page
     rate_text: str = ''                          # «По площади»: «45 м² × 7,12 ₽», or why it can't be counted
+    month: object = None                         # the 1st of the month (the meters' own tariffs are taken at it)
 
 
 @dataclass
@@ -1546,12 +1611,7 @@ def _readings_for(meters, month):
 
 def meter_tariff_text(receipt, entry, meter):
     """The meter's tariff in the month, next to its №: «9,6 ₽/кВт·ч», day / night «5,5 / 2,1 ₽/кВт·ч», or ''."""
-    row = for_meter(entry.kind_tariffs, receipt, meter)
-    if row is not None:
-        day, night = row.tariff, row.tariff_night
-    else:
-        day = meter.tariff if meter.tariff is not None else entry.tariff
-        night = meter.tariff_night if meter.tariff_night is not None else entry.tariff_night
+    day, night = meter_price(receipt, entry, meter)
     if day is None:
         return ''
     unit = meter_unit(meter) or receipt.unit
@@ -1649,13 +1709,7 @@ def _meter_cost(receipt, entry, reading):
     """(exact cost, formula) of one meter's month, or None while something is missing."""
     meter = reading.meter
     unit, currency = meter_unit(meter) or receipt.unit, receipt.currency_symbol
-    # The service's tariff for this kind of meter; before those, the meter's own old one, then the service's.
-    row = for_meter(entry.kind_tariffs, receipt, meter)
-    if row is not None:
-        tariff, tariff_night = row.tariff, row.tariff_night
-    else:
-        tariff = meter.tariff if meter.tariff is not None else entry.tariff
-        tariff_night = meter.tariff_night if meter.tariff_night is not None else entry.tariff_night
+    tariff, tariff_night = meter_price(receipt, entry, meter)
     day, night = used(receipt, reading)
     if tariff is None or day is None:
         return None
@@ -1680,26 +1734,56 @@ def _meter_cost(receipt, entry, reading):
     return day * tariff + night * tariff_night, formula
 
 
-def _split(total, receipt, tenants, property_obj):
-    """Split a receipt's total between tenants. Returns {tenant_id: Line}."""
+def _split(total, receipt, tenants, property_obj, all_tenants=None, how=None, owner_takes=None, note=''):
+    """Split a receipt's total between the paying tenants. Returns {tenant_id: Line}.
+
+    all_tenants — everyone, the switched-off included. owner_takes (default — the service's «Остаётся на вас»):
+    the part of those who don't pay stays with the owner; off — it is divided between those who pay (2026-11-19).
+    how — the way to divide (default — the service's split); note — added after the formula («общий счётчик»)."""
+    how = how or receipt.split
+    owner_takes = receipt.owner_takes if owner_takes is None else owner_takes
+    all_tenants = tenants if all_tenants is None else all_tenants
+    someone_off = len(tenants) < len(all_tenants)
+    pass_on = someone_off and not owner_takes and bool(tenants)  # the remainder goes to those who pay
     currency = receipt.currency_symbol
     total_text = f'{fmt_number(total, 2)}{NBSP}{currency}'
+    tail = f' · {note}' if note else ''
     lines = {}
-    if receipt.split == Receipt.Split.SHARES:
-        for tenant in tenants:
+    if how == Receipt.Split.SHARES:
+        base = sum((t.share_percent or Decimal('0') for t in tenants), Decimal('0')) if pass_on else HUNDRED
+        for tenant in tenants if base else []:
             share = tenant.share_percent or Decimal('0')
-            lines[tenant.pk] = tenant_line(receipt, total * share / HUNDRED, f'{total_text} × {fmt_number(share)}%')
-    elif receipt.split == Receipt.Split.EQUAL and tenants:
+            of = f' из {fmt_number(base)}%' if pass_on else ''
+            lines[tenant.pk] = tenant_line(receipt, total * share / base, f'{total_text} × {fmt_number(share)}%{of}{tail}')
+    elif how == Receipt.Split.EQUAL and tenants:
+        count = len(all_tenants) if someone_off and owner_takes else len(tenants)
         for tenant in tenants:
-            lines[tenant.pk] = tenant_line(receipt, total / len(tenants), f'{total_text} ÷ {len(tenants)}')
-    elif receipt.split == Receipt.Split.AREA and property_obj.area:
-        for tenant in tenants:
+            lines[tenant.pk] = tenant_line(receipt, total / count, f'{total_text} ÷ {count}{tail}')
+    elif how == Receipt.Split.AREA and property_obj.area:
+        base = sum((t.area or Decimal('0') for t in tenants), Decimal('0')) if pass_on else property_obj.area
+        for tenant in tenants if base else []:
             area = tenant.area or Decimal('0')
             lines[tenant.pk] = tenant_line(
-                receipt, total * area / property_obj.area,
-                f'{total_text} × {fmt_number(area)} из {fmt_number(property_obj.area)}{NBSP}м²',
+                receipt, total * area / base,
+                f'{total_text} × {fmt_number(area)} из {fmt_number(base)}{NBSP}м²{tail}',
             )
     return lines
+
+
+def _common_meter(receipt, meter, exact, formula, tenants, payers, owner, property_obj):
+    """A common meter of «По счётчикам» divided between the tenants (its own split, «не платит», «Остаётся на вас»);
+    what is left — the owner's. Returns the meter's sum in kopecks (all of it is billed to someone)."""
+    total = money(exact)
+    off = {tenant.pk for tenant in meter.excluded.all()}
+    paying = [tenant for tenant in tenants if tenant.pk not in off]
+    lines = _split(total, receipt, paying, property_obj, all_tenants=tenants, how=meter.split,
+                   owner_takes=meter.owner_takes, note=f'{_meter_title(meter).strip()} · общий')
+    for tenant_id, line in lines.items():
+        payers[tenant_id].lines.append(line)
+    rest = total - sum((line.base for line in lines.values()), Decimal('0'))
+    if rest:
+        owner.lines.append(Line(receipt, rest, f'{formula} · общий счётчик, не распределено на арендаторов'))
+    return total
 
 
 @dataclass
@@ -1744,14 +1828,14 @@ def payer_preview(receipt, excluded=None):
             known = receipt.fixed_amount
         elif receipt.amount_mode == Receipt.AmountMode.RATE:
             known = rate_total(receipt, first_of_month(date.today()), typed=True)[0]
-    lines = _split(known, receipt, paying, property_obj) if known else {}
+    lines = _split(known, receipt, paying, property_obj, all_tenants=tenants) if known else {}
     rows = []
     for tenant in tenants:
         pays = tenant.pk not in excluded
         if not pays:
             basis = ''
         elif receipt.split == Receipt.Split.EQUAL:
-            basis = f'÷ {len(paying)}'
+            basis = f'÷ {len(tenants) if len(paying) < len(tenants) and receipt.owner_takes else len(paying)}'
         elif receipt.split == Receipt.Split.AREA:
             basis = f'{fmt_number(tenant.area)}{NBSP}м²' if tenant.area is not None else '— м²'
         elif receipt.split == Receipt.Split.SHARES:
@@ -1779,9 +1863,7 @@ def _tariff_lines(receipt, entry):
         if key in seen:
             continue
         seen.add(key)
-        row = for_meter(entry.kind_tariffs, receipt, meter)
-        day = row.tariff if row else (meter.tariff if meter.tariff is not None else entry.tariff)
-        night = row.tariff_night if row else (meter.tariff_night if meter.tariff is not None else entry.tariff_night)
+        day, night = meter_price(receipt, entry, meter)
         if day is None:
             lines.append(('' if key == '*' else _meter_title(meter), 'не указан'))
             continue
@@ -1806,10 +1888,11 @@ def month_bill(property_obj, month):
     entries = []
     readings_done = readings_total = 0
 
-    prefetch = ('meters__readings', 'meters__tenant', 'monthly_amounts', 'excluded', 'tariffs', 'numbers__values')
+    prefetch = ('meters__readings', 'meters__tenant', 'meters__tariff_history', 'meters__excluded', 'monthly_amounts',
+                'excluded', 'tariffs', 'numbers__values')
     for receipt in property_obj.receipts.prefetch_related(*prefetch):
         amount = next((a for a in receipt.monthly_amounts.all() if a.month == month), None)
-        entry = MonthEntry(receipt=receipt, amount=amount)
+        entry = MonthEntry(receipt=receipt, amount=amount, month=month)
         entries.append(entry)
 
         if receipt.metered:
@@ -1846,6 +1929,9 @@ def month_bill(property_obj, month):
                         line = Line(receipt, money(exact), f'{formula} · свободный счётчик')
                         owner.lines.append(line)
                         billed += line.base
+                    elif meter.tenant_id is None and meter.split and tenants:
+                        # A common meter of the service window (2026-11-19): its sum is divided like a receipt's.
+                        billed += _common_meter(receipt, meter, exact, formula, tenants, payers, owner, property_obj)
                     elif meter.tenant_id is None and receipt.layout == Receipt.Layout.BOTH:
                         common = (common or Decimal('0')) + exact
                     elif payer:
@@ -1899,7 +1985,8 @@ def month_bill(property_obj, month):
         # Tenants switched off in «Кто платит» don't pay: their part stays with the owner.
         excluded = excluded_ids(receipt)
         paying = [tenant for tenant in tenants if tenant.pk not in excluded]
-        lines = {} if receipt.split == Receipt.Split.OWNER else _split(entry.total, receipt, paying, property_obj)
+        lines = {} if receipt.split == Receipt.Split.OWNER else _split(entry.total, receipt, paying, property_obj,
+                                                                        all_tenants=tenants)
         for tenant_id, line in lines.items():
             payers[tenant_id].lines.append(line)
         # The owner's remainder is counted from the receipt itself, without the coefficient.

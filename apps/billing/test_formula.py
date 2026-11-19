@@ -116,8 +116,24 @@ class PayerSwitchTests(TestCase):
         rows = services.payer_preview(self.internet())
         self.assertEqual([(r.pays, r.amount_text) for r in rows], [(True, '450,00 ₽'), (False, '')])
 
-    def test_equal_divides_between_those_who_pay(self):
+    def test_equal_leaves_the_part_with_the_owner(self):
+        # «Остаётся на вас» on (2026-11-19): ÷ everyone, the part of who doesn't pay is the owner's.
         rows = services.payer_preview(self.internet('equal'))
+        self.assertEqual(rows[0].basis, '÷ 2')
+
+    def test_owner_off_passes_the_part_on_by_shares(self):
+        receipt = self.internet()
+        receipt.owner_takes = False
+        receipt.save()
+        bill = services.month_bill(self.prop, date(2026, 11, 1))
+        totals = {p.tenant.name: sum(line.amount for line in p.lines) for p in bill.payers}
+        self.assertEqual(totals, {'Виктор': Decimal('1000.00'), 'Владислав': 0})
+        self.assertEqual(bill.owner.lines, [])
+
+    def test_equal_divides_between_those_who_pay(self):
+        receipt = self.internet('equal')
+        receipt.owner_takes = False
+        rows = services.payer_preview(receipt)
         self.assertEqual((rows[0].basis, rows[0].amount_text), ('÷ 1', '1 000,00 ₽'))
 
     def test_month_bill_leaves_the_part_with_the_owner(self):
@@ -143,4 +159,5 @@ class PayerSwitchTests(TestCase):
             'fixed_amount': '1000', 'split': 'equal', 'payers_shown': '1', 'pays': [str(self.viktor.pk)],
         })
         self.assertContains(response, 'не платит')
-        self.assertContains(response, '1 000,00 ₽')
+        self.assertContains(response, '÷ 2')
+        self.assertNotContains(response, '1 000,00 ₽')

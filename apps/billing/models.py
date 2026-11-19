@@ -84,6 +84,12 @@ class Receipt(models.Model):
     rate_base = models.CharField('За что', max_length=10, choices=RateBase.choices, default=RateBase.AREA)
     rate = models.DecimalField('Тариф', max_digits=10, decimal_places=4, null=True, blank=True)
     persons = models.PositiveSmallIntegerField('Человек', null=True, blank=True)
+    # «По тарифу» (окно услуг 2026-11-19): «Тариф ₽ за [ед.] × [объём]». Единица — м², чел., м³ или своя; пусто — по
+    # rate_base. Объём пусто + м² — площадь объекта. История — в ReceiptTariff (tariff + volume).
+    rate_unit = models.CharField('Единица тарифа', max_length=12, blank=True)
+    volume = models.DecimalField('Объём', max_digits=12, decimal_places=3, null=True, blank=True)
+    # «Остаётся на вас»: доля тех, кто не платит, — на собственнике (да) или делится между платящими (нет).
+    owner_takes = models.BooleanField(default=True)
     currency = models.CharField(max_length=3, default=settings.CURRENCY)
     # «Своя формула»: the blocks in order — {"t": "num", "id": <FormulaNumber>}, {"t": "meter", "key": <kind or
     # «custom:<name>»>, "meters": [<Meter ids>], "join": "each" | "sum"}, {"t": "op", "op": "+" | "−" | "×" | "÷" | "(" | ")"}.
@@ -147,6 +153,13 @@ class Meter(models.Model):
     # What it showed when it was set up: «было» of its first month.
     initial = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     initial_night = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    # Общий счётчик в услуге «По счётчикам» (окно услуг, 2026-11-19): как делим его сумму между арендаторами.
+    # Пусто — как раньше (общий счётчик целиком на собственнике). excluded — кто не платит; owner_takes — их доля
+    # на собственнике (да) или делится между платящими (нет).
+    split = models.CharField(max_length=10, blank=True,
+                             choices=[('shares', 'По долям'), ('equal', 'Поровну'), ('area', 'По м²')])
+    excluded = models.ManyToManyField('tenants.Tenant', related_name='excluded_meters', blank=True)
+    owner_takes = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['id']
@@ -160,6 +173,20 @@ class Meter(models.Model):
         if self.tenant_id:
             return self.tenant.name
         return 'Свободен' if self.vacant else 'Объект (общий)'
+
+
+class MeterTariff(models.Model):
+    """The meter's own tariff from a month on (2026-11-19: the tariff is the meter's, typed in its window of the
+    object). A new price is a new row from the current month, so earlier months keep the old one."""
+
+    meter = models.ForeignKey(Meter, on_delete=models.CASCADE, related_name='tariff_history')
+    valid_from = models.DateField()
+    tariff = models.DecimalField(max_digits=10, decimal_places=4)
+    tariff_night = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+
+    class Meta:
+        ordering = ['meter', 'valid_from']
+        constraints = [models.UniqueConstraint(fields=['meter', 'valid_from'], name='unique_meter_tariff_per_month')]
 
 
 class ReceiptTariff(models.Model):
@@ -178,6 +205,8 @@ class ReceiptTariff(models.Model):
     tariff_night = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
     # «По площади · за человека»: how many people from this month (the tariff is in `tariff`).
     quantity = models.PositiveSmallIntegerField(null=True, blank=True)
+    # «По тарифу»: the volume from this month (empty with м² — the object's area).
+    volume = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
 
     class Meta:
         ordering = ['receipt', 'key', 'valid_from']
