@@ -412,7 +412,9 @@
         h += '<div class="sv-back" data-ask-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Сохранить изменения?">' +
           '<div class="sv-mw-head"><b>Сохранить изменения?</b><button type="button" class="sv-x" data-ask-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
           '<div class="sv-mw-body"><p class="sv-note">В «' + esc(s.name || 'Новая услуга') + '» есть несохранённые изменения.</p></div>' +
-          '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-ask-drop>Не сохранять</button>' +
+          // «Не сохранять» on the left; «Отмена» — stay on this service, «Сохранить» — the main one
+          '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto sv-ask-drop" data-ask-drop>Не сохранять</button>' +
+          '<button type="button" class="btn btn-ghost btn-auto" data-ask-close>Отмена</button>' +
           '<button type="button" class="btn btn-primary btn-auto" data-ask-save>Сохранить</button></div></div></div>';
       }
       if (meterOpen != null) h += meterWindow();
