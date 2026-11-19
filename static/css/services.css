@@ -42,8 +42,12 @@
 .sv-mkind { display: inline-flex; color: var(--mk, #7f8c8d); }
 .sv-mkind .icon { width: 18px; height: 18px; }
 
-/* the right part */
-.svcwin-pane { position: relative; overflow-y: auto; container-type: inline-size; }
+/* the right part: the head on top, the blocks, the bottom bar always at the bottom (sticky) */
+.svcwin-pane { position: relative; overflow-y: auto; container-type: inline-size; display: flex; flex-direction: column; }
+.sv-body { flex: 1 0 auto; }
+.sv-foot { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 12px 32px; border-top: 1px solid var(--color-border); background: var(--color-surface); }
+.sv-foot .btn { height: 38px; }
 .sv-empty { padding: 48px 32px; color: var(--color-text-muted); }
 .sv-top { position: sticky; top: 0; z-index: 2; background: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 0 32px; }
 .sv-top-line { display: flex; align-items: center; gap: 8px; height: 52px; min-width: 0; }

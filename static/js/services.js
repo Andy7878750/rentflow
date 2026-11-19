@@ -57,7 +57,14 @@
     var csrf = (box.querySelector('input[name=csrfmiddlewaretoken]') || {}).value || '';
     var T = S.tenants;
     var current = null, editing = false, unitOpen = false, unitNew = '', addedUnits = [];
-    var meterOpen = null, draft = null, exampleOpen = false, dirty = false;
+    var meterOpen = null, draft = null, exampleOpen = false, dirty = false, confirmDelete = false;
+    // After «Сохранить» or «Удалить» — a new service «По квитанции», ready for its name (the user's wish, 2026-11-19).
+    function nextNew() {
+      startNew('receipt');
+      unitOpen = false; exampleOpen = false; meterOpen = null; confirmDelete = false;
+      render(); pane.scrollTop = 0;
+      var input = pane.querySelector('[data-f="name"]'); if (input) input.focus();
+    }
 
     function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
     function copy(s) { return JSON.parse(JSON.stringify(s)); }
@@ -273,8 +280,8 @@
         (s.provider ? '<span class="sv-prov fade">· ' + esc(s.provider) + '</span>' : '') +
         '<button type="button" class="head-icon" data-edit title="Название и поставщик" aria-label="Название и поставщик"><svg class="icon"><use href="#i-edit"/></svg></button>' +
         '<span class="sv-saved" data-saved>' + (s.id ? 'Сохранено' : 'Введите название — услуга сохранится сама') + '</span>' +
-        (s.id && s.delete_url ? '<a href="' + esc(s.delete_url) + '" data-modal class="head-icon sv-del" title="Удалить услугу" aria-label="Удалить услугу">' +
-          '<svg class="icon"><use href="#i-trash"/></svg></a>' : '') + '</div>' +
+        (s.id ? '<button type="button" class="head-icon sv-del" data-delete title="Удалить услугу" aria-label="Удалить услугу">' +
+          '<svg class="icon"><use href="#i-trash"/></svg></button>' : '') + '</div>' +
         // The same fields as everywhere (properties/_field.html): the label over a 38px box.
         (editing ? '<div class="sv-top-edit"><div class="field fl"><label for="sv-name">Название в счёте</label>' +
           '<input type="text" id="sv-name" data-f="name" value="' + esc(s.name) + '" placeholder=" " maxlength="100" autocomplete="off"></div>' +
@@ -314,13 +321,46 @@
           '<div class="sv-mw-body"><p class="sv-note">' + (s.mode === 'receipt' ? 'Каждый месяц вы вводите сюда сумму из квитанции.' :
             s.mode === 'meters' ? 'Каждый месяц вы вводите сюда показания счётчиков.' : 'Сумма считается сама — вводить ничего не нужно.') + '</p>' + example(s) + '</div></div></div>';
       }
+      // The bottom bar repeats the top right corner: «Удалить услугу» on the left, «Сохранить» — the main button.
+      h += '<div class="sv-foot">' + (s.id ? '<button type="button" class="subwin-delete" data-delete>Удалить услугу</button>' : '') +
+        '<button type="button" class="btn btn-primary btn-auto" data-save-next>Сохранить</button></div>';
+      if (confirmDelete) {
+        h += '<div class="sv-back" data-del-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Удалить услугу">' +
+          '<div class="sv-mw-head"><b>Удалить услугу?</b><button type="button" class="sv-x" data-del-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
+          '<div class="sv-mw-body"><p class="sv-note">«' + esc(s.name) + '» больше не будет в счетах; её суммы и тарифы удалятся. Счётчики объекта и их показания останутся.</p></div>' +
+          '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-del-close>Отмена</button>' +
+          '<button type="button" class="btn btn-danger btn-auto" data-del-yes>Удалить</button></div></div></div>';
+      }
       if (meterOpen != null) h += meterWindow();
       pane.innerHTML = h;
     }
     function render() { renderNav(); renderPane(); }
 
     // ---------- saving ----------
-    var timer = null, saving = false, again = false, closed = false;
+    var timer = null, saving = false, again = false, closed = false, afterSave = null;
+    // «Сохранить»: send now (or wait for the save on its way), then go on.
+    function saveThen(next) {
+      if (!String(current.name || '').trim()) {
+        editing = true; renderPane();
+        status('Введите название услуги', 'is-error');
+        pane.querySelector('[data-f="name"]').focus();
+        return;
+      }
+      afterSave = next;
+      save(true);
+    }
+    function removeCurrent() {
+      var gone = current;
+      fetch(gone.delete_url, { method: 'POST', credentials: 'same-origin', headers: { 'X-Modal': '1', 'X-CSRFToken': csrf } })
+        .then(function (response) {
+          if (!response.ok) throw new Error(response.status);
+          dirty = true;
+          S.services = S.services.filter(function (s) { return s.id !== gone.id; });
+          S.meters.forEach(function (m) { if (m.service === gone.id) { m.service = null; m.service_name = ''; } });
+          nextNew();
+        })
+        .catch(function () { confirmDelete = false; renderPane(); status('Не удалось удалить', 'is-error'); });
+    }
     function done() { if (closed && !saving && dirty) window.location.reload(); }
     function status(text, cls) {
       var el = pane.querySelector('[data-saved]');
@@ -357,7 +397,7 @@
         return response.json().then(function (json) { return { ok: response.ok, json: json }; });
       }).then(function (answer) {
         saving = false;
-        if (!answer.ok) { status(answer.json.error || 'Не сохранено', 'is-error'); done(); return; }
+        if (!answer.ok) { afterSave = null; status(answer.json.error || 'Не сохранено', 'is-error'); done(); return; }
         dirty = true;
         var fresh = answer.json;
         S.services = fresh.services;
@@ -374,7 +414,8 @@
         status.t = setTimeout(function () { status('Сохранено'); }, 1500);
         if (again) { again = false; save(true); return; }
         done();
-      }).catch(function () { saving = false; status('Нет связи — не сохранено', 'is-error'); done(); });
+        if (afterSave) { var next = afterSave; afterSave = null; next(); }
+      }).catch(function () { saving = false; afterSave = null; status('Нет связи — не сохранено', 'is-error'); done(); });
     }
 
     // ---------- clicks ----------
@@ -398,6 +439,14 @@
         return;
       }
       if (!current) return;
+      // «Удалить услугу» — asked in a small window right here; after it — a new service «По квитанции»
+      if (confirmDelete) {
+        if (e.target.closest('[data-del-yes]')) { removeCurrent(); return; }
+        if ((t = e.target.closest('[data-del-close]')) && (e.target === t || t.tagName === 'BUTTON')) { confirmDelete = false; renderPane(); }
+        return;
+      }
+      if (e.target.closest('[data-delete]')) { confirmDelete = true; return renderPane(); }
+      if (e.target.closest('[data-save-next]')) { saveThen(nextNew); return; }
       // the meter's window
       if (meterOpen != null) {
         if (e.target.closest('[data-meter-done]')) {
@@ -483,8 +532,8 @@
         if (e.key === 'Escape') { e.stopPropagation(); unitOpen = false; unitNew = ''; renderPane(); }
         return;
       }
-      if (e.key === 'Escape' && (meterOpen != null || exampleOpen || unitOpen)) {
-        e.stopPropagation(); meterOpen = null; exampleOpen = false; unitOpen = false; renderPane(); return;
+      if (e.key === 'Escape' && (meterOpen != null || exampleOpen || unitOpen || confirmDelete)) {
+        e.stopPropagation(); meterOpen = null; exampleOpen = false; unitOpen = false; confirmDelete = false; renderPane(); return;
       }
       if (e.key === 'Enter' && e.target.dataset && e.target.dataset.meter) { e.preventDefault(); openMeter(+e.target.dataset.meter); return; }
       if (e.key === 'Enter' && e.target.dataset && e.target.dataset.f) {
