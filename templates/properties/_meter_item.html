@@ -64,14 +64,20 @@
       </div>
       {# The meter's own tariff (2026-11-19): one field, or day + night; «₽/<unit>» inside the field. #}
       <div class="item-grid">
-        <div class="field fl">
+        <div class="field fl fl-unit">
           <label for="{{ mform.tariff.id_for_label }}">Тариф<span data-day-label> · день</span> <span class="req">*</span></label>
-          <div class="num-wrap mt-tariff"><span class="num-wrap-in">{{ mform.tariff }}</span><span class="num-unit">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
+          <div class="unit-input">
+            <span class="unit-value">{{ mform.tariff }}</span>
+            <div class="unit-picker is-fixed"><span class="unit-trigger">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
+          </div>
           {% if mform.tariff.errors %}<ul class="errorlist">{% for error in mform.tariff.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
         </div>
-        <div class="field fl" data-night-field>
+        <div class="field fl fl-unit" data-night-field>
           <label for="{{ mform.tariff_night.id_for_label }}">Тариф · ночь <span class="req">*</span></label>
-          <div class="num-wrap mt-tariff"><span class="num-wrap-in">{{ mform.tariff_night }}</span><span class="num-unit">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
+          <div class="unit-input">
+            <span class="unit-value">{{ mform.tariff_night }}</span>
+            <div class="unit-picker is-fixed"><span class="unit-trigger">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
+          </div>
           {% if mform.tariff_night.errors %}<ul class="errorlist">{% for error in mform.tariff_night.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
         </div>
       </div>

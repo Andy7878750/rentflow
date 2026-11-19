@@ -2321,11 +2321,6 @@ input.masked {
 }
 
 /* ---------- The meter's own tariff in its small window (2026-11-19) ----------
-   «₽/кВт·ч» inside the field on the right; pale yellow while empty, as every number field. */
-.mt-tariff { position: relative; }
-.mt-tariff .num-wrap-in { display: block; }
-.mt-tariff input { text-align: right; padding-right: 76px; }
-.mt-tariff input:placeholder-shown { background: var(--input-warm, #fff8e6); }
-.mt-tariff .num-unit { position: absolute; top: 50%; transform: translateY(-50%); z-index: 1; right: 12px; color: var(--color-text-muted); font-size: 13px; pointer-events: none; white-space: nowrap; }
+   The same box as «Начальное»: the number, then «₽/кВт·ч» in the grey unit block on the right. */
 .mt-line .mt-tariff-cell { white-space: nowrap; }
 .mt-line .mt-tariff-cell.is-none { color: var(--color-danger); }

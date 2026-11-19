@@ -157,9 +157,9 @@ class MeterForm(forms.ModelForm):
     owner = forms.CharField(required=False, widget=forms.HiddenInput)
     # The meter's own tariff (2026-11-19): kept with history (MeterTariff) — a change starts this month.
     tariff = LooseDecimalField(required=False, max_digits=10, decimal_places=4,
-                               widget=forms.TextInput(attrs={'inputmode': 'decimal', 'placeholder': '0,00'}))
+                               widget=forms.TextInput(attrs={'inputmode': 'decimal'}))
     tariff_night = LooseDecimalField(required=False, max_digits=10, decimal_places=4,
-                                     widget=forms.TextInput(attrs={'inputmode': 'decimal', 'placeholder': '0,00'}))
+                                     widget=forms.TextInput(attrs={'inputmode': 'decimal'}))
 
     class Meta:
         model = Meter
