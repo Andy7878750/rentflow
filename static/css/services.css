@@ -52,7 +52,7 @@
 .sv-foot { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: flex-end; gap: 8px;
   padding: 12px 32px; border-top: 1px solid var(--color-border); background: var(--color-surface); }
 .sv-foot .btn { height: 38px; }
-.sv-foot .subwin-delete { margin-right: auto; }
+.sv-foot-left { margin-right: auto; display: flex; align-items: center; gap: 24px; min-width: 0; }
 .sv-empty { padding: 48px 32px; color: var(--color-text-muted); }
 .sv-top { position: sticky; top: 0; z-index: 2; background: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 0 32px; }
 .sv-top-line { display: flex; align-items: center; gap: 8px; height: 52px; min-width: 0; }
@@ -186,7 +186,7 @@
 .sv-mshare.is-owner.is-live .sv-who, .sv-mshare.is-owner.is-live .sv-pc { color: var(--color-text); font-weight: 600; }
 
 /* «См. пример на странице объекта» — a link; the example — a piece of «Ввод за месяц» */
-.sv-ex-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0;
+.sv-ex-link { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0;
   color: var(--color-accent); font: 13px var(--font); cursor: pointer; }
 .sv-ex-link:hover { text-decoration: underline; }
 .sv-ex-link .sv-i { width: 15px; height: 15px; }

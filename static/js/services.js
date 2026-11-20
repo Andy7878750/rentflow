@@ -473,9 +473,7 @@
         var todo = s.meters.filter(function (id) { var m = byId(S.meters, id); return m.who === '' || m.who == null; }).length;
         if (s.group) h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));
       }
-      if (s.mode !== 'formula' && (s.mode !== 'meters' || s.group)) {
-        h += '<button type="button" class="sv-ex-link" data-example>' + svg(CP_ICON.eye) + 'См. пример на странице объекта</button>';
-      }
+      var showExample = s.mode !== 'formula' && (s.mode !== 'meters' || s.group);
       h += '</div>';
       if (exampleOpen && s.mode !== 'formula') {
         h += '<div class="sv-back" data-ex-close><div class="sv-mw sv-ex" role="dialog" aria-modal="true" aria-label="На странице объекта">' +
@@ -484,8 +482,10 @@
           '<div class="sv-mw-body"><p class="sv-note">' + (s.mode === 'receipt' ? 'Каждый месяц вы вводите сюда сумму из квитанции.' :
             s.mode === 'meters' ? 'Каждый месяц вы вводите сюда показания счётчиков.' : 'Сумма считается сама — вводить ничего не нужно.') + '</p>' + example(s) + '</div></div></div>';
       }
-      // The bottom bar repeats the top right corner: «Удалить услугу» on the left, «Сохранить» — the main button.
-      h += '<div class="sv-foot">' + (s.id ? '<button type="button" class="subwin-delete" data-delete>Удалить услугу</button>' : '') +
+      // The bottom bar: on the left «См. пример на странице объекта» (2026-11-20) and «Удалить услугу»; «Сохранить» — the main button.
+      h += '<div class="sv-foot"><span class="sv-foot-left">' +
+        (showExample ? '<button type="button" class="sv-ex-link" data-example>' + svg(CP_ICON.eye) + 'См. пример на странице объекта</button>' : '') +
+        (s.id ? '<button type="button" class="subwin-delete" data-delete>Удалить услугу</button>' : '') + '</span>' +
         '<button type="button" class="btn btn-ghost btn-auto sv-cancel" data-modal-close>Отмена</button>' +
         '<button type="button" class="btn btn-primary btn-auto" data-save-next>Сохранить</button></div>';
       if (confirmDelete) {
