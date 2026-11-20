@@ -370,7 +370,7 @@
           '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div></div>';
       }).join('');
       return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>' +
-        '<div><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
+        '<div class="sv-add-row"><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
     }
     // «изменить» under a common meter: only how it is divided (who pays by it is chosen in its row).
     function meterWindow() {

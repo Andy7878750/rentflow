@@ -26,6 +26,8 @@
 /* the left menu */
 .svcwin-nav { display: flex; flex-direction: column; border-right: 1px solid var(--color-border); padding: 12px; overflow-y: auto; }
 .sv-nav-svcs { margin-top: auto; }  /* the object's services at the bottom of the column */
+/* the list ends on the line of the bottom bar (.sv-foot: 1 + 12 + 38 + 12 = 63px) */
+.svcwin-nav { padding-bottom: 63px; }
 /* a service just added: its row blinks after «Понятно» */
 .sv-nav-item.is-flash { animation: sv-flash 1.6s ease-out 1; }
 @keyframes sv-flash { 0%, 40% { background: var(--color-accent-soft); color: var(--color-accent); } 100% { background: transparent; } }
@@ -158,6 +160,7 @@
 .sv-sub { font-size: 12px; color: var(--color-text-muted); min-width: 0; }
 .sv-none { color: var(--color-danger); }
 .sv-add-link { color: var(--color-accent); font-weight: 600; font-size: 13px; text-decoration: none; }
+.sv-add-row { text-align: right; }  /* under the right edge of the meters table (2026-11-20) */
 
 /* a small window over the window: who pays by the meter, the example */
 .sv-back { position: fixed; inset: 0; z-index: 20; background: rgba(30, 40, 50, .35); display: flex; align-items: center;
@@ -225,7 +228,7 @@
 @media (max-width: 760px) {
   .modal-panel.svcwin { height: auto; max-height: none; }
   .svcwin-body { grid-template-columns: 1fr; }
-  .svcwin-nav { border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .svcwin-nav { border-right: 0; border-bottom: 1px solid var(--color-border); padding-bottom: 12px; }
   .sv-nav-svcs { margin-top: 0; }
   .sv-top-line { height: auto; flex-wrap: wrap; padding: 7px 0; }
   .sv-top, .sv-body { padding-left: 16px; padding-right: 16px; }
