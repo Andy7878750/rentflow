@@ -442,9 +442,8 @@
           (s.provider ? '<span class="sv-prov fade">· ' + esc(s.provider) + '</span>' : '');
       h += '<div class="sv-top"><div class="sv-top-line">' + icon + title +
         (s.isNew ? '' : '<button type="button" class="head-icon" data-edit title="Название и поставщик" aria-label="Название и поставщик"><svg class="icon"><use href="#i-' + (editing ? 'check' : 'edit') + '"/></svg></button>') +
-        '<span class="sv-saved" data-saved>' + (changed && !s.isNew ? 'Есть несохранённые изменения' : s.id ? 'Сохранено' : '') + '</span>' +
-        (s.id ? '<button type="button" class="head-icon sv-del" data-delete title="Удалить услугу" aria-label="Удалить услугу">' +
-          '<svg class="icon"><use href="#i-trash"/></svg></button>' : '') + '</div>' +
+        // only what needs attention: unsaved changes or an error (no «Сохранено», no 🗑 — «Удалить услугу» is below; 2026-11-20)
+        '<span class="sv-saved" data-saved>' + (changed && !s.isNew ? 'Есть несохранённые изменения' : '') + '</span></div>' +
         '</div><div class="sv-body">';
 
       var b;
@@ -618,9 +617,6 @@
         }
         renderNav();
         if (current === sent && !pane.querySelector('[data-f]:focus')) renderPane();
-        status('Сохранено ✓', 'is-on');
-        clearTimeout(status.t);
-        status.t = setTimeout(function () { status('Сохранено'); }, 1500);
         done();
         if (afterSave) { var next = afterSave; afterSave = null; next(); }
       }).catch(function () { saving = false; afterSave = null; status('Нет связи — не сохранено', 'is-error'); done(); });
