@@ -109,7 +109,8 @@
       });
       if (!String(current.name || '').trim() || current.autoName) { current.name = g.name; current.autoName = true; }
     }
-    function mark() { changed = true; status('Есть несохранённые изменения'); }
+    // a new service is not saved anyway: no «Есть несохранённые изменения» on it
+    function mark() { changed = true; if (!current.isNew) status('Есть несохранённые изменения'); }
     // Leaving the service with changes not saved: ask first (go — what to do after).
     // jumpTo — the name of the service we go to from «Уже в услугах»: then «Перейти в «…»?».
     function leave(go, jumpTo) {
@@ -432,14 +433,16 @@
       // The name and the supplier are typed right in the top line (2026-11-20): a new service and a ready one have
       // the same head — nothing below moves.
       var icon = s.isNew ? '<span class="sv-kind">' + svg(MODE_ICON[s.mode]) + '</span>' : kindIcon(s.kind);
+      // the title stays («Новая услуга», then the name as it is typed) — a fixed width, so the fields never move
       var title = editing
-        ? '<input type="text" class="sv-top-in w-name" data-f="name" value="' + esc(s.name) + '" placeholder="Название в счёте *" maxlength="100" autocomplete="off" aria-label="Название в счёте">' +
+        ? '<span class="sv-name is-fixed fade">' + esc(s.name || 'Новая услуга') + '</span>' +
+          '<input type="text" class="sv-top-in w-name" data-f="name" value="' + esc(s.name) + '" placeholder="Название в счёте *" maxlength="100" autocomplete="off" aria-label="Название в счёте">' +
           '<input type="text" class="sv-top-in w-prov" data-f="provider" value="' + esc(s.provider) + '" placeholder="Поставщик *" maxlength="150" autocomplete="off" aria-label="Поставщик">'
         : '<span class="sv-name">' + esc(s.name || 'Новая услуга') + '</span>' +
           (s.provider ? '<span class="sv-prov fade">· ' + esc(s.provider) + '</span>' : '');
       h += '<div class="sv-top"><div class="sv-top-line">' + icon + title +
         (s.isNew ? '' : '<button type="button" class="head-icon" data-edit title="Название и поставщик" aria-label="Название и поставщик"><svg class="icon"><use href="#i-' + (editing ? 'check' : 'edit') + '"/></svg></button>') +
-        '<span class="sv-saved" data-saved>' + (changed ? 'Есть несохранённые изменения' : s.id ? 'Сохранено' : '') + '</span>' +
+        '<span class="sv-saved" data-saved>' + (changed && !s.isNew ? 'Есть несохранённые изменения' : s.id ? 'Сохранено' : '') + '</span>' +
         (s.id ? '<button type="button" class="head-icon sv-del" data-delete title="Удалить услугу" aria-label="Удалить услугу">' +
           '<svg class="icon"><use href="#i-trash"/></svg></button>' : '') + '</div>' +
         '</div><div class="sv-body">';

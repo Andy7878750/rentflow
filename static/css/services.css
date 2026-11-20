@@ -61,11 +61,13 @@
 .sv-saved { margin-left: auto; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; transition: color .2s; }
 .sv-saved.is-on { color: var(--color-accent); }
 .sv-saved.is-error { color: var(--color-danger); }
+.sv-saved:empty { display: none; }  /* a new service: no status, the supplier field reaches the edge */
 /* the name and the supplier typed right in the top line (2026-11-20): 38px boxes, the head keeps its 52px */
 .sv-top-in { min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--radius);
   background: var(--color-surface); color: var(--color-text); font: 14px var(--font); }
+.sv-name.is-fixed { flex: 0 0 150px; min-width: 0; overflow: hidden; margin-right: 4px; }
 .sv-top-in.w-name { flex: 1 1 220px; max-width: 280px; }
-.sv-top-in.w-prov { flex: 1 1 180px; max-width: 240px; }
+.sv-top-in.w-prov { flex: 1 1 180px; }  /* to the right edge of the blocks below (status and 🗑 take their room when shown) */
 .sv-top-in::placeholder { color: var(--color-text-muted); }
 .sv-top-in:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
 
