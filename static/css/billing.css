@@ -70,17 +70,6 @@
   color: var(--color-accent);
 }
 
-.chip-sm {
-  padding: 6px 10px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.chip-sm .icon {
-  width: 15px;
-  height: 15px;
-}
-
 /* «Новая услуга»: templates as compact chips; they wrap (two short rows) so every one stays in sight. */
 .kind-tiles {
   display: flex;
@@ -169,20 +158,6 @@
   margin-bottom: 0;
 }
 
-.receipt-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.receipt-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 0;
-  border-top: 1px solid var(--color-border);
-}
-
 .receipt-icon {
   display: flex;
   align-items: center;
@@ -193,34 +168,6 @@
   border-radius: var(--radius);
   background: var(--color-accent-soft);
   color: var(--color-accent);
-}
-
-.receipt-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.receipt-title {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.receipt-title a {
-  color: var(--color-text);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.receipt-title a:hover {
-  color: var(--color-accent);
-}
-
-.receipt-meta {
-  margin: 4px 0 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
 }
 
 .tag {
@@ -237,43 +184,7 @@
   color: var(--color-text-muted);
 }
 
-.receipt-more {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border);
-}
-
-.receipt-more-label {
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
 /* ---------- Calculation card ---------- */
-
-.calc-card {
-  padding: 20px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
-.calc-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.calc-head h2 {
-  margin: 0;
-  color: var(--color-primary);
-  font-size: 18px;
-}
 
 .month-switch-sm .month-label {
   min-width: 0;
@@ -308,17 +219,6 @@
   margin: 0;
 }
 
-.rform-question h2 {
-  margin: 0 0 10px;
-  color: var(--color-primary);
-  font-size: 15px;
-}
-
-.segmented-wrap {
-  flex-wrap: wrap;
-}
-
-.rform-hint,
 .rform-note {
   margin: 8px 0 0;
   color: var(--color-text-muted);
@@ -332,37 +232,6 @@
   border-radius: 6px;
   background: var(--color-bg);
   font-size: 13px;
-}
-
-/* A yes/no question: the question on the left, a switch on the right; the whole row is clickable. */
-.rform-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  cursor: pointer;
-}
-
-.rform-toggle-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.rform-toggle-q {
-  color: var(--color-primary);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.rform-toggle .rform-hint {
-  margin-top: 4px;
-}
-
-/* «Как считаем»: a list of questions — the question on the left, the answer on the right. */
-.calc-list {
-  display: flex;
-  flex-direction: column;
 }
 
 .calc-row {
@@ -393,7 +262,6 @@
   min-width: 0;
 }
 
-.calc-hint,
 .calc-error {
   flex-basis: 100%;
   margin: 0;
@@ -551,16 +419,6 @@
   min-width: 140px;
 }
 
-/* «[5,00 ₽] за [кВт·ч ▾]» */
-.calc-word {
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.ifield-sum input {
-  width: 190px;
-}
-
 .ifield.is-disabled {
   background: var(--color-bg);
   cursor: default;
@@ -570,163 +428,17 @@
   text-align: left;
 }
 
-/* «Кто платит»: the meters list right under the questions. */
-.calc-list + .meter-list {
-  margin-top: 8px;
-}
-
-.meter-list + .split-row {
-  margin-top: 12px;
-}
-
 .rform .form-section-body > .rform-note {
   margin: 0;
 }
 
-/* Meters: a quiet list — who, the number (a chip until typed), the reading at the start. */
-.meter-list {
-  margin-top: 6px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--color-border);
-}
-
-.meter-list-head {
-  display: flex;
-  justify-content: space-between;
-  padding-bottom: 4px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.meter-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 50px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.meter-item-name {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 220px;
-  font-size: 14px;
-}
-
-.meter-item-start {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.ifield-num input {
-  width: 72px;
-}
-
-.serial-add {
-  height: 26px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 13px;
-  background: var(--color-info-soft);
-  color: var(--color-info);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.serial-add:hover {
-  background: #d6e8f6;
-}
-
-/* The number: green frame and ✓ while typing, blue frame and ✎ once saved. */
-.serial-field {
-  height: 34px;
-  padding: 0 0 0 10px;
-  border-color: var(--color-accent);
-  overflow: hidden;
-}
-
-.serial-field input {
-  width: 120px;
-  text-align: left;
-}
-
-.serial[data-state=empty] .serial-field,
-.serial:not([data-state=empty]) .serial-add {
-  display: none;
-}
-
-.serial[data-state=locked] .serial-field {
-  border-color: var(--color-info);
-  background: var(--color-info-soft);
-  box-shadow: none;
-  cursor: default;
-}
-
-.serial[data-state=locked] .serial-field input {
-  color: var(--color-primary);
-  cursor: default;
-}
-
-.serial-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: stretch;
-  width: 34px;
-  border: none;
-  border-left: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-accent);
-  cursor: pointer;
-}
-
-.serial-toggle .icon {
-  width: 15px;
-  height: 15px;
-}
-
-.serial-toggle:hover {
-  background: var(--color-accent-soft);
-}
-
-.serial[data-state=locked] .serial-toggle {
-  border-left-color: #c9dff0;
-  color: var(--color-info);
-}
-
-.serial[data-state=locked] .serial-toggle:hover {
-  background: #d6e8f6;
-}
-
-.serial-toggle .icon-edit,
-.serial[data-state=locked] .serial-toggle .icon-done {
-  display: none;
-}
-
-.serial[data-state=locked] .serial-toggle .icon-edit {
-  display: block;
-}
-
 /* Show only what applies to the current choices (no JS needed). */
 .rform .split-hint,
-.rform .amount-hint,
 .rform .layout-hint,
 .rform:not(:has(input[name=charge][value=meters]:checked)) .metered-only,
 .rform:has(input[name=charge][value=meters]:checked) .unmetered-only,
 .rform:not(:has(input[name=charge][value=fixed]:checked)) .fixed-only,
 .rform:not(:has(input[name=charge][value=receipt]:checked)) .monthly-only,
-.rform:has(input[name=zones][value="2"]:checked) .zones1-only,
-.rform:not(:has(input[name=zones][value="2"]:checked)) .zones2-only,
-.rform:has(input[name=layout][value=common]:checked) .meter-item:not([data-layouts~=common]),
-.rform:has(input[name=layout][value=tenants]:checked) .meter-item:not([data-layouts~=tenants]),
-.rform:has(input[name=layout][value=both]:checked) .meter-item:not([data-layouts~=both]),
 .rform:has(input[name=charge][value=meters]:checked):has(input[name=layout][value=tenants]:checked) .split-track,
 .rform:has(input[name=charge][value=meters]:checked):has(input[name=layout][value=both]:checked) .split-track,
 .rform:has(input[name=charge][value=meters]:checked):has(input[name=layout][value=tenants]:checked) .split-hint,
@@ -739,8 +451,6 @@
 .rform:has(input[name=split][value=area]:checked) .split-hint[data-for=area],
 .rform:has(input[name=split][value=usage]:checked) .split-hint[data-for=usage],
 .rform:has(input[name=split][value=owner]:checked) .split-hint[data-for=owner],
-.rform:has(input[name=charge][value=receipt]:checked) .amount-hint[data-for=monthly],
-.rform:has(input[name=charge][value=fixed]:checked) .amount-hint[data-for=fixed],
 .rform:has(input[name=layout][value=common]:checked) .layout-hint[data-for=common],
 .rform:has(input[name=charge][value=meters]:checked):has(input[name=layout][value=tenants]:checked) .layout-hint[data-for=tenants],
 .rform:has(input[name=charge][value=meters]:checked):has(input[name=layout][value=both]:checked) .layout-hint[data-for=both] {
@@ -757,13 +467,6 @@
     padding-top: 0;
   }
 
-  .meter-item {
-    flex-wrap: wrap;
-  }
-
-  .meter-item-start {
-    margin-left: 0;
-  }
 }
 
 @media (max-width: 520px) {
@@ -771,8 +474,7 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .receipts,
-  .calc-card {
+  .receipts {
     padding: 16px;
   }
 }
@@ -884,12 +586,6 @@
   gap: 12px;
 }
 
-.mreceipt {
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
 /* Nothing entered for the month yet: a small red dot after the name. */
 .missing-dot {
   display: none;
@@ -899,36 +595,6 @@
   margin-left: -2px;
   border-radius: 50%;
   background: var(--color-danger);
-}
-
-.mreceipt.is-missing .missing-dot {
-  display: inline-block;
-}
-
-.mreceipt-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-/* Icon, coefficient and menu line up with the first line of the name. */
-.mreceipt-head .receipt-icon {
-  padding-top: 2px;
-}
-
-.mreceipt-head .coef,
-.mreceipt-head .dropdown {
-  margin-top: -6px;
-}
-
-.mreceipt-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-  color: var(--color-text-muted);
-  font-size: 14px;
 }
 
 .num-input {
@@ -942,10 +608,6 @@
   font-family: inherit;
   font-size: 15px;
   text-align: right;
-}
-
-.num-input-wide {
-  width: 170px;
 }
 
 .num-input:focus {
@@ -1009,30 +671,10 @@
   font-size: 13px;
 }
 
-.mreceipt-fixed,
 .mreceipt-tariff {
   margin: 14px 0 0;
   color: var(--color-text-muted);
   font-size: 14px;
-}
-
-.mreceipt-fixed strong {
-  color: var(--color-text);
-}
-
-.icon-link {
-  display: inline-flex;
-  vertical-align: middle;
-  color: var(--color-text-muted);
-}
-
-.icon-link .icon {
-  width: 15px;
-  height: 15px;
-}
-
-.icon-link:hover {
-  color: var(--color-accent);
 }
 
 .month-actions {
@@ -1078,7 +720,6 @@
   text-transform: uppercase;
 }
 
-.bill-group-sum { color: var(--color-primary); font-size: 13px; letter-spacing: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bill-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; padding: 9px 12px; }
 .bill-line + .bill-line { border-top: 1px solid var(--color-border); }
 .bill-name { font-size: 14px; }
@@ -1224,28 +865,6 @@
 }
 
 @container month (max-width: 440px) {
-  .mreceipt-head {
-    flex-wrap: wrap;
-  }
-
-  .mreceipt-head .receipt-body {
-    flex-basis: calc(100% - 80px);
-  }
-
-  .mreceipt-head .coef {
-    order: 3;
-    margin: 0 0 0 30px;
-  }
-
-  .mreceipt-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-  }
-
-  .mreceipt-row .num-input {
-    width: 100%;
-  }
 
   .readings th,
   .readings td {
@@ -1288,70 +907,14 @@
   }
 }
 
-.coef {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  white-space: nowrap;
-  cursor: help;
-}
-
 .num-input-coef {
   width: 64px;
   padding: 7px 10px;
   text-align: center;
 }
 
-
-/* Month input: calm and neutral — the accent is left for focus and actions. */
-.mreceipt .receipt-icon {
-  width: auto;
-  height: auto;
-  background: none;
-  color: var(--color-text-muted);
-}
-
-.mreceipt .tag {
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-}
-
-/* Long names stay on one line inside the month block; the tags never shrink. */
-.mreceipt .receipt-title {
-  flex-wrap: nowrap;
-}
-
-.mreceipt .receipt-title .tag {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-/* Everything under the name starts where the name starts (icon 20px + gap 12px). */
-.mreceipt {
-  --mreceipt-indent: 32px;
-}
-
-.mreceipt-row,
-.mreceipt-fixed,
 .mreceipt-tariff {
   margin-left: var(--mreceipt-indent);
-}
-
-.meter-serial {
-  display: block;
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.mreceipt .readings {
-  width: calc(100% - var(--mreceipt-indent));
-  margin-left: var(--mreceipt-indent);
-}
-
-.mreceipt-head .receipt-icon {
-  width: 20px;
 }
 
 /* ---------- «К какому объекту?» ---------- */
@@ -1624,19 +1187,6 @@
   font-size: 13px;
 }
 
-.rform .meter-item {
-  min-height: 42px;
-}
-
-.rform .serial-field input {
-  width: 120px;
-}
-
-/* «· вводим [Показания | Расход]»: with the usage typed in, no starting readings are needed. */
-.rform:has(input[name=input_mode][value=usage]:checked) .readings-only {
-  display: none;
-}
-
 /* ---------- «Новая услуга»: rows on one grid, even spacing ----------
    Every row of «Сколько стоит» / «Кто платит» is a thin line + 8px above and below. The answers
    take the full width or two equal halves, so switches and fields line up from row to row. */
@@ -1647,7 +1197,6 @@
 
 .rform .rows .calc-row,
 .rform .rows .calc-row:first-child,
-.rform .rows .meter-list,
 .rform .rows .rform-note {
   margin: 0;
   padding: 10px 0;
@@ -1673,7 +1222,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.rform .calc-ctrl > .calc-hint,
 .rform .calc-ctrl > .calc-note,
 .rform .calc-ctrl > .calc-error {
   grid-column: 1 / -1;
@@ -1710,34 +1258,12 @@
   min-width: 0;
 }
 
-.calc-half {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.calc-half .ifield {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
 /* With the tenants' own meters «Делим» says it in words, at the height of a switch. */
 .calc-note {
   margin: 0;
   color: var(--color-text);
   font-size: 13px;
   line-height: 34px;
-}
-
-/* Meters: a line between rows, as everywhere in the window. */
-.rform .meter-list-head {
-  padding-bottom: 4px;
-}
-
-.rform .meter-item {
-  border-top: 1px solid var(--color-border);
-  border-bottom: 0;
 }
 
 @media (max-width: 640px) {
@@ -1752,45 +1278,8 @@
   margin-bottom: 0;
 }
 
-/* ---------- Meters list: the same columns and rhythm as the question rows ----------
-   name in the label column (150px), the number where the answers start, the starting reading
-   at the right edge. A line under each meter; the last line lies on the next row's line. */
-.rform .rows .meter-list {
-  margin-bottom: -1px;
-  padding-bottom: 0;
-}
-
-.rform .meter-list-head,
-.rform .meter-item {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-}
-
-.rform .meter-list-head {
-  padding: 0 0 2px;
-}
-
-.rform .meter-item {
-  min-height: 0;
-  padding: 10px 0;
-  border-top: 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.rform .meter-item-name {
-  max-width: none;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
 .rform .serial {
   justify-self: start;
-}
-
-.rform .meter-item-start {
-  margin-left: 0;
 }
 
 /* ---------- Switches: thin and light ----------
@@ -1817,8 +1306,7 @@
 
 /* Fields and the unit menu at the switches' height (30px). */
 .rform .ifield,
-.rform .pick-trigger,
-.rform .serial-field {
+.rform .pick-trigger {
   height: 30px;
 }
 
@@ -1828,22 +1316,6 @@
 
 .calc-note {
   line-height: 30px;
-}
-
-@media (max-width: 640px) {
-  .rform .meter-list-head,
-  .rform .meter-item {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .rform .meter-list-head span:nth-child(2) {
-    display: none;
-  }
-
-  .rform .meter-item .serial {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
 }
 
 /* ---------- Badges: soft labels for information ----------
@@ -1883,19 +1355,9 @@
 
 .rform .rows .calc-row,
 .rform .rows .calc-row:first-child,
-.rform .rows .meter-list,
-.rform .rows .rform-note,
-.rform .meter-item {
+.rform .rows .rform-note {
   border-top: 0;
   border-bottom: 0;
-}
-
-.rform .rows .meter-list {
-  margin-bottom: 0;
-}
-
-.rform .meter-item {
-  padding: 6px 0;
 }
 
 /* «Кто платит» in the head: the meters' layout, or the split when there is one sum to split. */
@@ -1920,13 +1382,11 @@
 
 /* The meaning of a choice: badges at the height of a switch. */
 /* No «display» here: the hide / show rules above decide it. */
-.rform .calc-badges,
 .rform .calc-note {
   margin: 0;
   line-height: 30px;
 }
 
-.rform .calc-badges .badge,
 .rform .calc-note .badge {
   margin-right: 6px;
   vertical-align: middle;
@@ -1943,111 +1403,6 @@
   gap: 12px;
 }
 
-.formula-for {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.formula-cap {
-  margin-right: 4px;
-  color: var(--color-text-muted);
-  font-size: 12.5px;
-}
-
-.formula-who {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  max-width: 200px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-}
-
-.formula-who:hover {
-  border-color: var(--color-text-muted);
-}
-
-.formula-who.is-on {
-  border-color: var(--color-text);
-  color: var(--color-text);
-  font-weight: 600;
-}
-
-.formula-who .icon {
-  flex: none;
-  width: 14px;
-  height: 14px;
-}
-
-.formula-eq {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 6px 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--color-bg);
-}
-
-.formula-term {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.formula-term small {
-  color: var(--color-text-muted);
-  font-size: 11.5px;
-}
-
-.formula-term b,
-.formula-result {
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.formula-op {
-  color: var(--color-text-muted);
-  font-size: 14px;
-  line-height: 20px;
-}
-
-.formula-result {
-  line-height: 20px;
-}
-
-.formula-total {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--color-text);
-  font-size: 13.5px;
-}
-
-.formula-total b {
-  font-size: 17px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.formula-note {
-  margin: -6px 0 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
 /* ---------- Switches: short and in the accent colour (2026-11-10) ----------
    A switch is as wide as its answers, not the whole cell; the switches and fields of a row stand
    in one line from the answers' column. The chosen answer is filled with the accent, so in a
@@ -2060,9 +1415,7 @@
   gap: 8px 12px;
 }
 
-.rform .calc-ctrl > .calc-hint,
 .rform .calc-ctrl > .calc-note,
-.rform .calc-ctrl > .calc-badges,
 .rform .calc-ctrl > .calc-error {
   flex-basis: 100%;
 }
@@ -2095,15 +1448,6 @@
 /* Fields keep a sensible width instead of filling the cell. */
 .rform .calc-ctrl > .ifield {
   width: 200px;
-}
-
-.rform .calc-half {
-  flex: 0 0 auto;
-}
-
-.rform .calc-half .ifield {
-  flex: 0 0 auto;
-  width: 112px;
 }
 
 /* ---------- Drop-downs of radios: «Счётчики», «Вводим показания / расход» ----------
@@ -2146,132 +1490,6 @@
   white-space: nowrap;
 }
 
-/* ---------- «Счётчики», variant 1 (2026-11-10) ----------
-   «Сколько счётчиков» with the same short switches as «Сколько стоит»; under a thin line one row per
-   meter on the same grid: the name in the label column, then fields of one height (30px) from the
-   answers' column — the number, the starting reading (day and night). The head sums it up. */
-.rform .meters-block .calc-row + .meter-list {
-  border-top: 1px solid var(--color-border);
-}
-
-.rform .meters-block .meter-list {
-  padding: 6px 0;
-}
-
-.rform .meters-block .meter-item {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  align-items: center;
-  gap: 16px;
-  min-height: 0;
-  padding: 4px 0;
-  border: 0;
-}
-
-.rform .meters-block .meter-item-name {
-  color: var(--color-text);
-  font-size: 13px;
-}
-
-.meter-item-fields {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.rform .meters-block .ifield {
-  box-sizing: border-box;
-  height: 30px;
-}
-
-.rform .meters-block .ifield-num {
-  width: 112px;
-}
-
-.rform .meters-block .ifield-num input {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-}
-
-/* The number: an ordinary field; green while typed, blue with ✎ once saved. */
-.rform .meters-block .serial-field {
-  width: 170px;
-  padding: 0 0 0 10px;
-  overflow: hidden;
-  border-color: var(--color-border);
-  background: var(--color-surface);
-}
-
-.rform .meters-block .serial-field input {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-  text-align: left;
-}
-
-.rform .meters-block .serial-field[data-state=edit] {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
-}
-
-.rform .meters-block .serial-field[data-state=locked] {
-  border-color: var(--color-info);
-  background: var(--color-info-soft);
-  box-shadow: none;
-}
-
-.rform .meters-block .serial-field[data-state=locked] input {
-  color: var(--color-primary);
-  cursor: default;
-}
-
-.rform .meters-block .serial-field[data-state=empty] .serial-toggle {
-  display: none;
-}
-
-.rform .meters-block .serial-field .serial-toggle {
-  width: 30px;
-  border-left: 1px solid var(--color-border);
-}
-
-.rform .meters-block .serial-field[data-state=locked] .serial-toggle {
-  border-left-color: #c9dff0;
-  color: var(--color-info);
-}
-
-.rform .meters-block .serial-field[data-state=locked] .serial-toggle .icon-done {
-  display: none;
-}
-
-.rform .meters-block .serial-field[data-state=locked] .serial-toggle .icon-edit {
-  display: block;
-}
-
-/* Head: how many meters and which layout — only the badges of the chosen layout. */
-.rform .meter-count,
-.rform .meter-layout {
-  display: none;
-}
-
-.rform .meter-count[data-layout=any],
-.rform:has(input[name=layout][value=common]:checked) .meter-count[data-layout=common],
-.rform:has(input[name=layout][value=tenants]:checked) .meter-count[data-layout=tenants],
-.rform:has(input[name=layout][value=both]:checked) .meter-count[data-layout=both],
-.rform:has(input[name=layout][value=common]:checked) .meter-layout[data-layout=common],
-.rform:has(input[name=layout][value=tenants]:checked) .meter-layout[data-layout=tenants],
-.rform:has(input[name=layout][value=both]:checked) .meter-layout[data-layout=both] {
-  display: inline-flex;
-}
-
-@media (max-width: 640px) {
-  .rform .meters-block .meter-item {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
-  }
-}
-
 /* ---------- Head badges: pale blue everywhere (2026-11-10) ----------
    A cool, slightly sea-blue tint, so it sits next to the accent #148f77 without fighting it. */
 .rform .form-section-head .badge,
@@ -2281,112 +1499,15 @@
   color: #1f6280;
 }
 
-/* ---------- «Счётчики»: a free list (2026-11-11) ----------
-   One meter = two lines: «what it measures ▾ · № · whose ▾ · ×», then «Тариф [₽] за [ед. ▾] · на старте».
-   All 30px high, like the rest of the window; a thin line between meters. */
-.rform .meters-block .meter-list {
-  padding: 4px 0 0;
-}
-
-.meter-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 0;
-}
-
-.meter-row + .meter-row {
-  border-top: 1px solid var(--color-border);
-}
-
-.meter-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.rform .mkind .pick-trigger {
-  width: 190px;
-  justify-content: space-between;
-  font-weight: 600;
-}
-
 .rform .mwho .pick-trigger {
   width: 170px;
   justify-content: space-between;
 }
 
-.rform .mkind .pick-trigger .fade,
 .rform .mwho .pick-trigger .fade {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-}
-
-.rform .meters-block .meter-row .serial-field {
-  width: 160px;
-}
-
-.meter-cap {
-  width: 190px;
-  color: var(--color-text-muted);
-  font-size: 12.5px;
-  text-align: right;
-  padding-right: 4px;
-  box-sizing: border-box;
-}
-
-.rform .meters-block .meter-line > .ifield:not(.serial-field) {
-  width: 112px;
-}
-
-.rform .meters-block .meter-line > .ifield input {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-}
-
-.meter-start {
-  display: inline-flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.rform .meters-block .meter-start .ifield-num {
-  width: 150px;
-}
-
-.meter-remove {
-  width: 30px;
-  height: 30px;
-  margin-left: auto;
-  color: var(--color-text-muted);
-}
-
-.meter-remove .icon {
-  width: 15px;
-  height: 15px;
-}
-
-/* The last meter can't be removed: a metered service has at least one. */
-.meter-list > .meter-row:only-child .meter-remove {
-  visibility: hidden;
-}
-
-.meter-add {
-  align-self: flex-start;
-  margin: 4px 0 2px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.mkind-menu {
-  min-width: 240px;
 }
 
 .rform .select-add-input {
@@ -2405,82 +1526,9 @@
   outline: none;
 }
 
-@media (max-width: 640px) {
-  .meter-cap {
-    width: auto;
-    text-align: left;
-  }
-
-  .meter-start,
-  .meter-remove {
-    margin-left: 0;
-  }
-}
-
-/* ---------- «Счётчики»: one line per meter, like a table (2026-11-11) ----------
-   The column captions once on top; every meter on the same columns. A field is as wide as its
-   answer: 6–7 digits for the tariff and the start reading. The tariff and its unit are one field,
-   «45,50 ₽/м³» — the unit is a small menu inside it. Day / night: the cell holds two fields. */
-.meter-head,
-.rform .meter-row .meter-line {
-  display: grid;
-  grid-template-columns: 160px 150px 150px 136px 104px 30px;
-  align-items: start;
-  gap: 8px;
-}
-
-.meter-head {
-  padding: 4px 0 0;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.meter-head span:nth-child(4),
-.meter-head span:nth-child(5) {
-  text-align: right;
-}
-
-.meter-row {
-  padding: 6px 0;
-}
-
-.meter-row + .meter-row {
-  border-top: 0;
-}
-
-.rform .meters-block .meter-list {
-  padding: 0;
-}
-
-.rform .mkind .pick-trigger,
 .rform .mwho .pick-trigger {
   width: 100%;
   box-sizing: border-box;
-}
-
-.rform .meters-block .meter-row .serial-field {
-  width: 100%;
-}
-
-.meter-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.rform .meters-block .meter-cell .ifield {
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.rform .meters-block .meter-cell .ifield input {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-  text-align: right;
 }
 
 /* The unit inside the tariff field: plain text with a dashed line — it opens a small menu. */
@@ -2490,24 +1538,6 @@
   flex: none;
 }
 
-.munit-trigger {
-  padding: 0;
-  border: 0;
-  border-bottom: 1px dashed #9aa1a6;
-  background: none;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 12px;
-  line-height: 1.2;
-  cursor: pointer;
-}
-
-.munit-trigger:hover,
-.munit.is-open .munit-trigger {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
-}
-
 .munit .pick-menu {
   top: calc(100% + 10px);
   right: -10px;
@@ -2515,95 +1545,22 @@
   min-width: 110px;
 }
 
-.rform .meter-remove {
-  margin: 0;
-}
-
-@media (max-width: 760px) {
-  .meter-head {
-    display: none;
-  }
-
-  .rform .meter-row .meter-line {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) 30px;
-  }
-}
-
-/* ---------- Meter row, round 2 (2026-11-11) ----------
-   No column captions: the hints are inside the fields. Long names fade out (.fade).
-   The unit sits on the right of the tariff field, like «Доля [м² ▾]» in the object window.
-   At the end of the row: ✓ saves the meter to the object, × deletes it. */
-.rform .meter-row .meter-line {
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.1fr) 172px 104px 30px 30px;
-  gap: 6px;
-}
-
-.rform .mkind .pick-trigger,
 .rform .mwho .pick-trigger {
   gap: 4px;
   padding: 0 8px 0 10px;
 }
 
-.rform .mkind .pick-trigger .fade,
 .rform .mwho .pick-trigger .fade {
   flex: 1 1 auto;
   text-align: left;
 }
 
-.rform .mkind .select-chevron,
 .rform .mwho .select-chevron {
   flex: none;
 }
 
-.rform .meters-block .mserial {
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.rform .meters-block .mserial input {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-  text-align: left;
-}
-
-/* Tariff: [ 45,50 ₽ | м³ ▾ ] */
-.rform .meters-block .mtariff {
-  padding-right: 0;
-  overflow: visible;
-}
-
 .munit {
   align-self: stretch;
-}
-
-.munit-trigger {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: 100%;
-  padding: 0 6px 0 8px;
-  border: 0;
-  border-left: 1px solid var(--color-border);
-  border-radius: 0 7px 7px 0;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.munit-trigger .icon {
-  width: 12px;
-  height: 12px;
-  color: var(--color-text-muted);
-}
-
-.munit-trigger:hover,
-.munit.is-open .munit-trigger {
-  border-bottom: 0;
-  background: #e9ecef;
-  color: var(--color-text);
 }
 
 .munit.is-open .select-chevron {
@@ -2615,429 +1572,13 @@
   right: 0;
 }
 
-.munit-echo {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  border-left: 1px solid var(--color-border);
-  border-radius: 0 7px 7px 0;
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.rform .meters-block .mstart input {
-  text-align: right;
-}
-
-/* ✓ and × at the end. A row with changes not saved yet: ✓ in the accent; saved: a quiet check. */
-.meter-save,
-.rform .meter-remove {
-  width: 30px;
-  height: 30px;
-  margin: 0;
-  border-radius: 8px;
-}
-
-.meter-save .icon,
-.rform .meter-remove .icon {
-  width: 15px;
-  height: 15px;
-}
-
-.meter-save .icon-edit,
-.meter-row[data-state=saved] .meter-save .icon-done {
-  display: none;
-}
-
-.meter-row[data-state=saved] .meter-save .icon-edit {
-  display: block;
-}
-
-.meter-row .meter-save {
-  background: var(--color-accent);
-  color: #fff;
-}
-
-.meter-row .meter-save:hover {
-  background: var(--color-accent-hover);
-}
-
-.meter-row[data-state=saving] .meter-save {
-  opacity: 0.6;
-}
-
-/* Saved: the button is ✎ — clearly a button (white, framed, accent icon), not a faded ✓. */
-.meter-row[data-state=saved] .meter-save {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-accent);
-}
-
-.meter-row[data-state=saved] .meter-save:hover {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
-}
-
-/* A saved row is locked: quiet grey fields, menus don't open until ✎. */
-.rform .meter-row[data-state=saved] .ifield,
-.rform .meter-row[data-state=saved] .pick-trigger {
-  background: var(--color-bg);
-  box-shadow: none;
-}
-
-.rform .meter-row[data-state=saved] .ifield {
-  cursor: default;
-}
-
-.rform .meter-row[data-state=saved] .pick-trigger,
-.rform .meter-row[data-state=saved] .munit-trigger {
-  pointer-events: none;
-}
-
-.rform .meter-row[data-state=saved] .select-chevron {
-  visibility: hidden;
-}
-
-.rform .meter-row[data-state=saved] .ifield:focus-within {
-  border-color: var(--color-border);
-}
-
-.meter-row[data-state=error] .meter-save {
-  background: var(--color-danger);
-}
-
-.rform .meter-remove {
-  color: var(--color-text-muted);
-}
-
-.rform .meter-remove:hover {
-  color: var(--color-danger);
-}
-
-/* No browser autofill colour in the meter fields. */
-.rform .meter-row input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 30px var(--color-surface) inset;
-}
-
-.rform .meters-block .mserial .ifield-fix {
-  color: var(--color-text-muted);
-}
-
 /* ---------- Meter row, round 4 + even gaps (2026-11-11) ----------
    One gap everywhere between the controls of a line: 8px — in «Сколько стоит» too.
    The row: what ▾ · № · whose ▾ share the free width; the tariff is one field in one line;
    «Старт» is a link with a small card; then ✓ and ×. */
 .rform .calc-ctrl,
-.rform .calc-ctrl.halves,
-.rform .calc-half {
+.rform .calc-ctrl.halves {
   gap: 8px;
-}
-
-/* Fixed columns for the tariff and «Старт», so every row lines up whatever is typed. */
-.rform .meter-row .meter-line {
-  --tariff-w: 150px;
-  --start-w: 100px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) var(--tariff-w) var(--start-w) 30px 30px;
-  align-items: center;
-  gap: 8px;
-}
-
-.rform:has(input[name=zones][value="2"]:checked) .meter-row .meter-line {
-  --tariff-w: 216px;
-  --start-w: 136px;
-}
-
-.rform .meters-block .meter-line > .ifield.mserial,
-.rform .meters-block .meter-line > .ifield.mtariff {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-}
-
-/* Tariff: [тариф ₽ | ед. ▾]; day / night: [день ₽ · ночь ₽ | ед. ▾] — still one line. */
-.rform .meters-block .meter-line > .ifield.mtariff {
-  padding-right: 0;
-  overflow: visible;
-}
-
-.rform .meters-block .mtariff input {
-  flex: 1 1 0;
-  width: auto;
-  min-width: 0;
-  text-align: right;
-}
-
-.mtariff-night {
-  display: flex;
-  flex: 1 1 0;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  align-self: stretch;
-  padding-left: 8px;
-  border-left: 1px solid var(--color-border);
-}
-
-.rform:not(:has(input[name=zones][value="2"]:checked)) .mtariff-night {
-  display: none;
-}
-
-/* «Старт»: a link, the reading next to it once typed. */
-.mstart {
-  position: relative;
-  display: inline-flex;
-  min-width: 0;
-}
-
-.mstart-link {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mstart-link {
-  padding: 0 2px;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  line-height: 30px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.mstart-value {
-  color: var(--color-text);
-}
-
-.mstart-card {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: -6px;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
-}
-
-.mstart-card[hidden] {
-  display: none;
-}
-
-.rform .mstart-card .ifield {
-  box-sizing: border-box;
-  width: 120px;
-  height: 30px;
-}
-
-.rform .mstart-card .ifield input {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-  text-align: right;
-}
-
-.mstart-done {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--color-accent);
-  color: #fff;
-}
-
-.mstart-done:hover {
-  background: var(--color-accent-hover);
-}
-
-.mstart-done .icon {
-  width: 15px;
-  height: 15px;
-}
-
-.rform .meter-row[data-state=saved] .mstart-link {
-  pointer-events: none;
-  color: var(--color-text-muted);
-}
-
-/* Day and night share the tariff field equally. */
-.rform .meters-block .meter-line > .ifield.mtariff > input,
-.rform .meters-block .meter-line > .ifield.mtariff .mtariff-night > input {
-  flex: 1 1 0;
-  width: 0;
-}
-
-/* ---------- «Счётчики», круг 5 (2026-11-11) ----------
-   The same air as every block: 10px under the head and above the bottom line, 8px between meters
-   and before «+ Добавить счётчик». «Базовые» + «?» instead of «Старт»; the numbers live in the card. */
-.rform .meters-block .form-section-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-.rform .meters-block .meter-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0;
-}
-
-.rform .meters-block .meter-row {
-  padding: 0;
-  border-top: 0;
-}
-
-.rform .meters-block .meter-add {
-  margin: 0;
-  line-height: 20px;
-}
-
-.rform .meter-row .meter-line,
-.rform:has(input[name=zones][value="2"]:checked) .meter-row .meter-line {
-  --start-w: 100px;
-}
-
-.mstart {
-  align-items: center;
-  gap: 4px;
-}
-
-.rform .mstart .help {
-  flex: none;
-}
-
-.mstart-card {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  padding: 12px;
-}
-
-.mstart-title {
-  color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.mstart-fields {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.rform .mstart-card .ifield {
-  width: 150px;
-}
-
-.rform .mstart-card .ifield .ifield-fix[data-unit-echo]:empty {
-  display: none;
-}
-
-/* ---------- «Счётчики», круг 6 (2026-11-11) ----------
-   A number in front of each meter (1, 2, …), the columns by name, and when the window is narrow
-   the row wraps (a container query on the list: it is the list's width that counts, not the screen's). */
-.rform .meters-block .meter-list {
-  container-type: inline-size;
-  counter-reset: meter;
-}
-
-.rform .meters-block .meter-row {
-  counter-increment: meter;
-}
-
-.mnum {
-  grid-area: num;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.mnum::before {
-  content: counter(meter);
-}
-
-.rform .meters-block .meter-line > .mkind { grid-area: kind; }
-.rform .meters-block .meter-line > .mserial { grid-area: serial; }
-.rform .meters-block .meter-line > .mwho { grid-area: who; }
-.rform .meters-block .meter-line > .mtariff { grid-area: tariff; }
-.rform .meters-block .meter-line > .mstart { grid-area: start; }
-.rform .meters-block .meter-line > .meter-remove { grid-area: remove; }
-.rform .meters-block .meter-line > .meter-save { grid-area: save; }
-
-.rform .meters-block .meter-row .meter-line {
-  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) var(--tariff-w) var(--start-w) 30px 30px;
-  grid-template-areas: "num kind serial who tariff start remove save";
-  row-gap: 8px;
-}
-
-/* Narrower: two lines — what · № · whose · × ✓, then the tariff and «Базовые» under them. */
-@container (max-width: 700px) {
-  .rform .meters-block .meter-row .meter-line {
-    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
-    grid-template-areas:
-      "num kind   serial who   remove save"
-      ".   tariff tariff start start  start";
-  }
-
-  .rform .meters-block .meter-row + .meter-row {
-    padding-top: 10px;
-    border-top: 1px solid var(--color-border);
-  }
-
-  .mstart-card {
-    right: auto;
-    left: 0;
-  }
-}
-
-/* A phone: what ▾ · × ✓, then № · whose, then the tariff, then «Базовые». */
-@container (max-width: 440px) {
-  .rform .meters-block .meter-row .meter-line {
-    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 30px 30px;
-    grid-template-areas:
-      "num kind   kind   remove save"
-      ".   serial who    who    who"
-      ".   tariff tariff tariff tariff"
-      ".   start  start  start  start";
-  }
-}
-
-/* The meter's number in a pale accent circle — like the tenants' numbers in the object window. */
-.rform .meters-block .mnum {
-  display: grid;
-  place-items: center;
-  align-self: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-@container (max-width: 700px) {
-  .rform .meters-block .mnum {
-    align-self: start;
-    margin-top: 3px;
-  }
-}
-
-/* A saved (locked) row: «Базовые» does not open the card, but hovering it still shows the value typed. */
-.rform .meters-block .meter-row[data-state=saved] .mstart-link {
-  pointer-events: auto;
-  cursor: default;
 }
 
 /* «Кто платит» → «Арендаторы»: the object's tenants, one per line — number, name, share (2026-11-11). */
@@ -3212,117 +1753,6 @@
   }
 }
 
-/* «Счётчик: Да» (2026-11-12): the object's meters as tiles — the same look as in the object window
-   (icon coloured by kind, № · ▷ start, whose) — with a tick. Unticked ones are pale. */
-.pick-tiles {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-}
-
-.meter-pick {
-  position: relative;
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 20px;
-  gap: 4px 10px;
-  align-items: center;
-  padding: 10px 10px 10px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface);
-  cursor: pointer;
-  transition: border-color .12s ease, opacity .12s ease;
-}
-
-.meter-pick input[name=meter_ids] {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.meter-pick:not(:has(input:checked)) {
-  opacity: .55;
-}
-
-.meter-pick:hover {
-  border-color: var(--mk);
-  opacity: 1;
-}
-
-.meter-pick:has(input:checked) {
-  border-color: var(--mk);
-  box-shadow: inset 0 0 0 1px var(--mk);
-}
-
-.meter-pick:has(input:focus-visible) {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.pick-box {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1.5px solid #c9cfd5;
-  border-radius: 6px;
-  background: #fff;
-  color: transparent;
-}
-
-.pick-box .icon {
-  width: 13px;
-  height: 13px;
-  stroke-width: 3;
-}
-
-.meter-pick:has(input:checked) .pick-box {
-  border-color: var(--mk);
-  background: var(--mk);
-  color: #fff;
-}
-
-.meter-object-link {
-  align-self: flex-start;
-  font-size: 13px;
-}
-
-/* A tariff per kind of the ticked meters: «Тариф · электричество [₽ день] [₽ ночь] за кВт·ч». */
-.tariff-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tariff-rows:not(:has(.tariff-row:not([hidden]))) {
-  display: none;
-}
-
-.tariff-row .calc-ctrl {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.tariff-row .ifield {
-  width: 132px;
-}
-
-.tariff-row .ifield input {
-  min-width: 0;
-  width: 100%;
-  text-align: right;
-}
-
-.tariff-row .ifield-fix {
-  white-space: nowrap;
-}
-
-.tariff-unit {
-  color: var(--color-text-muted);
-  font-size: 13px;
-  white-space: nowrap;
-}
-
 /* «Начисление» — four tiles (2026-11-13): по квитанции / фиксированная сумма / по счётчикам / своя формула.
    Icon on top, the name (may wrap) and a small grey hint under it. Picked — accent frame and pale accent fill. */
 .rform .rows .charge-tiles {
@@ -3409,7 +1839,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
 
 /* «Кто платит», tidied (2026-11-13): «Делим» — the switch and its meaning as grey text on the same line;
    «Арендаторы» — a small table over the whole width: number (grey: green is for switches) · name · share ·
@@ -3691,11 +2120,6 @@
 
 .rform .mrow:first-child {
   border-top: 0;
-}
-
-.rform .mrow-dn {
-  color: var(--color-text-muted);
-  font-size: 12px;
 }
 
 .rform .mrow-serial {
@@ -4027,8 +2451,6 @@
 
 /* ---------- Object page, the month's input (2026-11-15, feature/month-input) ---------- */
 
-/* Service icons in colour, the same as the meters: light turquoise, cold water blue, hot red… */
-.mreceipt .receipt-icon { color: var(--rk, var(--color-text-muted)); }
 .rk-electricity { --rk: #0e9aa7; }
 .rk-water { --rk: #2f80d1; }
 .rk-hot_water, .rk-hot_water_heating { --rk: #d9534f; }
@@ -4041,22 +2463,6 @@
 .rk-garbage { --rk: #6b8e23; }
 .rk-custom { --rk: #34495e; }
 
-/* The coefficient stays in the header line, next to «…», at any width (it used to drop under the name). */
-@container month (max-width: 440px) {
-  .mreceipt-head { flex-wrap: nowrap; }
-  .mreceipt-head .receipt-body { flex: 1 1 auto; flex-basis: auto; min-width: 0; }
-  .mreceipt-head .coef { order: 0; margin: -6px 0 0; }
-}
-
-.mreceipt-head .coef { flex-shrink: 0; }
-.mreceipt-head .num-input-coef { width: 48px; padding: 6px 4px; }
-
-/* Meter rows: who · «было» as text · today's field · usage. The same columns in every row. */
-.mreads {
-  margin: 16px 0 0;  /* from the icon, not under the name (2026-11-16) */
-  font-size: 14px;
-}
-
 .mread {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 72px 110px 76px;
@@ -4068,14 +2474,6 @@
 
 .mread:last-child { border-bottom: 0; }
 
-.mread-head {
-  padding: 0 0 6px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.mread-head > span:not(:first-child),
 .mread-prev,
 .mread-use { text-align: right; }
 
@@ -4093,10 +2491,6 @@
   font-size: 12px;
   font-weight: 400;
 }
-
-.mread-night { padding-top: 0; }
-.mread-night .mread-who { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
-.mread:has(+ .mread-night) { border-bottom: 0; }
 
 .mread-prev {
   color: var(--color-text-muted);
@@ -4200,8 +2594,6 @@
   .mread.is-dn .mread-ins { flex-direction: column; }
   .mread.is-dn .mread-prev,
   .mread.is-dn .mread-use { gap: 22px; }
-  .mreceipt-head .coef > span { font-size: 0; }
-  .mreceipt-head .coef > span::before { content: '×'; font-size: 13px; }
 }
 
 /* Usage in the month's rows — a grey badge (2026-11-16, the user's wish): «4 кВт·ч» stands out from «было». */
@@ -4286,37 +2678,13 @@
    Everything starts from the icon, as the meter rows do. */
 .obj-month .num-input:not(.num-input-coef) { padding: 6px 10px; font-size: 14px; }
 
-.obj-month .mreceipt-row,
-.obj-month .mreceipt-fixed {
-  margin-left: 0;
-}
-
-.obj-month .mreceipt-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px 200px 80px;
-  align-items: center;
-  column-gap: 10px;
-  margin-top: 16px;
-}
-
-.obj-month .mreceipt-row > label { grid-column: 1 / 3; }
-.obj-month .mreceipt-row > span { grid-column: 3; }
-.obj-month .mreceipt-row .num-input { width: 100%; }
-
-@container month (max-width: 560px) {
-  .obj-month .mreceipt-row { grid-template-columns: minmax(0, 1fr) 52px 88px 58px; column-gap: 8px; }
-}
-
 /* The month's rows, the golden middle (2026-11-16): a narrower «стало», a wider usage column — «13 750 кВт·ч» fits.
    A receipt's sum (no meters) takes «стало» + «расход»: a longer field, the same edges. */
-.mread,
-.obj-month .mreceipt-row { grid-template-columns: minmax(0, 1fr) 72px 160px 104px; }
-.obj-month .mreceipt-row > span { grid-column: 3 / 5; }
+.mread { grid-template-columns: minmax(0, 1fr) 72px 160px 104px; }
 .mread-use .badge { white-space: nowrap; }
 
 @container month (max-width: 560px) {
-  .mread,
-  .obj-month .mreceipt-row { grid-template-columns: minmax(0, 1fr) 48px 84px 80px; }
+  .mread { grid-template-columns: minmax(0, 1fr) 48px 84px 80px; }
 }
 
 /* «Стало» below «было» (or a negative usage): the field red, a red badge instead of the usage; not counted. */
@@ -4333,10 +2701,6 @@
   background: var(--color-danger);
 }
 
-/* The supplier under a service's name on the object page starts at the icon's edge, not under the name
-   (2026-11-16, the user: «придвинь название поставщика на уровень иконки»). Icon 20px + gap 12px. */
-.mreceipt-head .receipt-meta { margin-left: -32px; }
-
 /* ---------- The service cards change places (2026-11-17, variant Г): «⇅ Порядок» folds them into short rows ---------- */
 .section-actions { display: flex; flex-shrink: 0; flex-wrap: nowrap; justify-content: flex-end; gap: 8px; }
 @media (max-width: 480px) { .section-actions { flex-wrap: wrap; } }
@@ -4347,7 +2711,6 @@
 
 .morder { display: none; }
 .obj-month.is-ordering .morder { display: flex; flex-direction: column; gap: 6px; }
-.obj-month.is-ordering .mreceipt,
 .obj-month.is-ordering .month-actions,
 .obj-month.is-ordering .month-hint { display: none; }
 
@@ -4674,7 +3037,6 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .mi .mread { grid-template-columns: minmax(0, 1fr) 64px 90px 76px; }
 .mi .mread.is-dn .mread-ins { flex-direction: column; }
 .mi-body { padding: 4px 16px 6px; font-size: 14px; }
-.mi-body .mread-head { padding: 8px 0 2px; border-bottom: 0; }
 .mi .mread-in .num-input,
 .mi-field .num-wrap,
 .mi-field .num-input { width: 100%; max-width: none; }

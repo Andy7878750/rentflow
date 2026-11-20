@@ -280,22 +280,6 @@ def meters_label(count):
     return f'{count} {word}'
 
 
-def meter_counts(property_obj):
-    """How many meters each layout gives, for the badge in the head of «Счётчики»."""
-    tenants = 0 if property_obj.is_owner_used else property_obj.tenants.count()
-    if not tenants:
-        return [{'value': 'any', 'count': meters_label(1)}]
-    return [
-        {'value': Receipt.Layout.COMMON, 'count': meters_label(1)},
-        {'value': Receipt.Layout.TENANTS, 'count': meters_label(tenants)},
-        {'value': Receipt.Layout.BOTH, 'count': meters_label(tenants + 1)},
-    ]
-
-
-def _meter_key(tenant_id):
-    return 'common' if tenant_id is None else f't{tenant_id}'
-
-
 # What a meter measures: the ready-made kinds of the «Что за счётчик» menu, with their units.
 METER_KINDS = [
     (Receipt.Kind.ELECTRICITY, 'Электричество', 'кВт·ч'),
@@ -411,27 +395,6 @@ def parse_meters(property_obj, data):
         return None
     tenant_ids = {str(pk): pk for pk in property_obj.tenants.values_list('pk', flat=True)}
     return [clean_meter(property_obj, row, tenant_ids) for row in meter_rows(Receipt(property=property_obj), data)]
-
-
-def meters_without_tariff(meters, zones):
-    """Indexes of the meters whose tariff is not typed (with day / night — either of the two)."""
-    return [
-        index for index, values in enumerate(meters)
-        if values['tariff'] is None or (zones == 2 and values['tariff_night'] is None)
-    ]
-
-
-def tariff_from_meters(receipt, meters, tenant_id=None):
-    """The service's tariff and unit = those of its meter (the tenant's, if asked, else the first with a tariff).
-    The tariff is typed per meter in the window; the service keeps one for the month history and «Формула»."""
-    with_tariff = [values for values in meters if values['tariff'] is not None]
-    if not with_tariff:
-        return receipt
-    chosen = next((values for values in with_tariff if tenant_id and str(values['tenant_id']) == str(tenant_id)), with_tariff[0])
-    receipt.tariff = chosen['tariff']
-    receipt.tariff_night = chosen['tariff_night']
-    receipt.unit = chosen['unit'] or receipt.unit
-    return receipt
 
 
 def _store_meter(property_obj, values, meter=None):

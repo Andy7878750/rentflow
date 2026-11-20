@@ -146,7 +146,6 @@
 .sv-sw.is-on::after { transform: translateX(12px); }
 .sv-sw:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
-.sv-t { font-weight: 600; }
 .sv-sub { font-size: 12px; color: var(--color-text-muted); min-width: 0; }
 .sv-none { color: var(--color-danger); }
 .sv-add-link { color: var(--color-accent); font-weight: 600; font-size: 13px; text-decoration: none; }
@@ -273,8 +272,6 @@
 .sv-payer-menu .sv-sel-opt span { overflow: hidden; text-overflow: ellipsis; }
 .sv-sel-sep { height: 1px; margin: 4px 6px; background: var(--color-border); }
 .sv-mt-seg button { height: 30px; flex: auto; padding: 0 8px; white-space: nowrap; }
-.sv-link { border: 0; background: none; padding: 0; font: 600 12px var(--font); color: var(--color-accent); cursor: pointer; }
-.sv-link:hover { text-decoration: underline; }
 .sv-mt-ph { display: flex; align-items: center; justify-content: center; height: 194px; border: 1px dashed var(--color-border);
   border-radius: var(--radius); color: var(--color-text-muted); font-size: 13px; }
 

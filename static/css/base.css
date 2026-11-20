@@ -221,17 +221,6 @@ a {
   color: var(--color-text-muted);
 }
 
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.field-row-link {
-  font-size: 13px;
-  text-decoration: none;
-}
-
 .field-hint {
   margin: 6px 0 0;
   font-size: 12px;
@@ -560,6 +549,3 @@ a {
   font-size: 14px;
 }
 
-.message-error {
-  border-left-color: #c0392b;
-}
