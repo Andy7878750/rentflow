@@ -2324,9 +2324,10 @@ input.masked {
    The same box as «Начальное»: the number, then «₽/кВт·ч» in the grey unit block on the right. */
 .mt-line .mt-tariff-cell { white-space: nowrap; }
 .mt-line .mt-tariff-cell.is-none { color: var(--color-danger); }
-/* The start reading and the tariff in one row (2026-11-19, variant А): 50% / 50%, day / night — four of 25%. */
+/* The start reading and the tariff in one row: 50% / 50%. Day / night (2026-11-20) — both numbers in one field,
+   split by a grey slash, one unit block on the right. */
 .item-grid.mt-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.item-grid.mt-values:has([data-night-field]:not([hidden])) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-@media (max-width: 560px) {
-  .item-grid.mt-values:has([data-night-field]:not([hidden])) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+.dn-input .dn-slash { flex: 0 0 auto; align-self: center; color: var(--color-text-muted); font-size: 16px; }
+.dn-input .dn-slash[hidden], .dn-input .unit-value[hidden] { display: none; }
+.dn-input:has(.dn-slash:not([hidden])) .unit-value input:not([type=radio]):not([type=checkbox]) { padding-left: 10px; padding-right: 10px; }
+.dn-input:has(.dn-slash:not([hidden])) .unit-value:first-child input { padding-left: 12px; }

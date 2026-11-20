@@ -238,22 +238,32 @@
 .sv-tile.is-busy b { color: var(--color-text-muted); }
 .sv-tile.is-busy .sv-tile-t span { color: var(--color-accent); }
 
-/* «Кто платит» (вариант Б): Счётчик | Кто платит | Ввод показаний; row = 56 line + 22 kept for the line under it */
+/* «Кто платит» (вариант Б): Счётчик | Кто платит | Ввод показаний; every row 64px, nothing under it */
 .sv-mt { border: 1px solid var(--color-border); border-radius: var(--radius); background: #fff; }
 .sv-mt-head, .sv-mt-line { display: grid; grid-template-columns: 18px minmax(0, 1fr) 170px 184px; align-items: center; gap: 12px; }
 .sv-mt-head { height: 36px; padding: 0 14px; background: #f1f3f5; border-bottom: 1px solid var(--color-border);
   border-radius: var(--radius) var(--radius) 0 0; font-size: 12px; color: var(--color-text-muted); }
-/* the row keeps 78px (56 + 22 for the line under it); what is in it stands in the middle */
-.sv-mt-row { height: 78px; padding: 0 14px; display: flex; flex-direction: column; justify-content: center; }
+.sv-mt-row { height: 64px; padding: 0 14px; }
 .sv-mt-row + .sv-mt-row { border-top: 1px solid var(--color-border); }
-.sv-mt-line { height: 56px; }
 .sv-mt-no { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
 .sv-mt-no b { font-weight: 600; white-space: nowrap; overflow: hidden; }
 .sv-mt-no span { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
+/* always 20px (the badge's height) — the № above does not move when the badge comes */
+.sv-mt-sub { display: flex; align-items: center; gap: 6px; min-width: 0; height: 20px; }
+.sv-mt-sub > .fade { flex-shrink: 0; }
+/* a common meter's parts «А 60% · Б 40%» — a grey badge next to the tariff */
+.sv-mt-no .sv-parts { flex-shrink: 1; min-width: 0; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px;
+  background: #eef0f3; color: var(--color-text); text-overflow: ellipsis; }
 .sv-mt-no span.sv-none { color: var(--color-danger); }
 .sv-mt-pick { position: relative; }
 .sv-mt-pick .sv-pick { width: 100%; font-weight: 400; }
 .sv-mt-pick .sv-pick .fade { white-space: nowrap; overflow: hidden; }
+.sv-mt-pick .sv-pick small { margin-left: 6px; font-size: 12px; color: var(--color-text-muted); }
+/* ✎ right after the parts badge — the window «Делим» */
+.sv-mt-edit { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px; padding: 0;
+  border: 0; border-radius: 6px; background: none; color: var(--color-accent); cursor: pointer; }
+.sv-mt-edit .icon { width: 14px; height: 14px; }
+.sv-mt-edit:hover { background: #eef7f4; }
 .sv-mt-pick .sv-pick.is-empty { background: var(--input-warm, #fff8e6); border-color: var(--input-warm-border, #ecd9a8); color: #9a7b2f; }
 .sv-mt-pick .sv-pick[aria-expanded="true"] { border-color: var(--color-accent); }
 /* «Кто платит»: wider than the field when names are long, every item in one line; 7 tenants and more — it scrolls */
@@ -263,7 +273,6 @@
 .sv-payer-menu .sv-sel-opt span { overflow: hidden; text-overflow: ellipsis; }
 .sv-sel-sep { height: 1px; margin: 4px 6px; background: var(--color-border); }
 .sv-mt-seg button { height: 30px; flex: auto; padding: 0 8px; white-space: nowrap; }
-.sv-mt-note { height: 18px; margin-top: -4px; padding-left: 30px; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
 .sv-link { border: 0; background: none; padding: 0; font: 600 12px var(--font); color: var(--color-accent); cursor: pointer; }
 .sv-link:hover { text-decoration: underline; }
 .sv-mt-ph { display: flex; align-items: center; justify-content: center; height: 194px; border: 1px dashed var(--color-border);
@@ -272,8 +281,21 @@
 @media (max-width: 760px) {
   .sv-tiles { grid-template-columns: 1fr; }
   .sv-mt-head { display: none; }
-  .sv-mt-row { height: auto; }
-  .sv-mt-line { grid-template-columns: 18px minmax(0, 1fr); height: auto; padding: 10px 0 6px; }
+  .sv-mt-row { height: auto; padding: 10px 14px; row-gap: 8px; }
+  .sv-mt-line { grid-template-columns: 18px minmax(0, 1fr); }
   .sv-mt-pick, .sv-mt-seg { grid-column: 1 / -1; }
-  .sv-mt-note { padding-left: 0; }
 }
+
+/* «Как начисляется · По счётчикам»: groups already in a service — info badges at the right of the head */
+.sv-busy { display: flex; align-items: center; gap: 6px; margin-left: auto; min-width: 0; font-size: 12px; font-weight: 400;
+  text-transform: none; letter-spacing: 0; color: var(--color-text-muted); white-space: nowrap; }
+.sv-busy-link { border: 0; cursor: pointer; font-family: inherit; }
+.sv-busy-link:hover { background: #d3e7f8; }
+/* narrow window: the badges go under the head instead of out of it */
+.sv-sec > h3:has(.sv-busy) { height: auto; min-height: 20px; flex-wrap: wrap; row-gap: 6px; }
+.sv-busy { flex-wrap: wrap; row-gap: 6px; }
+/* «Общий — делим» in the payer menu: ✎ in place of the check — opens «Делим» */
+.sv-sel-edit { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; margin-right: 6px; padding: 0;
+  border: 0; border-radius: 6px; background: none; color: var(--color-accent); cursor: pointer; }
+.sv-sel-edit .icon { width: 15px; height: 15px; }
+.sv-sel-edit:hover { background: #dff3ee; }

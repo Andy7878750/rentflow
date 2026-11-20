@@ -40,12 +40,15 @@
           </div>
         </div>
       </div>
+      {% comment %}The start reading and the meter's own tariff (2026-11-20): two fields 50% / 50%; day / night — both
+         numbers in one field, «день / ночь» split by a slash, one unit block.{% endcomment %}
       <div class="item-grid mt-values">
-        {% for field in mform %}{% if field.name == 'initial' or field.name == 'initial_night' %}
-          <div class="field fl fl-unit"{% if field.name == 'initial_night' %} data-night-field{% endif %}>
-            <label for="{{ field.id_for_label }}">{% if field.name == 'initial' %}Начальное<span data-day-label> · день</span>{% else %}Начальное · ночь{% endif %} <span class="req">*</span></label>
-            <div class="unit-input">
-              <span class="unit-value">{{ field }}</span>
+          <div class="field fl fl-unit">
+            <label for="{{ mform.initial.id_for_label }}">Начальное<span data-day-label> · день / ночь</span> <span class="req">*</span></label>
+            <div class="unit-input dn-input">
+              <span class="unit-value">{{ mform.initial }}</span>
+              <span class="dn-slash" data-night-field aria-hidden="true">/</span>
+              <span class="unit-value" data-night-field>{{ mform.initial_night }}</span>
               <div class="unit-picker" data-munit>
                 <button type="button" class="unit-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Единица" data-munit-trigger>
                   <span data-munit-label>{{ mform.unit.value }}</span>
@@ -58,26 +61,17 @@
                 </ul>
               </div>
             </div>
-            {% if field.errors %}<ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {% if mform.initial.errors or mform.initial_night.errors %}<ul class="errorlist">{% for error in mform.initial.errors %}<li>{{ error }}</li>{% endfor %}{% for error in mform.initial_night.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
           </div>
-        {% endif %}{% endfor %}
-        {% comment %}The meter's own tariff (2026-11-19), in the same row: one tariff — start and tariff 50% / 50%;
-           day / night — four of 25%: start day · start night · tariff day · tariff night.{% endcomment %}
         <div class="field fl fl-unit">
-          <label for="{{ mform.tariff.id_for_label }}">Тариф<span data-day-label> · день</span> <span class="req">*</span></label>
-          <div class="unit-input">
+          <label for="{{ mform.tariff.id_for_label }}">Тариф<span data-day-label> · день / ночь</span> <span class="req">*</span></label>
+          <div class="unit-input dn-input">
             <span class="unit-value">{{ mform.tariff }}</span>
+            <span class="dn-slash" data-night-field aria-hidden="true">/</span>
+            <span class="unit-value" data-night-field>{{ mform.tariff_night }}</span>
             <div class="unit-picker is-fixed"><span class="unit-trigger">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
           </div>
-          {% if mform.tariff.errors %}<ul class="errorlist">{% for error in mform.tariff.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-        </div>
-        <div class="field fl fl-unit" data-night-field>
-          <label for="{{ mform.tariff_night.id_for_label }}">Тариф · ночь <span class="req">*</span></label>
-          <div class="unit-input">
-            <span class="unit-value">{{ mform.tariff_night }}</span>
-            <div class="unit-picker is-fixed"><span class="unit-trigger">₽/<span data-tariff-unit>{{ mform.unit.value }}</span></span></div>
-          </div>
-          {% if mform.tariff_night.errors %}<ul class="errorlist">{% for error in mform.tariff_night.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          {% if mform.tariff.errors or mform.tariff_night.errors %}<ul class="errorlist">{% for error in mform.tariff.errors %}<li>{{ error }}</li>{% endfor %}{% for error in mform.tariff_night.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
         </div>
       </div>
       <p class="form-note item-note">Начальное — то, что на счётчике сейчас. Новый тариф действует с текущего месяца, прошлые месяцы — по старому.</p>

@@ -87,6 +87,9 @@ class MeterTariffTests(TestCase):
         self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · по м² · Виктор 27\xa0м² · Владислав 33\xa0м²')
         meter.excluded.set([self.vlad])
         self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · по м² · Виктор 27\xa0м² · вы 33\xa0м²')
+        meter.owner_takes = False  # Виктор pays for it all — the whole 60 м²
+        self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · по м² · Виктор 60\xa0м²')
+        meter.owner_takes = True
         meter.split = 'equal'
         self.assertEqual(services.meter_payer_text(meter, tenants), 'Общий · поровну · Виктор 1/2 · вы 1/2')
 

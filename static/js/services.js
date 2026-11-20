@@ -65,7 +65,7 @@
     var meterOpen = null, draft = null, exampleOpen = false, dirty = false, confirmDelete = false;
     // changed — there are changes not saved yet; asking — «Сохранить изменения?» before leaving this service;
     // pickOpen — the meter whose «Кто платит» menu is open; snap — the meters as they were (to undo «Не сохранять»).
-    var changed = false, asking = null, pickOpen = null, snap = copy(S.meters);
+    var changed = false, asking = null, askJump = null, pickOpen = null, snap = copy(S.meters);
     // After «Сохранить» or «Удалить» — a new service «По квитанции», ready for its name (the user's wish, 2026-11-19).
     function nextNew() {
       startNew('receipt');
@@ -108,9 +108,10 @@
     }
     function mark() { changed = true; status('Есть несохранённые изменения'); }
     // Leaving the service with changes not saved: ask first (go — what to do after).
-    function leave(go) {
+    // jumpTo — the name of the service we go to from «Уже в услугах»: then «Перейти в «…»?».
+    function leave(go, jumpTo) {
       if (!changed) { go(); return; }
-      asking = go; renderPane();
+      asking = go; askJump = jumpTo || null; renderPane();
     }
 
     // ---------- the left menu ----------
@@ -150,16 +151,17 @@
       r.owner = Math.max(0, 1 - given);
       return r;
     }
+    function wholeArea() { return S.property.area || T.reduce(function (a, t) { return a + (t.area || 0); }, 0); }
+    // по м² — the м² one pays for: its own while the owner takes the rest, a bigger part when the paying ones share it all
     function partText(how, r, t) {
-      if (how === 'area') return t.area != null ? num(t.area) + ' м²' : '— м²';
+      if (how === 'area') return t.area != null ? num(Math.round(r.k[t.id] * wholeArea() * 100) / 100) + ' м²' : '— м²';
       if (how === 'equal') return '1/' + (r.takes ? T.length : T.length - r.off);
       return Math.round(r.k[t.id] * 1000) / 10 + '%';
     }
     function ownerPartText(how, r) {
       if (r.owner <= 0.00001) return '—';
       if (how === 'area') {
-        var area = S.property.area || T.reduce(function (a, t) { return a + (t.area || 0); }, 0);
-        return num(Math.round(r.owner * area * 100) / 100) + ' м²';
+        return num(Math.round(r.owner * wholeArea() * 100) / 100) + ' м²';
       }
       if (how === 'equal') return r.off + '/' + T.length;
       return Math.round(r.owner * 1000) / 10 + '%';
@@ -231,62 +233,100 @@
 
     // ---------- «По счётчикам» (вариант 6): все счётчики объекта, кто платит — в окне счётчика ----------
     function payerName(m) {
-      if (m.who === 'common') return 'Общий — делим';
+      if (m.who === 'common') return 'Общий<small>' + SPLITS.filter(function (x) { return x[0] === (m.split || 'shares'); })[0][1] + '</small>';
       if (m.who === 'owner') return 'Платите вы';
-      return tname(m.who);
+      return esc(tname(m.who));
+    }
+    // Short tenant names for the parts badge: without ИП / ООО / «Арендатор» and quotes, the first word
+    // («Аптека Вита» → «Аптека», «ИП Иванов П. С.» → «Иванов», «Арендатор А» → «А»); long — cut to 8 letters + «.»;
+    // the same short twice — the next word's first letter is added («Иванов П.» / «Иванов С.»).
+    var LEGAL = /^(ип|ооо|оао|зао|пао|ао|нко|арендатор)$/i;
+    function shortNames() {
+      var words = {}, out = {};
+      T.forEach(function (t) {
+        var w = String(t.name || '').replace(/[«»"']/g, ' ').split(/\s+/).filter(function (x) { return x && !LEGAL.test(x); });
+        words[t.id] = w.length ? w : [String(t.name || '')];
+        var f = words[t.id][0];
+        out[t.id] = f.length > 9 ? f.slice(0, 8) + '.' : f;
+      });
+      var first = {};
+      T.forEach(function (t) { first[t.id] = out[t.id]; });
+      T.forEach(function (t) {
+        var twin = T.filter(function (o) { return first[o.id] === first[t.id]; });
+        if (twin.length > 1) {
+          var next = words[t.id][1];
+          out[t.id] = first[t.id] + ' ' + (next ? next.charAt(0) + '.' : twin.indexOf(t) + 1);
+        }
+      });
+      return out;
+    }
+    // A common meter: «А 60% · Б 40%» in a badge next to its tariff (the full names — in its tooltip).
+    // The badge is always there once «кто платит» is chosen: a tenant — «Б 100%», «Платите вы» — «Вы 100%»;
+    // a common one — its parts and the owner's «Вы …» (three shown, «+N»; the full names — in its tooltip), ✎ — «Делим».
+    function meterParts(m) {
+      if (m.who === '' || m.who == null) return '';
+      var short = shortNames(), list = [];
+      if (m.who === 'owner') list.push(['Вы', 'Вы', '100%']);
+      else if (m.who !== 'common') list.push([short[m.who] || '', tname(m.who), '100%']);
+      else {
+        var how = m.split || 'shares', r = shares(how, m.excluded, m.owner_takes);
+        T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; }).forEach(function (t) { list.push([short[t.id], t.name, partText(how, r, t)]); });
+        if (r.owner > 0.00001) list.push(['Вы', 'Вы', ownerPartText(how, r)]);
+      }
+      var shown = list.slice(0, 3).map(function (x) { return esc(x[0] + ' ' + x[2]); });
+      if (list.length > 3) shown.push('+' + (list.length - 3));
+      var full = list.map(function (x) { return x[1] + ' ' + x[2]; }).join(' · ');
+      return '<span class="sv-parts" title="' + esc(full) + '">' + shown.join(' · ') + '</span>' + (m.who !== 'common' ? '' :
+        '<button type="button" class="sv-mt-edit" data-meter="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button>');
+    }
+    // «Что считаем»: only free groups; the ones already in a service — info badges in the head of «Как начисляется».
+    function busyBadges() {
+      var busy = S.groups.filter(function (g) { return busyGroup(g.key); });
+      if (!busy.length) return '';
+      return '<span class="sv-busy">уже в услугах:' + busy.map(function (g) {
+        var svc = byId(S.services, busyGroup(g.key));
+        return '<button type="button" class="badge badge-info sv-busy-link" data-svc="' + svc.id + '" title="Открыть «' + esc(svc.name) + '»">' +
+          esc(g.name) + (svc.name !== g.name ? ' → «' + esc(svc.name) + '»' : '') + '</button>';
+      }).join('') + '</span>';
     }
     function groupTiles(s) {
-      var tiles = S.groups.map(function (g) {
-        var busy = busyGroup(g.key);
+      if (!S.groups.length) return '<p class="sv-note">У объекта пока нет счётчиков.</p>';
+      var free = S.groups.filter(function (g) { return !busyGroup(g.key); });
+      var h = free.length ? '<div class="sv-tiles">' + free.map(function (g) {
         var list = g.meters.map(function (id) { return '№ ' + (byId(S.meters, id).serial || '—'); }).join(', ');
         var n = g.meters.length, word = n === 1 ? 'счётчик' : n < 5 ? 'счётчика' : 'счётчиков';
-        if (busy) {
-          var svc = byId(S.services, busy);
-          return '<button type="button" class="sv-tile is-busy" data-svc="' + busy + '">' + meterIcon(g.kind) +
-            '<span class="sv-tile-t"><b class="fade">' + esc(g.name) + '</b><span class="fade">уже в «' + esc(svc ? svc.name : '') + '» · открыть</span></span></button>';
-        }
         return '<button type="button" class="sv-tile' + (s.group === g.key ? ' is-on' : '') + '" data-group="' + esc(g.key) + '">' + meterIcon(g.kind) +
           '<span class="sv-tile-t"><b class="fade">' + esc(g.name) + '</b><span class="fade">' + n + ' ' + word + ' · ' + esc(list) + '</span></span></button>';
-      }).join('');
-      if (!S.groups.length) tiles = '<p class="sv-note">У объекта пока нет счётчиков.</p>';
-      return '<div class="sv-tiles">' + tiles + '</div>';
+      }).join('') + '</div>' : '<p class="sv-note">Все счётчики объекта уже в услугах.</p>';
+      return h;
     }
-    // «Кто платит» (вариант Б, 2026-11-20): a table — Счётчик | Кто платит | Ввод показаний; under each row the place
-    // for one line («Делим по долям…» / «Остаётся на вас») is always kept: nothing jumps.
-    function meterNote(m) {
-      if (m.who === 'common') {
-        var how = m.split || 'shares', r = shares(how, m.excluded, m.owner_takes);
-        var paying = T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; });
-        var parts = paying.slice(0, 3).map(function (t) { return esc(t.name) + ' ' + partText(how, r, t); });
-        if (paying.length > 3) parts.push('ещё ' + (paying.length - 3));
-        return 'Делим ' + SPLITS.filter(function (x) { return x[0] === how; })[0][1] + (parts.length ? ' · ' + parts.join(' · ') : '') +
-          ' · <button type="button" class="sv-link" data-meter="' + m.id + '">изменить</button>';
-      }
-      if (m.who === 'owner' && T.length) return 'В счета арендаторам не попадает — «Остаётся на вас»';
-      return '';
-    }
+    // «Кто платит» (вариант Б, 2026-11-20): a table — Счётчик | Кто платит | Ввод показаний; one line per meter,
+    // every row of the same height. A common meter: «Общий · по долям»; the parts — a badge, ✎ right after it — the window «Делим».
     function payerMenu(m) {
       var opt = function (v, label) {
         var sel = String(m.who) === String(v);
         return '<li class="sv-sel-row' + (sel ? ' is-selected' : '') + '"><button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':' + v + '">' +
           '<span>' + esc(label) + '</span>' + svg(CP_ICON.check, 'sv-ck') + '</button></li>';
       };
+      // «Общий — делим» with ✎ instead of the check: ✎ opens «Делим» right away (the meter is common after «Готово»)
+      var common = '<li class="sv-sel-row sv-sel-common' + (m.who === 'common' ? ' is-selected' : '') + '">' +
+        '<button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':common"><span>Общий — делим</span></button>' +
+        '<button type="button" class="sv-sel-edit" data-who-edit="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button></li>';
       return '<div class="sv-sel-menu sv-payer-menu"><ul>' + T.map(function (t) { return opt(t.id, t.name); }).join('') +
-        (T.length ? '<li class="sv-sel-sep"></li>' + opt('common', 'Общий — делим') : '') + opt('owner', 'Платите вы') + '</ul></div>';
+        (T.length ? '<li class="sv-sel-sep"></li>' + common : '') + opt('owner', 'Платите вы') + '</ul></div>';
     }
     function meterTable(s) {
       if (!s.group) return '<div class="sv-mt-ph">Сначала выберите, что считаем</div>';
       var rows = s.meters.map(function (id) {
-        var m = byId(S.meters, id), empty = m.who === '' || m.who == null, note = meterNote(m);
-        return '<div class="sv-mt-row"><div class="sv-mt-line">' + meterIcon(m.kind) +
-          '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="fade' + (m.tariff ? '' : ' sv-none') + '">' +
-          esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span></span>' +
+        var m = byId(S.meters, id), empty = m.who === '' || m.who == null, common = m.who === 'common';
+        return '<div class="sv-mt-row sv-mt-line">' + meterIcon(m.kind) +
+          '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="sv-mt-sub"><span class="fade' + (m.tariff ? '' : ' sv-none') + '">' +
+          esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span>' + meterParts(m) + '</span></span>' +
           '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '">' +
-          '<span class="fade">' + (empty ? 'Выберите' : esc(payerName(m))) + '</span><svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
+          '<span class="fade">' + (empty ? 'Выберите' : payerName(m)) + '</span><svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
           (pickOpen === m.id ? payerMenu(m) : '') + '</span>' +
           '<div class="sv-seg sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
-          '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div>' +
-          '</div>' + (note ? '<div class="sv-mt-note">' + note + '</div>' : '') + '</div>';
+          '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div></div>';
       }).join('');
       return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>' +
         '<div><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
@@ -378,7 +418,7 @@
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
-      h += block('Как начисляется · ' + modeName(s.mode) + warn, b);
+      h += block('Как начисляется · ' + modeName(s.mode) + warn + (s.mode === 'meters' && s.isNew ? busyBadges() : ''), b);
       if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
         h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (s.mode === 'meters') {
@@ -408,7 +448,13 @@
           '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-del-close>Отмена</button>' +
           '<button type="button" class="btn btn-danger btn-auto" data-del-yes>Удалить</button></div></div></div>';
       }
-      if (asking) {
+      if (asking && askJump) {
+        h += '<div class="sv-back" data-ask-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Перейти в услугу">' +
+          '<div class="sv-mw-head"><b>Перейти в «' + esc(askJump) + '»?</b><button type="button" class="sv-x" data-ask-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
+          '<div class="sv-mw-body"><p class="sv-note">Новая услуга «' + esc(s.name || 'Новая услуга') + '» не сохранится.</p></div>' +
+          '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-ask-close>Остаться</button>' +
+          '<button type="button" class="btn btn-primary btn-auto" data-ask-drop>Перейти</button></div></div></div>';
+      } else if (asking) {
         h += '<div class="sv-back" data-ask-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Сохранить изменения?">' +
           '<div class="sv-mw-head"><b>Сохранить изменения?</b><button type="button" class="sv-x" data-ask-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
           '<div class="sv-mw-body"><p class="sv-note">В «' + esc(s.name || 'Новая услуга') + '» есть несохранённые изменения.</p></div>' +
@@ -526,12 +572,12 @@
         return;
       }
       if ((t = e.target.closest('[data-svc]'))) {
-        var id = +t.dataset.svc;
+        var id = +t.dataset.svc, jump = t.classList.contains('sv-busy-link') ? byId(S.services, id).name : null;
         leave(function () {
           current = copy(byId(S.services, id)); changed = false; snap = copy(S.meters);
           editing = false; unitOpen = false; exampleOpen = false; meterOpen = null; pickOpen = null;
           render(); pane.scrollTop = 0;
-        });
+        }, jump);
         return;
       }
       if ((t = e.target.closest('[data-mode]'))) {
@@ -566,6 +612,7 @@
         if (e.target.closest('[data-meter-done]')) {
           var m = byId(S.meters, meterOpen);
           m.split = draft.split; m.excluded = draft.excluded; m.owner_takes = draft.owner_takes;
+          if (draft.makeCommon) m.who = 'common';
           meterOpen = null; renderPane(); mark(); return;
         }
         if ((t = e.target.closest('[data-meter-close]')) && (e.target === t || t.tagName === 'BUTTON')) { meterOpen = null; return renderPane(); }
@@ -599,6 +646,7 @@
       if (e.target.closest('[data-owner]')) { current.owner_takes = current.owner_takes === false; renderPane(); return mark(); }
       if ((t = e.target.closest('[data-pay]'))) { toggle(current.excluded, +t.dataset.pay); renderPane(); return mark(); }
       if ((t = e.target.closest('[data-group]'))) { S.meters = copy(snap); pickGroup(t.dataset.group); pickOpen = null; renderPane(); return mark(); }
+      if ((t = e.target.closest('[data-who-edit]'))) { pickOpen = null; openMeter(+t.dataset.whoEdit); draft.makeCommon = true; return renderPane(); }
       if ((t = e.target.closest('[data-who-set]'))) {
         var p = t.dataset.whoSet.split(':'), mm = byId(S.meters, +p[0]);
         mm.who = /^[0-9]+$/.test(p[1]) ? +p[1] : p[1];

@@ -1721,8 +1721,13 @@ def meter_payer_text(meter, tenants):
             parts.append(f'вы {len(off)}/{count}')
         return 'Общий · поровну · ' + ' · '.join(parts)
     if meter.split == Receipt.Split.AREA:
-        parts = [f'{tenant.name} {fmt_number(tenant.area or 0)}{NBSP}м²' for tenant in paying]
-        rest = (tenants[0].property.area or 0) - sum((tenant.area or 0 for tenant in paying), Decimal('0'))
+        # the м² each pays for: its own while the owner takes the rest; the paying ones sharing it all — more each
+        whole = tenants[0].property.area or sum((tenant.area or 0 for tenant in tenants), Decimal('0'))
+        paid = sum((tenant.area or 0 for tenant in paying), Decimal('0'))
+        scale = 1 if meter.owner_takes or not off or not paid else whole / paid
+        parts = [f'{tenant.name} {fmt_number(((tenant.area or 0) * scale).quantize(Decimal("0.01")))}{NBSP}м²'
+                 for tenant in paying]
+        rest = whole - paid
         if meter.owner_takes and rest > 0:
             parts.append(f'вы {fmt_number(rest)}{NBSP}м²')
         return 'Общий · по м² · ' + ' · '.join(parts)

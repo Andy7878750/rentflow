@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Строка общего счётчика</title>
+<style>
+:root { --c:#34495e; --acc:#148f77; --muted:#7b8794; --bd:#e3e6ea; --bg:#f4f5f7; --warm:#fff8e1; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px 16px 60px; background: #fff; color: var(--c); font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+.wrap { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+.lead { color: var(--muted); margin: 0 0 22px; }
+h2 { font-size: 15px; margin: 34px 0 4px; }
+h2 b { color: var(--acc); }
+.why { color: var(--muted); margin: 0 0 10px; font-size: 13px; }
+.t { border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; }
+.head, .line { display: grid; grid-template-columns: 18px minmax(0,1fr) 190px 184px; gap: 12px; align-items: center; padding: 0 14px; }
+.head { height: 36px; background: var(--bg); font-size: 12px; color: var(--muted); }
+.row + .row { border-top: 1px solid var(--bd); }
+.line { height: 64px; }
+.ic { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #c0392b; }
+.ic.el { border-color: #0e9aa7; }
+.no b { display: block; font-size: 15px; }
+.no span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.pick { height: 38px; border: 1px solid var(--bd); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; background: #fff; white-space: nowrap; overflow: hidden; }
+.pick::after { content: "▾"; color: var(--muted); margin-left: 8px; }
+.pick.empty { background: var(--warm); border-color: #ecd9a0; color: #9a7b2c; }
+.pick small { color: var(--muted); font-size: 12px; margin-left: 6px; }
+.pick.two { height: 44px; flex-wrap: wrap; align-content: center; line-height: 1.15; }
+.pick.two span { width: calc(100% - 20px); }
+.pick.two small { margin: 0; display: block; }
+.seg { display: flex; border: 1px solid var(--bd); border-radius: 8px; padding: 3px; height: 38px; }
+.seg span { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; }
+.seg .on { background: var(--acc); color: #fff; font-weight: 600; }
+.cell { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.cell .pick { flex: 1; min-width: 0; }
+.edit { width: 38px; height: 38px; flex-shrink: 0; border: 1px solid var(--bd); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--acc); }
+.slot { height: 22px; margin-top: -8px; padding: 0 14px 0 44px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.link { color: var(--acc); }
+.menu { margin: 6px 0 0 auto; width: 300px; border: 1px solid var(--bd); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.08); padding: 6px; font-size: 14px; }
+.menu div { padding: 8px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 10px; }
+.menu .sel { background: #eef7f4; color: var(--acc); font-weight: 600; }
+.menu small { color: var(--muted); font-weight: 400; }
+.menu hr { border: 0; border-top: 1px solid var(--bd); margin: 4px 0; }
+.menu .cap { font-size: 11px; color: var(--muted); text-transform: uppercase; padding: 6px 10px 2px; }
+.mine { margin-top: 26px; padding: 14px 16px; background: var(--bg); border-radius: 12px; font-size: 13px; }
+@media (max-width: 640px) { .head { display: none; } .line { grid-template-columns: 18px 1fr; height: auto; padding: 10px 14px; } .slot { padding-left: 14px; margin: 0; } .menu { width: 100%; } }
+</style></head><body><div class="wrap">
+<h1>Строка «Общий — делим»: варианты</h1>
+<p class="lead">Сейчас строка счётчика 78px с содержимым по центру. Когда выбираете «Общий», снизу появляется пояснение, и вся строка сдвигается вверх на 7px. Ниже — 4 варианта, где ничего не двигается.</p>
+
+<h2>А — <b>место под пояснение есть всегда</b>, строка прижата к верху</h2>
+<p class="why">Почти как сейчас. Строка не центрируется, поэтому пояснение появляется в пустом месте и ничего не сдвигает. Минус: у каждого счётчика снизу пустая полоса.</p>
+<div class="t">
+  <div class="head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 333</b><span>80,24 ₽/м³</span></span><span class="pick">Общий — делим</span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div>
+    <div class="slot">Делим по долям · Арендатор А 60% · Арендатор Б 40% · <span class="link">изменить</span></div></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 334</b><span>80,24 ₽/м³</span></span><span class="pick">Арендатор А</span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div>
+    <div class="slot"></div></div>
+</div>
+
+<h2>Б — <b>всё в поле «Кто платит»</b> + кнопка ✎ рядом</h2>
+<p class="why">Второй строки нет совсем, все строки одной высоты 64px. В поле «Общий · по долям», рядом ✎ — открывает окно «Делим». Доли (60% / 40%) видны в этом окне и на странице объекта.</p>
+<div class="t">
+  <div class="head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 333</b><span>80,24 ₽/м³</span></span><span class="cell"><span class="pick">Общий<small>по долям</small></span><span class="edit">✎</span></span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 334</b><span>80,24 ₽/м³</span></span><span class="pick">Арендатор А</span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 335</b><span>80,24 ₽/м³</span></span><span class="pick empty">Выберите</span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div></div>
+</div>
+
+<h2>В — <b>способ деления выбирается сразу в меню</b> «Кто платит»</h2>
+<p class="why">Вместо одного пункта «Общий — делим» в меню три: по долям / поровну / по м², у каждого сразу видны части. Обычно ничего больше открывать не нужно. Кто не платит и «Остаётся на вас» — последний пункт «Общий — настроить…» (окно «Делим»). Строки одной высоты.</p>
+<div class="t">
+  <div class="head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 333</b><span>80,24 ₽/м³</span></span><span class="pick">Общий · по долям</span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div></div>
+</div>
+<div class="menu">
+  <div>Арендатор А</div><div>Арендатор Б</div><hr>
+  <div class="cap">Общий — делим</div>
+  <div class="sel">по долям <small>А 60% · Б 40%</small></div>
+  <div>поровну <small>А ½ · Б ½</small></div>
+  <div>по м² <small>А 27 м² · Б 18 м²</small></div>
+  <div class="link">настроить…</div><hr>
+  <div>Платите вы</div>
+</div>
+
+<h2>Г — <b>части под номером счётчика</b>, в столбце «Счётчик»</h2>
+<p class="why">Под номером и так всегда есть вторая строка (тариф), поэтому у общего счётчика туда же дописываются части. Высота не меняется. Минус: длинные имена затухают (.fade), а ссылки «изменить» нет — делёж настраивается кликом по полю.</p>
+<div class="t">
+  <div class="head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 333</b><span>80,24 ₽/м³ · А 60% · Б 40%</span></span><span class="pick">Общий — по долям</span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div></div>
+  <div class="row"><div class="line"><i class="ic"></i><span class="no"><b>№ 334</b><span>80,24 ₽/м³</span></span><span class="pick">Арендатор А</span><span class="seg"><span class="on">Было / стало</span><span>Расход</span></span></div></div>
+</div>
+
+<div class="mine"><b>Мой выбор — В.</b> Деление выбирается в том же меню, где «Кто платит», и части видны до выбора. Строка всегда одной высоты, в 9 случаях из 10 второе окно не нужно. Второй — Б, если меню покажется длинным.</div>
+</div></body></html>
