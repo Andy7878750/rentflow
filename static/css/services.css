@@ -26,7 +26,11 @@
 .svcwin-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(0, 1fr); }
 
 /* the left menu */
-.svcwin-nav { border-right: 1px solid var(--color-border); padding: 12px; overflow-y: auto; }
+.svcwin-nav { display: flex; flex-direction: column; border-right: 1px solid var(--color-border); padding: 12px; overflow-y: auto; }
+.sv-nav-svcs { margin-top: auto; }  /* the object's services at the bottom of the column */
+/* a service just added: its row blinks after «Понятно» */
+.sv-nav-item.is-flash { animation: sv-flash 1.6s ease-out 1; }
+@keyframes sv-flash { 0%, 40% { background: var(--color-accent-soft); color: var(--color-accent); } 100% { background: transparent; } }
 .sv-nav-cap { font-size: 12px; color: var(--color-text-muted); padding: 4px 10px 6px; }
 .sv-nav-sep { height: 1px; background: var(--color-border); margin: 10px 10px 12px; }
 .sv-nav-item { width: 100%; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0;
@@ -57,7 +61,13 @@
 .sv-saved { margin-left: auto; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; transition: color .2s; }
 .sv-saved.is-on { color: var(--color-accent); }
 .sv-saved.is-error { color: var(--color-danger); }
-.sv-top-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 0 14px; }
+/* the name and the supplier typed right in the top line (2026-11-20): 38px boxes, the head keeps its 52px */
+.sv-top-in { min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--radius);
+  background: var(--color-surface); color: var(--color-text); font: 14px var(--font); }
+.sv-top-in.w-name { flex: 1 1 220px; max-width: 280px; }
+.sv-top-in.w-prov { flex: 1 1 180px; max-width: 240px; }
+.sv-top-in::placeholder { color: var(--color-text-muted); }
+.sv-top-in:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
 
 .sv-body { padding: 20px 32px 32px; display: flex; flex-direction: column; gap: 24px; }
 .sv-sec { display: flex; flex-direction: column; gap: 8px; }
@@ -217,8 +227,9 @@
   .modal-panel.svcwin { height: auto; max-height: none; }
   .svcwin-body { grid-template-columns: 1fr; }
   .svcwin-nav { border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .sv-nav-svcs { margin-top: 0; }
+  .sv-top-line { height: auto; flex-wrap: wrap; padding: 7px 0; }
   .sv-top, .sv-body { padding-left: 16px; padding-right: 16px; }
-  .sv-top-edit { grid-template-columns: 1fr; }
   .sv-cp { flex-wrap: wrap; }
 }
 
@@ -272,8 +283,6 @@
 .sv-payer-menu .sv-sel-opt span { overflow: hidden; text-overflow: ellipsis; }
 .sv-sel-sep { height: 1px; margin: 4px 6px; background: var(--color-border); }
 .sv-mt-seg button { height: 30px; flex: auto; padding: 0 8px; white-space: nowrap; }
-.sv-mt-ph { display: flex; align-items: center; justify-content: center; height: 194px; border: 1px dashed var(--color-border);
-  border-radius: var(--radius); color: var(--color-text-muted); font-size: 13px; }
 
 @media (max-width: 760px) {
   .sv-tiles { grid-template-columns: 1fr; }

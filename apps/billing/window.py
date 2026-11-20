@@ -246,7 +246,7 @@ def _save_meters(receipt, data, today):
     group = data.get('group')
     meters = [m for m in property_obj.meters.all() if services.meter_kind_key(m) == group]
     if not group or not meters:
-        raise WindowError('Выберите, что считаем.')
+        raise WindowError('Выберите группу счётчиков.')
     if any(meter.pk in busy for meter in meters):
         raise WindowError('Эти счётчики уже в другой услуге.')
     rows = {int(row['id']): row for row in data.get('meters') or [] if str(row.get('id', '')).isdigit()}

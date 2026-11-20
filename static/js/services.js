@@ -67,6 +67,8 @@
     // changed — there are changes not saved yet; asking — «Сохранить изменения?» before leaving this service;
     // pickOpen — the meter whose «Кто платит» menu is open; snap — the meters as they were (to undo «Не сохранять»).
     var changed = false, asking = null, askJump = null, pickOpen = null, snap = copy(S.meters);
+    // created — the service just added: a small window says so; flashId — its row on the left blinks once after «Понятно»
+    var created = null, flashId = null;
     // After «Сохранить» or «Удалить» — a new service «По квитанции», ready for its name (the user's wish, 2026-11-19).
     function nextNew() {
       startNew('receipt');
@@ -123,13 +125,15 @@
         h += '<button type="button" class="sv-nav-item is-mode' + (on ? ' is-on' : '') + '" data-mode="' + m[0] + '">' +
           svg(MODE_ICON[m[0]]) + '<span class="fade">' + m[1] + '</span>' + (on ? svg(CP_ICON.check, 'sv-check') : '') + '</button>';
       });
-      h += '<div class="sv-nav-sep"></div><div class="sv-nav-cap">Услуги объекта · ' + S.services.length + '</div>';
+      // the object's services sit at the bottom of the column (2026-11-20): a gap between them and «Начисление»
+      h += '<div class="sv-nav-svcs"><div class="sv-nav-sep"></div><div class="sv-nav-cap">Услуги объекта · ' + S.services.length + '</div>';
       S.services.forEach(function (s) {
         var on = current && current.id === s.id;
-        h += '<button type="button" class="sv-nav-item' + (on ? ' is-active' : '') + '" data-svc="' + s.id + '">' +
+        h += '<button type="button" class="sv-nav-item' + (on ? ' is-active' : '') + (s.id === flashId ? ' is-flash' : '') + '" data-svc="' + s.id + '">' +
           kindIcon(s.kind) + '<span class="fade">' + esc(s.name) + '</span></button>';
       });
-      nav.innerHTML = h;
+      nav.innerHTML = h + '</div>';
+      flashId = null;
     }
 
     // ---------- «Делим и кто платит» (квитанция, фикс, тариф — одинаково) ----------
@@ -316,7 +320,7 @@
       return '<span class="sv-parts" title="' + esc(full) + '">' + shown.join(' · ') + '</span>' + (m.who !== 'common' ? '' :
         '<button type="button" class="sv-mt-edit" data-meter="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button>');
     }
-    // «Что считаем»: only free groups; the ones already in a service — info badges in the head of «Как начисляется».
+    // «Выберите группу счётчиков»: only free groups; the ones already in a service — info badges in the head of «Как начисляется».
     function busyBadges() {
       var busy = S.groups.filter(function (g) { return busyGroup(g.key); });
       if (!busy.length) return '';
@@ -353,7 +357,6 @@
         (T.length ? '<li class="sv-sel-sep"></li>' + common : '') + opt('owner', 'Платите вы') + '</ul></div>';
     }
     function meterTable(s) {
-      if (!s.group) return '<div class="sv-mt-ph">Сначала выберите, что считаем</div>';
       var rows = s.meters.map(function (id) {
         var m = byId(S.meters, id), empty = m.who === '' || m.who == null, common = m.who === 'common';
         return '<div class="sv-mt-row sv-mt-line">' + meterIcon(m.kind) +
@@ -426,18 +429,19 @@
           'У объекта пока нет услуг. Выберите слева, как начисляется новая.') + '</div>';
         return;
       }
-      h += '<div class="sv-top"><div class="sv-top-line">' + (s.isNew ? '<span class="sv-kind">' + svg(MODE_ICON[s.mode]) + '</span>' : kindIcon(s.kind)) +
-        '<span class="sv-name">' + esc(s.name || 'Новая услуга') + '</span>' +
-        (s.provider ? '<span class="sv-prov fade">· ' + esc(s.provider) + '</span>' : '') +
-        '<button type="button" class="head-icon" data-edit title="Название и поставщик" aria-label="Название и поставщик"><svg class="icon"><use href="#i-edit"/></svg></button>' +
+      // The name and the supplier are typed right in the top line (2026-11-20): a new service and a ready one have
+      // the same head — nothing below moves.
+      var icon = s.isNew ? '<span class="sv-kind">' + svg(MODE_ICON[s.mode]) + '</span>' : kindIcon(s.kind);
+      var title = editing
+        ? '<input type="text" class="sv-top-in w-name" data-f="name" value="' + esc(s.name) + '" placeholder="Название в счёте *" maxlength="100" autocomplete="off" aria-label="Название в счёте">' +
+          '<input type="text" class="sv-top-in w-prov" data-f="provider" value="' + esc(s.provider) + '" placeholder="Поставщик *" maxlength="150" autocomplete="off" aria-label="Поставщик">'
+        : '<span class="sv-name">' + esc(s.name || 'Новая услуга') + '</span>' +
+          (s.provider ? '<span class="sv-prov fade">· ' + esc(s.provider) + '</span>' : '');
+      h += '<div class="sv-top"><div class="sv-top-line">' + icon + title +
+        (s.isNew ? '' : '<button type="button" class="head-icon" data-edit title="Название и поставщик" aria-label="Название и поставщик"><svg class="icon"><use href="#i-' + (editing ? 'check' : 'edit') + '"/></svg></button>') +
         '<span class="sv-saved" data-saved>' + (changed ? 'Есть несохранённые изменения' : s.id ? 'Сохранено' : '') + '</span>' +
         (s.id ? '<button type="button" class="head-icon sv-del" data-delete title="Удалить услугу" aria-label="Удалить услугу">' +
           '<svg class="icon"><use href="#i-trash"/></svg></button>' : '') + '</div>' +
-        // The same fields as everywhere (properties/_field.html): the label over a 38px box.
-        (editing ? '<div class="sv-top-edit"><div class="field fl"><label for="sv-name">Название в счёте <span class="req">*</span></label>' +
-          '<input type="text" id="sv-name" data-f="name" value="' + esc(s.name) + '" placeholder=" " maxlength="100" autocomplete="off"></div>' +
-          '<div class="field fl"><label for="sv-provider">Поставщик <span class="req">*</span></label>' +
-          '<input type="text" id="sv-provider" data-f="provider" value="' + esc(s.provider) + '" placeholder=" " maxlength="150" autocomplete="off"></div></div>' : '') +
         '</div><div class="sv-body">';
 
       var b;
@@ -462,11 +466,12 @@
       } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area' || s.mode === 'formula') {
         h += block('Делим и кто платит' + ((s.mode === 'receipt' || s.mode === 'formula') && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (s.mode === 'meters') {
-        if (s.isNew) h += block('Что считаем', groupTiles(s));
+        if (s.isNew) h += block('Выберите группу счётчиков', groupTiles(s));
+        // «Кто платит» only once a group is chosen — no empty box before that (2026-11-20)
         var todo = s.meters.filter(function (id) { var m = byId(S.meters, id); return m.who === '' || m.who == null; }).length;
-        h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));
+        if (s.group) h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));
       }
-      if (s.mode !== 'formula') {
+      if (s.mode !== 'formula' && (s.mode !== 'meters' || s.group)) {
         h += '<button type="button" class="sv-ex-link" data-example>' + svg(CP_ICON.eye) + 'См. пример на странице объекта</button>';
       }
       h += '</div>';
@@ -503,6 +508,12 @@
           '<button type="button" class="btn btn-ghost btn-auto" data-ask-close>Отмена</button>' +
           '<button type="button" class="btn btn-primary btn-auto" data-ask-save>Сохранить</button></div></div></div>';
       }
+      if (created) {
+        h += '<div class="sv-back"><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Услуга добавлена">' +
+          '<div class="sv-mw-head"><b>Услуга добавлена</b></div>' +
+          '<div class="sv-mw-body"><p class="sv-note">«' + esc(created.name) + '» теперь в списке «Услуги объекта» слева и в счетах.</p></div>' +
+          '<div class="sv-mw-foot"><button type="button" class="btn btn-primary btn-auto" data-created-ok>Понятно</button></div></div></div>';
+      }
       if (meterOpen != null) h += meterWindow();
       pane.innerHTML = h;
       // «Кто платит» near the bottom bar: the menu opens upwards
@@ -523,7 +534,7 @@
         return;
       }
       if (s.mode === 'meters') {
-        if (!s.group) { status('Выберите, что считаем', 'is-error'); return; }
+        if (!s.group) { status('Выберите группу счётчиков', 'is-error'); return; }
         var todo = s.meters.map(function (id) { return byId(S.meters, id); }).filter(function (m) { return m.who === '' || m.who == null; })[0];
         if (todo) { status('Выберите, кто платит по № ' + (todo.serial || '—'), 'is-error'); return; }
       }
@@ -586,12 +597,21 @@
         S.fx_new = fresh.fx_new;  // a new formula sees the meters this save connected (or let go)
         // The meters: who uses which (the window keeps its own choices of who pays).
         S.meters = fresh.meters; S.groups = fresh.groups; snap = copy(S.meters);
-        if (sent.isNew) { sent.id = fresh.selected; sent.isNew = false; }
+        var wasNew = sent.isNew;
+        if (sent.isNew) { sent.id = fresh.selected; sent.isNew = false; editing = false; }
         var saved = byId(S.services, sent.id);
         if (saved) {
           sent.kind = saved.kind; sent.delete_url = saved.delete_url;
           // the formula as the server keeps it now (numbers with their ids, who pays by each meter)
           sent.fx = saved.fx; sent.formula = saved.formula; sent.fx_each = saved.fx_each; sent.split = saved.split; delete sent.fx_data;
+        }
+        // A new service: a small window says it is added; after «Понятно» — what was next, and its row blinks on the left.
+        if (wasNew) {
+          created = { id: sent.id, name: sent.name, next: afterSave };
+          afterSave = null;
+          renderNav(); renderPane(); done();
+          var ok = pane.querySelector('[data-created-ok]'); if (ok) ok.focus();
+          return;
         }
         renderNav();
         if (current === sent && !pane.querySelector('[data-f]:focus')) renderPane();
@@ -609,6 +629,14 @@
       // Off to the object window: keep what is typed here; the window opened again picks it up (see «the start»).
       if (e.target.closest('[data-svc-return]')) {
         window.rentflowServiceDraft = { property: S.property.id, current: copy(current), meters: copy(S.meters), changed: changed };
+        return;
+      }
+      // «Услуга добавлена» — only «Понятно»; then a new service (or where the user was going) and the row blinks
+      if (created) {
+        if (e.target.closest('[data-created-ok]')) {
+          var was = created; created = null; flashId = was.id;
+          if (was.next) was.next(); else render();
+        }
         return;
       }
       // «Сохранить изменения?» — before leaving a service with changes not saved
@@ -746,6 +774,11 @@
       if (e.target.dataset && e.target.dataset.f === 'unitNew') {
         if (e.key === 'Enter') { e.preventDefault(); addUnit(); }
         if (e.key === 'Escape') { e.stopPropagation(); unitOpen = false; unitNew = ''; renderPane(); }
+        return;
+      }
+      if (created && (e.key === 'Escape' || e.key === 'Enter')) {
+        e.preventDefault(); e.stopPropagation();
+        var ok = pane.querySelector('[data-created-ok]'); if (ok) ok.click();
         return;
       }
       if (e.key === 'Escape' && (meterOpen != null || exampleOpen || unitOpen || confirmDelete || asking || pickOpen != null)) {
