@@ -19,6 +19,7 @@
     people: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/>',
     eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     warn: '<path d="M12 3 2 20h20zM12 10v4M12 17h.01"/>',
+    formula: '<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>',
     check: '<path d="M5 12l5 5L20 7"/>'
   };
   var SPLITS = [['shares', 'по долям'], ['equal', 'поровну'], ['area', 'по м²']];
@@ -205,6 +206,42 @@
         '<span class="sv-sum' + (r.owner > 0.00001 ? sc : '') + '">' + ownerSum + '</span>' +
         (r.canPass ? sw(r.takes, 'data-owner', 'Остаток на вас') : '<span></span>') + '</div>';
       return '<div class="sv-gp">' + splitTop(s.split, 'data-split') + rows + '</div>';
+    }
+
+    // «Своя формула» where each pays by his own meters: nothing to divide, only who pays (the rest — on the owner).
+    function eachRows(s) {
+      return '<div class="sv-gp">' + T.map(function (t, i) {
+        var on = s.excluded.indexOf(t.id) < 0;
+        return '<div class="sv-gp-row' + (on ? '' : ' is-off') + '"><span class="sv-no">' + (i + 1) + '</span>' +
+          '<span class="sv-who fade">' + esc(t.name) + '</span><span class="sv-meta"></span>' +
+          '<span class="sv-sum">' + (on ? 'по своим счётчикам' : 'не платит') + '</span>' +
+          sw(on, 'data-pay="' + t.id + '"', t.name + ' платит') + '</div>';
+      }).join('') + '</div>';
+    }
+
+    // ---------- «Своя формула»: its own window over this one (formula.js); «Готово» — into this service ----------
+    function openFormula() {
+      var s = current, last = null, first = null;
+      window.rentflowFormula.open({
+        ctx: s.fx || S.fx_new, state: s.fx_data || null,
+        host: box.closest('dialog') || document.body,
+        split: function () { return s.split; },
+        canPay: function (id) { return !!byId(T, id); },
+        isOff: function (id) { return s.excluded.indexOf(id) >= 0; },
+        togglePay: function (id) { toggle(s.excluded, id); mark(); },
+        // the first publish is the formula as it opened: «Готово» without changes changes nothing
+        publish: function (data, words, each) {
+          last = { data: data, words: words, each: each, json: JSON.stringify(data) };
+          if (first == null) first = last.json;
+        },
+        close: function (keep) {
+          if (keep && last && last.json !== first) {
+            s.fx_data = last.data; s.formula = last.words; s.fx_each = last.each && T.length > 0;
+            mark();
+          }
+          if (current === s) renderPane();
+        }
+      });
     }
 
     // ---------- «По тарифу»: Тариф ₽ за [ед.] × [объём] = итог ----------
@@ -413,14 +450,17 @@
       }
       if (s.mode === 'meters') b = cp('meters', '<span>Каждый платит по своему счётчику: <b>расход</b> <span class="sv-op">×</span> <b>тариф счётчика</b>. Общий счётчик — делим.</span>');
       if (s.mode === 'formula') {
-        b = cp('meters', '<span class="fade sv-formula">' + esc(s.formula || 'Формула ещё не собрана') + '</span>' +
-          '<a href="' + esc(s.id ? s.edit_url : S.urls.formula_new) + '" data-modal class="btn btn-primary btn-auto btn-sm">' + (s.id ? 'Изменить формулу' : 'Собрать формулу') + '</a>');
+        b = cp('formula', '<span class="fade sv-formula' + (s.formula ? '' : ' is-empty') + '" title="' + esc(s.formula) + '">' +
+          esc(s.formula || 'Формула ещё не собрана') + '</span>' +
+          '<button type="button" class="btn btn-primary btn-auto btn-sm" data-fx-open>' + (s.formula ? 'Изменить формулу' : 'Собрать формулу') + '</button>');
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
       h += block('Как начисляется · ' + modeName(s.mode) + warn + (s.mode === 'meters' && s.isNew ? busyBadges() : ''), b);
-      if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
-        h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
+      if (s.mode === 'formula' && s.fx_each) {
+        h += block('Кто платит', eachRows(s));
+      } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area' || s.mode === 'formula') {
+        h += block('Делим и кто платит' + ((s.mode === 'receipt' || s.mode === 'formula') && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (s.mode === 'meters') {
         if (s.isNew) h += block('Что считаем', groupTiles(s));
         var todo = s.meters.filter(function (id) { var m = byId(S.meters, id); return m.who === '' || m.who == null; }).length;
@@ -487,6 +527,7 @@
         var todo = s.meters.map(function (id) { return byId(S.meters, id); }).filter(function (m) { return m.who === '' || m.who == null; })[0];
         if (todo) { status('Выберите, кто платит по № ' + (todo.serial || '—'), 'is-error'); return; }
       }
+      if (s.mode === 'formula' && !s.formula) { status('Соберите формулу', 'is-error'); return; }
       afterSave = next;
       save();
     }
@@ -521,6 +562,7 @@
           return { id: m.id, who: m.who, input: m.input, split: m.split, excluded: m.excluded, owner_takes: m.owner_takes };
         });
       }
+      if (s.mode === 'formula') data.formula = s.fx_data || null;  // null — the stored formula stays as it is
       return data;
     }
     function save() {
@@ -545,7 +587,11 @@
         S.meters = fresh.meters; S.groups = fresh.groups; snap = copy(S.meters);
         if (sent.isNew) { sent.id = fresh.selected; sent.isNew = false; }
         var saved = byId(S.services, sent.id);
-        if (saved) { sent.kind = saved.kind; sent.edit_url = saved.edit_url; sent.delete_url = saved.delete_url; }
+        if (saved) {
+          sent.kind = saved.kind; sent.delete_url = saved.delete_url;
+          // the formula as the server keeps it now (numbers with their ids, who pays by each meter)
+          sent.fx = saved.fx; sent.formula = saved.formula; sent.fx_each = saved.fx_each; sent.split = saved.split; delete sent.fx_data;
+        }
         renderNav();
         if (current === sent && !pane.querySelector('[data-f]:focus')) renderPane();
         status('Сохранено ✓', 'is-on');
@@ -626,6 +672,7 @@
         return;
       }
       if (e.target.closest('[data-example]')) { exampleOpen = true; return renderPane(); }
+      if (e.target.closest('[data-fx-open]')) { openFormula(); return; }
       if (e.target.closest('[data-edit]')) { editing = !editing; renderPane(); if (editing) pane.querySelector('[data-f="name"]').focus(); return; }
       if (e.target.closest('[data-unit-open]')) { unitOpen = !unitOpen; return renderPane(); }
       if ((t = e.target.closest('[data-unit-del]'))) {

@@ -253,21 +253,57 @@ class FormulaServiceTests(TestCase):
         other = services.new_receipt(self.prop, 'electricity')
         self.assertNotIn(formula.pk, {receipt.pk for receipt in services.busy_meters(other).values()})
 
-    def test_service_window_saves_the_formula(self):
+    # ---------- the new service window (2026-11-20): the formula is saved with the service ----------
+    def save(self, **data):
         self.client.force_login(self.user)
-        data = {'numbers': [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': '2'}],
-                'blocks': [self.meter('electricity'), self.op('×'), {'t': 'num', 'id': 'n1'}],
-                'owners': {str(pk): '' for pk in []}}
-        url = reverse('receipt_create', args=[self.prop.pk])
-        response = self.client.post(url, {'kind': 'custom', 'name': 'Свет', 'charge': 'formula', 'split': 'shares',
-                                          'formula_json': json.dumps(data)})
-        self.assertEqual(response.status_code, 302)
-        receipt = Receipt.objects.get(name='Свет')
-        self.assertEqual(receipt.amount_mode, Receipt.AmountMode.FORMULA)
-        self.assertEqual(len(receipt.formula), 3)
-        # An empty formula is refused with a sentence, nothing saved.
-        response = self.client.post(url, {'kind': 'custom', 'name': 'Пусто', 'charge': 'formula', 'split': 'shares',
-                                          'formula_json': '{}'})
+        data.setdefault('provider', 'Поставщик')
+        return self.client.post(reverse('service_save', args=[self.prop.pk]), json.dumps(data),
+                                content_type='application/json')
+
+    def light(self, split='shares'):
+        """«Свет»: Электричество · все вместе × 2 ₽/кВт·ч — one sum for the object."""
+        return {'numbers': [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': 2}],
+                'blocks': [self.meter('electricity', 'sum'), self.op('×'), {'t': 'num', 'id': 'n1'}], 'owners': {}}
+
+    def test_service_window_saves_a_new_formula(self):
+        response = self.save(name='Свет', mode='formula', split='equal', excluded=[self.vlad.pk], formula=self.light())
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Соберите формулу')
+        receipt = Receipt.objects.get(name='Свет')
+        self.assertEqual((receipt.amount_mode, receipt.split, receipt.provider),
+                         (Receipt.AmountMode.FORMULA, Receipt.Split.EQUAL, 'Поставщик'))
+        self.assertEqual(len(receipt.formula), 3)
+        self.assertEqual(list(receipt.excluded.all()), [self.vlad])
+        state = next(s for s in response.json()['services'] if s['id'] == receipt.pk)
+        self.assertEqual((state['mode'], state['fx_each'], len(state['fx']['blocks'])), ('formula', False, 3))
+        self.assertEqual(state['formula'], 'electricity × Тариф')
+
+    def test_service_window_refuses_an_empty_formula(self):
+        response = self.save(name='Пусто', mode='formula', formula={'numbers': [], 'blocks': []})
+        self.assertEqual((response.status_code, response.json()['error']),
+                         (400, 'Соберите формулу — нажмите «Собрать формулу».'))
+        response = self.save(name='Пусто', mode='formula', formula=None)
+        self.assertEqual(response.status_code, 400)
         self.assertFalse(Receipt.objects.filter(name='Пусто').exists())
+
+    def test_service_window_each_by_own_meters_kept_on_a_rename(self):
+        formula = {'numbers': [{'id': 'n1', 'label': 'Тариф водоотведения', 'unit': '₽', 'per': 'м³', 'value': 45}],
+                   'blocks': [self.meter('water'), self.op('×'), {'t': 'num', 'id': 'n1'}], 'owners': {}}
+        self.save(name='Водоотведение', mode='formula', split='shares', formula=formula)
+        receipt = Receipt.objects.get(name='Водоотведение')
+        self.assertEqual((receipt.split, receipt.meters.count()), (Receipt.Split.METERS, 2))
+        # only the name changed: no formula sent — it stays, and so do its meters and «each by his own»
+        response = self.save(id=receipt.pk, name='Стоки', mode='formula', split='shares', formula=None)
+        self.assertEqual(response.status_code, 200)
+        receipt.refresh_from_db()
+        self.assertEqual((receipt.name, receipt.split, receipt.meters.count(), len(receipt.formula)),
+                         ('Стоки', Receipt.Split.METERS, 2, 3))
+        self.assertTrue(next(s for s in response.json()['services'] if s['id'] == receipt.pk)['fx_each'])
+
+    def test_service_window_turns_a_fixed_service_into_a_formula(self):
+        self.save(name='Свет', mode='fixed', fixed=500)
+        receipt = Receipt.objects.get(name='Свет')
+        self.assertEqual(self.save(id=receipt.pk, name='Свет', mode='formula', formula=None).status_code, 400)
+        self.save(id=receipt.pk, name='Свет', mode='formula', split='shares', formula=self.light())
+        receipt.refresh_from_db()
+        self.assertEqual((receipt.amount_mode, receipt.fixed_amount, receipt.numbers.count()),
+                         (Receipt.AmountMode.FORMULA, None, 1))

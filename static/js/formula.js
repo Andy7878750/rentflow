@@ -1,10 +1,11 @@
 /* «Своя формула» — its own window over the service window (2026-11-16), as in the approved mockup
    docs/mockups/2026-11-16-formula-blocks.html (round 25).
 
-   The service window has a panel row [data-formula-panel]: the formula in words, «Собрать / Изменить формулу», a hidden
-   formula_json (what the server saves) and #formula-ctx (the object's tenants, meters with last month's usage, the numbers
-   and the blocks). The window keeps its state in memory; «Готово» writes formula_json, «Отмена» brings back what was.
-   The server counts the bills itself (apps/billing/formula.py) — the check here is only a preview on last month's numbers.
+   The service window (services.js, 2026-11-20) opens it: window.rentflowFormula.open({ctx, state, …}) — ctx is the
+   server's formula_context (the object's tenants, meters with last month's usage, the numbers and the blocks), state —
+   what «Готово» gave last time, not saved yet. «Готово» hands the formula back (publish + close(true)), «Отмена»
+   leaves it as it was. The server counts the bills itself (apps/billing/formula.py) — the check here is only a preview
+   on last month's numbers.
 
    Meters: a block of a kind («Электричество») with the object's meters of that kind ticked, and each meter's «чей»
    (the tenant who pays by it). One meter of a tenant — the formula is his only; several «у каждого свой» — each by his
@@ -59,13 +60,33 @@
   }
   function rub(v, sym) { return fmt(Math.round(v * 100) / 100, 2) + ' ' + sym; }
 
-  function setup(panel) {
-    var form = panel.closest('form');
-    var host = form.closest('dialog') || document.body;
-    var ctx = JSON.parse(panel.querySelector('#formula-ctx').textContent);
-    var jsonInput = panel.querySelector('[data-formula-json]');
-    var summaryEl = panel.querySelector('[data-formula-summary]');
-    var openBtn = panel.querySelector('[data-formula-open]');
+  // The context of the server (formula_context) with what the window gave last time ({numbers, blocks, owners}) over it:
+  // a formula changed by «Готово» but not saved yet opens as it was left.
+  function withState(ctx, state) {
+    if (!state) return ctx;
+    var last = {};
+    ctx.numbers.forEach(function (n) { last[n.id] = n.last; });
+    var owners = state.owners || {};
+    return Object.assign({}, ctx, {
+      numbers: (state.numbers || []).map(function (n) { return Object.assign({}, n, { id: String(n.id), last: last[n.id] === undefined ? null : last[n.id] }); }),
+      blocks: state.blocks || [],
+      meters: ctx.meters.map(function (m) {
+        if (!(m.id in owners)) return m;
+        var o = owners[m.id];
+        return Object.assign({}, m, { tenant: o && o !== 'free' ? Number(o) : null, vacant: o === 'free' });
+      }),
+    });
+  }
+
+  /* The formula window over a service window. opts:
+     ctx, state — what to draw (formula_context of the server, and the window's last «Готово» over it);
+     host — where the window goes (the service window's <dialog>);
+     split() — how the sum is divided now; canPay(id), isOff(id), togglePay(id) — the «платит» switch of a tenant;
+     publish(data, summary, each) — the formula as it is now: data for the server, the words, each by his own meters;
+     close(keep) — the window closed by «Готово» (keep) or «Отмена». */
+  function setup(opts) {
+    var host = opts.host || document.body;
+    var ctx = withState(opts.ctx, opts.state);
     var TENANTS = ctx.tenants, METERS = ctx.meters, KINDS = ctx.kinds, SYM = ctx.symbol || '₽';
     var uid = 0, nid = 0;
 
@@ -127,9 +148,9 @@
     }
     function usageOf(meterId) { var m = meterById(meterId); return m && m.last !== null && m.last !== undefined ? m.last : sampleFor(kindOf(m ? m.key : '').unit); }
     function usageIsSample(meterId) { var m = meterById(meterId); return !m || m.last === null || m.last === undefined; }
-    function payBox(tenantId) { return form.querySelector('input[name=pays][value="' + tenantId + '"]'); }
-    function isOff(tenantId) { var box = payBox(tenantId); return box ? !box.checked : false; }
-    function splitNow() { var r = form.querySelector('input[name=split]:checked'); return r ? r.value : 'shares'; }
+    function payBox(tenantId) { return opts.canPay(Number(tenantId)); }
+    function isOff(tenantId) { return payBox(tenantId) ? opts.isOff(Number(tenantId)) : false; }
+    function splitNow() { return opts.split() || 'shares'; }
 
     function make(kind) {
       var id = ++uid;
@@ -575,10 +596,8 @@
       if (built) { blocks = built; render(); }
     });
     overlay.querySelector('[data-check]').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-pay]'); if (!b) return;
-      var box = payBox(b.dataset.pay); if (!box) return;
-      box.checked = !box.checked;
-      box.dispatchEvent(new Event('change', { bubbles: true }));
+      var b = e.target.closest('[data-pay]'); if (!b || !payBox(b.dataset.pay)) return;
+      opts.togglePay(Number(b.dataset.pay));
       render();
     });
 
@@ -806,7 +825,8 @@
       else if (e.key === 'Backspace' && blocks.length) { e.preventDefault(); blocks.pop(); render(); }
     });
     // The service window's <dialog> closes on Escape — not while the formula window is open.
-    if (host.tagName === 'DIALOG') host.addEventListener('cancel', function (e) { if (!overlay.hidden) { e.preventDefault(); closeFormula(false); } });
+    function onCancel(e) { if (!overlay.hidden) { e.preventDefault(); closeFormula(false); } }
+    if (host.tagName === 'DIALOG') host.addEventListener('cancel', onCancel);
 
     // ---------- Open / close; what the service window sees ----------
     var saved = null;
@@ -826,9 +846,10 @@
       }
       overlay.hidden = true;
       publish();
+      if (opts.close) opts.close(keep);
     }
     function serialize() {
-      return JSON.stringify({
+      return {
         numbers: values.map(function (v) {
           return { id: v.id, label: v.label, monthly: v.type === 'month', unit: v.unit, per: v.type === 'month' ? '' : v.per,
             value: v.type === 'const' ? v.value : null };
@@ -839,34 +860,33 @@
           return { t: 'op', op: b.op };
         }),
         owners: owners,
-      });
+      };
     }
     function publish() {
-      var json = serialize();
-      var changed = jsonInput.value !== json;
-      jsonInput.value = json;
-      summaryEl.textContent = blocks.length ? 'Формула: ' + blocks.map(chipText).join(' ').replace(/\( /g, '(').replace(/ \)/g, ')') : 'Формула ещё не собрана';
-      summaryEl.title = summaryEl.textContent;
-      summaryEl.classList.toggle('is-empty', !blocks.length);
-      openBtn.textContent = blocks.length ? 'Изменить формулу' : 'Собрать формулу';
-      form.classList.toggle('is-formula-each', modeNow() === 'each');
-      if (changed) jsonInput.dispatchEvent(new Event('change', { bubbles: true }));
+      var words = blocks.map(chipText).join(' ').replace(/\( /g, '(').replace(/ \)/g, ')');
+      if (opts.publish) opts.publish(serialize(), words, modeNow() === 'each');
     }
-    openBtn.addEventListener('click', openFormula);
     overlay.querySelector('[data-cancel]').addEventListener('click', function () { closeFormula(false); });
     overlay.querySelector('[data-done]').addEventListener('click', function () { closeFormula(true); });
-    // «Делим» and the «платит» switches live in the service window: the check follows them when it opens.
     publish();
-    // A refused save of an unfinished formula: open the window again so the error is right there.
-    if (panel.querySelector('.calc-error') && blocks.length && form.querySelector('input[name=charge][value=formula]:checked')) openFormula();
+    return {
+      open: openFormula,
+      destroy: function () { closePop(); overlay.remove(); if (host.tagName === 'DIALOG') host.removeEventListener('cancel', onCancel); },
+    };
   }
 
-  window.initFormula = function (root) {
-    (root || document).querySelectorAll('[data-formula-panel]').forEach(function (panel) {
-      if (panel.dataset.ready) return;
-      panel.dataset.ready = '1';
-      setup(panel);
-    });
+  /* The service window (services.js) opens it: one window per opening, gone when closed.
+     «Делим» and the «платит» switches live in the service window: the check follows them. */
+  window.rentflowFormula = {
+    open: function (opts) {
+      var fx = setup(Object.assign({}, opts, {
+        close: function (keep) {
+          fx.destroy();
+          if (opts.close) opts.close(keep);
+        },
+      }));
+      fx.open();
+      return fx;
+    },
   };
-  window.initFormula(document);
 })();

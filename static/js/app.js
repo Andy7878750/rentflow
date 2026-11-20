@@ -1593,7 +1593,6 @@
     root.querySelectorAll('[data-subwin]').forEach(function (sub) { initItems(sub.closest('form')); });
     initFades(root);
     initMeters(root);
-    if (window.initFormula) window.initFormula(root);  // «Своя формула» (formula.js)
     if (window.initServiceWindow) window.initServiceWindow(root);  // «Услуги · объект» (services.js)
   }
 

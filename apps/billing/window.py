@@ -53,9 +53,9 @@ def _meter_tariff_text(meter, today):
 
 
 def _formula_text(receipt):
-    """The formula in words: «Расход гор. воды × Норматив × Тариф»."""
+    """The formula in words: «Расход гор. воды × Норматив × Тариф»; '' — not built yet."""
     if not receipt.formula:
-        return 'Формула ещё не собрана'
+        return ''
     labels = {str(number.pk): number.label for number in receipt.numbers.all()}
     names = {services.meter_kind_key(meter): meter.name for meter in receipt.property.meters.all()}
     parts = []
@@ -113,7 +113,9 @@ def window_state(property_obj, selected=None, today=None):
                      'area': _number(t.area)} for t in tenants],
         'meters': meters,
         'groups': groups,
-        'services': [service_state(receipt) for receipt in receipts],
+        'services': [service_state(receipt, today) for receipt in receipts],
+        # what the formula window of a new «Своя формула» starts from: the object's tenants and meters, no numbers yet
+        'fx_new': services.formula_context(Receipt(property=property_obj, kind=Receipt.Kind.CUSTOM), today=today),
         'units': BASE_UNITS, 'own_units': own_units,
         'modes': MODES,
         'selected': selected,
@@ -121,12 +123,11 @@ def window_state(property_obj, selected=None, today=None):
             'save': reverse('service_save', args=[property_obj.pk]),
             'window': reverse('service_window', args=[property_obj.pk]),
             'object': reverse('property_edit', args=[property_obj.pk]),
-            'formula_new': reverse('receipt_create', args=[property_obj.pk]) + '?kind=custom',
         },
     }
 
 
-def service_state(receipt):
+def service_state(receipt, today=None):
     mode = mode_of(receipt)
     unit = receipt.rate_unit or ('чел.' if receipt.rate_base == Receipt.RateBase.PERSON else 'м²')
     volume = receipt.volume
@@ -142,7 +143,9 @@ def service_state(receipt):
         'meters': [meter.pk for meter in receipt.meters.all()] if mode == 'meters' else [],
         'group': next((services.meter_kind_key(m) for m in receipt.meters.all()), None) if mode == 'meters' else None,
         'formula': _formula_text(receipt) if mode == 'formula' else '',
-        'edit_url': reverse('receipt_edit', args=[receipt.pk]),
+        # «Своя формула»: what its window draws; fx_each — each pays by his own meters (nothing to divide)
+        'fx': services.formula_context(receipt, today=today) if mode == 'formula' else None,
+        'fx_each': mode == 'formula' and receipt.split == Receipt.Split.METERS,
         'delete_url': reverse('receipt_delete', args=[receipt.pk]),
     }
 
@@ -181,18 +184,17 @@ def save_service(property_obj, data, today=None):
     if not provider:
         raise WindowError('Введите поставщика.')
     mode = data.get('mode')
-    if mode not in dict(MODES) or mode == 'formula' and mode_of(receipt) != 'formula':
-        raise WindowError('Такое начисление здесь пока не задаётся.')
+    if mode not in dict(MODES):
+        raise WindowError('Такое начисление здесь не задаётся.')
     receipt.name, receipt.provider = name, provider
-    if mode == 'formula':
-        receipt.save(update_fields=['name', 'provider'] if receipt.pk else None)
-        return receipt
 
     split = data.get('split') if data.get('split') in SPLITS else Receipt.Split.SHARES
     receipt.owner_takes = bool(data.get('owner_takes', True))
     excluded = _tenant_ids(property_obj, data.get('excluded'))
     if mode == 'meters':
         return _save_meters(receipt, data, today)
+    if mode == 'formula':
+        return _save_formula(receipt, data, split, excluded, today)
 
     if receipt.pk:
         receipt.meters.clear()  # not by meters any more: the meters stay the object's, free for another service
@@ -209,6 +211,29 @@ def save_service(property_obj, data, today=None):
     if mode == 'area' and receipt.rate_unit == 'м²' and receipt.volume == property_obj.area:
         receipt.volume = None  # м² of the whole object: follows the object's area
     services.save_receipt(receipt, excluded=excluded, today=today)
+    return receipt
+
+
+def _save_formula(receipt, data, split, excluded, today):
+    """«Своя формула» (2026-11-20): the formula window's state (data['formula']: numbers, blocks, who uses each meter),
+    checked as the old window did; None — the stored formula stays as it is. «Делим» — as for a receipt; each by his own
+    meters — save_formula sets it."""
+    property_obj = receipt.property
+    formula = data.get('formula')
+    kept = formula is None and receipt.pk and mode_of(receipt) == 'formula'  # only the name, supplier or «Делим» changed
+    if not kept:
+        problem = services.formula_problem(property_obj, formula if isinstance(formula, dict) else {},
+                                           receipt if receipt.pk else None)
+        if problem:
+            raise WindowError(problem)
+    each = kept and receipt.split == Receipt.Split.METERS
+    receipt.metered = False
+    receipt.amount_mode = Receipt.AmountMode.FORMULA
+    receipt.split = Receipt.Split.OWNER if property_obj.is_owner_used else Receipt.Split.METERS if each else split
+    receipt.fixed_amount = receipt.rate = receipt.volume = None
+    receipt.rate_unit = ''
+    # the meters it reads are linked by save_formula; a kept formula keeps its meters
+    services.save_receipt(receipt, excluded=excluded, today=today, formula=None if kept else formula)
     return receipt
 
 
