@@ -583,6 +583,7 @@
         var fresh = answer.json;
         S.services = fresh.services;
         S.own_units = fresh.own_units;
+        S.fx_new = fresh.fx_new;  // a new formula sees the meters this save connected (or let go)
         // The meters: who uses which (the window keeps its own choices of who pays).
         S.meters = fresh.meters; S.groups = fresh.groups; snap = copy(S.meters);
         if (sent.isNew) { sent.id = fresh.selected; sent.isNew = false; }
