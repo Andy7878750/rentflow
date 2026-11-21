@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Своя формула — четыре блока</title>
+<style>
+/* Макет 2026-11-21: окно «Своя формула» — четыре блока одного размера (палитра), окно «Тариф / норматив / коэф.»,
+   окно «Расход счётчиков» (все счётчики объекта галочками), «Как посчитается» по арендаторам. Вкладки 1–4, в каждой варианты. */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1; --danger: #c0392b;
+  --border: #e1e4e8; --text: #2c3338; --muted: #6b7680; --tile: #f4f6f8; --warm: #fffbe6;
+  --info-bg: #e3f1f6; --info: #1f6280; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 40px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.page { max-width: 880px; margin: 0 auto; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: rgba(255,255,255,.85); font: 600 13px var(--font); color: var(--text); cursor: pointer; }
+.tabs button.is-on { background: var(--accent); color: #fff; }
+.sub-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.sub-tabs button { height: 30px; padding: 0 12px; border: 0; border-radius: 15px; background: rgba(255,255,255,.6); font: 600 12.5px var(--font); color: var(--text); cursor: pointer; }
+.sub-tabs button.is-on { background: #fff; color: var(--accent); }
+.sub-tabs .rec { font-weight: 400; color: var(--muted); }
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.about div { background: #fff; border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+.about b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.about .plus b { color: var(--accent); }
+.about .minus b { color: var(--danger); }
+.view { display: none; }
+.view.is-on { display: block; }
+
+/* окно формулы */
+.fx { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25); padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.fx h2 { margin: 0; font-size: 20px; color: var(--primary); }
+.fx .desc { margin: -10px 0 0; font-size: 13px; color: var(--muted); }
+
+/* палитра: четыре колонки одной ширины, блоки одной высоты 76px */
+.pal { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pal h3 { margin: 0 0 8px; height: 16px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text); white-space: nowrap; }
+.tile { display: flex; align-items: center; gap: 10px; height: 76px; padding: 0 12px; border: 1px dashed #cfd8de; border-radius: var(--radius); background: #fff; cursor: pointer; }
+.tile:hover { border-color: var(--accent); }
+.tile .i { width: 20px; height: 20px; }
+.tile .t1 { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.tile .t2 { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+.k-month .i { color: #b07d2b; } .k-const .i { color: var(--accent); } .k-meter .i { color: #2e86c1; }
+.signs { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 34px 34px; gap: 8px; height: 76px; }
+.signs span { display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: var(--radius); background: var(--tile); font-weight: 700; cursor: pointer; }
+/* под блоком — готовые числа этого вида (вариант Б палитры) */
+.made { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--tile); font-size: 13px; white-space: nowrap; overflow: hidden; }
+.chip .i { width: 15px; height: 15px; }
+.chip.op { justify-content: center; min-width: 30px; padding: 0 8px; font-weight: 700; }
+.chip small { color: var(--muted); font-size: 11.5px; }
+.c-month .i { color: #b07d2b; } .c-const .i { color: var(--accent); } .c-water .i { color: #2e86c1; } .c-hot .i { color: #c0392b; }
+
+.line { min-height: 64px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 12px 14px; border: 1px dashed #cfd8de; border-radius: 12px; background: #fafbfc; }
+.line .eq { margin-left: auto; color: var(--muted); font-size: 13px; }
+.how h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; background: var(--info-bg); color: var(--info); font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.badge.ok { background: var(--accent-soft); color: var(--accent); }
+.rows { border-radius: var(--radius); background: #f1f3f5; padding: 4px 14px; }
+.row { display: grid; grid-template-columns: 26px 160px 1fr 96px; align-items: center; gap: 10px; height: 40px; font-size: 13px; }
+.row + .row { border-top: 1px solid #e3e6ea; }
+.num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+.row .calc { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .sum { text-align: right; font-weight: 600; }
+.row.owner .who { color: var(--muted); }
+.one { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 14px; border-radius: var(--radius); background: #f1f3f5; font-size: 13px; }
+.one .i { color: var(--accent); }
+.one b { font-weight: 600; }
+.one .sum { margin-left: auto; font-weight: 600; }
+.foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+.btn { height: 38px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font: 600 13.5px var(--font); color: var(--text); }
+.btn.main { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* маленькие окна — поверх окна формулы */
+.stage { position: relative; }
+.stage .fx { filter: brightness(.6); }
+.small { position: absolute; left: 50%; top: 110px; transform: translateX(-50%); width: 460px; background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.35); padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.small h4 { margin: 0; font-size: 16px; color: var(--primary); display: flex; justify-content: space-between; }
+.small h4 span { color: var(--muted); font-weight: 400; font-size: 20px; line-height: 1; }
+.fl { display: flex; flex-direction: column; gap: 4px; }
+.fl label { font-size: 12px; color: var(--muted); }
+.inp { display: flex; align-items: center; height: 38px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 10px; font-size: 14px; background: #fff; }
+.inp.warm { background: var(--warm); color: var(--muted); }
+.inp .u { margin-left: auto; color: var(--muted); font-size: 13px; }
+.sel { display: flex; align-items: center; justify-content: space-between; height: 38px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 10px; font-size: 14px; background: #fff; }
+.sel::after { content: "▾"; color: var(--muted); font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; height: 34px; padding: 3px; border-radius: var(--radius); background: #eceef0; }
+.seg span { display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; color: var(--muted); }
+.seg span.on { background: var(--accent); color: #fff; font-weight: 600; }
+.menu { border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.12); background: #fff; padding: 4px; font-size: 13.5px; }
+.menu div { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 10px; border-radius: 6px; }
+.menu div.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.menu .cap { height: 24px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.menu .add { color: var(--accent); font-weight: 600; }
+.menu .sep { height: 1px; padding: 0; margin: 4px 6px; background: var(--border); }
+.say { padding: 10px 12px; border-radius: var(--radius); background: #f1f3f5; font-size: 13px; color: var(--muted); }
+.say b { color: var(--text); }
+.sfoot { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* окно счётчиков */
+.mlist { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.mhead, .mrow { display: grid; grid-template-columns: 22px 22px 1fr 130px; align-items: center; gap: 10px; padding: 0 12px; }
+.mhead { height: 30px; background: #f1f3f5; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.mrow { height: 44px; border-top: 1px solid var(--border); font-size: 13px; }
+.mrow small { display: block; color: var(--muted); font-size: 11.5px; }
+.mrow .who { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.box { width: 16px; height: 16px; border: 1.5px solid #b9c4cc; border-radius: 4px; }
+.box.on { background: var(--accent); border-color: var(--accent); position: relative; }
+.box.on::after { content: ""; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px; color: var(--muted); align-items: center; }
+.quick span.q { padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); }
+.ico-water { color: #2e86c1; } .ico-hot { color: #c0392b; } .ico-el { color: #0e9aa7; }
+.note { margin-top: 10px; font-size: 12.5px; color: rgba(255,255,255,.9); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
+  <symbol id="gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></symbol>
+  <symbol id="drop" viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></symbol>
+  <symbol id="bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+</svg>
+
+<div class="page">
+  <div class="tabs" data-tabs="main">
+    <button class="is-on" data-v="p">1 · Четыре блока</button>
+    <button data-v="t">2 · Тариф · норматив · коэф.</button>
+    <button data-v="m">3 · Расход счётчиков</button>
+    <button data-v="h">4 · Как посчитается</button>
+  </div>
+
+  <!-- ===================== 1. Палитра ===================== -->
+  <section class="view is-on" data-view="p">
+    <div class="sub-tabs" data-tabs="p">
+      <button class="is-on" data-v="pA">А · только четыре блока <span class="rec">советую</span></button>
+      <button data-v="pB">Б · блоки + готовые под ними</button>
+    </div>
+    <div class="view is-on" data-view="pA">
+      <div class="about">
+        <div class="plus"><b>Плюс</b>Четыре блока строго одного размера (76px), ничего под ними не растёт. Клик по блоку — маленькое окно: выбрать готовое или создать новое.</div>
+        <div class="minus"><b>Минус</b>Готовый тариф виден только в строке формулы и в окне выбора — на один клик дальше.</div>
+      </div>
+      <div class="fx">
+        <h2>Своя формула</h2>
+        <p class="desc">Соберите расчёт из четырёх блоков. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>
+        <div class="pal">
+          <div><h3>Каждый месяц</h3><div class="tile k-month"><svg class="i"><use href="#cal"/></svg><div><div class="t1">Число за месяц</div><div class="t2">из квитанции</div></div></div></div>
+          <div><h3>Тариф · норматив</h3><div class="tile k-const"><svg class="i"><use href="#tag"/></svg><div><div class="t1">Постоянное число</div><div class="t2">тариф или коэф.</div></div></div></div>
+          <div><h3>Расход счётчиков</h3><div class="tile k-meter"><svg class="i"><use href="#gauge"/></svg><div><div class="t1">Выбрать счётчики</div><div class="t2">расход за месяц</div></div></div></div>
+          <div><h3>Знаки</h3><div class="signs"><span>+</span><span>−</span><span>×</span><span>÷</span><span>(</span><span>)</span></div></div>
+        </div>
+        <div class="line">
+          <span class="chip op">(</span>
+          <span class="chip c-water"><svg class="i"><use href="#drop"/></svg>Вода хол. № 545575</span><span class="chip op">+</span>
+          <span class="chip c-hot"><svg class="i"><use href="#drop"/></svg>Вода гор. № 63323</span><span class="chip op">)</span>
+          <span class="chip op">×</span>
+          <span class="chip c-const"><svg class="i"><use href="#tag"/></svg>Тариф водоотведения <small>45 ₽/м³</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="view" data-view="pB">
+      <div class="about">
+        <div class="plus"><b>Плюс</b>Готовые тарифы и числа видны сразу — их можно тащить в строку без лишнего окна.</div>
+        <div class="minus"><b>Минус</b>Под блоками разное число строк — колонки неровные по высоте («кривые зубы»).</div>
+      </div>
+      <div class="fx">
+        <h2>Своя формула</h2>
+        <p class="desc">Соберите расчёт из четырёх блоков. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>
+        <div class="pal">
+          <div><h3>Каждый месяц</h3><div class="tile k-month"><svg class="i"><use href="#cal"/></svg><div><div class="t1">Число за месяц</div><div class="t2">из квитанции</div></div></div>
+            <div class="made"><span class="chip c-month"><svg class="i"><use href="#cal"/></svg>Тепло по квитанции</span></div></div>
+          <div><h3>Тариф · норматив</h3><div class="tile k-const"><svg class="i"><use href="#tag"/></svg><div><div class="t1">Постоянное число</div><div class="t2">тариф или коэф.</div></div></div>
+            <div class="made"><span class="chip c-const"><svg class="i"><use href="#tag"/></svg>Тариф водоотв. <small>45 ₽/м³</small></span><span class="chip c-const"><svg class="i"><use href="#tag"/></svg>Коэф. <small>1,5</small></span></div></div>
+          <div><h3>Расход счётчиков</h3><div class="tile k-meter"><svg class="i"><use href="#gauge"/></svg><div><div class="t1">Выбрать счётчики</div><div class="t2">расход за месяц</div></div></div></div>
+          <div><h3>Знаки</h3><div class="signs"><span>+</span><span>−</span><span>×</span><span>÷</span><span>(</span><span>)</span></div></div>
+        </div>
+        <div class="line"><span class="eq">Перетащите блоки сюда или нажмите на них</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 2. Тариф ===================== -->
+  <section class="view" data-view="t">
+    <div class="sub-tabs" data-tabs="t">
+      <button class="is-on" data-v="tA">А · одно меню единиц <span class="rec">советую</span></button>
+      <button data-v="tB">Б · сначала «что это»</button>
+      <button data-v="tC">В · «[₽] за [м³]» двумя меню</button>
+    </div>
+    <div class="view is-on" data-view="tA">
+      <div class="about">
+        <div class="plus"><b>Плюс</b>Три поля: название, число, единица. Все единицы в одном меню, коэффициент — просто «без единицы». Ниже фраза, как поняли.</div>
+        <div class="minus"><b>Минус</b>Меню длинное (8–10 строк), свои — внизу «+ своя единица…».</div>
+      </div>
+      <div class="stage">
+        <div class="fx" style="min-height:520px"><h2>Своя формула</h2></div>
+        <div class="small">
+          <h4>Постоянное число <span>×</span></h4>
+          <div class="fl"><label>Название</label><div class="inp">Тариф водоотведения</div></div>
+          <div class="grid2">
+            <div class="fl"><label>Число</label><div class="inp">45</div></div>
+            <div class="fl"><label>Единица</label><div class="sel">₽ за м³</div></div>
+          </div>
+          <div class="menu" style="margin-top:-6px">
+            <div class="cap">Тариф</div><div class="on">₽ за м³ <span>✓</span></div><div>₽ за кВт·ч</div><div>₽ за Гкал</div><div>₽ за м² · ₽ за чел.</div>
+            <div class="cap">Норматив</div><div>м³ на чел. · Гкал на м²</div>
+            <div class="sep"></div><div>без единицы — коэффициент</div><div class="add">+ своя единица…</div>
+          </div>
+          <div class="say">Это тариф: <b>45 ₽ за 1 м³</b>. Новое число — с текущего месяца, прошлые месяцы по старому.</div>
+          <div class="sfoot"><span class="btn">Отмена</span><span class="btn main">Готово</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="view" data-view="tB">
+      <div class="about">
+        <div class="plus"><b>Плюс</b>Сразу ясно, что вводите: переключатель «Тариф | Норматив | Коэффициент», под ним только нужные поля.</div>
+        <div class="minus"><b>Минус</b>Лишний шаг и лишняя строка; разница «тариф / норматив» ленивому арендодателю не всегда понятна.</div>
+      </div>
+      <div class="stage">
+        <div class="fx" style="min-height:420px"><h2>Своя формула</h2></div>
+        <div class="small">
+          <h4>Постоянное число <span>×</span></h4>
+          <div class="seg"><span class="on">Тариф</span><span>Норматив</span><span>Коэффициент</span></div>
+          <div class="fl"><label>Название</label><div class="inp">Тариф водоотведения</div></div>
+          <div class="grid2">
+            <div class="fl"><label>Цена</label><div class="inp">45 <span class="u">₽</span></div></div>
+            <div class="fl"><label>За что</label><div class="sel">м³</div></div>
+          </div>
+          <div class="say">Коэффициент — одно поле «Число», без единицы.</div>
+          <div class="sfoot"><span class="btn">Отмена</span><span class="btn main">Готово</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="view" data-view="tC">
+      <div class="about">
+        <div class="plus"><b>Плюс</b>Любая единица собирается сама: «₽ за м³», «Гкал за м²», «— за —» = коэффициент. Как сейчас в коде (unit + per).</div>
+        <div class="minus"><b>Минус</b>Два меню — надо понять, что верхнее «что», нижнее «за что». Для «просто коэффициента» — выбрать «—» дважды.</div>
+      </div>
+      <div class="stage">
+        <div class="fx" style="min-height:400px"><h2>Своя формула</h2></div>
+        <div class="small">
+          <h4>Постоянное число <span>×</span></h4>
+          <div class="fl"><label>Название</label><div class="inp">Тариф водоотведения</div></div>
+          <div class="grid3">
+            <div class="fl"><label>Число</label><div class="inp">45</div></div>
+            <div class="fl"><label>Что</label><div class="sel">₽</div></div>
+            <div class="fl"><label>За что</label><div class="sel">м³</div></div>
+          </div>
+          <div class="say">Это тариф: <b>45 ₽ за 1 м³</b>. «—» в обоих меню — коэффициент.</div>
+          <div class="sfoot"><span class="btn">Отмена</span><span class="btn main">Готово</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. Счётчики ===================== -->
+  <section class="view" data-view="m">
+    <div class="sub-tabs" data-tabs="m">
+      <button class="is-on" data-v="mA">А · в строку «( А + Б )» <span class="rec">советую</span></button>
+      <button data-v="mB">Б · в строку одним блоком «Σ»</button>
+    </div>
+    <div class="about">
+      <div class="plus"><b>Окно одно для обоих</b>Все счётчики объекта списком, без групп; сверху быстрые кнопки «вся вода», «всё электричество». Кто платит — серым справа (сажает его окно услуги).</div>
+      <div class="minus"><b>Разница — что попадёт в строку</b>А: каждый счётчик своим блоком, сами «+» и скобки (можно поправить руками). Б: один блок «Вода · 4 счётчика» — строка короче, но плюсов не видно.</div>
+    </div>
+    <div class="stage">
+      <div class="fx" style="min-height:560px"><h2>Своя формула</h2></div>
+      <div class="small" style="width:560px">
+        <h4>Расход счётчиков <span>×</span></h4>
+        <div class="quick">Отметить: <span class="q">вся вода</span><span class="q">вода холодная</span><span class="q">вода горячая</span><span class="q">электричество</span></div>
+        <div class="mlist">
+          <div class="mhead"><span></span><span></span><span>Счётчик</span><span>Кто платит</span></div>
+          <div class="mrow"><span class="box on"></span><svg class="i ico-water"><use href="#drop"/></svg><span>Вода холодная № 545575<small>расход, м³</small></span><span class="who">Аптека «Вита»</span></div>
+          <div class="mrow"><span class="box on"></span><svg class="i ico-hot"><use href="#drop"/></svg><span>Вода горячая № 63323-567<small>расход, м³</small></span><span class="who">Аптека «Вита»</span></div>
+          <div class="mrow"><span class="box on"></span><svg class="i ico-water"><use href="#drop"/></svg><span>Вода холодная № 64758<small>расход, м³</small></span><span class="who">Салон «Ногти»</span></div>
+          <div class="mrow"><span class="box on"></span><svg class="i ico-hot"><use href="#drop"/></svg><span>Вода горячая № 64758-484<small>расход, м³</small></span><span class="who">Салон «Ногти»</span></div>
+          <div class="mrow"><span class="box"></span><svg class="i ico-el"><use href="#bolt"/></svg><span>Электричество № 222<small>расход, кВт·ч</small></span><span class="who">Общий</span></div>
+        </div>
+        <div class="view is-on" data-view="mA"><div class="say">В строку: <b>( Вода хол. № 545575 + Вода гор. № 63323 + … )</b> — 4 блока, плюсы и скобки сами.</div></div>
+        <div class="view" data-view="mB"><div class="say">В строку: один блок <b>Σ Вода · 4 счётчика</b> — клик по нему открывает это же окно.</div></div>
+        <div class="sfoot"><span class="btn">Отмена</span><span class="btn main">Добавить 4 счётчика</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 4. Как посчитается ===================== -->
+  <section class="view" data-view="h">
+    <div class="sub-tabs" data-tabs="h">
+      <button class="is-on" data-v="h1">Счётчики одного арендатора</button>
+      <button data-v="h2">Двух и больше</button>
+      <button data-v="h3">Есть общий счётчик</button>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="view is-on" data-view="h1">
+        <div class="line">
+          <span class="chip op">(</span><span class="chip c-water"><svg class="i"><use href="#drop"/></svg>Вода хол. № 545575</span><span class="chip op">+</span>
+          <span class="chip c-hot"><svg class="i"><use href="#drop"/></svg>Вода гор. № 63323</span><span class="chip op">)</span><span class="chip op">×</span>
+          <span class="chip c-const"><svg class="i"><use href="#tag"/></svg>Тариф водоотв. <small>45 ₽/м³</small></span>
+        </div>
+        <div class="how" style="margin-top:16px">
+          <h3>Как посчитается <span class="badge">на примерных числах</span></h3>
+          <div class="one"><svg class="i"><use href="#user"/></svg><span>Платит только <b>Аптека «Вита»</b> — все счётчики её · (4 + 2) м³ × 45 ₽</span><span class="sum">270,00 ₽</span></div>
+        </div>
+        <p class="desc" style="margin:10px 0 0">Блока «Делим и кто платит» в окне услуги нет — услуга сразу на одного.</p>
+      </div>
+      <div class="view" data-view="h2">
+        <div class="line">
+          <span class="chip op">(</span><span class="chip c-water"><svg class="i"><use href="#drop"/></svg>Вода хол. № 545575</span><span class="chip op">+</span>
+          <span class="chip c-hot"><svg class="i"><use href="#drop"/></svg>Вода гор. № 63323</span><span class="chip op">+</span>
+          <span class="chip c-water"><svg class="i"><use href="#drop"/></svg>Вода хол. № 64758</span><span class="chip op">+</span>
+          <span class="chip c-hot"><svg class="i"><use href="#drop"/></svg>Вода гор. № 64758</span><span class="chip op">)</span><span class="chip op">×</span>
+          <span class="chip c-const"><svg class="i"><use href="#tag"/></svg>Тариф водоотв. <small>45 ₽/м³</small></span>
+        </div>
+        <div class="how" style="margin-top:16px">
+          <h3>Как посчитается <span class="badge">каждый по своим счётчикам</span></h3>
+          <div class="rows">
+            <div class="row"><span class="num">1</span><span>Аптека «Вита»</span><span class="calc">(4 + 2) м³ × 45 ₽</span><span class="sum">270,00 ₽</span></div>
+            <div class="row"><span class="num">2</span><span>Салон «Ногти»</span><span class="calc">(3 + 1) м³ × 45 ₽</span><span class="sum">180,00 ₽</span></div>
+            <div class="row owner"><span class="num">·</span><span class="who">Остаётся на вас</span><span class="calc">нет счётчиков без арендатора</span><span class="sum">—</span></div>
+          </div>
+        </div>
+        <p class="desc" style="margin:10px 0 0">Формула одна, а у каждого считаются только его счётчики: чужие для него — 0.</p>
+      </div>
+      <div class="view" data-view="h3">
+        <div class="line">
+          <span class="chip c-water"><svg class="i"><use href="#drop"/></svg>Вода хол. № 777 <small>общий</small></span><span class="chip op">×</span>
+          <span class="chip c-const"><svg class="i"><use href="#tag"/></svg>Тариф водоотв. <small>45 ₽/м³</small></span>
+        </div>
+        <div class="how" style="margin-top:16px">
+          <h3>Как посчитается <span class="badge">общий — делим по долям</span></h3>
+          <div class="rows">
+            <div class="row"><span class="num">1</span><span>Аптека «Вита»</span><span class="calc">10 м³ × 45 ₽ = 450 ₽ × 55%</span><span class="sum">247,50 ₽</span></div>
+            <div class="row"><span class="num">2</span><span>Салон «Ногти»</span><span class="calc">450 ₽ × 45%</span><span class="sum">202,50 ₽</span></div>
+          </div>
+        </div>
+        <p class="desc" style="margin:10px 0 0">Итог формулы делится как в «Делим и кто платит» (по долям · поровну · по м²).</p>
+      </div>
+    </div>
+    <p class="note">Вопрос: общий счётчик и счётчики арендаторов в одной формуле (например, «общий − свои») — делать или запретить, как в «По счётчикам»?</p>
+  </section>
+</div>
+
+<script>
+document.querySelectorAll('[data-tabs]').forEach(function (bar) {
+  bar.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    bar.querySelectorAll('button').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+    var scope = bar.parentElement;
+    bar.querySelectorAll('button').forEach(function (x) {
+      scope.querySelectorAll('[data-view="' + x.dataset.v + '"]').forEach(function (v) { v.classList.toggle('is-on', x === b); });
+    });
+  });
+});
+</script>
+</body>
+</html>
