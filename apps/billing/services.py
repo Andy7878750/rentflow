@@ -2405,6 +2405,8 @@ def formula_problem(property_obj, data, receipt=None):
             return unconnected_text(loose[0])
     try:
         fx.evaluate(blocks, resolve)
+        if not property_obj.is_owner_used:
+            fx.check_mixed(blocks, owners.get)
         if not property_obj.is_owner_used and fx.mode(blocks, owners.get) == 'each':
             fx.payers(blocks, owners.get, list(property_obj.tenants.values_list('pk', flat=True)))
     except fx.FormulaError as error:
@@ -2537,12 +2539,15 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
                 raise fx.FormulaError('У счётчика в формуле не отмечен ни один счётчик.')
             value = fx.meter_usage(block, tenant_id, usage.get, owner_of)
             unit = meter_unit(meters[block['meters'][0]])
-            return fx.Value(value, fx.units_of(unit, ''), [{'value': value, 'unit': unit, 'word': ''}])
+            part = {'value': value, 'unit': unit, 'word': '', 'foreign': fx.is_foreign(block, tenant_id, owner_of)}
+            return fx.Value(value, fx.units_of(unit, ''), [part])
 
         result, _ = fx.evaluate(blocks, resolve)
-        return result.value, _parts_text(result.parts)
+        return result.value, _parts_text(fx.drop_foreign(result.parts))
 
     try:
+        if tenants:
+            fx.check_mixed(blocks, owner_of)
         each = bool(tenants) and fx.mode(blocks, owner_of) == 'each'
         if not each:
             value, entry.formula_text = count(None)

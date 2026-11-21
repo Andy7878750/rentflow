@@ -27,12 +27,13 @@
 .fx-examples button:hover { border-color: var(--fx-accent); color: var(--fx-accent); }
 
 /* Palette: numbers «Каждый месяц», «Тариф / норматив», the object's meters, signs */
-.fx-palette { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 12px; }
+/* Window v2 (2026-11-21): four blocks of one size — columns 1fr, every block 76px high, nothing grows under them */
+.fx-palette { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .fx-group { min-width: 0; }
-.fx-group h3 { margin: 0 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fx-text); }
-.fx-group .fx-sub { margin: 0 0 6px; font-size: 11px; color: var(--fx-muted); }
-.fx-chips { display: flex; flex-direction: column; gap: 6px; }
-.fx-chips.is-signs { display: grid; grid-template-columns: repeat(3, 36px); gap: 6px; }
+.fx-group h3 { margin: 0 0 8px; height: 16px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--fx-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-signs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 34px 34px; gap: 8px; height: 76px; }
+.fx-signs .fx-chip.k-op { width: auto; height: 34px; padding: 0; }
 
 /* Blocks — grey, only the icon keeps its colour */
 .fx-chip { --c: var(--fx-muted); position: relative; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: 30px;
@@ -50,15 +51,18 @@
 .fx-chip.k-new.k-month { --c: #8a6420; }
 .fx-chip.is-ghost { position: fixed; z-index: 100; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: grabbing; }
 .fx-chip.is-dragging { opacity: .3; }
-/* A palette tile: full column width, 44px, two lines */
-.fx-chip.is-tile { display: flex; width: 100%; height: 44px; gap: 8px; padding: 0 10px; }
-.fx-chip.is-tile .fx-ico { width: 18px; }
-.fx-chip.is-tile .fx-ico svg { width: 16px; height: 16px; }
+/* A palette block: full column width, 76px, two lines */
+.fx-chip.is-tile { display: flex; width: 100%; height: 76px; gap: 10px; padding: 0 12px; background: #fff; }
+.fx-chip.is-tile:hover { border-color: var(--fx-accent); }
+.fx-chip.is-tile .fx-ico { width: 20px; }
+.fx-chip.is-tile .fx-ico svg { width: 20px; height: 20px; }
+.fx-chip.is-tile .fx-t1 { font-size: 13.5px; font-weight: 600; }
+.fx-chip.is-tile .fx-t2 { font-size: 11.5px; }
+.fx-chip.k-meter { --c: #2e86c1; }
 .fx-tl { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .fx-t1, .fx-t2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fx-t1 { font-size: 13px; color: var(--fx-text); }
 .fx-t2 { font-size: 11px; color: var(--fx-muted); }
-.fx-chips .fx-chip.k-op { width: 36px; height: 36px; padding: 0; }
 
 /* The formula line */
 .fx-strip-wrap { position: relative; }
@@ -76,12 +80,12 @@
 .fx-strip .fx-chip.k-op { min-width: 22px; height: 44px; padding: 0 5px; }
 .fx-caret { width: 2px; height: 40px; border-radius: 1px; background: var(--fx-accent); }
 /* × on a block — a small white circle on its corner, like an attachment's */
-.fx-strip .fx-del, .fx-chips .fx-del { position: absolute; top: -7px; right: -7px; z-index: 2; display: none; align-items: center; justify-content: center;
+.fx-strip .fx-del { position: absolute; top: -7px; right: -7px; z-index: 2; display: none; align-items: center; justify-content: center;
   box-sizing: border-box; width: 18px; height: 18px; border: 1px solid var(--fx-border); border-radius: 50%; background: #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--fx-muted); font-size: 13px; line-height: 1; cursor: pointer; }
-.fx-strip .fx-chip:hover .fx-del, .fx-chips .fx-chip:hover .fx-del { display: inline-flex; }
-.fx-strip .fx-del:hover, .fx-chips .fx-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
-@media (hover: none) { .fx-strip .fx-del, .fx-chips .fx-del { display: inline-flex; } }
+.fx-strip .fx-chip:hover .fx-del { display: inline-flex; }
+.fx-strip .fx-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
+@media (hover: none) { .fx-strip .fx-del { display: inline-flex; } }
 .fx-clear { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: #eef2f4;
   color: var(--fx-muted); font-size: 16px; line-height: 1; cursor: pointer; }
 .fx-clear:hover { background: var(--color-danger-soft); color: var(--fx-danger); }
@@ -155,7 +159,7 @@
 .fx-vrow > .fx-usel { width: 100%; }
 .fx-vfield .fx-usel { flex: none; width: 66px; height: 100%; border: 0; border-left: 1px solid var(--fx-border); border-radius: 0; background: #f7f9fa; }
 .fx-vrow.is-one .fx-vfield .fx-usel { width: 90px; }
-.fx-umenu { position: fixed; z-index: 95; display: flex; flex-direction: column; box-sizing: border-box; max-height: 280px; overflow: auto; padding: 4px;
+.fx-umenu { position: fixed; z-index: 95; display: flex; flex-direction: column; box-sizing: border-box; max-height: 440px; overflow: auto; padding: 4px;
   border: 1px solid var(--color-border); border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
 .fx-umenu > button { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px;
   color: var(--color-text); text-align: left; cursor: pointer; white-space: nowrap; }
@@ -181,11 +185,55 @@
 .fx-seg button.is-on { background: var(--fx-accent); color: #fff; }
 .fx-seg.is-off { opacity: .45; }
 .fx-seg button:disabled { cursor: default; }
+/* A block's small window (v2): the ready ones on top, a new one below */
+.fx-pop.is-wide { width: 560px; }
+.fx-pop .fx-or { margin: 4px 0 6px; }
+.fx-pop .fx-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px; }
+.fx-pop .fx-two .fx-f { margin-bottom: 10px; }
+.fx-pop .fx-two input { text-align: right; }
+.fx-usel.is-wide { width: 100%; }
+.fx-umenu .fx-mcap { padding: 6px 10px 2px; font-size: 11px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.fx-ready-list { display: flex; flex-direction: column; gap: 6px; max-height: 172px; overflow: auto; margin-bottom: 10px; }
+.fx-ready-row { display: flex; gap: 6px; }
+.fx-ready { --c: var(--fx-muted); flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px;
+  border: 1px solid var(--fx-border); border-radius: 8px; background: var(--fx-tile, #f4f6f8); font: inherit; font-size: 13px; color: var(--fx-text);
+  text-align: left; cursor: pointer; }
+.fx-ready:hover { border-color: var(--fx-accent); }
+.fx-ready.k-month { --c: #b07d2b; } .fx-ready.k-const { --c: var(--fx-accent); }
+.fx-ready .fx-ico { display: inline-flex; color: var(--c); }
+.fx-ready .fx-ico svg { width: 15px; height: 15px; }
+.fx-ready-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-ready-v { flex: none; font-size: 12px; color: var(--fx-muted); }
+.fx-ready-del { flex: none; width: 34px; height: 34px; border: 1px solid var(--fx-border); border-radius: 8px; background: #fff;
+  color: var(--fx-muted); font-size: 16px; cursor: pointer; }
+.fx-ready-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
+/* «Расход счётчиков»: every meter of the object with a tick */
+.fx-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12.5px; color: var(--fx-muted); }
+.fx-quick button { height: 26px; padding: 0 10px; border: 1px solid var(--fx-border); border-radius: 13px; background: #fff; font: inherit;
+  font-size: 12.5px; color: var(--fx-text); cursor: pointer; }
+.fx-quick button:hover { border-color: var(--fx-accent); color: var(--fx-accent); }
+.fx-mlist { max-height: 320px; overflow: auto; margin-bottom: 10px; border: 1px solid var(--fx-border); border-radius: 8px; }
+.fx-mhead, .fx-mline { display: grid; grid-template-columns: 16px 18px minmax(0, 1fr) 150px; align-items: center; gap: 10px; padding: 0 12px; }
+.fx-mhead { height: 30px; background: #f1f3f5; font-size: 11px; color: var(--fx-muted); text-transform: uppercase; letter-spacing: .04em; }
+.fx-mline { height: 44px; border-top: 1px solid var(--fx-border); font-size: 13px; cursor: pointer; }
+.fx-mline input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--fx-accent); }
+.fx-mline .fx-ico { display: inline-flex; color: var(--c, var(--fx-muted)); }
+.fx-mline.mk-electricity { --c: #0e9aa7; } .fx-mline.mk-water { --c: #2e86c1; } .fx-mline.mk-hot_water { --c: #c0392b; }
+.fx-mline.mk-heating { --c: #e67e22; } .fx-mline.mk-gas { --c: #5b6bc0; }
+.fx-mname { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.fx-mname span, .fx-mwho { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-mname small { font-size: 11.5px; color: var(--fx-muted); }
+.fx-mwho { font-size: 12.5px; color: var(--fx-muted); }
+.fx-mline.is-off { color: var(--fx-muted); cursor: help; }
+.fx-mline.is-off .fx-ico { opacity: .5; }
+.fx-example.is-warn { color: var(--fx-danger); }
+.fx-example:empty { display: none; }
 .fx-example { min-height: 36px; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: #f4f6f8; font-size: 12px; }
 
 @media (max-width: 640px) {
   .fx-modal { padding: 18px 16px; }
   .fx-palette { grid-template-columns: 1fr 1fr; }
+  .fx-mhead, .fx-mline { grid-template-columns: 16px 18px minmax(0, 1fr) 96px; }
   .fx-line, .fx-line.has-pay { grid-template-columns: 1fr auto; gap: 4px; }
   .fx-line .fx-calc { grid-column: 1 / -1; order: 3; }
 }

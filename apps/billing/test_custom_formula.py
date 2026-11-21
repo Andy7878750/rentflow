@@ -244,7 +244,46 @@ class FormulaServiceTests(TestCase):
                self.meter('electricity', meters=[self.meters['electricity', self.vlad.pk].pk]), self.op(')'), self.op('×'),
                {'t': 'num', 'id': 'n1'}]
         rub['per'] = 'кВт·ч'
-        self.assertIn('непонятно, кому выставить', services.formula_problem(self.prop, {'numbers': [rub], 'blocks': two}))
+        # Window v2 (2026-11-21): two tenants' meters — each pays by his own, nothing to ask.
+        self.assertEqual(services.formula_problem(self.prop, {'numbers': [rub], 'blocks': two}), '')
+
+    def one(self, kind, tenant):
+        """A meter block of its own (window v2): one meter."""
+        return {'t': 'meter', 'key': kind, 'meters': [self.meters[kind, tenant.pk].pk], 'join': 'each'}
+
+    def test_v2_each_meter_a_block_each_by_his_own(self):
+        """(Вода хол. В + Вода гор. В + Вода хол. Вл + Вода гор. Вл) × 45 — another's meter is 0 for him and drops
+        out of his bill line."""
+        plus = self.op('+')
+        receipt = self.make(
+            [{'id': 'n1', 'label': 'Тариф водоотведения', 'unit': '₽', 'per': 'м³', 'value': '45'}],
+            [self.op('('), self.one('water', self.viktor), plus, self.one('hot_water', self.viktor), plus,
+             self.one('water', self.vlad), plus, self.one('hot_water', self.vlad), self.op(')'), self.op('×'),
+             {'t': 'num', 'id': 'n1'}])
+        self.assertEqual(receipt.split, Receipt.Split.METERS)
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('180.00'))  # (3 + 1) × 45
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('270.00'))  # (2 + 4) × 45
+        self.assertEqual(self.line(bill, self.vlad, receipt).formula.replace(services.NBSP, ' '), '(2 м³ + 4 м³) × 45 ₽/м³')
+        self.assertEqual(self.line(bill, self.viktor, receipt).formula.replace(services.NBSP, ' '), '(3 м³ + 1 м³) × 45 ₽/м³')
+
+    def test_v2_one_meter_of_his_keeps_no_brackets(self):
+        receipt = self.make(
+            [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'м³', 'value': '10'}],
+            [self.op('('), self.one('water', self.viktor), self.op('+'), self.one('water', self.vlad), self.op(')'),
+             self.op('×'), {'t': 'num', 'id': 'n1'}])
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).formula.replace(services.NBSP, ' '), '3 м³ × 10 ₽/м³')
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('20.00'))
+
+    def test_v2_common_and_tenant_meters_are_refused(self):
+        common = self.meters['water', self.vlad.pk]
+        Meter.objects.filter(pk=common.pk).update(tenant=None)
+        data = {'numbers': [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'м³', 'value': '10'}],
+                'blocks': [self.op('('), self.one('water', self.viktor), self.op('+'),
+                           {'t': 'meter', 'key': 'water', 'meters': [common.pk], 'join': 'each'}, self.op(')'),
+                           self.op('×'), {'t': 'num', 'id': 'n1'}]}
+        self.assertEqual(services.formula_problem(self.prop, data), fx.MIXED)
 
     def test_a_formula_locks_no_meter(self):
         """It only reads meters: «По счётчикам» of the same meter is still possible."""

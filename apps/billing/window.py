@@ -57,14 +57,20 @@ def _formula_text(receipt):
     if not receipt.formula:
         return ''
     labels = {str(number.pk): number.label for number in receipt.numbers.all()}
-    names = {services.meter_kind_key(meter): meter.name for meter in receipt.property.meters.all()}
+    meters = list(receipt.property.meters.all())
+    names = {services.meter_kind_key(meter): meter.name for meter in meters}
+    by_id = {meter.pk: meter for meter in meters}
     parts = []
     for block in receipt.formula:
         kind = block.get('t')
         if kind == 'num':
             parts.append(labels.get(str(block.get('id')), '?'))
         elif kind == 'meter':
-            parts.append(names.get(block.get('key'), 'счётчик'))
+            one = by_id.get((block.get('meters') or [None])[0]) if len(block.get('meters') or []) == 1 else None
+            if one is not None:  # a meter of its own (window v2): «Вода холодная № 545575»
+                parts.append(f'{one.name} № {one.serial}' if one.serial else one.name)
+            else:
+                parts.append(names.get(block.get('key'), 'счётчик'))
         elif kind == 'op':
             parts.append(block.get('op', ''))
     return ' '.join(parts).replace('( ', '(').replace(' )', ')')

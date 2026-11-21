@@ -7,9 +7,11 @@
    leaves it as it was. The server counts the bills itself (apps/billing/formula.py) — the check here is only a preview
    on last month's numbers.
 
-   Meters: a block of a kind («Электричество») with the object's meters of that kind ticked, and each meter's «чей»
-   (the tenant who pays by it). One meter of a tenant — the formula is his only; several «у каждого свой» — each by his
-   own; «складываем» or common ones — one number for all. Who pays is not asked: it follows from the formula. */
+   Window v2 (2026-11-21, docs/mockups/2026-11-21-formula-blocks-v2.html): four blocks of one size — «Число за месяц»,
+   «Постоянное число» (one menu of units), «Выбрать счётчики» (every meter of the object with a tick), signs. Each meter is
+   a block of its own; several go in as «( А + Б )». Who pays follows from the meters: one tenant's — his only; several
+   tenants' — each by his own (another's meter is 0 for him); common ones — one sum, split by «Делим». Common and
+   tenants' meters together are refused. Older blocks of several meters («у каждого свой» / «Σ складываем») still work. */
 (function () {
   'use strict';
 
@@ -24,6 +26,8 @@
     month: svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>'),
     const: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
+    tag: svg('<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
+    gauge: svg('<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>'),
     electricity: svg('<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>', true),
     water: svg('<path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/>', true),
     heating: svg('<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v12M12 6v12M16 6v12M6 18v3M18 18v3"/>'),
@@ -31,6 +35,7 @@
     custom: svg('<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3"/>'),
   };
   ICONS.hot_water = ICONS.water;
+  ICONS.const = ICONS.tag;
   var CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 
   function fmt(n, d) {
@@ -130,11 +135,6 @@
       return 'Счётчик «' + meterName(m) + '» пока не подключён ни к одной услуге — его показания негде вводить. ' +
         'Подключите его в услуге «По счётчикам», и тогда его можно будет взять в формулу.';
     }
-    function offKindText(key) {
-      return 'Счётчики «' + kindOf(key).name + '» пока не подключены ни к одной услуге — их показания негде вводить. ' +
-        'Подключите счётчик в услуге «По счётчикам» (например, создайте услугу «' + kindOf(key).name + '»), ' +
-        'и тогда его можно будет взять в формулу.';
-    }
     // A short window with the explanation and «Понятно».
     function openNote(anchor, title, text) {
       closePop();
@@ -183,17 +183,18 @@
     overlay.innerHTML =
       '<div class="fx-modal" role="dialog" aria-label="Своя формула">' +
       '<h2>Своя формула</h2>' +
-      '<p class="fx-desc">Соберите расчёт как на бумаге: числа, счётчики и знаки. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>' +
+      '<p class="fx-desc">Соберите расчёт из четырёх блоков. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>' +
       '<div class="fx-examples">Примеры:' +
       '<button type="button" data-example="sewage">Водоотведение</button>' +
       '<button type="button" data-example="usage">Сумма по расходу</button>' +
       '<button type="button" data-example="heat">Отопление</button>' +
       '<button type="button" data-example="one">Только арендатору 1</button></div>' +
+      // Four blocks of one size (2026-11-21, window v2): a click opens a small window — pick a ready one or make a new one.
       '<div class="fx-palette">' +
-      '<div class="fx-group"><h3>Вводите каждый месяц</h3><p class="fx-sub">например, из квитанции</p><div class="fx-chips" data-pal="month"></div></div>' +
-      '<div class="fx-group"><h3>Тарифы и нормативы</h3><p class="fx-sub">задаёте один раз</p><div class="fx-chips" data-pal="const"></div></div>' +
-      '<div class="fx-group"><h3>Счётчики</h3><p class="fx-sub">расход за месяц</p><div class="fx-chips" data-pal="meter"></div></div>' +
-      '<div class="fx-group"><h3>Знаки</h3><p class="fx-sub">или с клавиатуры</p><div class="fx-chips is-signs">' +
+      '<div class="fx-group"><h3>Каждый месяц</h3><div data-pal="month"></div></div>' +
+      '<div class="fx-group"><h3>Тариф · норматив</h3><div data-pal="const"></div></div>' +
+      '<div class="fx-group"><h3>Расход счётчиков</h3><div data-pal="meter"></div></div>' +
+      '<div class="fx-group"><h3>Знаки</h3><div class="fx-signs">' +
       ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + s + '</span>'; }).join('') +
       '</div></div></div>' +
       '<div class="fx-strip-wrap"><div class="fx-strip" data-strip></div>' +
@@ -206,12 +207,14 @@
     host.appendChild(overlay);
     var strip = overlay.querySelector('[data-strip]');
 
+    // A meter of its own (window v2): «Вода хол. № 545575».
+    function oneName(b) { var m = meterById(b.meters[0]); return shortOf(b.key) + (m && m.serial ? ' № ' + m.serial : ''); }
     function chipText(b) {
       if (b.type === 'op') return b.op;
       if (b.type === 'meter') {
         var short = shortOf(b.key);
         if (!b.meters.length) return short + ' · ?';
-        if (b.meters.length === 1) return short + ' · ' + whoShort(b.meters[0]);
+        if (b.meters.length === 1) return oneName(b);
         if (modeNow() === 'total' || b.join === 'sum') {
           var all = METERS.filter(function (m) { return m.key === b.key; }).length === b.meters.length;
           return short + ' · ' + (all ? 'все вместе' : b.meters.map(whoShort).join(' + '));
@@ -234,7 +237,8 @@
       return valueOf(b).type === 'const' ? 'k-const' : 'k-month';
     }
     function chipParts(b) {
-      if (b.type === 'meter') { var short = shortOf(b.key); return [short, chipText(b).slice(short.length + 3) + ' · ' + kindOf(b.key).unit]; }
+      if (b.type === 'meter' && b.meters.length === 1) return [oneName(b), whoShort(b.meters[0]) + ' · ' + kindOf(b.key).unit];
+      if (b.type === 'meter') { var short = shortOf(b.key); return ['Σ ' + short, chipText(b).slice(short.length + 3) + ' · ' + kindOf(b.key).unit]; }
       var v = valueOf(b), val = chipValue(b).replace(' за ', '/');
       return [v.label, v.type === 'month' ? (val ? val + ' · каждый месяц' : 'каждый месяц') : (val || 'число')];
     }
@@ -262,29 +266,18 @@
       return el;
     }
 
+    // The palette: always the same four blocks (window v2) — the ready numbers and meters are picked in their small windows.
     function renderPalette() {
-      ['month', 'const'].forEach(function (type) {
-        var box = overlay.querySelector('[data-pal="' + type + '"]');
-        box.innerHTML = '';
-        values.filter(function (v) { return v.type === type; }).forEach(function (v) {
-          var b = { type: 'val', vid: v.id };
-          var tile = tileEl('val:' + v.id, kindClass(b), iconOf(b), v.label, chipValue(b) || 'без единицы');
-          tile.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Удалить число" aria-label="Удалить число «' + esc(v.label) + '»">×</span>');
-          box.appendChild(tile);
-        });
-        box.appendChild(tileEl('new:' + type, 'k-new ' + (type === 'const' ? 'k-const' : 'k-month'), ICONS.plus,
-          type === 'const' ? 'Тариф или норматив' : 'Число или сумма', type === 'const' ? 'например, 45 ₽ за м³' : 'например, Гкал или сумма'));
-      });
-      var meters = overlay.querySelector('[data-pal="meter"]');
-      meters.innerHTML = '';
-      if (!KINDS.length) meters.innerHTML = '<p class="fx-hint">У объекта нет счётчиков — их добавляют в окне объекта.</p>';
-      KINDS.forEach(function (k) {
-        var on = METERS.some(function (m) { return m.key === k.key && isActive(m); });
-        var tile = tileEl((on ? 'meter:' : 'off:') + k.key, 'k-meter mk-' + k.icon + (on ? '' : ' is-off'), ICONS[k.icon] || ICONS.custom, k.name,
-          on ? 'расход' + (k.unit ? ', ' + k.unit : '') : 'не подключён к услуге');
-        if (!on) tile.title = offKindText(k.key);
-        meters.appendChild(tile);
-      });
+      var month = overlay.querySelector('[data-pal="month"]');
+      if (!month.firstChild) {
+        month.appendChild(tileEl('new:month', 'k-new k-month', ICONS.month, 'Число за месяц', 'из квитанции'));
+        overlay.querySelector('[data-pal="const"]').appendChild(tileEl('new:const', 'k-new k-const', ICONS.tag, 'Постоянное число', 'тариф или коэф.'));
+        overlay.querySelector('[data-pal="meter"]').appendChild(tileEl('pick:meters', 'k-new k-meter', ICONS.gauge, 'Выбрать счётчики', 'расход за месяц'));
+      }
+      var meterTile = overlay.querySelector('[data-pal="meter"] .fx-chip');
+      var any = METERS.some(isActive);
+      meterTile.classList.toggle('is-off', !any);
+      meterTile.querySelector('.fx-t2').textContent = METERS.length ? (any ? 'расход за месяц' : 'не подключены к услугам') : 'у объекта нет счётчиков';
     }
 
     function render() {
@@ -315,6 +308,10 @@
         var loose = b.meters.map(meterById).filter(function (m) { return !isActive(m); });
         if (loose.length) throw offText(loose[0]);
         var ids = b.meters;
+        // Another tenant's meter of its own: 0 in this one's count, and left out of his line.
+        if (b.meters.length === 1 && tenantId !== null && tenantOf(b.meters[0]) !== null && tenantOf(b.meters[0]) !== tenantId) {
+          return { v: 0, u: unitsOf(k.unit, ''), parts: [{ num: '0', word: chipText(b), foreign: true }] };
+        }
         if (b.meters.length > 1 && tenantId !== null && b.join !== 'sum') ids = b.meters.filter(function (id) { return tenantOf(id) === tenantId; });
         var v = ids.reduce(function (s, id) { return s + usageOf(id); }, 0);
         var word = chipText(b);
@@ -356,8 +353,35 @@
         if (i < blocks.length) throw blocks[i].op === ')' ? 'Лишняя закрывающая скобка «)».' : 'Между блоками не хватает знака.';
         if (bare) r.bare = true;
         else if (!sameUnits(r.u, { '₽': 1 })) return { error: 'В итоге получается ' + unitText(r.u) + ', а нужны рубли.' };
+        r.parts = dropForeign(r.parts);
         return r;
       } catch (msg) { return { error: String(msg) }; }
+    }
+
+    // «(4 + 0) × 45» → «4 × 45»: another tenant's meter goes with the «+» / «−» next to it; brackets around one value go.
+    function dropForeign(parts) {
+      var out = parts.slice(), at;
+      while ((at = out.findIndex(function (p) { return p.foreign; })) >= 0) {
+        if (at > 0 && (out[at - 1].op === '+' || out[at - 1].op === '−')) out.splice(at - 1, 2);
+        else if (out[at + 1] && out[at + 1].op === '+') out.splice(at, 2);
+        else out[at] = Object.assign({}, out[at], { foreign: false });
+      }
+      for (var i = 0; i + 2 < out.length; i++) {
+        if (out[i].op === '(' && !out[i + 1].op && out[i + 2].op === ')') { out.splice(i + 2, 1); out.splice(i, 1); i = -1; }
+      }
+      return out;
+    }
+    // Common meters and tenants' meters in one formula are refused (2026-11-21, as in «По счётчикам»).
+    var MIXED = 'Общий счётчик и счётчики арендаторов в одной формуле нельзя — для общего сделайте отдельную услугу.';
+    function isMixed(ids) {
+      var own = false, common = false;
+      ids.forEach(function (id) { if (tenantOf(id) !== null) own = true; else common = true; });
+      return own && common && TENANTS.length > 0;
+    }
+    function formulaMeters() {
+      var ids = [];
+      blocks.forEach(function (b) { if (b.type === 'meter' && b.join !== 'sum') b.meters.forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); }); });
+      return ids;
     }
 
     function renderCheck() {
@@ -389,6 +413,11 @@
       }
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
       var ok = true;
+      if (isMixed(formulaMeters())) {
+        line('Кому?', MIXED, '', true);
+        badge.textContent = 'есть ошибка'; badge.className = 'fx-badge is-bad';
+        return;
+      }
       if (modeNow() === 'each') {
         var meterBlocks = blocks.filter(function (b) { return b.type === 'meter'; });
         var own = meterBlocks.filter(function (b) { return b.meters.length > 1 && b.join === 'each'; });
@@ -396,10 +425,8 @@
         meterBlocks.forEach(function (b) { if (b.meters.length === 1 && tenantOf(b.meters[0]) && named.indexOf(tenantOf(b.meters[0])) < 0) named.push(tenantOf(b.meters[0])); });
         var payers = own.length ? TENANTS.filter(function (t) { return own.every(function (b) { return b.meters.some(function (id) { return tenantOf(id) === t.id; }); }); }).map(function (t) { return t.id; })
           : named;
-        if (!own.length && named.length > 1) {
-          ok = false;
-          line('Кому?', 'В формуле счётчики разных арендаторов — непонятно, кому выставить. Отметьте у счётчика обоих и выберите «у каждого свой» или «складываем».', '', true);
-        } else if (own.length && !payers.length) {
+        // Several tenants' meters: each pays by his own (window v2).
+        if (own.length && !payers.length) {
           ok = false;
           line('Кому?', 'Ни у одного арендатора нет своего счётчика в формуле — укажите у счётчиков, чьи они.', '', true);
         } else {
@@ -488,10 +515,12 @@
       }
       var chip = e.target.closest('.fx-chip');
       if (!chip || e.button > 0) return;
-      if ((chip.dataset.new || '').indexOf('off:') === 0) {
-        // Not connected to any service: it can't be taken — say why and how to fix it.
+      if (chip.dataset.new === 'pick:meters' && chip.classList.contains('is-off')) {
+        // No meter is typed in any service: none can be taken — say why and how to fix it.
         e.preventDefault();
-        openNote(chip, 'Счётчик пока не подключён', offKindText(chip.dataset.new.slice(4)));
+        openNote(chip, 'Счётчиков пока нет', METERS.length
+          ? 'Счётчики объекта пока не подключены ни к одной услуге — их показания негде вводить. Подключите их в услуге «По счётчикам», и тогда их можно будет взять в формулу.'
+          : 'У объекта нет счётчиков — их добавляют в окне объекта.');
         return;
       }
       var inStrip = strip.contains(chip);
@@ -507,7 +536,7 @@
         drag.moved = true;
         var kind = drag.chip.dataset.new || '';
         drag.block = drag.fromStrip ? blocks.find(function (b) { return String(b.id) === drag.chip.dataset.id; })
-          : kind.indexOf('new:') === 0 ? { id: 0, type: 'new', kind: kind.slice(4) } : make(kind);
+          : kind.indexOf('new:') === 0 || kind.indexOf('pick:') === 0 ? { id: 0, type: 'new', kind: kind } : make(kind);
         drag.ghost = drag.block.type === 'new' ? drag.chip.cloneNode(true) : chipEl(drag.block);
         drag.ghost.classList.add('is-ghost'); overlay.appendChild(drag.ghost);
         if (drag.fromStrip) drag.chip.classList.add('is-dragging');
@@ -528,7 +557,8 @@
       caret.remove(); strip.classList.remove('is-over');
       var kind = d.chip.dataset.new || '';
       if (!d.moved) {
-        if (kind.indexOf('new:') === 0) openDraft(kind.slice(4), d.chip);
+        if (kind === 'pick:meters') openMeters(d.chip);
+        else if (kind.indexOf('new:') === 0) openDraft(kind.slice(4), d.chip);
         else if (!d.fromStrip) insertBlock(make(kind));
         else openPop(blocks.find(function (b) { return String(b.id) === d.chip.dataset.id; }), d.chip);
         return;
@@ -537,7 +567,10 @@
       justDragged = true; setTimeout(function () { justDragged = false; }, 0);
       var over = overStrip(e.clientX, e.clientY);
       var at = over ? insertIndex(e.clientX, e.clientY) : -1;
-      if (d.block.type === 'new') { if (over) openDraft(d.block.kind, d.chip, at); return; }
+      if (d.block.type === 'new') {
+        if (over) { if (d.block.kind === 'pick:meters') openMeters(d.chip, at); else openDraft(d.block.kind.slice(4), d.chip, at); }
+        return;
+      }
       if (d.fromStrip) blocks = blocks.filter(function (b) { return b !== d.block; });  // moved or dragged out (= deleted)
       if (over) blocks.splice(Math.min(at, blocks.length), 0, d.block);
       render();
@@ -556,11 +589,12 @@
     var EXAMPLES = {
       sewage: { needs: ['hot_water', 'water'], build: function () {
         var t = exampleValue('const', { label: 'Тариф водоотведения', value: 45, unit: '₽', per: 'м³' });
-        return [op('('), make('meter:hot_water'), op('+'), make('meter:water'), op(')'), op('×'), val(t)];
+        return meterBlocks(activeOf(['water', 'hot_water'])).concat([op('×'), val(t)]);
       } },
+      // The receipt's sum × his usage ÷ the whole usage: «Σ» (all meters together) is the one number for all.
       usage: { needs: ['electricity'], build: function () {
         var sum = exampleValue('month', { label: 'Сумма по квитанции', unit: '₽' });
-        return [val(sum), op('÷'), meterSum('electricity'), op('×'), make('meter:electricity')];
+        return [val(sum), op('÷'), meterSum('electricity'), op('×')].concat(meterBlocks(activeOf(['electricity'])));
       } },
       heat: { needs: ['hot_water'], build: function () {
         var heat = exampleValue('month', { label: 'Тепло по квитанции', unit: 'Гкал' });
@@ -577,8 +611,7 @@
           return null;
         }
         var t = exampleValue('const', { label: 'Тариф', value: 9.6, unit: '₽', per: 'кВт·ч' });
-        var b = make('meter:electricity'); b.meters = [meter.id];
-        return [b, op('×'), val(t)];
+        return meterBlocks([meter.id]).concat([op('×'), val(t)]);
       } },
     };
     overlay.querySelector('.fx-examples').addEventListener('click', function (e) {
@@ -606,7 +639,10 @@
     function closePop() { closeUnitMenu(); if (pop) pop.remove(); pop = null; }
     function placePop(anchor) {
       var r = anchor.getBoundingClientRect();
-      pop.style.left = Math.max(8, Math.min(r.left, innerWidth - pop.offsetWidth - 8)) + 'px';
+      // A wide one («Расход счётчиков») — in the middle of the formula window, not hanging off its edge.
+      var m = pop.classList.contains('is-wide') ? overlay.querySelector('.fx-modal').getBoundingClientRect() : null;
+      var left = m ? m.left + (m.width - pop.offsetWidth) / 2 : r.left;
+      pop.style.left = Math.max(8, Math.min(left, innerWidth - pop.offsetWidth - 8)) + 'px';
       var h = pop.offsetHeight;
       pop.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
     }
@@ -631,9 +667,33 @@
           '<input data-k="sample" class="fx-sample" disabled value="' + num(v.sample || sampleFor(v.unit)) + '">' + unitButton('unit', v.unit) +
           '</span></div></div><p class="fx-say">' + valueSays(v) + '</p>';
       }
-      return name + '<div class="fx-f">Сколько<div class="fx-vrow"><span class="fx-vfield">' +
-        '<input data-k="value" inputmode="decimal" value="' + (v.value ? num(v.value) : '') + '" placeholder="0">' + unitButton('unit', v.unit) +
-        '</span><span>за</span>' + unitButton('per', v.per) + '</div></div><p class="fx-say">' + valueSays(v) + '</p>';
+      // One menu of units (window v2): «₽ за м³», «м³ на чел.», «без единицы — коэффициент», «+ своя единица…».
+      return name + '<div class="fx-two"><label class="fx-f">Число<input data-k="value" inputmode="decimal" value="' +
+        (v.value ? num(v.value) : '') + '" placeholder="0"></label>' +
+        '<div class="fx-f">Единица<button type="button" class="fx-usel is-wide" data-k="pair"><span>' + esc(pairLabel(v.unit, v.per)) + '</span>' + CHEV +
+        '</button></div></div><p class="fx-say">' + valueSays(v) + '</p>';
+    }
+    // The units of a «Постоянное число» as one list: [unit, per, label]; null — a caption.
+    var PAIRS = [['Тариф'], ['₽', 'м³'], ['₽', 'кВт·ч'], ['₽', 'Гкал'], ['₽', 'м²'], ['₽', 'чел.'],
+      ['Норматив'], ['м³', 'чел.'], ['Гкал', 'м²'], ['Гкал', 'м³'], ['Другое'], ['₽', ''], ['', '']];
+    function pairLabel(unit, per) {
+      if (!unit && !per) return 'без единицы — коэффициент';
+      if (!per) return unit === '₽' ? '₽ — сумма' : unit;
+      return (unit || '') + (unit === '₽' ? ' за ' : ' на ') + per;
+    }
+    // «₽/м³», «Гкал на м²», «₽ за чел.», «шт.» — what was typed in «+ своя единица…».
+    function parsePair(text) {
+      var t = String(text || '').trim(), m = t.match(/^(.*?)\s*(?:\/|\sза\s|\sна\s)\s*(.+)$/);
+      return m ? [cleanUnit(m[1]), cleanUnit(m[2])] : [cleanUnit(t), ''];
+    }
+    function openPairMenu(btn, v, pick) {
+      var cur = v.unit + '|' + v.per;
+      var options = PAIRS.map(function (p) { return p.length === 1 ? ['', p[0], 'cap'] : [p[0] + '|' + p[1], pairLabel(p[0], p[1])]; });
+      if (!PAIRS.some(function (p) { return p.length === 2 && p[0] + '|' + p[1] === cur; })) options.push([cur, pairLabel(v.unit, v.per)]);
+      openMenu(btn, options, cur, true, function (value) {
+        var pair = value.indexOf('|') >= 0 ? value.split('|') : parsePair(value);
+        pick(pair[0], pair[1]);
+      }, 'своя единица…');
     }
     // The number's fields write into v; «change» of a unit refreshes the sample and the sentence.
     function wireValue(v, onChange) {
@@ -647,6 +707,15 @@
       });
       pop.querySelectorAll('.fx-usel').forEach(function (btn) {
         btn.addEventListener('click', function () {
+          if (btn.dataset.k === 'pair') {
+            openPairMenu(btn, v, function (unit, per) {
+              v.unit = unit; v.per = per;
+              btn.querySelector('span').textContent = pairLabel(unit, per);
+              pop.querySelector('.fx-say').textContent = valueSays(v);
+              onChange();
+            });
+            return;
+          }
           openUnitMenu(btn, function (unit) {
             v[btn.dataset.k] = unit;
             btn.dataset.v = unit;
@@ -662,24 +731,123 @@
       });
     }
     // A new number is set up first — next to the palette — then kept («Сохранить») or put in the formula.
+    // A block of the palette (window v2): the ready numbers of this kind on top — a click puts one in the formula,
+    // × deletes it; below — a new one, set up and put in the formula.
+    function readyRows(type) {
+      return values.filter(function (v) { return v.type === type; }).map(function (v) {
+        var b = { type: 'val', vid: v.id };
+        return '<div class="fx-ready-row"><button type="button" class="fx-ready ' + kindClass(b) + '" data-use="' + esc(v.id) + '">' +
+          '<span class="fx-ico">' + iconOf(b) + '</span><span class="fx-ready-nm"></span><span class="fx-ready-v">' +
+          esc(chipValue(b).replace(' за ', '/') || (type === 'const' ? 'коэффициент' : 'каждый месяц')) + '</span></button>' +
+          '<button type="button" class="fx-ready-del" data-drop="' + esc(v.id) + '" title="Удалить число" aria-label="Удалить «' + esc(v.label) + '»">×</button></div>';
+      }).join('');
+    }
     function openDraft(type, anchor, at) {
       closePop();
-      var v = { id: '', type: type, label: '', unit: '₽', per: '', value: 0, sample: 0, real: false };
+      var v = { id: '', type: type, label: '', unit: '₽', per: type === 'const' ? 'м³' : '', value: 0, sample: 0, real: false };
       if (type === 'month') v.sample = sampleFor(v.unit);
+      var ready = readyRows(type);
       pop = document.createElement('div'); pop.className = 'fx-pop';
-      pop.innerHTML = '<h4>' + (type === 'const' ? 'Новый тариф или норматив' : 'Новое число или сумма — каждый месяц') + '</h4>' + valueFields(v) +
-        '<div class="fx-acts"><button type="button" class="fx-btn" data-cancel>Отмена</button><button type="button" class="fx-btn" data-keep disabled title="Сохранить в палитру, поставить в формулу потом">Сохранить</button>' +
+      pop.innerHTML = '<h4>' + (type === 'const' ? 'Постоянное число' : 'Число за месяц') + '</h4>' +
+        (ready ? '<div class="fx-f">Готовые</div><div class="fx-ready-list">' + ready + '</div><div class="fx-f fx-or">Новое</div>' : '') +
+        valueFields(v) +
+        '<div class="fx-acts"><button type="button" class="fx-btn" data-cancel>Отмена</button>' +
         '<button type="button" class="fx-btn is-primary" data-put disabled>В формулу</button></div>';
       overlay.appendChild(pop);
+      pop.querySelectorAll('[data-use]').forEach(function (btn) {
+        btn.querySelector('.fx-ready-nm').textContent = valueById(btn.dataset.use).label;
+        btn.onclick = function () { closePop(); insertBlock({ id: ++uid, type: 'val', vid: btn.dataset.use }, at); };
+      });
+      pop.querySelectorAll('[data-drop]').forEach(function (btn) {
+        btn.onclick = function () {
+          var vid = btn.dataset.drop;
+          values = values.filter(function (x) { return x.id !== vid; });
+          blocks = blocks.filter(function (b) { return !(b.type === 'val' && b.vid === vid); });
+          render();
+          openDraft(type, anchor, at);
+        };
+      });
       placePop(anchor);
-      var ready = function () { pop.querySelectorAll('[data-keep], [data-put]').forEach(function (btn) { btn.disabled = !String(v.label).trim(); }); };
-      wireValue(v, ready);
+      var check = function () { pop.querySelector('[data-put]').disabled = !String(v.label).trim(); };
+      wireValue(v, check);
       function save() { return newValue(type, { label: v.label.trim(), unit: v.unit, per: v.per, value: v.value, sample: v.sample }); }
       pop.querySelector('[data-cancel]').onclick = closePop;
-      pop.querySelector('[data-keep]').onclick = function () { save(); closePop(); render(); };
       pop.querySelector('[data-put]').onclick = function () { var saved = save(); closePop(); insertBlock({ id: ++uid, type: 'val', vid: saved.id }, at); };
       pop.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && !pop.querySelector('[data-put]').disabled) { ev.preventDefault(); pop.querySelector('[data-put]').click(); } });
       pop.querySelector('[data-k="label"]').focus();
+    }
+
+    // ---------- «Расход счётчиков» (window v2): every meter of the object with a tick, no groups ----------
+    function activeOf(keys) { return METERS.filter(function (m) { return keys.indexOf(m.key) >= 0 && isActive(m); }).map(function (m) { return m.id; }); }
+    // The ticked meters into the formula: each a block of its own; several — «( А + Б )».
+    function meterBlocks(ids) {
+      var list = ids.map(function (id) { return { id: ++uid, type: 'meter', key: meterById(id).key, meters: [id], join: 'each' }; });
+      if (list.length < 2) return list;
+      var out = [op('(')];
+      list.forEach(function (b, n) { if (n) out.push(op('+')); out.push(b); });
+      out.push(op(')'));
+      return out;
+    }
+    function openMeters(anchor, at) {
+      closePop();
+      var picked = [];
+      // Quick ticks: «вся вода» when there are both waters, then each kind there is.
+      var quick = [];
+      if (activeOf(['water']).length && activeOf(['hot_water']).length) quick.push(['water,hot_water', 'вся вода']);
+      KINDS.forEach(function (k) { if (activeOf([k.key]).length) quick.push([k.key, k.name.toLowerCase()]); });
+      pop = document.createElement('div'); pop.className = 'fx-pop is-wide';
+      pop.innerHTML = '<h4>Расход счётчиков</h4>' +
+        (quick.length > 1 ? '<div class="fx-quick">Отметить:' + quick.map(function (q) {
+          return '<button type="button" data-quick="' + q[0] + '">' + esc(q[1]) + '</button>';
+        }).join('') + '</div>' : '') +
+        '<div class="fx-mlist"><div class="fx-mhead"><span></span><span></span><span>Счётчик</span><span>Кто платит</span></div>' +
+        METERS.map(function (m) {
+          var k = kindOf(m.key), on = isActive(m);
+          return '<label class="fx-mline mk-' + k.icon + (on ? '' : ' is-off') + '"' + (on ? '' : ' title="' + esc(offText(m)) + '"') + '>' +
+            '<input type="checkbox" data-m="' + m.id + '"' + (on ? '' : ' disabled') + '>' +
+            '<span class="fx-ico">' + (ICONS[k.icon] || ICONS.custom) + '</span>' +
+            '<span class="fx-mname"><span>' + esc(meterName(m)) + '</span><small>' + (on ? 'расход' + (k.unit ? ', ' + esc(k.unit) : '') : 'не подключён к услуге') + '</small></span>' +
+            '<span class="fx-mwho">' + esc(whoLabel(m.id)) + '</span></label>';
+        }).join('') + '</div>' +
+        '<p class="fx-example" data-mnote></p>' +
+        '<div class="fx-acts"><button type="button" class="fx-btn" data-cancel>Отмена</button>' +
+        '<button type="button" class="fx-btn is-primary" data-add disabled>Добавить</button></div>';
+      overlay.appendChild(pop);
+      placePop(anchor);
+      function count(n) { return n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'счётчик' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'счётчика' : 'счётчиков'); }
+      function refresh() {
+        pop.querySelectorAll('[data-m]').forEach(function (box) { box.checked = picked.indexOf(Number(box.dataset.m)) >= 0; });
+        var mixed = isMixed(picked.concat(formulaMeters()));
+        var add = pop.querySelector('[data-add]'), note = pop.querySelector('[data-mnote]');
+        add.disabled = !picked.length || mixed;
+        add.textContent = picked.length ? 'Добавить ' + count(picked.length) : 'Добавить';
+        note.textContent = mixed ? MIXED : picked.length > 1 ? 'В формулу встанут через «+» в скобках.' : '';
+        note.classList.toggle('is-warn', mixed);
+      }
+      pop.addEventListener('change', function (ev) {
+        var id = Number(ev.target.dataset.m); if (!id) return;
+        picked = ev.target.checked ? picked.concat([id]) : picked.filter(function (x) { return x !== id; });
+        refresh();
+      });
+      pop.addEventListener('click', function (ev) {
+        var q = ev.target.closest('[data-quick]'); if (!q) return;
+        var ids = activeOf(q.dataset.quick.split(','));
+        var all = ids.every(function (id) { return picked.indexOf(id) >= 0; });
+        picked = all ? picked.filter(function (id) { return ids.indexOf(id) < 0; })
+          : picked.concat(ids.filter(function (id) { return picked.indexOf(id) < 0; }));
+        refresh();
+      });
+      pop.querySelector('[data-cancel]').onclick = closePop;
+      pop.querySelector('[data-add]').onclick = function () {
+        // In the object's order, not the order of the ticks.
+        var ids = METERS.map(function (m) { return m.id; }).filter(function (id) { return picked.indexOf(id) >= 0; });
+        var add = meterBlocks(ids);
+        closePop();
+        var where = at === undefined ? blocks.length : Math.min(at, blocks.length);
+        blocks.splice.apply(blocks, [where, 0].concat(add));
+        render();
+      };
+      refresh();
     }
 
     function meterPopBody(b) {
@@ -724,6 +892,11 @@
         var uses = blocks.filter(function (x) { return x.vid === v.id; }).length;
         pop.innerHTML = '<h4>' + (v.type === 'const' ? 'Тариф или норматив · задаёте один раз' : 'Вводите каждый месяц · например, из квитанции') + '</h4>' +
           (uses > 1 ? '<p class="fx-uses">Стоит в формуле ' + uses + ' раза — правка меняет везде.</p>' : '') + valueFields(v);
+      } else if (b.meters.length === 1) {
+        // A meter of its own (window v2): what it is, whose, where its readings are typed.
+        var m = meterById(b.meters[0]), k = kindOf(b.key);
+        pop.innerHTML = '<h4>' + esc(meterName(m)) + '</h4><p class="fx-example">Расход за месяц' + (k.unit ? ', ' + esc(k.unit) : '') +
+          ' · ' + esc(whoLabel(m.id)) + (m.typed && m.typed.length ? ' · показания вводятся в «' + esc(m.typed[0]) + '»' : '') + '.</p>';
       } else {
         pop.innerHTML = '<h4>' + esc(kindOf(b.key).name) + ' — расход за месяц</h4>' + meterPopBody(b);
       }
@@ -731,7 +904,7 @@
       overlay.appendChild(pop);
       placePop(anchor);
       if (b.type === 'val') wireValue(valueOf(b), render);
-      else wireMeter(b);
+      else if (b.meters.length > 1) wireMeter(b);
       pop.querySelector('[data-ok]').onclick = closePop;
       pop.querySelector('[data-del]').onclick = function () { blocks = blocks.filter(function (x) { return x !== b; }); closePop(); render(); };
     }
@@ -780,15 +953,16 @@
       if (cur && units.indexOf(cur) < 0) units.push(cur);
       openMenu(btn, [['', 'без единицы']].concat(units.map(function (u) { return [u, u]; })), cur, true, pick);
     }
-    function openMenu(btn, options, cur, custom, pick) {
+    function openMenu(btn, options, cur, custom, pick, customText) {
       var was = btn.classList.contains('is-open');
       closeUnitMenu(); if (was) return;
       btn.classList.add('is-open');
       var m = document.createElement('div'); m.className = 'fx-umenu'; m.setAttribute('role', 'listbox');
       m.innerHTML = options.map(function (o) {
+        if (o[2] === 'cap') return '<div class="fx-mcap">' + esc(o[1]) + '</div>';
         return '<button type="button" role="option" data-v="' + esc(o[0]) + '"' + (o[0] === cur ? ' class="is-on"' : '') + '>' +
           (o[0] || !custom ? esc(o[1]) : '<span class="fx-none">' + esc(o[1]) + '</span>') + '</button>';
-      }).join('') + (custom ? '<div class="fx-ucustom"><input placeholder="свой вариант…" maxlength="12"><button type="button" title="Добавить">✓</button></div>' : '');
+      }).join('') + (custom ? '<div class="fx-ucustom"><input placeholder="' + esc(customText || 'свой вариант…') + '" maxlength="20"><button type="button" title="Добавить">✓</button></div>' : '');
       overlay.appendChild(m);
       var r = btn.getBoundingClientRect();
       m.style.minWidth = Math.max(r.width, 150) + 'px';

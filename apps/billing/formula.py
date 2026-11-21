@@ -9,9 +9,10 @@ It is counted here without eval: a small parser (sum → product → primary) ov
 its units as powers (45 ₽/м³ → {'₽': 1, 'м³': -1}). The result must come out in rubles; a number without a unit
 switches that check off for the formula.
 
-Who pays follows from the formula itself (no «Как считаем»): a meter block «у каждого свой» (several meters, join
-«each») or one tenant's single meter → each tenant pays by his own meters; otherwise the formula gives one sum for
-the object, split as the service says («Делим»).
+Who pays follows from the formula itself (no «Как считаем»). Since 2026-11-21 (window v2) each meter is a block of
+its own: meters of tenants → each tenant pays by his own meters (another tenant's meter is 0 for him, and drops out of
+his bill line); only common meters → one sum for the object, split as the service says («Делим»). Common meters and
+tenants' meters in one formula are refused. Older blocks of several meters («у каждого свой» / «складываем») still count.
 """
 
 from dataclasses import dataclass, field
@@ -143,9 +144,21 @@ def is_own(block):
 
 
 def named_tenant(block, owner_of):
-    """A single meter of a tenant: the formula is that tenant's only."""
+    """A single meter of a tenant: whose it is."""
     meters = block.get('meters') or []
     return owner_of(meters[0]) if len(meters) == 1 else None
+
+
+MIXED = 'Общий счётчик и счётчики арендаторов в одной формуле нельзя — для общего сделайте отдельную услугу.'
+
+
+def check_mixed(blocks, owner_of):
+    """Common meters and tenants' meters in one formula (2026-11-21: refused, as in «По счётчикам»). Blocks
+    «складываем» are one number for all — not counted here."""
+    whose = {owner_of(pk) is not None for block in meter_blocks(blocks) if block.get('join') != 'sum'
+             for pk in block.get('meters') or []}
+    if whose == {True, False}:
+        raise FormulaError(MIXED)
 
 
 def mode(blocks, owner_of):
@@ -166,26 +179,61 @@ def payers(blocks, owner_of, tenant_ids):
         if not found:
             raise FormulaError('Ни у одного арендатора нет своего счётчика в формуле — отметьте счётчики арендаторов.')
         return found
+    check_mixed(blocks, owner_of)
     named = []
     for block in meter_blocks(blocks):
         tenant = named_tenant(block, owner_of)
         if tenant and tenant not in named:
             named.append(tenant)
-    if len(named) > 1:
-        raise FormulaError('В формуле счётчики разных арендаторов — непонятно, кому выставить. '
-                           'Отметьте у счётчика обоих и выберите «у каждого свой» или «складываем».')
-    return named
+    # Several tenants' meters: each pays by his own (another's meter is 0 for him).
+    return [tenant for tenant in tenant_ids if tenant in named]
 
 
 def meter_usage(block, tenant, usage_of, owner_of):
-    """The month's usage a meter block stands for: one meter — its usage; «складываем» or the whole object — the sum;
-    «у каждого свой» — the tenant's own meters."""
+    """The month's usage a meter block stands for: one meter — its usage, or 0 in another tenant's count;
+    «складываем» or the whole object — the sum; «у каждого свой» — the tenant's own meters."""
     meters = block.get('meters') or []
     if len(meters) == 1:
+        if is_foreign(block, tenant, owner_of):
+            return Decimal('0')
         return usage_of(meters[0])
     if tenant is None or block.get('join') == 'sum':
         return sum((usage_of(pk) for pk in meters), Decimal('0'))
     return sum((usage_of(pk) for pk in meters if owner_of(pk) == tenant), Decimal('0'))
+
+
+def is_foreign(block, tenant, owner_of):
+    """A single meter of another tenant, in this tenant's count: 0, and left out of his bill line."""
+    meters = block.get('meters') or []
+    if tenant is None or len(meters) != 1:
+        return False
+    owner = owner_of(meters[0])
+    return owner is not None and owner != tenant
+
+
+def drop_foreign(parts):
+    """The bill line without another tenant's meters (each was a 0): «(4 м³ + 0 м³) × 45 ₽» → «4 м³ × 45 ₽».
+    A part marked 'foreign' goes with the «+» / «−» next to it; brackets left around one value go too."""
+    out = list(parts)
+    while True:
+        at = next((i for i, part in enumerate(out) if part.get('foreign')), None)
+        if at is None:
+            break
+        if at > 0 and out[at - 1].get('op') in ('+', '−'):
+            del out[at - 1:at + 1]
+        elif at + 1 < len(out) and out[at + 1].get('op') == '+':
+            del out[at:at + 2]
+        else:
+            out[at] = dict(out[at], foreign=False)
+    changed = True
+    while changed:
+        changed = False
+        for i in range(len(out) - 2):
+            if out[i].get('op') == '(' and 'op' not in out[i + 1] and out[i + 2].get('op') == ')':
+                del out[i + 2], out[i]
+                changed = True
+                break
+    return out
 
 
 def clean_blocks(raw, number_ids, meter_ids):
