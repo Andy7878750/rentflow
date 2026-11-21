@@ -73,18 +73,3 @@ class RateTests(TestCase):
         octo = services.rate_total(Receipt.objects.get(pk=receipt.pk), OCT)
         self.assertEqual(sept, (Decimal('300.00'), '2 чел. × 150 ₽'))
         self.assertEqual(octo, (Decimal('480.00'), '3 чел. × 160 ₽'))
-
-    def test_window_saves_and_checks(self):
-        self.client.force_login(self.user)
-        url = reverse('receipt_create', args=[self.prop.pk])
-        base = {'kind': 'garbage', 'name': 'Мусор', 'charge': 'rate', 'rate_base': 'person', 'rate': '150', 'split': 'equal'}
-        response = self.client.post(url, base, HTTP_X_MODAL='1')
-        self.assertContains(response, 'Укажите, сколько человек.')
-        self.client.post(url, {**base, 'persons': '2'}, HTTP_X_MODAL='1')
-        receipt = Receipt.objects.get(name='Мусор')
-        self.assertEqual((receipt.amount_mode, receipt.rate_base, receipt.rate, receipt.persons),
-                         ('rate', 'person', Decimal('150'), 2))
-        window = self.client.get(reverse('receipt_edit', args=[receipt.pk]), HTTP_X_MODAL='1')
-        self.assertContains(window, 'name="charge" value="rate" checked')
-        page = self.client.get(reverse('property_detail', args=[self.prop.pk]))
-        self.assertContains(page, '300,00&nbsp;₽')  # «Считается само» on the object page (2026-11-18): 2 чел. × 150 ₽

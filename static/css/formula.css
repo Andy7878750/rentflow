@@ -190,14 +190,3 @@
   .fx-line .fx-calc { grid-column: 1 / -1; order: 3; }
 }
 
-/* The service window: the formula's panel row and «Делим» only for a formula of one sum */
-.rform:not(:has(input[name=charge][value=formula]:checked)) .formula-only { display: none; }
-.rform .cp-formula { flex: 1 1 auto; min-width: 0; color: var(--color-text); }
-.rform .cp-formula.is-empty { color: var(--color-text-muted); }
-.rform:has(input[name=charge][value=formula]:checked) .charge-panel { --caret: calc((100% - 32px) / 10 * 9 + 32px); }
-.rform:has(input[name=charge][value=formula]:checked) .meter-rows,
-.rform:has(input[name=charge][value=formula]:checked) .cp-row.metered-only,
-.rform:has(input[name=charge][value=formula]:checked) .split-track label:has(input[value=usage]) { display: none !important; }
-/* Each pays by his own meters — nothing to split; the «платит» switches are in the formula window's check. */
-.rform.is-formula-each:has(input[name=charge][value=formula]:checked) [data-split-home=charge],
-.rform.is-formula-each:has(input[name=charge][value=formula]:checked) .head-badge { display: none; }

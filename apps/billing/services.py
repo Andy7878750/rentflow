@@ -659,7 +659,8 @@ def meter_table(owner):
 
     groups = []
     properties = (Property.objects.filter(owner=owner).order_by('name')
-                  .prefetch_related('meters__tenant', 'meters__readings', 'meters__receipts__tariffs'))
+                  .prefetch_related('meters__tenant', 'meters__readings', 'meters__receipts__tariffs',
+                                    'meters__tariff_history'))
     for property_obj in properties:
         rows = []
         for meter in property_obj.meters.all():
@@ -851,7 +852,7 @@ def tariff_table(owner, today=None):
     month = first_of_month(today or date.today())
     groups = []
     properties = (Property.objects.filter(owner=owner).order_by('name')
-                  .prefetch_related('receipts__tariffs', 'receipts__meters', 'receipts__numbers'))
+                  .prefetch_related('receipts__tariffs', 'receipts__meters__tariff_history', 'receipts__numbers'))
     for property_obj in properties:
         rows = []
         for receipt in property_obj.receipts.all():
@@ -887,8 +888,10 @@ def tariff_table(owner, today=None):
             elif receipt.metered:
                 seen = set()
                 for meter in receipt.meters.all():
-                    key = tariff_key(receipt, meter)
-                    key_rows = history.get(key) or history.get(kind_key(receipt, meter), [])
+                    # The meter's own tariff first (2026-11-19), else the service's old one for it.
+                    own_rows = list(meter.tariff_history.all())
+                    key = f'meter:{meter.pk}' if own_rows else tariff_key(receipt, meter)
+                    key_rows = own_rows or history.get(key) or history.get(kind_key(receipt, meter), [])
                     if key == '*' and key in seen:
                         continue
                     seen.add(key)
@@ -927,7 +930,8 @@ def busy_tariff_text(other, meter):
     """The tariff a locked meter counts by in its service: «45,50 ₽/кВт·ч», day / night «5,50 / 2,10 ₽»."""
     if by_usage(other):
         return 'делит по расходу'
-    found = for_meter(kind_tariffs(other, first_of_month(date.today())), other, meter)
+    month = first_of_month(date.today())
+    found = meter_tariff_at(meter, month) or for_meter(kind_tariffs(other, month), other, meter)
     day, night = (found.tariff, found.tariff_night) if found else (meter.tariff or other.tariff, meter.tariff_night or other.tariff_night)
     if day is None:
         return ''

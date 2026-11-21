@@ -77,24 +77,6 @@ class FormulaExampleTests(TestCase):
         receipt.amount_mode = 'monthly'
         self.assertEqual([r.amount_text for r in services.payer_preview(receipt)], ['', ''], 'no sum known yet')
 
-    def test_view_recounts_the_unsaved_form(self):
-        self.client.force_login(self.user)
-        response = self.client.post(reverse('receipt_formula', args=[self.prop.pk]), {
-            'kind': 'internet', 'name': 'Интернет', 'metered': '0', 'amount_mode': 'fixed',
-            'fixed_amount': '4800', 'split': 'shares',
-        })
-        self.assertContains(response, 'class="payer-list')
-        self.assertContains(response, '2 640,00 ₽')
-
-    def test_window_lists_the_tenants_instead_of_the_formula(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('receipt_create', args=[self.prop.pk]) + '?kind=management',
-                                   HTTP_X_MODAL='1')
-        self.assertNotContains(response, 'Пример для')
-        self.assertContains(response, 'class="payer-list')
-        self.assertContains(response, 'Виктор')
-
-
 class PayerSwitchTests(TestCase):
     """«Кто платит»: a tenant switched off doesn't pay the service; their part stays with the owner."""
 
@@ -142,22 +124,3 @@ class PayerSwitchTests(TestCase):
         totals = {p.tenant.name: sum(line.amount for line in p.lines) for p in bill.payers}
         self.assertEqual(totals, {'Виктор': Decimal('450.00'), 'Владислав': 0})
         self.assertEqual(sum(line.amount for line in bill.owner.lines), Decimal('550.00'))
-
-    def test_window_saves_the_switches(self):
-        self.client.force_login(self.user)
-        self.client.post(reverse('receipt_create', args=[self.prop.pk]), {
-            'kind': 'internet', 'name': 'Интернет', 'metered': '0', 'amount_mode': 'fixed',
-            'fixed_amount': '1000', 'split': 'shares', 'payers_shown': '1', 'pays': [str(self.viktor.pk)],
-        })
-        receipt = Receipt.objects.get(property=self.prop)
-        self.assertEqual(list(receipt.excluded.all()), [self.vlad])
-
-    def test_view_recounts_with_the_switch(self):
-        self.client.force_login(self.user)
-        response = self.client.post(reverse('receipt_formula', args=[self.prop.pk]), {
-            'kind': 'internet', 'name': 'Интернет', 'metered': '0', 'amount_mode': 'fixed',
-            'fixed_amount': '1000', 'split': 'equal', 'payers_shown': '1', 'pays': [str(self.viktor.pk)],
-        })
-        self.assertContains(response, 'не платит')
-        self.assertContains(response, '÷ 2')
-        self.assertNotContains(response, '1 000,00 ₽')
