@@ -96,25 +96,34 @@
 .fx-check-box h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em;
   text-transform: uppercase; color: var(--fx-muted); }
 .fx-check { display: flex; flex-direction: column; gap: 6px; }
-.fx-line { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--fx-border); }
-.fx-line:last-child { border-bottom: 0; }
-.fx-line.has-pay { grid-template-columns: 150px minmax(0, 1fr) auto; }
-.fx-who { padding-top: 1px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fx-line.is-off .fx-who, .fx-line.is-off .fx-calc { color: var(--fx-muted); }
-.fx-calc { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 6px; color: var(--fx-text); font-size: 13px; }
-/* Every number — the same 96px column, its name centred under it, up to three lines */
-.fx-n { display: inline-grid; justify-items: center; min-width: 96px; }
-.fx-n b { font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.fx-n i { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; width: 0; min-width: 100%;
-  font-style: normal; font-size: 10.5px; line-height: 1.2; color: var(--fx-muted); text-align: center; white-space: normal; }
-.fx-op { font-size: 14px; line-height: 20px; color: var(--fx-muted); }
-.fx-op.is-paren { font-size: 17px; font-weight: 300; }
-.fx-eq { white-space: nowrap; line-height: 20px; }
-.fx-res { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Variant А (2026-11-21): a card per tenant, like the object page's «Счёт» */
+.fx-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fx-cards.is-one { grid-template-columns: minmax(0, 1fr); }
+.fx-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--fx-border); border-radius: 8px; background: #fff; }
+.fx-chead { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 40px; padding: 0 12px; background: #f1f3f5; font-weight: 600; }
+.fx-cname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-cbody { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; font-size: 13px; }
+.fx-cbody .fx-note { margin: 0; }
+.fx-crow { display: flex; justify-content: space-between; gap: 10px; }
+.fx-ck { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fx-muted); }
+.fx-cv { flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fx-crow.is-calc { margin-top: 2px; padding-top: 4px; border-top: 1px dashed var(--fx-border); }
+.fx-ctotal { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 8px 12px; border-top: 2px solid var(--color-primary);
+  color: var(--color-primary); }
+.fx-ctotal span { font-size: 13px; font-weight: 700; }
+.fx-ctotal b { font-size: 20px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fx-card.is-off .fx-cname, .fx-card.is-off .fx-ctotal { color: var(--fx-muted); }
+.fx-card.is-off .fx-ctotal { border-top-color: var(--fx-border); }
+.fx-sums { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--fx-border); }
+.fx-sum { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--color-primary); }
+.fx-sum span { display: flex; flex-direction: column; min-width: 0; font-size: 13px; font-weight: 700; }
+.fx-sum small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 400; color: var(--fx-muted); }
+.fx-sum b { font-size: 16px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fx-sum.is-owner span, .fx-sum.is-owner b { color: var(--fx-muted); font-weight: 600; }
 .fx-note { color: var(--fx-muted); font-size: 13px; line-height: 20px; }
 .fx-note.is-err { color: var(--fx-danger); }
 .fx-sample-note { margin: 0 0 2px; }
-.fx-pay { position: relative; width: 32px; height: 18px; margin-top: 1px; padding: 0; border: 0; border-radius: 9px; background: #cfd8dc; cursor: pointer; }
+.fx-pay { position: relative; flex: none; width: 32px; height: 18px; padding: 0; border: 0; border-radius: 9px; background: #cfd8dc; cursor: pointer; }
 .fx-pay span { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff;
   box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .15s; }
 .fx-pay.is-on { background: var(--fx-accent); }
@@ -235,7 +244,6 @@
   .fx-modal { padding: 18px 16px; }
   .fx-palette { grid-template-columns: 1fr 1fr; }
   .fx-mhead, .fx-mline { grid-template-columns: 16px 18px minmax(0, 1fr) 96px; }
-  .fx-line, .fx-line.has-pay { grid-template-columns: 1fr auto; gap: 4px; }
-  .fx-line .fx-calc { grid-column: 1 / -1; order: 3; }
+  .fx-cards { grid-template-columns: minmax(0, 1fr); }
 }
 

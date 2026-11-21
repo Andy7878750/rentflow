@@ -393,28 +393,44 @@
         box.innerHTML = '<p class="fx-hint">Соберите формулу — здесь появится расчёт для каждого арендатора.</p>';
         return;
       }
-      function line(who, parts, sum, bad, tid) {
-        var d = document.createElement('div');
-        var switchable = tid && payBox(tid);
-        d.className = 'fx-line' + (switchable ? ' has-pay' : '') + (switchable && isOff(tid) ? ' is-off' : '');
-        var html;
-        if (typeof parts === 'string') html = '<span class="fx-note' + (bad ? ' is-err' : '') + '">' + esc(parts) + '</span>';
-        else html = parts.map(function (x) {
-          return x.op ? '<span class="fx-op' + ('()'.indexOf(x.op) >= 0 ? ' is-paren' : '') + '">' + x.op + '</span>'
-            : '<span class="fx-n" title="' + esc(x.word) + '"><b>' + esc(x.num) + '</b><i>' + esc(x.word) + (x.sample ? ' · пример' : '') + '</i></span>';
-        }).join('') + (sum ? '<span class="fx-eq"><span class="fx-op">=</span> <span class="fx-res">' + esc(sum) + '</span></span>' : '');
-        d.innerHTML = '<span class="fx-who"></span><span class="fx-calc">' + html + '</span>';
-        d.querySelector('.fx-who').textContent = who;
-        if (switchable) {
-          d.insertAdjacentHTML('beforeend', '<button type="button" class="fx-pay' + (isOff(tid) ? '' : ' is-on') + '" data-pay="' + tid +
-            '" role="switch" aria-checked="' + !isOff(tid) + '" title="' + (isOff(tid) ? 'Не платит' : 'Платит') + '"><span></span></button>');
-        }
-        box.appendChild(d);
+      // Variant А (2026-11-21, docs/mockups/2026-11-21-formula-result.html): a card per tenant like the object page's
+      // «Счёт» — what goes in (name · number), the formula in numbers, «Итого» big; under the cards «Всего по услуге».
+      function partsText(parts) {
+        return parts.map(function (x) { return x.op || x.num; }).join(' ').replace(/\( /g, '(').replace(/ \)/g, ')');
       }
+      function valueRows(parts) {
+        return parts.filter(function (x) { return !x.op; }).map(function (x) { return [x.word, x.num, x.sample]; });
+      }
+      var cards = document.createElement('div'); cards.className = 'fx-cards';
+      // rows: [[word, number, sample]]; calc — the formula in numbers; note — a sentence instead (bad — an error).
+      function card(who, o) {
+        var d = document.createElement('div');
+        var switchable = o.tid && payBox(o.tid), off = switchable && isOff(o.tid);
+        d.className = 'fx-card' + (off || o.muted ? ' is-off' : '');
+        var body = o.note ? '<p class="fx-note' + (o.bad ? ' is-err' : '') + '">' + esc(o.note) + '</p>'
+          : (o.rows || []).map(function (row) {
+            return '<div class="fx-crow"><span class="fx-ck">' + esc(row[0]) + (row[2] ? ' · пример' : '') + '</span><span class="fx-cv">' + esc(row[1]) + '</span></div>';
+          }).join('') + (o.calc ? '<div class="fx-crow is-calc"><span class="fx-ck">' + esc(o.calc) + '</span></div>' : '');
+        d.innerHTML = '<div class="fx-chead"><span class="fx-cname"></span>' + (switchable ? '<button type="button" class="fx-pay' + (off ? '' : ' is-on') +
+          '" data-pay="' + o.tid + '" role="switch" aria-checked="' + !off + '" title="' + (off ? 'Не платит' : 'Платит') + '"><span></span></button>' : '') + '</div>' +
+          '<div class="fx-cbody">' + body + '</div>' +
+          '<div class="fx-ctotal"><span>Итого</span><b>' + esc(o.total || '—') + '</b></div>';
+        d.querySelector('.fx-cname').textContent = who;
+        d.querySelector('.fx-cname').title = who;
+        cards.appendChild(d);
+      }
+      // «Остаётся на вас» and «Всего по услуге» under the cards.
+      function sums(owner, total, calc) {
+        var s = document.createElement('div'); s.className = 'fx-sums';
+        s.innerHTML = (owner > 0.004 ? '<div class="fx-sum is-owner"><span>Остаётся на вас</span><b>' + esc(rub(owner, SYM)) + '</b></div>' : '') +
+          '<div class="fx-sum"><span>Всего по услуге' + (calc ? '<small>' + esc(calc) + '</small>' : '') + '</span><b>' + esc(rub(total, SYM)) + '</b></div>';
+        box.appendChild(s);
+      }
+      function fail(text) { var p = document.createElement('p'); p.className = 'fx-note is-err'; p.textContent = text; box.appendChild(p); }
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
       var ok = true;
       if (isMixed(formulaMeters())) {
-        line('Кому?', MIXED, '', true);
+        fail(MIXED);
         badge.textContent = 'есть ошибка'; badge.className = 'fx-badge is-bad';
         return;
       }
@@ -428,45 +444,50 @@
         // Several tenants' meters: each pays by his own (window v2).
         if (own.length && !payers.length) {
           ok = false;
-          line('Кому?', 'Ни у одного арендатора нет своего счётчика в формуле — укажите у счётчиков, чьи они.', '', true);
+          fail('Ни у одного арендатора нет своего счётчика в формуле — укажите у счётчиков, чьи они.');
         } else {
+          var all = 0, mine = 0;
+          box.appendChild(cards);
           TENANTS.forEach(function (t) {
-            if (payers.indexOf(t.id) < 0) { line(t.name, 'не платит — нет его счётчика в формуле', ''); return; }
-            if (isOff(t.id)) { line(t.name, 'не платит — его часть на вас', '', false, t.id); return; }
+            if (payers.indexOf(t.id) < 0) { card(t.name, { note: 'не платит — нет его счётчика в формуле', muted: true }); return; }
             var r = evaluate(t.id);
-            if (r.error) { ok = false; line(t.name, r.error, '', true, t.id); }
-            else line(t.name, r.parts, rub(r.v, SYM), false, t.id);
+            if (r.error) { ok = false; card(t.name, { note: r.error, bad: true, tid: t.id }); return; }
+            all += r.v;
+            if (isOff(t.id)) { mine += r.v; card(t.name, { note: 'не платит — его часть ' + rub(r.v, SYM) + ' на вас', tid: t.id }); return; }
+            card(t.name, { rows: valueRows(r.parts), calc: partsText(r.parts), total: rub(r.v, SYM), tid: t.id });
           });
+          if (ok) sums(mine, all);
         }
       } else {
         var r = evaluate(null);
-        if (r.error) { ok = false; line('Объект', r.error, '', true); }
+        if (r.error) { ok = false; fail(r.error); }
         else if (!TENANTS.length) {
-          line('Вы', r.parts, rub(r.v, SYM));
+          box.appendChild(cards);
+          card('Вы', { rows: valueRows(r.parts), calc: partsText(r.parts), total: rub(r.v, SYM) });
         } else {
-          line('Объект', r.parts, rub(r.v, SYM));
           var split = splitNow();
           var paying = TENANTS.filter(function (t) { return !isOff(t.id); }).length;
-          var owner = r.v;
+          var owner = r.v, whole = ['Сумма на объект', rub(r.v, SYM)];
+          box.appendChild(cards);
           TENANTS.forEach(function (t) {
-            if (split === 'owner') { line(t.name, 'не платит — «Плачу сам»', ''); return; }
-            if (isOff(t.id)) { line(t.name, 'не платит — его часть на вас', '', false, t.id); return; }
-            var whole = { num: rub(r.v, SYM), word: 'на объект' };
-            var part, parts;
-            if (split === 'equal') { part = r.v / paying; parts = [whole, { op: '÷' }, { num: String(paying), word: paying === 1 ? 'платит один' : 'платят' }]; }
+            if (split === 'owner') { card(t.name, { note: 'не платит — «Плачу сам»', muted: true }); return; }
+            if (isOff(t.id)) { card(t.name, { note: 'не платит — его часть на вас', tid: t.id }); return; }
+            var part, rows;
+            if (split === 'equal') { part = r.v / paying; rows = [whole, ['Поровну', '÷ ' + paying]]; }
             else if (split === 'area') {
               part = ctx.area ? r.v * (t.area || 0) / ctx.area : 0;
-              parts = [whole, { op: '×' }, { num: fmt(t.area || 0) + ' м²', word: 'его площадь' }, { op: '÷' }, { num: fmt(ctx.area || 0) + ' м²', word: 'площадь объекта' }];
-            } else { part = r.v * t.share / 100; parts = [whole, { op: '×' }, { num: fmt(t.share) + '%', word: 'доля' }]; }
+              rows = [whole, ['По м²', '× ' + fmt(t.area || 0) + ' ÷ ' + fmt(ctx.area || 0) + ' м²']];
+            } else { part = r.v * t.share / 100; rows = [whole, ['Доля', '× ' + fmt(t.share) + '%']]; }
             owner -= part;
-            line(t.name, parts, rub(part, SYM), false, t.id);
+            card(t.name, { rows: rows, total: rub(part, SYM), tid: t.id });
           });
-          if (owner > 0.004) line('На вас', [{ num: rub(owner, SYM), word: split === 'owner' ? 'вся сумма' : 'не платит / не сдано' }], '');
+          sums(owner, r.v, partsText(r.parts));
           hint(split === 'owner' ? 'Всю сумму платите вы. Как делить, выбираете в окне услуги, под формулой.'
-            : 'Формула даёт одну сумму на объект — она делится ' + ({ shares: 'по долям', equal: 'поровну', area: 'по м²' }[split] || 'по долям') +
-              '. Как делить, выбираете в окне услуги, под формулой.');
+            : 'Одна сумма на объект делится ' + ({ shares: 'по долям', equal: 'поровну', area: 'по м²' }[split] || 'по долям') +
+              ' — как делить, выбираете в окне услуги, под формулой.');
         }
       }
+      cards.classList.toggle('is-one', cards.children.length === 1);
       if (ok && evaluate(modeNow() === 'each' && TENANTS.length ? TENANTS[0].id : null).bare) {
         hint('У одного из чисел не указана единица — проверку «итог в рублях» для этой формулы не делаем.');
       }
