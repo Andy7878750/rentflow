@@ -788,13 +788,20 @@
       out.push(op(')'));
       return out;
     }
+    // Meters already standing in the formula as blocks of their own: one meter goes in once.
+    function inFormula() {
+      var ids = [];
+      blocks.forEach(function (b) { if (b.type === 'meter' && b.meters.length === 1) ids.push(b.meters[0]); });
+      return ids;
+    }
     function openMeters(anchor, at) {
       closePop();
-      var picked = [];
-      // Quick ticks: «вся вода» when there are both waters, then each kind there is.
+      var picked = [], taken = inFormula();
+      function free(keys) { return activeOf(keys).filter(function (id) { return taken.indexOf(id) < 0; }); }
+      // Quick ticks: «вся вода» when there are both waters, then each kind there is (only meters not in the formula yet).
       var quick = [];
-      if (activeOf(['water']).length && activeOf(['hot_water']).length) quick.push(['water,hot_water', 'вся вода']);
-      KINDS.forEach(function (k) { if (activeOf([k.key]).length) quick.push([k.key, k.name.toLowerCase()]); });
+      if (free(['water']).length && free(['hot_water']).length) quick.push(['water,hot_water', 'вся вода']);
+      KINDS.forEach(function (k) { if (free([k.key]).length) quick.push([k.key, k.name.toLowerCase()]); });
       pop = document.createElement('div'); pop.className = 'fx-pop is-wide';
       pop.innerHTML = '<h4>Расход счётчиков</h4>' +
         (quick.length > 1 ? '<div class="fx-quick">Отметить:' + quick.map(function (q) {
@@ -802,11 +809,13 @@
         }).join('') + '</div>' : '') +
         '<div class="fx-mlist"><div class="fx-mhead"><span></span><span></span><span>Счётчик</span><span>Кто платит</span></div>' +
         METERS.map(function (m) {
-          var k = kindOf(m.key), on = isActive(m);
-          return '<label class="fx-mline mk-' + k.icon + (on ? '' : ' is-off') + '"' + (on ? '' : ' title="' + esc(offText(m)) + '"') + '>' +
-            '<input type="checkbox" data-m="' + m.id + '"' + (on ? '' : ' disabled') + '>' +
+          var k = kindOf(m.key), on = isActive(m), used = taken.indexOf(m.id) >= 0;
+          var sub = !on ? 'не подключён к услуге' : used ? 'уже в формуле' : 'расход' + (k.unit ? ', ' + esc(k.unit) : '');
+          return '<label class="fx-mline mk-' + k.icon + (on && !used ? '' : ' is-off') + (used ? ' is-used' : '') + '"' +
+            (on ? '' : ' title="' + esc(offText(m)) + '"') + '>' +
+            '<input type="checkbox" data-m="' + m.id + '"' + (used ? ' checked disabled' : on ? '' : ' disabled') + '>' +
             '<span class="fx-ico">' + (ICONS[k.icon] || ICONS.custom) + '</span>' +
-            '<span class="fx-mname"><span>' + esc(meterName(m)) + '</span><small>' + (on ? 'расход' + (k.unit ? ', ' + esc(k.unit) : '') : 'не подключён к услуге') + '</small></span>' +
+            '<span class="fx-mname"><span>' + esc(meterName(m)) + '</span><small>' + sub + '</small></span>' +
             '<span class="fx-mwho">' + esc(whoLabel(m.id)) + '</span></label>';
         }).join('') + '</div>' +
         '<p class="fx-example" data-mnote></p>' +
@@ -816,7 +825,7 @@
       placePop(anchor);
       function count(n) { return n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'счётчик' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'счётчика' : 'счётчиков'); }
       function refresh() {
-        pop.querySelectorAll('[data-m]').forEach(function (box) { box.checked = picked.indexOf(Number(box.dataset.m)) >= 0; });
+        pop.querySelectorAll('[data-m]:not(:disabled)').forEach(function (box) { box.checked = picked.indexOf(Number(box.dataset.m)) >= 0; });
         var mixed = isMixed(picked.concat(formulaMeters()));
         var add = pop.querySelector('[data-add]'), note = pop.querySelector('[data-mnote]');
         add.disabled = !picked.length || mixed;
@@ -831,7 +840,7 @@
       });
       pop.addEventListener('click', function (ev) {
         var q = ev.target.closest('[data-quick]'); if (!q) return;
-        var ids = activeOf(q.dataset.quick.split(','));
+        var ids = free(q.dataset.quick.split(','));
         var all = ids.every(function (id) { return picked.indexOf(id) >= 0; });
         picked = all ? picked.filter(function (id) { return ids.indexOf(id) < 0; })
           : picked.concat(ids.filter(function (id) { return picked.indexOf(id) < 0; }));

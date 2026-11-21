@@ -225,6 +225,7 @@
 .fx-mname small { font-size: 11.5px; color: var(--fx-muted); }
 .fx-mwho { font-size: 12.5px; color: var(--fx-muted); }
 .fx-mline.is-off { color: var(--fx-muted); cursor: help; }
+.fx-mline.is-used { cursor: default; }
 .fx-mline.is-off .fx-ico { opacity: .5; }
 .fx-example.is-warn { color: var(--fx-danger); }
 .fx-example:empty { display: none; }
