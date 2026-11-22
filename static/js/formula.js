@@ -28,6 +28,7 @@
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
     tag: svg('<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
     gauge: svg('<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>'),
+    people: svg('<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/>'),
     electricity: svg('<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>', true),
     water: svg('<path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/>', true),
     heating: svg('<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v12M12 6v12M16 6v12M6 18v3M18 18v3"/>'),
@@ -384,9 +385,11 @@
       return ids;
     }
 
-    function renderCheck() {
-      var box = overlay.querySelector('[data-check]');
-      var badge = overlay.querySelector('[data-state-badge]');
+    function renderCheck(root) {
+      root = root || overlay;
+      var box = root.querySelector('[data-check]');
+      var badge = root.querySelector('[data-state-badge]') || document.createElement('span');
+      var checkBadge = root.querySelector('[data-check-badge]') || document.createElement('span');
       box.innerHTML = '';
       if (!blocks.length) {
         badge.textContent = ''; badge.className = 'fx-badge';
@@ -501,6 +504,12 @@
           var allW = split === 'shares' ? 100 : split === 'area' ? (ctx.area || sumW(TENANTS)) : TENANTS.length;
           var baseW = tk ? allW : sumW(on);
           box.appendChild(cards);
+          if (split !== 'owner') {
+            cards.insertAdjacentHTML('afterbegin', '<div class="sv-split-top">' + ICONS.people.replace('<svg ', '<svg class="sv-i" ') +
+              '<div class="sv-how">' + [['shares', 'по долям'], ['equal', 'поровну'], ['area', 'по м²']].map(function (x) {
+                return '<button type="button" data-split="' + x[0] + '"' + (x[0] === split ? ' class="is-on"' : '') + '>' + x[1] + '</button>';
+              }).join('') + '</div></div>');
+          }
           TENANTS.forEach(function (t) {
             if (split === 'owner') { card(t.name, { note: 'не платит — «Плачу сам»', muted: true }); return; }
             if (isOff(t.id)) { card(t.name, { note: 'не платит — его часть ' + (tk ? 'на вас' : 'делят платящие'), tid: t.id }); return; }
@@ -512,9 +521,7 @@
             card(t.name, { rows: [whole], calc: rub(r.v, SYM) + ' ' + how, total: rub(part, SYM), tid: t.id });
           });
           sums(owner, r.v, partsText(r.parts), canPass, tk);
-          hint(split === 'owner' ? 'Всю сумму платите вы. Как делить, выбираете в окне услуги, под формулой.'
-            : 'Одна сумма на объект делится ' + ({ shares: 'по долям', equal: 'поровну', area: 'по м²' }[split] || 'по долям') +
-              ' — как делить, выбираете в окне услуги, под формулой.');
+          if (split === 'owner') hint('Всю сумму платите вы.');
         }
       }
       if (ok && evaluate(modeNow() === 'each' && TENANTS.length ? TENANTS[0].id : null).bare) {
@@ -522,7 +529,7 @@
       }
       var samples = values.filter(function (v) { return v.type === 'month' && !v.real && blocks.some(function (b) { return b.vid === v.id; }); });
       var sampleMeters = blocks.some(function (b) { return b.type === 'meter' && b.meters.some(usageIsSample); });
-      overlay.querySelector('[data-check-badge]').textContent = samples.length || sampleMeters ? 'на примерных числах' : 'на числах прошлого месяца';
+      checkBadge.textContent = samples.length || sampleMeters ? 'на примерных числах' : 'на числах прошлого месяца';
       if (samples.length || sampleMeters) {
         var words = samples.map(function (v) { return v.label + ' ' + fmt(v.sample) + (v.unit ? ' ' + v.unit : ''); });
         if (sampleMeters) words.push('расход счётчиков без показаний');
@@ -682,6 +689,8 @@
     });
     overlay.querySelector('[data-check]').addEventListener('click', function (e) {
       if (e.target.closest('[data-owner]') && opts.toggleOwner) { opts.toggleOwner(); render(); return; }
+      var how = e.target.closest('[data-split]');
+      if (how && opts.setSplit) { opts.setSplit(how.dataset.split); render(); return; }
       var b = e.target.closest('[data-pay]'); if (!b || !payBox(b.dataset.pay)) return;
       opts.togglePay(Number(b.dataset.pay));
       render();
@@ -1075,7 +1084,19 @@
     overlay.querySelector('[data-x]').addEventListener('click', function () { closeFormula(false); });
     overlay.querySelector('[data-done]').addEventListener('click', function () { closeFormula(true); });
     publish();
+    // The service window shows the same formula and the same «Как посчитается» (2026-11-22): blocks here are read-only,
+    // the panel's switches are the service window's own (data-pay / data-owner / data-split are handled there).
+    function preview(chipsEl, checkEl) {
+      if (chipsEl) {
+        chipsEl.innerHTML = '';
+        if (!blocks.length) chipsEl.innerHTML = '<span class="fx-empty">Формула ещё не собрана</span>';
+        blocks.forEach(function (b) { chipsEl.appendChild(chipEl(b)); });
+        chipsEl.querySelectorAll('.fx-nm, .fx-s2').forEach(function (e) { e.classList.toggle('is-cut', e.scrollWidth > e.clientWidth + 1); });
+      }
+      if (checkEl && blocks.length) renderCheck(checkEl);
+    }
     return {
+      preview: preview,
       open: openFormula,
       destroy: function () { closePop(); overlay.remove(); if (host.tagName === 'DIALOG') host.removeEventListener('cancel', onCancel); },
     };
@@ -1084,6 +1105,11 @@
   /* The service window (services.js) opens it: one window per opening, gone when closed.
      «Делим» and the «платит» switches live in the service window: the check follows them. */
   window.rentflowFormula = {
+    // Draw the formula (blocks) and «Как посчитается» into the service window, without opening the formula window.
+    preview: function (opts, chipsEl, checkEl) {
+      var fx = setup(Object.assign({}, opts, { host: document.createElement('div') }));
+      fx.preview(chipsEl, checkEl);
+    },
     open: function (opts) {
       var fx = setup(Object.assign({}, opts, {
         close: function (keep) {

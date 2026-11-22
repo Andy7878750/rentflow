@@ -213,36 +213,24 @@
       return '<div class="sv-gp">' + splitTop(s.split, 'data-split') + rows + '</div>';
     }
 
-    // «Своя формула» where each pays by his own meters: nothing to divide, only who pays (the rest — on the owner).
-    function eachRows(s) {
-      var r = shares('shares', s.excluded, s.owner_takes);
-      return '<div class="sv-gp">' + T.map(function (t, i) {
-        var on = s.excluded.indexOf(t.id) < 0;
-        return '<div class="sv-gp-row' + (on ? '' : ' is-off') + '"><span class="sv-no">' + (i + 1) + '</span>' +
-          '<span class="sv-who fade">' + esc(t.name) + '</span><span class="sv-meta"></span>' +
-          '<span class="sv-sum">' + (on ? 'по своим счётчикам' : 'не платит') + '</span>' +
-          sw(on, 'data-pay="' + t.id + '"', t.name + ' платит') + '</div>';
-      }).join('') +
-        // «Остаётся на вас» as everywhere: its switch shows once someone doesn't pay; off — those who pay share his part.
-        '<div class="sv-gp-row is-owner' + (r.canPass ? ' can-pass' : '') + (r.takes ? '' : ' is-off') + '"><span></span>' +
-        '<span class="sv-who">Остаётся на вас</span><span class="sv-meta"></span>' +
-        '<span class="sv-sum">' + (r.canPass ? (r.takes ? 'часть неплатящих' : 'делят платящие') : '—') + '</span>' +
-        (r.canPass ? sw(r.takes, 'data-owner', 'Остаток на вас') : '<span></span>') + '</div></div>';
-    }
-
-    // ---------- «Своя формула»: its own window over this one (formula.js); «Готово» — into this service ----------
-    function openFormula() {
-      var s = current, last = null, first = null;
-      window.rentflowFormula.open({
+    // What the formula window and its preview here see of this service: «Делим», who pays, «Остаётся на вас».
+    function fxOpts(s) {
+      return {
         ctx: s.fx || S.fx_new, state: s.fx_data || null,
-        host: box.closest('dialog') || document.body,
         split: function () { return s.split; },
+        setSplit: function (how) { s.split = how; mark(); },
         canPay: function (id) { return !!byId(T, id); },
         isOff: function (id) { return s.excluded.indexOf(id) >= 0; },
         togglePay: function (id) { toggle(s.excluded, id); mark(); },
         // «Остаётся на вас»: on — the part of those who don't pay is the owner's; off — those who pay share it
         ownerTakes: function () { return s.owner_takes !== false; },
         toggleOwner: function () { s.owner_takes = s.owner_takes === false; mark(); },
+      };
+    }
+    function openFormula() {
+      var s = current, last = null, first = null;
+      window.rentflowFormula.open(Object.assign(fxOpts(s), {
+        host: box.closest('dialog') || document.body,
         // the first publish is the formula as it opened: «Готово» without changes changes nothing
         publish: function (data, words, each) {
           last = { data: data, words: words, each: each, json: JSON.stringify(data) };
@@ -255,7 +243,7 @@
           }
           if (current === s) renderPane();
         }
-      });
+      }));
     }
 
     // ---------- «По тарифу»: Тариф ₽ за [ед.] × [объём] = итог ----------
@@ -464,18 +452,22 @@
           '<span class="sv-op">×</span>' + field('volume', v, s.unit, 'w-vol', '0') + '<span class="sv-cp-total">= ' + money(t) + '</span>');
       }
       if (s.mode === 'meters') b = cp('meters', '<span>Каждый платит по своему счётчику: <b>расход</b> <span class="sv-op">×</span> <b>тариф счётчика</b>. Общий счётчик — делим.</span>');
+      // «Своя формула» (2026-11-22): the formula as the same blocks as in its window (a click opens it), and under it
+      // the same «Как посчитается» — its switches work here too.
       if (s.mode === 'formula') {
-        b = cp('formula', '<span class="fade sv-formula' + (s.formula ? '' : ' is-empty') + '" title="' + esc(s.formula) + '">' +
-          esc(s.formula || 'Формула ещё не собрана') + '</span>' +
-          '<button type="button" class="btn btn-primary btn-auto btn-sm" data-fx-open>' + (s.formula ? 'Изменить формулу' : 'Собрать формулу') + '</button>');
+        b = '<div class="sv-fxv fx-preview"><div class="fx-strip is-static" data-fx-chips data-fx-open title="Изменить формулу"></div>' +
+          '<button type="button" class="btn btn-primary btn-auto btn-sm" data-fx-open>' + (s.formula ? 'Изменить формулу' : 'Собрать формулу') + '</button></div>';
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
       h += block('Как начисляется · ' + modeName(s.mode) + warn + (s.mode === 'meters' && s.isNew ? busyBadges() : ''), b);
-      if (s.mode === 'formula' && s.fx_each) {
-        h += block('Кто платит', eachRows(s));
-      } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area' || s.mode === 'formula') {
-        h += block('Делим и кто платит' + ((s.mode === 'receipt' || s.mode === 'formula') && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
+      if (s.mode === 'formula') {
+        if (s.formula) {
+          h += '<div class="sv-sec fx-preview" data-fx-check><h3>Как посчитается <span class="fx-badge" data-check-badge></span> ' +
+            '<span class="fx-badge" data-state-badge></span></h3><div class="fx-check" data-check></div></div>';
+        }
+      } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
+        h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (s.mode === 'meters') {
         if (s.isNew) h += block('Выберите группу счётчиков', groupTiles(s));
         // «Кто платит» only once a group is chosen — no empty box before that (2026-11-20)
@@ -527,6 +519,9 @@
       }
       if (meterOpen != null) h += meterWindow();
       pane.innerHTML = h;
+      if (s.mode === 'formula' && window.rentflowFormula) {
+        window.rentflowFormula.preview(fxOpts(s), pane.querySelector('[data-fx-chips]'), pane.querySelector('[data-fx-check]'));
+      }
       // «Кто платит» near the bottom bar: the menu opens upwards
       var menu = pane.querySelector('.sv-payer-menu'), foot = pane.querySelector('.sv-foot');
       if (menu && foot && menu.getBoundingClientRect().bottom > foot.getBoundingClientRect().top - 8) menu.classList.add('is-up');

@@ -9,6 +9,18 @@
   padding: 24px 16px; background: rgba(30, 40, 50, .45); overflow-y: auto; color: var(--fx-text);
 }
 .fx-overlay[hidden] { display: none; }
+/* The same formula and «Как посчитается» in the service window (2026-11-22) */
+.fx-preview {
+  --fx-text: var(--color-text); --fx-muted: var(--color-text-muted); --fx-border: var(--color-border);
+  --fx-accent: var(--color-accent); --fx-accent-soft: var(--color-accent-soft); --fx-danger: var(--color-danger);
+  --fx-info-bg: #e3f1f6; --fx-info: #1f6280; --fx-tile: #f4f6f8;
+}
+.sv-fxv { display: flex; align-items: flex-start; gap: 12px; padding: 10px; border-radius: var(--radius); background: #f1f3f5; }
+.sv-fxv .btn { flex: none; margin-top: 6px; }
+.fx-strip.is-static { flex: 1; min-width: 0; min-height: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+.fx-strip.is-static .fx-chip { cursor: pointer; background: #fff; }
+.fx-strip.is-static .fx-chip.k-op { background: var(--fx-accent-soft); }
+.sv-sec.fx-preview h3 .fx-badge { margin-left: 0; }
 .fx-modal { box-sizing: border-box; width: 100%; max-width: 820px; display: flex; flex-direction: column; gap: 14px;
   padding: 22px 24px; border-radius: 16px; background: var(--color-surface); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
 .fx-modal h2 { margin: 0; font-size: 20px; }
