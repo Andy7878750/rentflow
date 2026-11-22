@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Окно объекта — как окно услуг</title>
+<style>
+/* Макет 2026-11-22: окно объекта в каркасе окна услуг — слева меню (Объект · Счётчики · Арендаторы, ниже «Объекты»),
+   справа — тот же блок формы, что сейчас (поля, плашки счётчиков, строки арендаторов не меняются). Вкладки — разделы. */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1; --danger: #c0392b;
+  --bg: #f5f6f7; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680; --warm: #fffbe6; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 40px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.page { max-width: 1060px; margin: 0 auto; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: rgba(255,255,255,.85); font: 600 13px var(--font); color: var(--text); cursor: pointer; }
+.tabs button.is-on { background: var(--accent); color: #fff; }
+.view { display: none; } .view.is-on { display: block; }
+
+.win { height: 640px; background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; overflow: hidden; }
+.win-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border); }
+.win-head h1 { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary); }
+.win-head h1 span { color: var(--muted); font-weight: 400; }
+.x { color: var(--muted); font-size: 22px; }
+.win-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px 1fr; }
+.nav { display: flex; flex-direction: column; border-right: 1px solid var(--border); padding: 12px; }
+.nav-cap { font-size: 12px; color: var(--muted); padding: 4px 10px 6px; }
+.nav-sep { height: 1px; background: var(--border); margin: 10px 10px 12px; }
+.nav-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: var(--radius); color: var(--text); cursor: pointer; }
+.nav-item .i { color: var(--muted); }
+.nav-item.is-on { color: var(--accent); font-weight: 600; }
+.nav-item.is-on .i { color: var(--accent); }
+.nav-item .cnt { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 400; }
+.nav-item .dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+.nav-bottom { margin-top: auto; }
+.nav-item.is-active { background: #eceef0; font-weight: 600; }
+.nav-item.is-add { color: var(--accent); font-weight: 600; }
+.pane { display: flex; flex-direction: column; min-width: 0; }
+.top { border-bottom: 1px solid var(--border); padding: 0 32px; }
+.top-line { display: flex; align-items: center; gap: 8px; height: 52px; }
+.top-line .name { font-size: 15px; font-weight: 600; color: var(--primary); }
+.top-line .sub { font-size: 13px; color: var(--muted); }
+.body { flex: 1; overflow-y: auto; padding: 20px 32px 24px; display: flex; flex-direction: column; gap: 20px; }
+.sec > h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; height: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.foot { display: flex; align-items: center; gap: 8px; height: 72px; padding: 0 32px; border-top: 1px solid var(--border); }
+.foot .del { color: var(--danger); font-size: 13.5px; }
+.foot .sp { flex: 1; }
+.btn { height: 38px; padding: 0 18px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font: 600 14px var(--font); color: var(--text); display: inline-flex; align-items: center; }
+.btn.main { border-color: var(--accent); color: var(--accent); }
+
+/* как сейчас в окне объекта */
+.grid { display: grid; gap: 12px; }
+.g2 { grid-template-columns: 1fr 1fr; } .gaddr { grid-template-columns: 2fr 1fr 1fr; }
+.fl label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.fl .in { height: 38px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 12px; display: flex; align-items: center; justify-content: space-between; }
+.fl .in.warm { background: var(--warm); }
+.link { color: var(--accent); font-size: 13.5px; }
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.tile { height: 72px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; }
+.tile small { color: var(--muted); font-size: 12px; }
+.tile.add { border-style: dashed; align-items: center; color: var(--accent); }
+.seg { display: inline-flex; padding: 3px; border-radius: var(--radius); background: #eceef0; }
+.seg span { padding: 4px 12px; border-radius: 6px; font-size: 13px; color: var(--muted); }
+.seg span.on { background: var(--accent); color: #fff; font-weight: 600; }
+.badge { height: 20px; padding: 0 8px; border-radius: 10px; background: #e3f1f6; color: #1f6280; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; text-transform: none; letter-spacing: 0; }
+.rows { border-radius: var(--radius); background: #f1f3f5; padding: 4px 14px; }
+.row { display: grid; grid-template-columns: 22px 1fr 90px 30px; align-items: center; gap: 10px; height: 40px; font-size: 13.5px; }
+.row + .row { border-top: 1px solid #e3e6e9; }
+.no { width: 22px; height: 22px; border-radius: 50%; background: #fff; color: var(--muted); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.row .m { color: var(--muted); text-align: right; }
+.empty { color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></symbol>
+  <symbol id="people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/></symbol>
+  <symbol id="obj" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-4h4v4"/></symbol>
+</svg>
+<div class="page">
+  <div class="tabs" data-tabs>
+    <button class="is-on" data-v="o">Объект</button>
+    <button data-v="m">Счётчики</button>
+    <button data-v="t">Арендаторы</button>
+  </div>
+
+  <div class="win">
+    <div class="win-head"><h1>Объекты <span>· Новый объект</span></h1><span class="x">×</span></div>
+    <div class="win-body">
+      <nav class="nav">
+        <div class="nav-cap">Новый объект</div>
+        <div class="nav-item is-on" data-go="o"><svg class="i"><use href="#home"/></svg>Объект<span class="dot" title="Не заполнено название"></span></div>
+        <div class="nav-item" data-go="m"><svg class="i"><use href="#gauge"/></svg>Счётчики<span class="cnt">2</span></div>
+        <div class="nav-item" data-go="t"><svg class="i"><use href="#people"/></svg>Арендаторы<span class="cnt">2</span></div>
+        <div class="nav-bottom">
+          <div class="nav-sep"></div>
+          <div class="nav-cap">Объекты · 2</div>
+          <div class="nav-item"><svg class="i"><use href="#obj"/></svg>Просвет 81</div>
+          <div class="nav-item"><svg class="i"><use href="#obj"/></svg>Демо · формула</div>
+        </div>
+      </nav>
+      <section class="pane">
+        <div class="top"><div class="top-line"><span class="name">Новый объект</span><span class="sub">· квартира</span></div></div>
+        <div class="body">
+          <div class="view is-on" data-view="o">
+            <div class="sec"><h3>Объект</h3>
+              <div class="grid g2">
+                <div class="fl"><label>Тип *</label><div class="in">Квартира <span>▾</span></div></div>
+                <div class="fl"><label>Короткое название *</label><div class="in"></div></div>
+              </div>
+              <div class="grid gaddr" style="margin-top:12px">
+                <div class="fl"><label>Адрес</label><div class="in"></div></div>
+                <div class="fl"><label>Этаж</label><div class="in"></div></div>
+                <div class="fl"><label>Площадь, м²</label><div class="in warm"></div></div>
+              </div>
+            </div>
+            <div class="sec" style="margin-top:20px"><h3>УК / ТСЖ</h3>
+              <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+                <div class="fl"><label>Управляющая компания</label><div class="in"></div></div>
+                <div class="fl"><label>Телефон</label><div class="in"></div></div>
+                <div class="fl"><label>Почта</label><div class="in"></div></div>
+              </div>
+              <div style="margin-top:8px"><span class="link">Личный кабинет УК ▾</span></div>
+            </div>
+          </div>
+          <div class="view" data-view="m">
+            <div class="sec"><h3>Счётчики</h3>
+              <div class="tiles">
+                <div class="tile"><b>Вода холодная № 554833-75</b><small>начальное 120 м³ · 45 ₽/м³</small></div>
+                <div class="tile"><b>Вода горячая № 63323-567</b><small>начальное 80 м³ · 210 ₽/м³</small></div>
+                <div class="tile add">+ Добавить счётчик</div>
+              </div>
+            </div>
+          </div>
+          <div class="view" data-view="t">
+            <div class="sec"><h3>Кто пользуется объектом <span class="seg"><span class="on">Арендаторы</span><span>Собственник</span></span> <span class="badge">занято 100%</span></h3>
+              <div class="rows">
+                <div class="row"><span class="no">1</span><span>Аптека «Вита»</span><span class="m">55%</span><span>✎</span></div>
+                <div class="row"><span class="no">2</span><span>Салон «Ногти»</span><span class="m">45%</span><span>✎</span></div>
+              </div>
+              <div style="margin-top:8px;text-align:right"><span class="link">+ Добавить арендатора</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span class="sp"></span><span class="btn">Отмена</span><span class="btn main">Создать объект</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+<script>
+function go(v) {
+  document.querySelectorAll('[data-tabs] button').forEach(function (x) { x.classList.toggle('is-on', x.dataset.v === v); });
+  document.querySelectorAll('[data-go]').forEach(function (x) { x.classList.toggle('is-on', x.dataset.go === v); });
+  document.querySelectorAll('[data-view]').forEach(function (x) { x.classList.toggle('is-on', x.dataset.view === v); });
+}
+document.addEventListener('click', function (e) { var b = e.target.closest('[data-v], [data-go]'); if (b) go(b.dataset.v || b.dataset.go); });
+</script>
+</body>
+</html>
