@@ -121,11 +121,13 @@
 .fx-gp .sv-gp-row.fx-row { grid-template-columns: 22px minmax(0, 170px) minmax(0, 1fr) 110px 30px; }
 .fx-rcalc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--fx-muted); }
 .fx-rcalc.is-err { color: var(--fx-danger); white-space: normal; }
+.fx-rcalc.is-warn { color: var(--color-warning); white-space: normal; }
 .fx-gp .sv-gp-row.is-total { font-weight: 700; color: var(--color-primary); }
 .fx-gp .sv-gp-row.is-total .sv-sum { font-weight: 700; }
 .fx-gp .sv-gp-row.is-total .fx-rcalc { font-weight: 400; }
 .fx-note { color: var(--fx-muted); font-size: 13px; line-height: 20px; }
 .fx-note.is-err { color: var(--fx-danger); }
+.fx-note.is-warn { color: var(--color-warning); }
 .fx-sample-note { margin: 0 0 2px; }
 
 .fx-acts { display: flex; justify-content: flex-end; gap: 8px; }
@@ -239,7 +241,7 @@
 
 
 /* Hints right where the problem is (2026-11-22, variant Б): an outlined block with «!», dashed brackets / sign to put */
-.fx-strip .fx-chip.is-mark { outline: 2px solid var(--color-warning); outline-offset: 1px; }
+.fx-strip .fx-chip.is-mark { outline: 1.5px solid var(--color-warning); outline-offset: 1px; }
 .fx-pin { position: absolute; top: -8px; right: -8px; z-index: 3; display: inline-flex; align-items: center; justify-content: center; width: 18px;
   height: 18px; border-radius: 50%; background: var(--color-warning); color: #fff; font-size: 11px; font-weight: 700; cursor: help; }
 .fx-strip .fx-chip.is-mark:hover .fx-del { display: none; }

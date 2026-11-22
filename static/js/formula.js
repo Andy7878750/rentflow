@@ -391,7 +391,7 @@
         ghosts(i);
         var el = chipEl(b);
         el.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Убрать из формулы" aria-label="Убрать из формулы">×</span>');
-        if (hint.marks[i] && !hint.fixed[i]) {
+        if (hint.marks[i]) {
           el.classList.add('is-mark');
           el.insertAdjacentHTML('beforeend', '<span class="fx-pin" title="' + esc(hint.marks[i]) + '">!</span>');
           el.querySelector('.fx-pin').dataset.say = hint.marks[i];
@@ -529,7 +529,7 @@
         var calc = o.note || o.calc || '';
         var words = (o.rows || []).map(function (row) { return row[0] + (row[2] ? ' (пример)' : '') + ' — ' + row[1]; }).join(' · ');
         d.innerHTML = (o.owner || o.total_row ? '<span></span>' : '<span class="sv-no">' + (++no) + '</span>') +
-          '<span class="sv-who fade"></span><span class="fx-rcalc' + (o.bad ? ' is-err' : '') + '"></span>' +
+          '<span class="sv-who fade"></span><span class="fx-rcalc' + (o.bad ? (soft ? ' is-warn' : ' is-err') : '') + '"></span>' +
           '<span class="sv-sum">' + esc(o.total || '—') + '</span>' +
           (switchable ? '<button type="button" class="sv-sw' + (off ? '' : ' is-on') + '" data-pay="' + o.tid + '" role="switch" aria-checked="' + !off +
             '" title="' + (off ? 'Не платит' : 'Платит') + '"></button>'
@@ -550,7 +550,7 @@
         card('Всего по услуге', { total_row: true, calc: calc || '', total: rub(total, SYM) });
       }
       var takes = opts.ownerTakes ? opts.ownerTakes() : true;
-      function fail(text) { var p = document.createElement('p'); p.className = 'fx-note is-err'; p.textContent = text; box.appendChild(p); }
+      function fail(text) { var p = document.createElement('p'); p.className = 'fx-note ' + (soft ? 'is-warn' : 'is-err'); p.textContent = text; box.appendChild(p); }
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
       var ok = true;
       // Almost right (2026-11-22): what the line's hints say — calm, one line, the fix as a button; red is for real errors.
@@ -575,14 +575,11 @@
         } else {
           calm.insertAdjacentHTML('beforeend', '<span class="fx-almost-text is-muted">— нажмите «Изменить формулу»</span>');
         }
-        box.appendChild(calm);
-        // A formula that counts as it is («A + B × C») — only a question: the bills are shown under it.
-        if (evaluate(null).error) {
-          badge.textContent = 'почти готово'; badge.className = 'fx-badge';
-          return;
-        }
         calm.classList.add('is-question');
+        box.appendChild(calm);
       }
+      // While the line has a fix to put, what doesn't count yet is a warning (orange), not an error (red).
+      var soft = Object.keys(hint.marks).length > 0;
       if (isMixed(formulaMeters())) {
         fail(MIXED);
         badge.textContent = 'есть ошибка'; badge.className = 'fx-badge is-bad';
@@ -669,8 +666,8 @@
         var h = hint('Прошлого месяца ещё нет — для примера взяли ' + words.join(', ') + '.', 'fx-sample-note');
         box.prepend(h);
       }
-      badge.textContent = ok ? 'считается' : 'есть ошибка';
-      badge.className = 'fx-badge ' + (ok ? 'is-ok' : 'is-bad');
+      badge.textContent = ok ? 'считается' : soft ? 'почти готово' : 'есть ошибка';
+      badge.className = 'fx-badge ' + (ok ? 'is-ok' : soft ? '' : 'is-bad');
     }
 
     // ---------- Drag and drop (mouse and finger), click to add ----------
