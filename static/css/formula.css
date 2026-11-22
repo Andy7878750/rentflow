@@ -50,6 +50,9 @@
 .fx-chip.k-month { --c: #b07d2b; }
 .fx-chip.k-const { --c: var(--fx-accent); }
 .fx-chip.k-op { justify-content: center; min-width: 30px; padding: 0 8px; font-weight: 700; }
+/* Signs stand out (2026-11-22): a pale accent fill and the sign in the accent colour — in the palette and in the line */
+.fx-chip.k-op { border-color: #bfe3da; background: var(--fx-accent-soft); color: var(--fx-accent); font-size: 16px; }
+.fx-chip.k-op:hover { border-color: var(--fx-accent); }
 .fx-chip.mk-electricity { --c: #0e9aa7; } .fx-chip.mk-water { --c: #2e86c1; } .fx-chip.mk-hot_water { --c: #c0392b; }
 .fx-chip.mk-heating { --c: #e67e22; } .fx-chip.mk-gas { --c: #5b6bc0; }
 .fx-chip.k-new { background: var(--color-surface); border-style: dashed; border-color: #cfd8de; color: var(--fx-muted); }
@@ -75,14 +78,14 @@
   padding: 10px 40px 10px 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
 .fx-strip.is-over { border-color: var(--fx-accent); background: var(--fx-accent-soft); }
 .fx-strip .fx-empty { color: var(--fx-muted); font-size: 13px; line-height: 44px; }
-.fx-strip .fx-chip.is-fx { flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; width: 104px; height: 44px; padding: 0 8px; }
+.fx-strip .fx-chip.is-fx { flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; width: 186px; height: 44px; padding: 0 9px; }
 .fx-strip .fx-r1 { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .fx-strip .fx-chip .fx-ico svg { width: 13px; height: 13px; }
 .fx-strip .fx-nm, .fx-strip .fx-s2 { min-width: 0; overflow: hidden; white-space: nowrap; }
 .fx-strip .fx-nm { font-size: 12.5px; color: var(--fx-text); }
 .fx-strip .fx-s2 { font-size: 11px; color: var(--fx-muted); }
 .fx-strip .is-cut { -webkit-mask-image: linear-gradient(to right, #000 75%, transparent); mask-image: linear-gradient(to right, #000 75%, transparent); }
-.fx-strip .fx-chip.k-op { min-width: 22px; height: 44px; padding: 0 5px; }
+.fx-strip .fx-chip.k-op { min-width: 24px; height: 44px; padding: 0 5px; }
 .fx-caret { width: 2px; height: 40px; border-radius: 1px; background: var(--fx-accent); }
 /* × on a block — a small white circle on its corner, like an attachment's */
 .fx-strip .fx-del { position: absolute; top: -7px; right: -7px; z-index: 2; display: none; align-items: center; justify-content: center;
