@@ -105,8 +105,22 @@ def _property_form(request, property_obj=None):
                 return HttpResponse(status=204, headers={'X-Modal-Redirect': url})
             return redirect(url)
 
+    # The window as the service window (2026-11-22): a menu of three parts on the left — the one with an error opens
+    # first (a red dot at each such part) — and the owner's other objects at the bottom, opened right there.
+    errors = {
+        'object': bool(form.errors),
+        'meters': bool(with_meters and data is not None and (meter_formset.non_form_errors() or any(meter_formset.errors))),
+        'tenants': bool(data is not None and data.get('occupancy') != Property.Occupancy.OWNER
+                        and (formset.non_form_errors() or any(formset.errors))),
+    }
+    others = Property.objects.filter(owner=request.user).order_by('name')
+    if property_obj:
+        others = others.exclude(pk=property_obj.pk)
     template = 'properties/_form.html' if is_modal else 'properties/form.html'
     return render(request, template, {
+        'errors': errors,
+        'open_part': next((part for part in ('object', 'meters', 'tenants') if errors[part]), 'object'),
+        'other_properties': others,
         'form': form,
         'formset': formset,
         'meter_formset': meter_formset,

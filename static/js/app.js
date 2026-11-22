@@ -1099,6 +1099,9 @@
         }
         var count = block.querySelector('[data-items-count]');
         if (count) count.textContent = all.length ? all.length + ' шт.' : '';
+        // the object window's menu: «Счётчики 2», «Арендаторы 3»
+        var navCount = form.querySelector('[data-ocount="' + kind + '"]');
+        if (navCount) navCount.textContent = all.length || '';
       });
     }
 
@@ -1575,8 +1578,60 @@
     if (broken) openItem(broken, false);
   }
 
+  // ---------- The object window (2026-11-22): the service window's frame — parts on the left, one save for all ----------
+  function formState(form) {
+    var pairs = [];
+    new FormData(form).forEach(function (value, key) { if (key !== 'csrfmiddlewaretoken') pairs.push(key + '=' + value); });
+    return pairs.join('&');
+  }
+
+  function initObjectWindow(form) {
+    if (form.dataset.objwinReady) return;
+    form.dataset.objwinReady = '1';
+    var start = '';
+    setTimeout(function () { start = formState(form); }, 0);  // once the rows of meters and tenants are drawn
+    // A part of the menu: show its block (the others stay in the form and are saved with it).
+    form.addEventListener('click', function (event) {
+      var part = event.target.closest('[data-opart]');
+      if (!part) return;
+      form.querySelectorAll('[data-opart]').forEach(function (b) { b.classList.toggle('is-on', b === part); });
+      form.querySelectorAll('[data-part]').forEach(function (sec) { sec.hidden = sec.dataset.part !== part.dataset.opart; });
+      var pane = form.querySelector('.svcwin-pane');
+      if (pane) pane.scrollTop = 0;
+    });
+    // The name in the head follows the field.
+    var name = form.querySelector('input[name=name]');
+    var head = form.querySelector('[data-oname]');
+    if (name && head) {
+      name.addEventListener('input', function () { head.textContent = name.value.trim() || 'Новый объект'; });
+    }
+    // Another object (or a new one) from the menu: with unsaved changes — ask first, as the service window does.
+    form.addEventListener('click', function (event) {
+      var go = event.target.closest('[data-obj-go]');
+      if (!go || formState(form) === start) return;
+      event.preventDefault();
+      event.stopPropagation();
+      var ask = document.createElement('div');
+      ask.className = 'sv-back';
+      ask.innerHTML = '<div class="sv-mw" role="dialog" aria-modal="true" aria-label="Сохранить изменения?">' +
+        '<div class="sv-mw-head"><b>Сохранить изменения?</b></div>' +
+        '<div class="sv-mw-body"><p class="sv-note">В этом объекте есть несохранённые изменения. Если перейти, они пропадут.</p></div>' +
+        '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto sv-ask-drop" data-ask-drop>Не сохранять</button>' +
+        '<button type="button" class="btn btn-ghost btn-auto" data-ask-stay>Отмена</button>' +
+        '<button type="button" class="btn btn-primary btn-auto" data-ask-save>Сохранить</button></div></div>';
+      form.appendChild(ask);
+      ask.addEventListener('click', function (e) {
+        if (e.target.closest('[data-ask-drop]')) { ask.remove(); openModal(go.href); return; }
+        if (e.target.closest('[data-ask-save]')) { ask.remove(); form.requestSubmit(); return; }
+        if (e.target.closest('[data-ask-stay]') || e.target === ask) ask.remove();
+      });
+      ask.querySelector('[data-ask-save]').focus();
+    }, true);
+  }
+
   function initForms(root) {
     root.querySelectorAll('[data-property-form]').forEach(initPropertyForm);
+    root.querySelectorAll('[data-objwin]').forEach(initObjectWindow);
     root.querySelectorAll('[data-subwin]').forEach(function (sub) { initItems(sub.closest('form')); });
     initFades(root);
     if (window.initServiceWindow) window.initServiceWindow(root);  // «Услуги · объект» (services.js)

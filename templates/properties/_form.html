@@ -1,17 +1,49 @@
-<div class="modal-panel">
-  <header class="modal-head">
-    <h1 class="fade">{% if property %}Изменить объект · {{ property.name }}{% else %}Новый объект{% endif %}</h1>
+{% comment %}Окно объекта (2026-11-22, макет docs/mockups/2026-11-22-object-window.html) — в каркасе окна услуг (svcwin):
+   слева три раздела (Объект · Счётчики · Арендаторы) и ниже другие объекты владельца; справа — раздел формы, как был.
+   Одна кнопка внизу сохраняет всё сразу; раздел с ошибкой открывается первым, у него в меню красная точка.{% endcomment %}
+<div class="modal-panel svcwin objwin">
+  <header class="svcwin-head">
+    <h1>Объекты <span>· {% if property %}{{ property.name }}{% else %}Новый объект{% endif %}</span></h1>
     <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть">
       <svg class="icon"><use href="#i-x"/></svg>
     </a>
   </header>
 
   <form method="post" action="{% if property %}{% url 'property_edit' property.pk %}{% else %}{% url 'property_create' %}{% endif %}"
-        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form novalidate>
+        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form data-objwin novalidate>
     {% csrf_token %}
+    <div class="svcwin-body">
+      <nav class="svcwin-nav" aria-label="Разделы объекта">
+        <div class="sv-nav-cap fade">{% if property %}{{ property.name }}{% else %}Новый объект{% endif %}</div>
+        <button type="button" class="sv-nav-item is-mode{% if open_part == 'object' %} is-on{% endif %}" data-opart="object">
+          <svg class="icon"><use href="#i-home"/></svg><span class="fade">Объект</span>{% if errors.object %}<span class="ow-dot" title="Есть ошибка"></span>{% endif %}
+        </button>
+        <button type="button" class="sv-nav-item is-mode{% if open_part == 'meters' %} is-on{% endif %}" data-opart="meters">
+          <svg class="icon"><use href="#i-gauge"/></svg><span class="fade">Счётчики</span>{% if errors.meters %}<span class="ow-dot" title="Есть ошибка"></span>{% endif %}<span class="ow-cnt" data-ocount="meter"></span>
+        </button>
+        <button type="button" class="sv-nav-item is-mode{% if open_part == 'tenants' %} is-on{% endif %}" data-opart="tenants">
+          <svg class="sv-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/></svg><span class="fade">Арендаторы</span>{% if errors.tenants %}<span class="ow-dot" title="Есть ошибка"></span>{% endif %}<span class="ow-cnt" data-ocount="tenant"></span>
+        </button>
+        {% if other_properties or property %}
+          <div class="sv-nav-svcs">
+            <div class="sv-nav-sep"></div>
+            {% if other_properties %}<div class="sv-nav-cap">Объекты · {{ other_properties|length }}</div>{% endif %}
+            {% for other in other_properties %}
+              <a href="{% url 'property_edit' other.pk %}" class="sv-nav-item" data-modal data-obj-go><svg class="icon"><use href="#i-building"/></svg><span class="fade">{{ other.name }}</span></a>
+            {% endfor %}
+            {% if property %}
+              <a href="{% url 'property_create' %}" class="sv-nav-item ow-add" data-modal data-obj-go><svg class="icon"><use href="#i-plus"/></svg><span class="fade">Новый объект</span></a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </nav>
+
+      <section class="svcwin-pane">
+        <div class="sv-top"><div class="sv-top-line"><span class="sv-name fade" data-oname>{{ form.name.value|default:"Новый объект" }}</span></div></div>
+        <div class="sv-body ow-body">
     {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 
-    <section class="form-section">
+    <section class="form-section" data-part="object"{% if open_part != 'object' %} hidden{% endif %}>
       <h2 class="form-section-head">Объект и УК / ТСЖ</h2>
       <div class="form-section-body">
         <div class="form-grid grid-2">
@@ -76,7 +108,7 @@
       </div>
     </section>
 
-    <section class="form-section" data-items="meter">
+    <section class="form-section" data-items="meter" data-part="meters"{% if open_part != 'meters' %} hidden{% endif %}>
       <div class="form-section-head">
         <h2>Счётчики <span class="help" tabindex="0" role="button" aria-label="Подсказка: Счётчики" data-tip-title="Счётчики" data-tip="Счётчики помещения: свет, вода и свои. Кто платит по счётчику, отмечается в окне арендатора.">?</span></h2>
         <span class="head-badge" data-items-count></span>
@@ -92,7 +124,7 @@
       </div>
     </section>
 
-    <section class="form-section" data-items="tenant">
+    <section class="form-section" data-items="tenant" data-part="tenants"{% if open_part != 'tenants' %} hidden{% endif %}>
       <div class="form-section-head">
         <h2>Кто пользуется объектом <span class="help" tabindex="0" role="button" aria-label="Подсказка: Кто пользуется объектом" data-tip-title="Кто пользуется объектом" data-tip="Доли нужны, чтобы делить расходы между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
         <div class="segmented seg-fill seg-sm head-seg" role="radiogroup" aria-label="Кто пользуется объектом">
@@ -122,8 +154,6 @@
       </div>
     </section>
 
-    <p class="form-note">После сохранения добавьте на странице объекта услуги — для каждой один раз выбираете, как делить её между арендаторами.</p>
-
     {# The small window for one meter or one tenant: app.js moves the item's fields in and back. #}
     <div class="subwin" data-subwin hidden>
       <div class="subwin-panel" role="dialog" aria-modal="true" aria-labelledby="subwin-title">
@@ -143,9 +173,12 @@
       </div>
     </div>
 
-    <div class="form-actions">
-      <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
-      <button type="submit" class="btn btn-primary btn-auto">{% if property %}Сохранить{% else %}Создать объект{% endif %}</button>
+        </div>
+        <div class="sv-foot">
+          <a href="{% if property %}{% url 'property_detail' property.pk %}{% else %}{% url 'property_list' %}{% endif %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+          <button type="submit" class="btn btn-primary btn-auto">{% if property %}Сохранить{% else %}Создать объект{% endif %}</button>
+        </div>
+      </section>
     </div>
   </form>
 </div>

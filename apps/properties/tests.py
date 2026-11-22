@@ -213,6 +213,29 @@ class PropertyPagesTests(TestCase):
         self.assertContains(response, '?month=2025-12')
         self.assertContains(response, '?month=2026-02')
 
+    def test_object_window_has_the_service_windows_menu(self):
+        """2026-11-22: parts on the left (Объект · Счётчики · Арендаторы), the owner's other objects below them."""
+        prop = Property.objects.create(owner=self.user, name='Королева 61')
+        second = Property.objects.create(owner=self.user, name='Просвет 81')
+        Property.objects.create(owner=self.other, name='Чужой объект')
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('property_edit', args=[prop.pk]), HTTP_X_MODAL='1')
+        for part in ('object', 'meters', 'tenants'):
+            self.assertContains(response, f'data-opart="{part}"')
+        self.assertContains(response, f'href="{reverse("property_edit", args=[second.pk])}" class="sv-nav-item" data-modal data-obj-go')
+        self.assertContains(response, 'Новый объект')  # «+ Новый объект» while another one is open
+        self.assertNotContains(response, 'Чужой объект')
+        self.assertContains(response, 'data-part="object">')  # the object part is open first
+        self.assertContains(response, 'data-part="meters" hidden')
+
+    def test_object_window_opens_the_part_with_an_error(self):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('property_create'), form_data(
+            tenants=[{'name': 'Аптека', 'share': '150'}]), HTTP_X_MODAL='1')
+        self.assertContains(response, 'data-part="tenants">')
+        self.assertContains(response, 'data-part="object" hidden')
+        self.assertContains(response, 'class="ow-dot"', count=1)
+
     def test_create_assigns_owner(self):
         self.client.force_login(self.user)
         response = self.client.post(reverse('property_create'), form_data(

@@ -307,3 +307,21 @@
   border: 0; border-radius: 6px; background: none; color: var(--color-accent); cursor: pointer; }
 .sv-sel-edit .icon { width: 15px; height: 15px; }
 .sv-sel-edit:hover { background: #dff3ee; }
+
+/* ---------- The object window (2026-11-22): the same frame as this one (svcwin), templates/properties/_form.html ---------- */
+.objwin > form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.objwin .svcwin-body { flex: 1; }
+.objwin a.sv-nav-item { text-decoration: none; }
+.objwin .sv-nav-item .icon { width: 18px; height: 18px; color: var(--color-text-muted); }
+.objwin .sv-nav-item.is-mode.is-on .icon { color: var(--color-accent); }
+.objwin .sv-nav-item.ow-add, .objwin .sv-nav-item.ow-add .icon { color: var(--color-accent); font-weight: 600; }
+.ow-cnt { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--color-text-muted); }
+.ow-dot { flex: none; margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); }
+.ow-dot + .ow-cnt { margin-left: 6px; }
+.ow-body { padding: 20px 32px 24px; }
+/* the parts without frames, as the service window's blocks: a caption in capitals, then what is in it */
+.objwin .pform .form-section { margin: 0; border: 0; border-radius: 0; }
+.objwin .pform .form-section-head { min-height: 20px; padding: 0 0 8px; border: 0; border-radius: 0; background: none;
+  color: var(--color-text-muted); font-size: 12px; font-weight: 600; letter-spacing: .03em; }
+.objwin .pform .form-section-body,
+.objwin .pform [data-items] .form-section-body { padding: 0; }
