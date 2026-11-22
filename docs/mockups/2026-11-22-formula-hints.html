@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Подсказки формулы — варианты</title>
+<style>
+/* Макет 2026-11-22: как подсказывать, пока собирают формулу (скобки, знак между блоками, чего не хватает).
+   Пример: собрали «Вода хол. + Вода гор. × Тариф» — без скобок умножится только горячая вода. Варианты А–Г. */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1; --danger: #c0392b; --danger-soft: #fdecea;
+  --warn: #b26a00; --warn-soft: #fff4e0; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680; --tile: #f4f6f8;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 40px; }
+svg.i { width: 13px; height: 13px; fill: currentColor; flex-shrink: 0; }
+svg.o { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.page { max-width: 860px; margin: 0 auto; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: rgba(255,255,255,.85); font: 600 13px var(--font); color: var(--text); cursor: pointer; }
+.tabs button.is-on { background: var(--accent); color: #fff; }
+.tabs .rec { font-weight: 400; opacity: .85; }
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.about div { background: #fff; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+.about b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.about .plus b { color: var(--accent); } .about .minus b { color: var(--danger); }
+.view { display: none; } .view.is-on { display: block; }
+.fx { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25); padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; }
+.fx h2 { margin: 0 0 4px; font-size: 20px; color: var(--primary); }
+.cap { font-size: 12px; color: var(--muted); }
+.w { color: #2e86c1; } .h { color: #c0392b; } .t { color: var(--accent); }
+/* строка формулы — как в коде: блоки 186×44, знаки бледно-зелёные */
+.area { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 68px; padding: 10px 40px 10px 10px;
+  border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+.blk { position: relative; display: inline-flex; flex-direction: column; justify-content: center; width: 186px; height: 44px; padding: 0 9px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--tile); font-size: 12.5px; }
+.blk .r { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.blk small { color: var(--muted); font-size: 11px; }
+.op { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 44px; border: 1px solid #bfe3da; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 16px; }
+/* А */
+.op.ghost { border-style: dashed; background: #fff; color: var(--accent); opacity: .9; }
+.mark { outline: 2px solid var(--warn); outline-offset: 2px; }
+.pin { position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--warn); color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; }
+.tip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+.tip.ok { background: var(--accent-soft); color: var(--accent); }
+.tip.err { background: var(--danger-soft); color: var(--danger); }
+.tip b { color: var(--text); font-weight: 600; }
+.tip .act { margin-left: auto; height: 28px; padding: 0 12px; border: 1px solid currentColor; border-radius: 8px; background: #fff; font: 600 12.5px var(--font); color: inherit; white-space: nowrap; }
+/* Г — словами */
+.say { padding: 10px 12px; border-radius: 8px; background: #f1f3f5; font-size: 13.5px; }
+.say ol { margin: 4px 0 0; padding-left: 20px; }
+.say li { margin: 2px 0; }
+.say .n { font-weight: 600; }
+.say .bad { color: var(--warn); }
+/* В — после блока: что можно дальше */
+.next { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.next span.k { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid #bfe3da; border-radius: 13px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.palette-signs { display: grid; grid-template-columns: repeat(6, 44px); gap: 8px; }
+.palette-signs span { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px solid #bfe3da; border-radius: 8px; background: var(--accent-soft);
+  color: var(--accent); font-weight: 700; }
+.palette-signs span.dim { opacity: .35; }
+.palette-signs span.hot { outline: 2px solid var(--accent); outline-offset: 1px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="drop" viewBox="0 0 24 24"><path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/></symbol>
+  <symbol id="tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
+</svg>
+<div class="page">
+  <div class="tabs" data-tabs>
+    <button class="is-on" data-v="A">А · подсказка над строкой + «Исправить» <span class="rec">советую</span></button>
+    <button data-v="B">Б · метка на месте ошибки</button>
+    <button data-v="C">В · знаки подсказывают, что дальше</button>
+    <button data-v="D">Г · «Как считаем» словами</button>
+  </div>
+
+  <!-- А -->
+  <section class="view is-on" data-view="A">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Одна строка под формулой говорит главное простыми словами и предлагает исправить одной кнопкой: «Поставить скобки». Ничего не надо знать о порядке действий.</div>
+      <div class="minus"><b>Минус</b>Ловит только известные случаи (сложение перед умножением, лишняя/нехватка скобки, нет знака) — экзотику не угадает.</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="cap">Сложение без скобок перед умножением</div>
+      <div class="area">
+        <span class="blk"><span class="r"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75</span><small>Аптека · м³</small></span><span class="op">+</span>
+        <span class="blk"><span class="r"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567</span><small>Аптека · м³</small></span><span class="op">×</span>
+        <span class="blk"><span class="r"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотведения</span><small>45 ₽/м³</small></span>
+      </div>
+      <div class="tip">Сейчас на тариф умножится только <b>Вода гор.</b> Сложить воду и потом умножить?<button class="act">Поставить скобки</button></div>
+      <div class="cap">Не хватает закрывающей скобки</div>
+      <div class="tip err">Не хватает «)» — где закончить скобку?<button class="act">Закрыть перед «×»</button></div>
+      <div class="cap">Два блока подряд</div>
+      <div class="tip err">Между «Вода гор.» и «Тариф» нужен знак.<button class="act">Поставить «×»</button></div>
+      <div class="cap">Всё в порядке</div>
+      <div class="tip ok">Формула собрана: (Вода хол. + Вода гор.) × Тариф = ₽</div>
+    </div>
+  </section>
+
+  <!-- Б -->
+  <section class="view" data-view="B">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Видно, ГДЕ проблема: блок или место в строке обведено, на нём кружок «!»; пунктирная скобка показывает, куда её поставить — клик ставит.</div>
+      <div class="minus"><b>Минус</b>Без слов не всегда понятно, ЧТО не так; пунктирные «призраки» в строке могут путать.</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="area">
+        <span class="op ghost">(</span>
+        <span class="blk"><span class="r"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75</span><small>Аптека · м³</small></span><span class="op">+</span>
+        <span class="blk mark"><span class="r"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567</span><small>Аптека · м³</small><span class="pin">!</span></span>
+        <span class="op ghost">)</span><span class="op">×</span>
+        <span class="blk"><span class="r"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотведения</span><small>45 ₽/м³</small></span>
+      </div>
+      <div class="cap">Наведение на «!» → «Умножится только этот блок. Нажмите на пунктирные скобки, чтобы сложить воду».</div>
+    </div>
+  </section>
+
+  <!-- В -->
+  <section class="view" data-view="C">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Подсказка ДО ошибки: под строкой «Дальше: × ÷ + − или )», в палитре ненужные сейчас знаки бледнеют, нужный — обведён. Ошибиться трудно.</div>
+      <div class="minus"><b>Минус</b>Не говорит про смысл (сначала сложить, потом умножить) — только про порядок «блок — знак — блок».</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="cap">Знаки в палитре: сейчас нужен знак, «(» не к месту</div>
+      <div class="palette-signs"><span class="hot">+</span><span class="hot">−</span><span class="hot">×</span><span class="hot">÷</span><span class="dim">(</span><span class="dim">)</span></div>
+      <div class="area">
+        <span class="op">(</span>
+        <span class="blk"><span class="r"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75</span><small>Аптека · м³</small></span><span class="op">+</span>
+        <span class="blk"><span class="r"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567</span><small>Аптека · м³</small></span>
+      </div>
+      <div class="next">Дальше: <span class="k">+ − × ÷</span> или закрыть скобку <span class="k">)</span></div>
+    </div>
+  </section>
+
+  <!-- Г -->
+  <section class="view" data-view="D">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Под строкой — как программа поняла формулу, по шагам словами. Если порядок не тот («умножим только горячую») — видно сразу, без правил математики.</div>
+      <div class="minus"><b>Минус</b>Ещё один блок текста в окне; исправлять — самому (можно совместить с кнопкой из А).</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="area">
+        <span class="blk"><span class="r"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75</span><small>Аптека · м³</small></span><span class="op">+</span>
+        <span class="blk"><span class="r"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567</span><small>Аптека · м³</small></span><span class="op">×</span>
+        <span class="blk"><span class="r"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотведения</span><small>45 ₽/м³</small></span>
+      </div>
+      <div class="say">Как считаем:
+        <ol>
+          <li class="bad"><span class="n">Вода гор.</span> × <span class="n">Тариф водоотведения</span> — сначала умножение</li>
+          <li><span class="n">Вода хол.</span> + результат шага 1</li>
+        </ol>
+      </div>
+      <div class="cap">Со скобками: 1) Вода хол. + Вода гор. 2) результат × Тариф водоотведения</div>
+    </div>
+  </section>
+</div>
+<script>
+document.querySelector('[data-tabs]').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('[data-tabs] button').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+  document.querySelectorAll('[data-view]').forEach(function (v) { v.classList.toggle('is-on', v.dataset.view === b.dataset.v); });
+});
+</script>
+</body>
+</html>
