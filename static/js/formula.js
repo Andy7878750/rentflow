@@ -688,33 +688,11 @@
           '<input data-k="sample" class="fx-sample" disabled value="' + num(v.sample || sampleFor(v.unit)) + '">' + unitButton('unit', v.unit) +
           '</span></div></div><p class="fx-say">' + valueSays(v) + '</p>';
       }
-      // One menu of units (window v2): «₽ за м³», «м³ на чел.», «без единицы — коэффициент», «+ своя единица…».
-      return name + '<div class="fx-two"><label class="fx-f">Число<input data-k="value" inputmode="decimal" value="' +
-        (v.value ? num(v.value) : '') + '" placeholder="0"></label>' +
-        '<div class="fx-f">Единица<button type="button" class="fx-usel is-wide" data-k="pair"><span>' + esc(pairLabel(v.unit, v.per)) + '</span>' + CHEV +
-        '</button></div></div><p class="fx-say">' + valueSays(v) + '</p>';
-    }
-    // The units of a «Постоянное число» as one list: [unit, per, label]; null — a caption.
-    var PAIRS = [['Тариф'], ['₽', 'м³'], ['₽', 'кВт·ч'], ['₽', 'Гкал'], ['₽', 'м²'], ['₽', 'чел.'],
-      ['Норматив'], ['м³', 'чел.'], ['Гкал', 'м²'], ['Гкал', 'м³'], ['Другое'], ['₽', ''], ['', '']];
-    function pairLabel(unit, per) {
-      if (!unit && !per) return 'без единицы — коэффициент';
-      if (!per) return unit === '₽' ? '₽ — сумма' : unit;
-      return (unit || '') + (unit === '₽' ? ' за ' : ' на ') + per;
-    }
-    // «₽/м³», «Гкал на м²», «₽ за чел.», «шт.» — what was typed in «+ своя единица…».
-    function parsePair(text) {
-      var t = String(text || '').trim(), m = t.match(/^(.*?)\s*(?:\/|\sза\s|\sна\s)\s*(.+)$/);
-      return m ? [cleanUnit(m[1]), cleanUnit(m[2])] : [cleanUnit(t), ''];
-    }
-    function openPairMenu(btn, v, pick) {
-      var cur = v.unit + '|' + v.per;
-      var options = PAIRS.map(function (p) { return p.length === 1 ? ['', p[0], 'cap'] : [p[0] + '|' + p[1], pairLabel(p[0], p[1])]; });
-      if (!PAIRS.some(function (p) { return p.length === 2 && p[0] + '|' + p[1] === cur; })) options.push([cur, pairLabel(v.unit, v.per)]);
-      openMenu(btn, options, cur, true, function (value) {
-        var pair = value.indexOf('|') >= 0 ? value.split('|') : parsePair(value);
-        pick(pair[0], pair[1]);
-      }, 'своя единица…');
+      // One field, two menus right in it (2026-11-22): «45 [₽ ▾] за [м³ ▾]»; «—» in both — a coefficient.
+      return name + '<div class="fx-f">Сколько<span class="fx-vfield is-pair">' +
+        '<input data-k="value" inputmode="decimal" value="' + (v.value ? num(v.value) : '') + '" placeholder="0">' +
+        unitButton('unit', v.unit) + '<span class="fx-za">за</span>' + unitButton('per', v.per) +
+        '</span></div><p class="fx-say">' + valueSays(v) + '</p>';
     }
     // The number's fields write into v; «change» of a unit refreshes the sample and the sentence.
     function wireValue(v, onChange) {
@@ -728,15 +706,6 @@
       });
       pop.querySelectorAll('.fx-usel').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          if (btn.dataset.k === 'pair') {
-            openPairMenu(btn, v, function (unit, per) {
-              v.unit = unit; v.per = per;
-              btn.querySelector('span').textContent = pairLabel(unit, per);
-              pop.querySelector('.fx-say').textContent = valueSays(v);
-              onChange();
-            });
-            return;
-          }
           openUnitMenu(btn, function (unit) {
             v[btn.dataset.k] = unit;
             btn.dataset.v = unit;
@@ -769,9 +738,10 @@
       if (type === 'month') v.sample = sampleFor(v.unit);
       var ready = readyRows(type);
       pop = document.createElement('div'); pop.className = 'fx-pop';
+      // The new one on top, the ready ones under it (2026-11-22), then the buttons.
       pop.innerHTML = '<h4>' + (type === 'const' ? 'Постоянное число' : 'Число за месяц') + '</h4>' +
-        (ready ? '<div class="fx-f">Готовые</div><div class="fx-ready-list">' + ready + '</div><div class="fx-f fx-or">Новое</div>' : '') +
         valueFields(v) +
+        (ready ? '<div class="fx-f fx-or">Или готовое</div><div class="fx-ready-list">' + ready + '</div>' : '') +
         '<div class="fx-acts"><button type="button" class="fx-btn" data-cancel>Отмена</button>' +
         '<button type="button" class="fx-btn is-primary" data-put disabled>В формулу</button></div>';
       overlay.appendChild(pop);
@@ -989,7 +959,6 @@
       btn.classList.add('is-open');
       var m = document.createElement('div'); m.className = 'fx-umenu'; m.setAttribute('role', 'listbox');
       m.innerHTML = options.map(function (o) {
-        if (o[2] === 'cap') return '<div class="fx-mcap">' + esc(o[1]) + '</div>';
         return '<button type="button" role="option" data-v="' + esc(o[0]) + '"' + (o[0] === cur ? ' class="is-on"' : '') + '>' +
           (o[0] || !custom ? esc(o[1]) : '<span class="fx-none">' + esc(o[1]) + '</span>') + '</button>';
       }).join('') + (custom ? '<div class="fx-ucustom"><input placeholder="' + esc(customText || 'свой вариант…') + '" maxlength="20"><button type="button" title="Добавить">✓</button></div>' : '');

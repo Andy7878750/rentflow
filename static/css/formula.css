@@ -197,11 +197,10 @@
 /* A block's small window (v2): the ready ones on top, a new one below */
 .fx-pop.is-wide { width: 560px; }
 .fx-pop .fx-or { margin: 4px 0 6px; }
-.fx-pop .fx-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px; }
-.fx-pop .fx-two .fx-f { margin-bottom: 10px; }
-.fx-pop .fx-two input { text-align: right; }
-.fx-usel.is-wide { width: 100%; }
-.fx-umenu .fx-mcap { padding: 6px 10px 2px; font-size: 11px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+/* «Сколько»: one field — the number, then «[₽ ▾] за [м³ ▾]» in its grey end (2026-11-22) */
+.fx-vfield.is-pair .fx-usel { width: 76px; }
+.fx-vfield.is-pair .fx-usel + .fx-za + .fx-usel { border-left: 0; }
+.fx-za { flex: none; display: flex; align-items: center; height: 100%; padding: 0 2px; background: #f7f9fa; font-size: 12px; color: var(--fx-muted); }
 .fx-ready-list { display: flex; flex-direction: column; gap: 6px; max-height: 172px; overflow: auto; margin-bottom: 10px; }
 .fx-ready-row { display: flex; gap: 6px; }
 .fx-ready { --c: var(--fx-muted); flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px;
