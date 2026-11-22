@@ -182,7 +182,7 @@
     overlay.hidden = true;
     overlay.innerHTML =
       '<div class="fx-modal" role="dialog" aria-label="Своя формула">' +
-      '<h2>Своя формула</h2>' +
+      '<div class="fx-head"><h2>Своя формула</h2><button type="button" class="fx-x" data-x title="Закрыть без изменений" aria-label="Закрыть">×</button></div>' +
       '<p class="fx-desc">Соберите расчёт из четырёх блоков. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>' +
       '<div class="fx-examples">Примеры:' +
       '<button type="button" data-example="sewage">Водоотведение</button>' +
@@ -401,30 +401,31 @@
       function valueRows(parts) {
         return parts.filter(function (x) { return !x.op; }).map(function (x) { return [x.word, x.num, x.sample]; });
       }
-      var cards = document.createElement('div'); cards.className = 'fx-cards';
-      // rows: [[word, number, sample]]; calc — the formula in numbers; note — a sentence instead (bad — an error).
+      // 2026-11-22: as the service window's «Делим и кто платит» — a grey panel, a 40px row per tenant (№ in a circle ·
+      // name · the formula in numbers, grey · sum · the small switch), then «Остаётся на вас» and «Всего по услуге».
+      var cards = document.createElement('div'); cards.className = 'sv-gp fx-gp';
+      var no = 0;
+      // rows: [[word, number, sample]] — the words go to the hint of the calc; note — a sentence instead (bad — an error).
       function card(who, o) {
         var d = document.createElement('div');
         var switchable = o.tid && payBox(o.tid), off = switchable && isOff(o.tid);
-        d.className = 'fx-card' + (off || o.muted ? ' is-off' : '');
-        var body = o.note ? '<p class="fx-note' + (o.bad ? ' is-err' : '') + '">' + esc(o.note) + '</p>'
-          : (o.rows || []).map(function (row) {
-            return '<div class="fx-crow"><span class="fx-ck">' + esc(row[0]) + (row[2] ? ' · пример' : '') + '</span><span class="fx-cv">' + esc(row[1]) + '</span></div>';
-          }).join('') + (o.calc ? '<div class="fx-crow is-calc"><span class="fx-ck">' + esc(o.calc) + '</span></div>' : '');
-        d.innerHTML = '<div class="fx-chead"><span class="fx-cname"></span>' + (switchable ? '<button type="button" class="fx-pay' + (off ? '' : ' is-on') +
-          '" data-pay="' + o.tid + '" role="switch" aria-checked="' + !off + '" title="' + (off ? 'Не платит' : 'Платит') + '"><span></span></button>' : '') + '</div>' +
-          '<div class="fx-cbody">' + body + '</div>' +
-          '<div class="fx-ctotal"><span>Итого</span><b>' + esc(o.total || '—') + '</b></div>';
-        d.querySelector('.fx-cname').textContent = who;
-        d.querySelector('.fx-cname').title = who;
+        d.className = 'sv-gp-row fx-row' + (off || o.muted || o.owner ? ' is-off' : '') + (o.owner ? ' is-owner' : '') + (o.total_row ? ' is-total' : '');
+        var calc = o.note || o.calc || '';
+        var words = (o.rows || []).map(function (row) { return row[0] + (row[2] ? ' (пример)' : '') + ' — ' + row[1]; }).join(' · ');
+        d.innerHTML = (o.owner || o.total_row ? '<span></span>' : '<span class="sv-no">' + (++no) + '</span>') +
+          '<span class="sv-who fade"></span><span class="fx-rcalc' + (o.bad ? ' is-err' : '') + '"></span>' +
+          '<span class="sv-sum">' + esc(o.total || '—') + '</span>' +
+          (switchable ? '<button type="button" class="sv-sw' + (off ? '' : ' is-on') + '" data-pay="' + o.tid + '" role="switch" aria-checked="' + !off +
+            '" title="' + (off ? 'Не платит' : 'Платит') + '"></button>' : '<span></span>');
+        d.querySelector('.sv-who').textContent = who;
+        d.querySelector('.fx-rcalc').textContent = calc;
+        d.querySelector('.fx-rcalc').title = words ? words + ' · ' + calc : calc;
         cards.appendChild(d);
       }
-      // «Остаётся на вас» and «Всего по услуге» under the cards.
+      // «Остаётся на вас» and «Всего по услуге» — the last rows of the same panel.
       function sums(owner, total, calc) {
-        var s = document.createElement('div'); s.className = 'fx-sums';
-        s.innerHTML = (owner > 0.004 ? '<div class="fx-sum is-owner"><span>Остаётся на вас</span><b>' + esc(rub(owner, SYM)) + '</b></div>' : '') +
-          '<div class="fx-sum"><span>Всего по услуге' + (calc ? '<small>' + esc(calc) + '</small>' : '') + '</span><b>' + esc(rub(total, SYM)) + '</b></div>';
-        box.appendChild(s);
+        if (owner > 0.004) card('Остаётся на вас', { owner: true, total: rub(owner, SYM) });
+        card('Всего по услуге', { total_row: true, calc: calc || '', total: rub(total, SYM) });
       }
       function fail(text) { var p = document.createElement('p'); p.className = 'fx-note is-err'; p.textContent = text; box.appendChild(p); }
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
@@ -479,7 +480,7 @@
               rows = [whole, ['По м²', '× ' + fmt(t.area || 0) + ' ÷ ' + fmt(ctx.area || 0) + ' м²']];
             } else { part = r.v * t.share / 100; rows = [whole, ['Доля', '× ' + fmt(t.share) + '%']]; }
             owner -= part;
-            card(t.name, { rows: rows, total: rub(part, SYM), tid: t.id });
+            card(t.name, { rows: rows, calc: rub(r.v, SYM) + ' ' + rows[1][1], total: rub(part, SYM), tid: t.id });
           });
           sums(owner, r.v, partsText(r.parts));
           hint(split === 'owner' ? 'Всю сумму платите вы. Как делить, выбираете в окне услуги, под формулой.'
@@ -487,7 +488,6 @@
               ' — как делить, выбираете в окне услуги, под формулой.');
         }
       }
-      cards.classList.toggle('is-one', cards.children.length === 1);
       if (ok && evaluate(modeNow() === 'each' && TENANTS.length ? TENANTS[0].id : null).bare) {
         hint('У одного из чисел не указана единица — проверку «итог в рублях» для этой формулы не делаем.');
       }
@@ -1040,6 +1040,7 @@
       if (opts.publish) opts.publish(serialize(), words, modeNow() === 'each');
     }
     overlay.querySelector('[data-cancel]').addEventListener('click', function () { closeFormula(false); });
+    overlay.querySelector('[data-x]').addEventListener('click', function () { closeFormula(false); });
     overlay.querySelector('[data-done]').addEventListener('click', function () { closeFormula(true); });
     publish();
     return {
