@@ -243,6 +243,18 @@
 .fx-pin { position: absolute; top: -8px; right: -8px; z-index: 3; display: inline-flex; align-items: center; justify-content: center; width: 18px;
   height: 18px; border-radius: 50%; background: var(--color-warning); color: #fff; font-size: 11px; font-weight: 700; cursor: help; }
 .fx-strip .fx-chip.is-mark:hover .fx-del { display: none; }
+/* The fix to put — the one thing to notice: filled with the accent, gently pulsing (2026-11-22) */
 .fx-ghost { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 24px; height: 44px; padding: 0 5px;
-  border: 1.5px dashed var(--fx-accent); border-radius: 8px; background: #fff; color: var(--fx-accent); font-size: 16px; font-weight: 700; cursor: pointer; }
-.fx-ghost:hover { background: var(--fx-accent-soft); }
+  border: 1.5px dashed var(--fx-accent); border-radius: 8px; background: var(--fx-accent); color: #fff; font-size: 16px; font-weight: 700;
+  cursor: pointer; animation: fx-pulse 1.6s ease-in-out infinite; }
+.fx-ghost:hover { animation: none; box-shadow: 0 0 0 4px var(--fx-accent-soft); }
+@keyframes fx-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(20, 143, 119, .35); } 50% { box-shadow: 0 0 0 5px rgba(20, 143, 119, 0); } }
+@media (prefers-reduced-motion: reduce) { .fx-ghost { animation: none; } }
+/* «Как посчитается» while the formula is almost right: one calm line, the fix as a button */
+.fx-almost { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-radius: 8px;
+  background: #f1f3f5; font-size: 13.5px; }
+.fx-almost-text.is-muted { color: var(--fx-muted); }
+.fx-almost.is-question { margin-bottom: 8px; }
+.fx-almost-btn { height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--fx-accent); color: #fff; font: inherit;
+  font-size: 13px; font-weight: 600; cursor: pointer; }
+.fx-almost-btn:hover { filter: brightness(1.08); }

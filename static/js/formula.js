@@ -292,7 +292,7 @@
     function isOp(b, ops) { return b && b.type === 'op' && ops.indexOf(b.op) >= 0; }
     function nameOf(b) { return b.type === 'op' ? b.op : chipParts(b)[0]; }
     function analyze() {
-      var marks = {}, ghosts = [], fixes = 0, stack = [], expect = true;
+      var marks = {}, fixed = {}, ghosts = [], fixes = 0, stack = [], expect = true;
       function ghost(at, op, fix) { ghosts.push({ at: at, op: op, fix: fix }); }
       blocks.forEach(function (b, i) {
         var operand = b.type !== 'op';
@@ -300,6 +300,7 @@
           if (!expect) {
             var f = ++fixes;
             ghost(i, '×', f);
+            fixed[i] = f;
             marks[i] = 'Между «' + nameOf(blocks[i - 1]) + '» и «' + nameOf(b) + '» нужен знак — нажмите на пунктирный «×» или поставьте свой.';
           }
           if (operand) expect = false; else { stack.push(i); expect = true; }
@@ -319,10 +320,11 @@
       stack.forEach(function (at) {
         var f = ++fixes;
         ghost(blocks.length, ')', f);
+        fixed[at] = f;
         marks[at] = 'У скобки «(» нет пары — нажмите на пунктирную «)» в конце или поставьте её сами.';
       });
       if (!Object.keys(marks).length) precedence(0, blocks.length);
-      return { marks: marks, ghosts: ghosts };
+      return { marks: marks, fixed: fixed, ghosts: ghosts };
 
       // «A + B × C»: B alone is multiplied — offer brackets around the sum. One level (inside a pair of brackets) at a time.
       function precedence(from, to) {
@@ -346,6 +348,7 @@
             var f = ++fixes, who = items[k];
             ghost(items[first].start, '(', f);
             ghost(who.end + 1, ')', f);
+            fixed[who.start] = f;
             marks[who.start] = 'Сейчас «' + ops[k] + '» применится только к «' + nameOf(blocks[who.start]) + '». Чтобы сначала ' +
               (ops[k - 1] === '+' ? 'сложить' : 'вычесть') + ', нажмите на пунктирные скобки.';
             return;
@@ -388,7 +391,7 @@
         ghosts(i);
         var el = chipEl(b);
         el.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Убрать из формулы" aria-label="Убрать из формулы">×</span>');
-        if (hint.marks[i]) {
+        if (hint.marks[i] && !hint.fixed[i]) {
           el.classList.add('is-mark');
           el.insertAdjacentHTML('beforeend', '<span class="fx-pin" title="' + esc(hint.marks[i]) + '">!</span>');
           el.querySelector('.fx-pin').dataset.say = hint.marks[i];
@@ -550,6 +553,36 @@
       function fail(text) { var p = document.createElement('p'); p.className = 'fx-note is-err'; p.textContent = text; box.appendChild(p); }
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
       var ok = true;
+      // Almost right (2026-11-22): what the line's hints say — calm, one line, the fix as a button; red is for real errors.
+      var hint = analyze();
+      if (Object.keys(hint.marks).length) {
+        var calm = document.createElement('div');
+        calm.className = 'fx-almost';
+        var groups = {};
+        hint.ghosts.forEach(function (g) { (groups[g.fix] = groups[g.fix] || []).push(g.op); });
+        var keys = Object.keys(groups);
+        var first = Object.keys(hint.marks).map(Number).sort(function (a, b) { return a - b; })[0];
+        var text = keys.length ? ({ '×': 'Не хватает знака между блоками.', ')': 'Не хватает закрывающей скобки.', '()': 'Сначала сложить, потом умножить?' })[
+          groups[keys[0]].slice().sort().join('').replace(')(', '()')] || hint.marks[first] : hint.marks[first];
+        calm.innerHTML = '<span class="fx-almost-text"></span>';
+        calm.querySelector('.fx-almost-text').textContent = text;
+        if (root === overlay) {
+          keys.forEach(function (k) {
+            var ops = groups[k].slice().sort().join('').replace(')(', '()');
+            calm.insertAdjacentHTML('beforeend', '<button type="button" class="fx-almost-btn" data-fixit="' + k + '">' +
+              (ops === '()' ? 'Поставить скобки' : 'Поставить «' + esc(ops) + '»') + '</button>');
+          });
+        } else {
+          calm.insertAdjacentHTML('beforeend', '<span class="fx-almost-text is-muted">— нажмите «Изменить формулу»</span>');
+        }
+        box.appendChild(calm);
+        // A formula that counts as it is («A + B × C») — only a question: the bills are shown under it.
+        if (evaluate(null).error) {
+          badge.textContent = 'почти готово'; badge.className = 'fx-badge';
+          return;
+        }
+        calm.classList.add('is-question');
+      }
       if (isMixed(formulaMeters())) {
         fail(MIXED);
         badge.textContent = 'есть ошибка'; badge.className = 'fx-badge is-bad';
@@ -657,8 +690,8 @@
 
     overlay.addEventListener('pointerdown', function (e) {
       if (e.target === overlay) { closeFormula(false); return; }
-      var fix = e.target.closest('.fx-ghost');
-      if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix)); return; }
+      var fix = e.target.closest('.fx-ghost, [data-fixit]');
+      if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix || fix.dataset.fixit)); return; }
       var pin = e.target.closest('.fx-pin');
       if (pin) { e.preventDefault(); openNote(pin.closest('.fx-chip'), 'Подсказка', pin.dataset.say); return; }
       var del = e.target.closest('.fx-del');
