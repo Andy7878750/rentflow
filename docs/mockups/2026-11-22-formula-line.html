@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Поле формулы — варианты</title>
+<style>
+/* Макет 2026-11-22: поле формулы в окне «Своя формула». Сейчас — блоки 104×44 в две строки, имя обрезается («Вода хол. №…»).
+   Варианты А/Б/В/Г. В каждом — обычный вид и момент перетаскивания (блок того же размера, зелёная черта — куда встанет). */
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1; --danger: #c0392b;
+  --border: #e1e4e8; --text: #2c3338; --muted: #6b7680; --tile: #f4f6f8;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 var(--font); color: var(--text); background: #8a9299; padding: 20px 16px 40px; }
+svg.i { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+svg.o { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.page { max-width: 860px; margin: 0 auto; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: rgba(255,255,255,.85); font: 600 13px var(--font); color: var(--text); cursor: pointer; }
+.tabs button.is-on { background: var(--accent); color: #fff; }
+.tabs .rec { font-weight: 400; opacity: .85; }
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.about div { background: #fff; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+.about b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.about .plus b { color: var(--accent); } .about .minus b { color: var(--danger); }
+.view { display: none; } .view.is-on { display: block; }
+.fx { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25); padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; }
+.fx h2 { margin: 0 0 4px; font-size: 20px; color: var(--primary); }
+.cap { font-size: 12px; color: var(--muted); }
+.w { color: #2e86c1; } .h { color: #c0392b; } .t { color: var(--accent); } .m { color: #b07d2b; }
+.area { position: relative; display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 6px; min-height: 72px;
+  padding: 12px 44px 12px 12px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+.area.is-over { border-color: var(--accent); background: var(--accent-soft); }
+.clear { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 50%; background: #eef2f4; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.caret { width: 2px; height: 30px; border-radius: 1px; background: var(--accent); }
+.ghost { position: absolute; box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.hole { opacity: .3; }
+
+/* А · блоки по ширине текста, одна строка, знаки без рамок */
+.a .blk { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--tile); font-size: 13px; white-space: nowrap; }
+.a .blk small { color: var(--muted); font-size: 12px; }
+.a .op { min-width: 14px; text-align: center; font-size: 18px; font-weight: 600; color: var(--primary); }
+.a .op.p { font-size: 22px; font-weight: 300; color: var(--muted); }
+
+/* Б · как сейчас, но шире (150) и одной высоты 44, знаки — узкие плашки */
+.b .blk { display: inline-flex; flex-direction: column; justify-content: center; width: 150px; height: 44px; padding: 0 9px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--tile); font-size: 12.5px; }
+.b .blk .r { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.b .blk small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.b .op { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 44px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--tile); font-weight: 700; }
+
+/* В · строка-предложение: слова-пилюли в тексте, как читается вслух */
+.c .area { font-size: 15px; line-height: 34px; gap: 4px 6px; }
+.c .pill { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 14px; background: var(--tile);
+  border: 1px solid var(--border); font-size: 13.5px; white-space: nowrap; }
+.c .op { padding: 0 2px; font-size: 17px; color: var(--muted); }
+
+/* Г · по строкам: каждое слагаемое — строка, как на калькуляторе */
+.d .area { flex-direction: column; align-items: stretch; gap: 0; padding: 6px 44px 6px 12px; }
+.d .ln { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 36px; font-size: 13.5px; }
+.d .ln + .ln { border-top: 1px dashed #e3e6e9; }
+.d .sg { text-align: center; font-size: 17px; font-weight: 600; color: var(--primary); }
+.d .ln small { color: var(--muted); font-size: 12px; }
+.d .ln .blk { display: inline-flex; align-items: center; gap: 6px; }
+.d .ln.sub { padding-left: 24px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="drop" viewBox="0 0 24 24"><path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14.5a6.5 6.5 0 0 0 13 0c0-4.1-3.9-9.2-5.7-11.6-.2-.2-.5-.4-.8-.4z"/></symbol>
+  <symbol id="tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
+</svg>
+<div class="page">
+  <div class="tabs" data-tabs>
+    <button class="is-on" data-v="A">А · по ширине текста <span class="rec">советую</span></button>
+    <button data-v="B">Б · как сейчас, шире</button>
+    <button data-v="C">В · строка-предложение</button>
+    <button data-v="D">Г · по строкам</button>
+  </div>
+
+  <section class="view is-on a" data-view="A">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Имя целиком: «Вода хол. № 554833-75 · Аптека». Блок одной высоты 34px, ширина по тексту. Знаки — крупные без рамок: формула читается как на бумаге, места меньше.</div>
+      <div class="minus"><b>Минус</b>Блоки разной ширины (строго — одной высоты). Длинная формула переносится на вторую строку.</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="cap">Обычный вид</div>
+      <div class="area">
+        <span class="op p">(</span><span class="blk"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75 <small>Аптека</small></span>
+        <span class="op">+</span><span class="blk"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567 <small>Аптека</small></span>
+        <span class="op">+</span><span class="blk"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 435235-3252 <small>Салон</small></span>
+        <span class="op">+</span><span class="blk"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 64738-484 <small>Салон</small></span>
+        <span class="op p">)</span><span class="op">×</span><span class="blk"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотведения <small>45 ₽/м³</small></span>
+        <span class="clear">×</span>
+      </div>
+      <div class="cap">Перетаскивание: блок того же размера, зелёная черта — куда встанет</div>
+      <div class="area is-over">
+        <span class="op p">(</span><span class="blk"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75 <small>Аптека</small></span>
+        <span class="op">+</span><span class="caret"></span><span class="blk hole"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567 <small>Аптека</small></span>
+        <span class="op">+</span><span class="blk"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 435235-3252 <small>Салон</small></span>
+        <span class="op p">)</span><span class="op">×</span><span class="blk"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотведения <small>45 ₽/м³</small></span>
+        <span class="blk ghost" style="left:300px;top:52px"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567 <small>Аптека</small></span>
+        <span class="clear">×</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="view b" data-view="B">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Все блоки строго одного размера 150×44 — ровная «сетка», как сейчас, только имя помещается чаще. Вторая строка — кто и единица.</div>
+      <div class="minus"><b>Минус</b>Длинные № всё равно обрезаются; блоки занимают много места — 4 счётчика + тариф уже в две строки.</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="area">
+        <span class="op">(</span>
+        <span class="blk"><span class="r"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75</span><small>Аптека · м³</small></span><span class="op">+</span>
+        <span class="blk"><span class="r"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567</span><small>Аптека · м³</small></span><span class="op">+</span>
+        <span class="blk"><span class="r"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 435235…</span><small>Салон · м³</small></span><span class="op">+</span>
+        <span class="blk"><span class="r"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 64738-484</span><small>Салон · м³</small></span>
+        <span class="op">)</span><span class="op">×</span>
+        <span class="blk"><span class="r"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотвед…</span><small>45 ₽/м³</small></span>
+        <span class="clear">×</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="view c" data-view="C">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Читается как фраза: «( Вода хол. Аптеки + Вода гор. Аптеки + … ) × Тариф водоотведения». Самое компактное, знаки — просто знаки.</div>
+      <div class="minus"><b>Минус</b>Пилюли мельче — в них труднее попасть пальцем на телефоне; номер счётчика — только во всплывающей подсказке.</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="area">
+        <span class="op">(</span><span class="pill"><svg class="i w"><use href="#drop"/></svg>Вода хол. · Аптека</span>
+        <span class="op">+</span><span class="pill"><svg class="i h"><use href="#drop"/></svg>Вода гор. · Аптека</span>
+        <span class="op">+</span><span class="pill"><svg class="i w"><use href="#drop"/></svg>Вода хол. · Салон</span>
+        <span class="op">+</span><span class="pill"><svg class="i h"><use href="#drop"/></svg>Вода гор. · Салон</span>
+        <span class="op">)</span><span class="op">×</span><span class="pill"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотведения 45 ₽/м³</span>
+        <span class="clear">×</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="view d" data-view="D">
+    <div class="about">
+      <div class="plus"><b>Плюс</b>Как лента калькулятора: каждое слагаемое — строка, справа кто платит. Длинные суммы счётчиков читаются легко, ничего не обрезается.</div>
+      <div class="minus"><b>Минус</b>Скобки и умножение по строкам выглядят непривычно; высота растёт с каждым блоком; перетаскивание — только вверх/вниз.</div>
+    </div>
+    <div class="fx">
+      <h2>Своя формула</h2>
+      <div class="area">
+        <div class="ln"><span class="sg">(</span><span class="blk"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 554833-75</span><small>Аптека · м³</small></div>
+        <div class="ln"><span class="sg">+</span><span class="blk"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 63323-567</span><small>Аптека · м³</small></div>
+        <div class="ln"><span class="sg">+</span><span class="blk"><svg class="i w"><use href="#drop"/></svg>Вода хол. № 435235-3252</span><small>Салон · м³</small></div>
+        <div class="ln"><span class="sg">+</span><span class="blk"><svg class="i h"><use href="#drop"/></svg>Вода гор. № 64738-484</span><small>Салон · м³ )</small></div>
+        <div class="ln"><span class="sg">×</span><span class="blk"><svg class="i o t"><use href="#tag"/></svg>Тариф водоотведения</span><small>45 ₽/м³</small></div>
+        <span class="clear">×</span>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+document.querySelector('[data-tabs]').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('[data-tabs] button').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+  document.querySelectorAll('[data-view]').forEach(function (v) { v.classList.toggle('is-on', v.dataset.view === b.dataset.v); });
+});
+</script>
+</body>
+</html>

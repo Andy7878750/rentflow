@@ -215,13 +215,19 @@
 
     // «Своя формула» where each pays by his own meters: nothing to divide, only who pays (the rest — on the owner).
     function eachRows(s) {
+      var r = shares('shares', s.excluded, s.owner_takes);
       return '<div class="sv-gp">' + T.map(function (t, i) {
         var on = s.excluded.indexOf(t.id) < 0;
         return '<div class="sv-gp-row' + (on ? '' : ' is-off') + '"><span class="sv-no">' + (i + 1) + '</span>' +
           '<span class="sv-who fade">' + esc(t.name) + '</span><span class="sv-meta"></span>' +
           '<span class="sv-sum">' + (on ? 'по своим счётчикам' : 'не платит') + '</span>' +
           sw(on, 'data-pay="' + t.id + '"', t.name + ' платит') + '</div>';
-      }).join('') + '</div>';
+      }).join('') +
+        // «Остаётся на вас» as everywhere: its switch shows once someone doesn't pay; off — those who pay share his part.
+        '<div class="sv-gp-row is-owner' + (r.canPass ? ' can-pass' : '') + (r.takes ? '' : ' is-off') + '"><span></span>' +
+        '<span class="sv-who">Остаётся на вас</span><span class="sv-meta"></span>' +
+        '<span class="sv-sum">' + (r.canPass ? (r.takes ? 'часть неплатящих' : 'делят платящие') : '—') + '</span>' +
+        (r.canPass ? sw(r.takes, 'data-owner', 'Остаток на вас') : '<span></span>') + '</div></div>';
     }
 
     // ---------- «Своя формула»: its own window over this one (formula.js); «Готово» — into this service ----------
@@ -234,6 +240,9 @@
         canPay: function (id) { return !!byId(T, id); },
         isOff: function (id) { return s.excluded.indexOf(id) >= 0; },
         togglePay: function (id) { toggle(s.excluded, id); mark(); },
+        // «Остаётся на вас»: on — the part of those who don't pay is the owner's; off — those who pay share it
+        ownerTakes: function () { return s.owner_takes !== false; },
+        toggleOwner: function () { s.owner_takes = s.owner_takes === false; mark(); },
         // the first publish is the formula as it opened: «Готово» without changes changes nothing
         publish: function (data, words, each) {
           last = { data: data, words: words, each: each, json: JSON.stringify(data) };

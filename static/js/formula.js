@@ -409,24 +409,33 @@
       function card(who, o) {
         var d = document.createElement('div');
         var switchable = o.tid && payBox(o.tid), off = switchable && isOff(o.tid);
-        d.className = 'sv-gp-row fx-row' + (off || o.muted || o.owner ? ' is-off' : '') + (o.owner ? ' is-owner' : '') + (o.total_row ? ' is-total' : '');
+        var ownerOn = o.owner && o.ownerSw === true;
+        d.className = 'sv-gp-row fx-row' + (off || o.muted || (o.owner && !ownerOn) ? ' is-off' : '') +
+          (o.owner ? ' is-owner' + (o.ownerSw !== undefined ? ' can-pass' : '') : '') + (o.total_row ? ' is-total' : '');
         var calc = o.note || o.calc || '';
         var words = (o.rows || []).map(function (row) { return row[0] + (row[2] ? ' (пример)' : '') + ' — ' + row[1]; }).join(' · ');
         d.innerHTML = (o.owner || o.total_row ? '<span></span>' : '<span class="sv-no">' + (++no) + '</span>') +
           '<span class="sv-who fade"></span><span class="fx-rcalc' + (o.bad ? ' is-err' : '') + '"></span>' +
           '<span class="sv-sum">' + esc(o.total || '—') + '</span>' +
           (switchable ? '<button type="button" class="sv-sw' + (off ? '' : ' is-on') + '" data-pay="' + o.tid + '" role="switch" aria-checked="' + !off +
-            '" title="' + (off ? 'Не платит' : 'Платит') + '"></button>' : '<span></span>');
+            '" title="' + (off ? 'Не платит' : 'Платит') + '"></button>'
+            : o.ownerSw !== undefined ? '<button type="button" class="sv-sw' + (o.ownerSw ? ' is-on' : '') + '" data-owner role="switch" aria-checked="' +
+              o.ownerSw + '" title="Остаток на вас"></button>' : '<span></span>');
         d.querySelector('.sv-who').textContent = who;
         d.querySelector('.fx-rcalc').textContent = calc;
         d.querySelector('.fx-rcalc').title = words ? words + ' · ' + calc : calc;
         cards.appendChild(d);
       }
       // «Остаётся на вас» and «Всего по услуге» — the last rows of the same panel.
-      function sums(owner, total, calc) {
-        if (owner > 0.004) card('Остаётся на вас', { owner: true, total: rub(owner, SYM) });
+      // «Остаётся на вас» as everywhere: its switch shows once someone doesn't pay (canPass); off — those who pay share it.
+      function sums(owner, total, calc, canPass, takes) {
+        if (canPass || owner > 0.004) {
+          card('Остаётся на вас', { owner: true, ownerSw: canPass ? takes : undefined, total: owner > 0.004 ? rub(owner, SYM) : '—',
+            calc: canPass ? (takes ? 'часть неплатящих — на вас' : 'часть неплатящих делят платящие') : '' });
+        }
         card('Всего по услуге', { total_row: true, calc: calc || '', total: rub(total, SYM) });
       }
+      var takes = opts.ownerTakes ? opts.ownerTakes() : true;
       function fail(text) { var p = document.createElement('p'); p.className = 'fx-note is-err'; p.textContent = text; box.appendChild(p); }
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
       var ok = true;
@@ -447,17 +456,31 @@
           ok = false;
           fail('Ни у одного арендатора нет своего счётчика в формуле — укажите у счётчиков, чьи они.');
         } else {
-          var all = 0, mine = 0;
+          // Counted first: the part of those who don't pay may go to those who do (as the server does).
+          var got = {}, onIds = [], offSum = 0, base = 0, all = 0, counted = 0;
+          payers.forEach(function (id) {
+            got[id] = evaluate(id);
+            if (got[id].error) return;
+            counted++;
+            all += got[id].v;
+            if (isOff(id)) offSum += got[id].v; else { onIds.push(id); base += got[id].v; }
+          });
+          var canPass = onIds.length > 0 && onIds.length < counted;
+          var pass = canPass && !takes && offSum > 0;
           box.appendChild(cards);
           TENANTS.forEach(function (t) {
             if (payers.indexOf(t.id) < 0) { card(t.name, { note: 'не платит — нет его счётчика в формуле', muted: true }); return; }
-            var r = evaluate(t.id);
+            var r = got[t.id];
             if (r.error) { ok = false; card(t.name, { note: r.error, bad: true, tid: t.id }); return; }
-            all += r.v;
-            if (isOff(t.id)) { mine += r.v; card(t.name, { note: 'не платит — его часть ' + rub(r.v, SYM) + ' на вас', tid: t.id }); return; }
-            card(t.name, { rows: valueRows(r.parts), calc: partsText(r.parts), total: rub(r.v, SYM), tid: t.id });
+            if (isOff(t.id)) {
+              card(t.name, { note: 'не платит — его часть ' + rub(r.v, SYM) + (pass ? ' делят платящие' : ' на вас'), tid: t.id });
+              return;
+            }
+            var extra = pass ? (base ? offSum * r.v / base : offSum / onIds.length) : 0;
+            card(t.name, { rows: valueRows(r.parts), total: rub(r.v + extra, SYM), tid: t.id,
+              calc: partsText(r.parts) + (extra ? ' + ' + rub(extra, SYM) + ' за неплатящих' : '') });
           });
-          if (ok) sums(mine, all);
+          if (ok) sums(pass ? 0 : offSum, all, '', canPass, takes);
         }
       } else {
         var r = evaluate(null);
@@ -467,22 +490,28 @@
           card('Вы', { rows: valueRows(r.parts), calc: partsText(r.parts), total: rub(r.v, SYM) });
         } else {
           var split = splitNow();
-          var paying = TENANTS.filter(function (t) { return !isOff(t.id); }).length;
+          var on = TENANTS.filter(function (t) { return !isOff(t.id); });
           var owner = r.v, whole = ['Сумма на объект', rub(r.v, SYM)];
+          // As «Делим и кто платит» (services.js shares): «Остаётся на вас» on — of 100% / the object's м² / everyone;
+          // off — of those who pay only.
+          var canPass = split !== 'owner' && on.length > 0 && on.length < TENANTS.length;
+          var tk = !canPass || takes;
+          var weight = function (t) { return split === 'equal' ? 1 : split === 'area' ? (t.area || 0) : (t.share || 0); };
+          var sumW = function (list) { return list.reduce(function (a, t) { return a + weight(t); }, 0); };
+          var allW = split === 'shares' ? 100 : split === 'area' ? (ctx.area || sumW(TENANTS)) : TENANTS.length;
+          var baseW = tk ? allW : sumW(on);
           box.appendChild(cards);
           TENANTS.forEach(function (t) {
             if (split === 'owner') { card(t.name, { note: 'не платит — «Плачу сам»', muted: true }); return; }
-            if (isOff(t.id)) { card(t.name, { note: 'не платит — его часть на вас', tid: t.id }); return; }
-            var part, rows;
-            if (split === 'equal') { part = r.v / paying; rows = [whole, ['Поровну', '÷ ' + paying]]; }
-            else if (split === 'area') {
-              part = ctx.area ? r.v * (t.area || 0) / ctx.area : 0;
-              rows = [whole, ['По м²', '× ' + fmt(t.area || 0) + ' ÷ ' + fmt(ctx.area || 0) + ' м²']];
-            } else { part = r.v * t.share / 100; rows = [whole, ['Доля', '× ' + fmt(t.share) + '%']]; }
+            if (isOff(t.id)) { card(t.name, { note: 'не платит — его часть ' + (tk ? 'на вас' : 'делят платящие'), tid: t.id }); return; }
+            var part = baseW ? r.v * weight(t) / baseW : 0, how;
+            if (split === 'equal') how = '÷ ' + (tk ? TENANTS.length : on.length);
+            else if (split === 'area') how = '× ' + fmt(t.area || 0) + ' ÷ ' + fmt(baseW) + ' м²';
+            else how = '× ' + fmt(Math.round(weight(t) / baseW * 1000) / 10) + '%';
             owner -= part;
-            card(t.name, { rows: rows, calc: rub(r.v, SYM) + ' ' + rows[1][1], total: rub(part, SYM), tid: t.id });
+            card(t.name, { rows: [whole], calc: rub(r.v, SYM) + ' ' + how, total: rub(part, SYM), tid: t.id });
           });
-          sums(owner, r.v, partsText(r.parts));
+          sums(owner, r.v, partsText(r.parts), canPass, tk);
           hint(split === 'owner' ? 'Всю сумму платите вы. Как делить, выбираете в окне услуги, под формулой.'
             : 'Одна сумма на объект делится ' + ({ shares: 'по долям', equal: 'поровну', area: 'по м²' }[split] || 'по долям') +
               ' — как делить, выбираете в окне услуги, под формулой.');
@@ -509,7 +538,7 @@
     var caret = document.createElement('span'); caret.className = 'fx-caret';
     function insertBlock(b, at) { blocks.splice(at === undefined ? blocks.length : at, 0, b); render(); }
     function insertIndex(x, y) {
-      var chips = Array.prototype.slice.call(strip.querySelectorAll('.fx-chip:not(.is-dragging)'));
+      var chips = Array.prototype.slice.call(strip.querySelectorAll('.fx-chip:not(.is-dragging):not(.is-ghost)'));
       for (var n = 0; n < chips.length; n++) {
         var r = chips[n].getBoundingClientRect();
         if (y < r.top - 4) return n;
@@ -559,7 +588,9 @@
         drag.block = drag.fromStrip ? blocks.find(function (b) { return String(b.id) === drag.chip.dataset.id; })
           : kind.indexOf('new:') === 0 || kind.indexOf('pick:') === 0 ? { id: 0, type: 'new', kind: kind } : make(kind);
         drag.ghost = drag.block.type === 'new' ? drag.chip.cloneNode(true) : chipEl(drag.block);
-        drag.ghost.classList.add('is-ghost'); overlay.appendChild(drag.ghost);
+        drag.ghost.classList.add('is-ghost');
+        // A block of the formula keeps its size while dragged: its copy lives in the line, where the blocks' styles are.
+        (drag.block.type === 'new' ? overlay : strip).appendChild(drag.ghost);
         if (drag.fromStrip) drag.chip.classList.add('is-dragging');
       }
       drag.ghost.style.left = (e.clientX - 20) + 'px'; drag.ghost.style.top = (e.clientY - 15) + 'px';
@@ -567,7 +598,7 @@
       strip.classList.toggle('is-over', over);
       caret.remove();
       if (over) {
-        var chips = Array.prototype.slice.call(strip.querySelectorAll('.fx-chip:not(.is-dragging)'));
+        var chips = Array.prototype.slice.call(strip.querySelectorAll('.fx-chip:not(.is-dragging):not(.is-ghost)'));
         var at = insertIndex(e.clientX, e.clientY);
         if (at < chips.length) strip.insertBefore(caret, chips[at]); else strip.appendChild(caret);
       }
@@ -650,6 +681,7 @@
       if (built) { blocks = built; render(); }
     });
     overlay.querySelector('[data-check]').addEventListener('click', function (e) {
+      if (e.target.closest('[data-owner]') && opts.toggleOwner) { opts.toggleOwner(); render(); return; }
       var b = e.target.closest('[data-pay]'); if (!b || !payBox(b.dataset.pay)) return;
       opts.togglePay(Number(b.dataset.pay));
       render();

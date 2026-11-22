@@ -213,6 +213,18 @@ class FormulaServiceTests(TestCase):
         self.assertIsNone(self.line(bill, self.vlad, receipt))
         self.assertEqual(bill.owner.total, Decimal('1000.00'))
 
+    def test_owner_off_passes_the_part_on_to_those_who_pay(self):
+        """«Остаётся на вас» off: the switched-off tenant's part goes to the paying one (2026-11-22, as everywhere)."""
+        receipt = self.make(
+            [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': '2'}],
+            [self.meter('electricity'), self.op('×'), {'t': 'num', 'id': 'n1'}])
+        receipt.excluded.set([self.vlad])
+        Receipt.objects.filter(pk=receipt.pk).update(owner_takes=False)
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertIsNone(self.line(bill, self.vlad, receipt))
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('2600.00'))  # 1 600 + Vlad's 1 000
+        self.assertEqual(bill.owner.total, Decimal('0'))
+
     def test_a_tariff_keeps_its_history(self):
         data = {'numbers': [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'кВт·ч', 'value': '2'}],
                 'blocks': [self.meter('electricity'), self.op('×'), {'t': 'num', 'id': 'n1'}]}

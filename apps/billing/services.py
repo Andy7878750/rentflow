@@ -2555,13 +2555,25 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
             return False
         payer_ids = fx.payers(blocks, owner_of, [tenant.pk for tenant in tenants])
         excluded = excluded_ids(receipt)
+        counted = [(tenant_id, *count(tenant_id)) for tenant_id in payer_ids]
+        paying = [(tenant_id, value) for tenant_id, value, _ in counted if tenant_id not in excluded]
+        off_sum = sum((value for tenant_id, value, _ in counted if tenant_id in excluded), Decimal('0'))
+        # «Остаётся на вас» off (2026-11-22, as everywhere): the part of those who don't pay goes to those who do,
+        # in proportion to their own sums (equally when theirs are all 0).
+        pass_on = not receipt.owner_takes and bool(paying) and off_sum > 0
+        base = sum((value for _, value in paying), Decimal('0'))
         total = Decimal('0')
-        for tenant_id in payer_ids:
-            value, text = count(tenant_id)
+        for tenant_id, value, text in counted:
             if tenant_id in excluded:
+                if pass_on:
+                    continue
                 line = Line(receipt, money(value), f'{text} · {payers[tenant_id].tenant.name} не платит')
                 owner.lines.append(line)
             else:
+                if pass_on:
+                    extra = off_sum * value / base if base else off_sum / len(paying)
+                    value += extra
+                    text = f'{text} + {fmt_number(money(extra))}{NBSP}{receipt.currency_symbol} за неплатящих'
                 line = tenant_line(receipt, value, text)
                 payers[tenant_id].lines.append(line)
             total += line.base
