@@ -251,5 +251,9 @@
   cursor: pointer; animation: fx-pulse 1.6s ease-in-out infinite; }
 .fx-ghost:hover { animation: none; box-shadow: 0 0 0 4px var(--fx-accent-soft); }
 .fx-ghost.is-blank { width: 24px; }
+/* Its menu — the six signs as the palette's «Знаки», 3 × 2 */
+.fx-umenu.fx-signmenu { display: grid; grid-template-columns: repeat(3, 44px); gap: 6px; padding: 8px; }
+.fx-signmenu .fx-chip.k-op { --fx-accent: var(--color-accent); --fx-accent-soft: var(--color-accent-soft); justify-content: center; width: 44px;
+  height: 34px; padding: 0; cursor: pointer; }
 @keyframes fx-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(20, 143, 119, .35); } 50% { box-shadow: 0 0 0 5px rgba(20, 143, 119, 0); } }
 @media (prefers-reduced-motion: reduce) { .fx-ghost { animation: none; } }

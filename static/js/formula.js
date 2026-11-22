@@ -667,10 +667,21 @@
       if (e.target === overlay) { closeFormula(false); return; }
       var fix = e.target.closest('.fx-ghost');
       if (fix && fix.classList.contains('fx-ghost') && fix.dataset.op === '?') {
-        // «?» in the line: a menu of the four signs right at it
-        e.preventDefault(); closePop();
+        // The blinking plaque: all six signs right at it, as the palette's «Знаки» (3 × 2)
+        e.preventDefault(); closePop(); closeUnitMenu();
         var id = Number(fix.dataset.fix);
-        openMenu(fix, [['+', '+'], ['−', '−'], ['×', '×'], ['÷', '÷']], '', false, function (sign) { applyFix(id, sign); });
+        var m = document.createElement('div'); m.className = 'fx-umenu fx-signmenu';
+        m.innerHTML = ['+', '−', '×', '÷', '(', ')'].map(function (sign) {
+          return '<button type="button" class="fx-chip k-op" data-sign="' + sign + '" title="Поставить «' + sign + '»">' + sign + '</button>';
+        }).join('');
+        overlay.appendChild(m);
+        var r = fix.getBoundingClientRect();
+        m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
+        m.style.top = (r.bottom + 4 + m.offsetHeight > innerHeight ? r.top - 4 - m.offsetHeight : r.bottom + 4) + 'px';
+        m.addEventListener('click', function (ev) {
+          var b = ev.target.closest('[data-sign]'); if (!b) return;
+          closeUnitMenu(); applyFix(id, b.dataset.sign);
+        });
         return;
       }
       if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix)); return; }
