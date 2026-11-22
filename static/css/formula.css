@@ -237,3 +237,12 @@
   .fx-gp .fx-rcalc { display: none; }
 }
 
+
+/* Hints right where the problem is (2026-11-22, variant Б): an outlined block with «!», dashed brackets / sign to put */
+.fx-strip .fx-chip.is-mark { outline: 2px solid var(--color-warning); outline-offset: 1px; }
+.fx-pin { position: absolute; top: -8px; right: -8px; z-index: 3; display: inline-flex; align-items: center; justify-content: center; width: 18px;
+  height: 18px; border-radius: 50%; background: var(--color-warning); color: #fff; font-size: 11px; font-weight: 700; cursor: help; }
+.fx-strip .fx-chip.is-mark:hover .fx-del { display: none; }
+.fx-ghost { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 24px; height: 44px; padding: 0 5px;
+  border: 1.5px dashed var(--fx-accent); border-radius: 8px; background: #fff; color: var(--fx-accent); font-size: 16px; font-weight: 700; cursor: pointer; }
+.fx-ghost:hover { background: var(--fx-accent-soft); }

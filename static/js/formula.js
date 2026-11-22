@@ -286,14 +286,116 @@
       meterTile.querySelector('.fx-t2').textContent = METERS.length ? (any ? 'расход за месяц' : 'не подключены к услугам') : 'у объекта нет счётчиков';
     }
 
+    // ---------- Hints right where the problem is (2026-11-22, variant Б of docs/mockups/2026-11-22-formula-hints.html):
+    // a block or sign outlined with «!» (its words on hover or click), dashed brackets / sign where one is missing —
+    // a click puts it. Cases: «A + B × C» without brackets, two blocks with no sign, a missing «)», a sign out of place.
+    function isOp(b, ops) { return b && b.type === 'op' && ops.indexOf(b.op) >= 0; }
+    function nameOf(b) { return b.type === 'op' ? b.op : chipParts(b)[0]; }
+    function analyze() {
+      var marks = {}, ghosts = [], fixes = 0, stack = [], expect = true;
+      function ghost(at, op, fix) { ghosts.push({ at: at, op: op, fix: fix }); }
+      blocks.forEach(function (b, i) {
+        var operand = b.type !== 'op';
+        if (operand || isOp(b, ['('])) {
+          if (!expect) {
+            var f = ++fixes;
+            ghost(i, '×', f);
+            marks[i] = 'Между «' + nameOf(blocks[i - 1]) + '» и «' + nameOf(b) + '» нужен знак — нажмите на пунктирный «×» или поставьте свой.';
+          }
+          if (operand) expect = false; else { stack.push(i); expect = true; }
+        } else if (isOp(b, [')'])) {
+          if (expect) marks[i] = 'Перед «)» нужен блок — число или счётчик.';
+          else if (!stack.length) marks[i] = 'Лишняя скобка «)» — у неё нет пары «(». Уберите её.';
+          else stack.pop();
+          expect = false;
+        } else {
+          if (expect) marks[i] = i ? 'Знак «' + b.op + '» не на месте: два знака подряд — уберите один.' : 'Формула не может начинаться со знака «' + b.op + '».';
+          expect = true;
+        }
+      });
+      if (blocks.length && expect && !Object.keys(marks).length) {
+        marks[blocks.length - 1] = 'Формула обрывается — после знака нужен блок.';
+      }
+      stack.forEach(function (at) {
+        var f = ++fixes;
+        ghost(blocks.length, ')', f);
+        marks[at] = 'У скобки «(» нет пары — нажмите на пунктирную «)» в конце или поставьте её сами.';
+      });
+      if (!Object.keys(marks).length) precedence(0, blocks.length);
+      return { marks: marks, ghosts: ghosts };
+
+      // «A + B × C»: B alone is multiplied — offer brackets around the sum. One level (inside a pair of brackets) at a time.
+      function precedence(from, to) {
+        var items = [], ops = [], i = from;
+        while (i < to) {
+          var b = blocks[i];
+          if (isOp(b, ['('])) {
+            var depth = 1, j = i + 1;
+            while (j < to && depth) { if (isOp(blocks[j], ['('])) depth++; else if (isOp(blocks[j], [')'])) depth--; j++; }
+            precedence(i + 1, j - 1);
+            items.push({ start: i, end: j - 1 });
+            i = j;
+          } else if (b.type === 'op') { ops.push(b.op); i++; }
+          else { items.push({ start: i, end: i }); i++; }
+        }
+        for (var k = 1; k < ops.length; k++) {
+          // Only when the sum is of like things (м³ + м³ × тариф): «Абонплата + Расход × Тариф» is right as it is.
+          if ('×÷'.indexOf(ops[k]) >= 0 && '+−'.indexOf(ops[k - 1]) >= 0 && alike(items[k - 1], items[k])) {
+            var first = k - 1;
+            while (first > 0 && '+−'.indexOf(ops[first - 1]) >= 0) first--;
+            var f = ++fixes, who = items[k];
+            ghost(items[first].start, '(', f);
+            ghost(who.end + 1, ')', f);
+            marks[who.start] = 'Сейчас «' + ops[k] + '» применится только к «' + nameOf(blocks[who.start]) + '». Чтобы сначала ' +
+              (ops[k - 1] === '+' ? 'сложить' : 'вычесть') + ', нажмите на пунктирные скобки.';
+            return;
+          }
+        }
+      }
+    }
+    // The units of one item of a level: a block's own; a group in brackets — unknown (null).
+    function itemUnits(item) {
+      if (item.start !== item.end) return null;
+      var b = blocks[item.start];
+      if (b.type === 'meter') return unitsOf(kindOf(b.key).unit, '');
+      if (b.type === 'val') { var v = valueOf(b); return unitsOf(v.unit, v.per); }
+      return null;
+    }
+    function alike(a, b) { var ua = itemUnits(a), ub = itemUnits(b); return !ua || !ub || sameUnits(ua, ub); }
+    // A click on a dashed bracket or sign: put every piece of that fix (both brackets of a pair).
+    function applyFix(fix) {
+      var hint = analyze();
+      hint.ghosts.filter(function (g) { return g.fix === fix; }).sort(function (a, b) { return b.at - a.at; })
+        .forEach(function (g) { blocks.splice(g.at, 0, make('op:' + g.op)); });
+      render();
+    }
+
     function render() {
       strip.innerHTML = '';
       if (!blocks.length) strip.innerHTML = '<span class="fx-empty">Перетащите сюда блоки — например, Вода гор. + Вода хол. × Тариф</span>';
-      blocks.forEach(function (b) {
+      var hint = analyze();
+      function ghosts(at) {
+        hint.ghosts.filter(function (g) { return g.at === at; }).forEach(function (g) {
+          var el = document.createElement('span');
+          el.className = 'fx-ghost';
+          el.dataset.fix = g.fix;
+          el.textContent = g.op;
+          el.title = 'Поставить «' + g.op + '» сюда';
+          strip.appendChild(el);
+        });
+      }
+      blocks.forEach(function (b, i) {
+        ghosts(i);
         var el = chipEl(b);
         el.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Убрать из формулы" aria-label="Убрать из формулы">×</span>');
+        if (hint.marks[i]) {
+          el.classList.add('is-mark');
+          el.insertAdjacentHTML('beforeend', '<span class="fx-pin" title="' + esc(hint.marks[i]) + '">!</span>');
+          el.querySelector('.fx-pin').dataset.say = hint.marks[i];
+        }
         strip.appendChild(el);
       });
+      ghosts(blocks.length);
       strip.querySelectorAll('.fx-nm, .fx-s2').forEach(function (e) { e.classList.toggle('is-cut', e.scrollWidth > e.clientWidth + 1); });
       renderPalette();
       renderCheck();
@@ -555,6 +657,10 @@
 
     overlay.addEventListener('pointerdown', function (e) {
       if (e.target === overlay) { closeFormula(false); return; }
+      var fix = e.target.closest('.fx-ghost');
+      if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix)); return; }
+      var pin = e.target.closest('.fx-pin');
+      if (pin) { e.preventDefault(); openNote(pin.closest('.fx-chip'), 'Подсказка', pin.dataset.say); return; }
       var del = e.target.closest('.fx-del');
       if (del) {
         e.preventDefault(); closePop();
