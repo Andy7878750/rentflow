@@ -288,6 +288,16 @@ class FormulaServiceTests(TestCase):
         self.assertEqual(self.line(bill, self.viktor, receipt).formula.replace(services.NBSP, ' '), '3 м³ × 10 ₽/м³')
         self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('20.00'))
 
+    def test_sigma_is_a_short_way_to_write_a_sum(self):
+        """(Σ Вода гор. + Вода хол. Виктора) × 10 — «Σ» is «сч1 + сч2»: each pays by his own meters of it (2026-11-22)."""
+        receipt = self.make(
+            [{'id': 'n1', 'label': 'Тариф', 'unit': '₽', 'per': 'м³', 'value': '10'}],
+            [self.op('('), self.meter('hot_water'), self.op('+'), self.one('water', self.viktor), self.op(')'),
+             self.op('×'), {'t': 'num', 'id': 'n1'}])
+        bill = services.month_bill(self.prop, SEPT)
+        self.assertEqual(self.line(bill, self.viktor, receipt).amount, Decimal('40.00'))  # (1 + 3) × 10
+        self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('40.00'))  # (4 + 0) × 10
+
     def test_v2_common_and_tenant_meters_are_refused(self):
         common = self.meters['water', self.vlad.pk]
         Meter.objects.filter(pk=common.pk).update(tenant=None)

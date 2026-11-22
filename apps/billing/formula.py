@@ -138,17 +138,6 @@ def meter_blocks(blocks):
     return [block for block in blocks if block.get('t') == 'meter']
 
 
-def is_own(block):
-    """«У каждого свой»: several meters, each tenant takes his own."""
-    return len(block.get('meters') or []) > 1 and block.get('join', 'each') == 'each'
-
-
-def named_tenant(block, owner_of):
-    """A single meter of a tenant: whose it is."""
-    meters = block.get('meters') or []
-    return owner_of(meters[0]) if len(meters) == 1 else None
-
-
 MIXED = 'Общий счётчик и счётчики арендаторов в одной формуле нельзя — для общего сделайте отдельную услугу.'
 
 
@@ -161,31 +150,31 @@ def check_mixed(blocks, owner_of):
         raise FormulaError(MIXED)
 
 
-def mode(blocks, owner_of):
-    """'each' — every tenant pays by his own meters; 'total' — one sum for the object, split by «Делим»."""
+def _tenants_in(blocks, owner_of):
+    """The tenants whose meters stand in the formula — single meters and «Σ» blocks alike («складываем» — the whole
+    object's number — not counted), in the formula's order."""
+    found = []
     for block in meter_blocks(blocks):
-        if is_own(block) or named_tenant(block, owner_of):
-            return 'each'
-    return 'total'
+        if block.get('join') == 'sum':
+            continue
+        for pk in block.get('meters') or []:
+            tenant = owner_of(pk)
+            if tenant and tenant not in found:
+                found.append(tenant)
+    return found
+
+
+def mode(blocks, owner_of):
+    """'each' — every tenant pays by his own meters (a tenant's meter stands in the formula, alone or in a «Σ» block);
+    'total' — one sum for the object, split by «Делим»."""
+    return 'each' if _tenants_in(blocks, owner_of) else 'total'
 
 
 def payers(blocks, owner_of, tenant_ids):
-    """In the 'each' mode: who pays (a tenant with a meter in every «у каждого свой» block; or the one tenant whose
-    single meter stands in the formula). Raises FormulaError when it's unclear."""
-    own = [block for block in meter_blocks(blocks) if is_own(block)]
-    if own:
-        found = [tenant for tenant in tenant_ids
-                 if all(any(owner_of(pk) == tenant for pk in block['meters']) for block in own)]
-        if not found:
-            raise FormulaError('Ни у одного арендатора нет своего счётчика в формуле — отметьте счётчики арендаторов.')
-        return found
+    """In the 'each' mode: who pays — every tenant with a meter of his in the formula (2026-11-22: a «Σ» block is only a
+    short way to write «сч1 + сч2 + сч3»). Common and tenants' meters together are refused."""
     check_mixed(blocks, owner_of)
-    named = []
-    for block in meter_blocks(blocks):
-        tenant = named_tenant(block, owner_of)
-        if tenant and tenant not in named:
-            named.append(tenant)
-    # Several tenants' meters: each pays by his own (another's meter is 0 for him).
+    named = _tenants_in(blocks, owner_of)
     return [tenant for tenant in tenant_ids if tenant in named]
 
 
@@ -203,10 +192,12 @@ def meter_usage(block, tenant, usage_of, owner_of):
 
 
 def is_foreign(block, tenant, owner_of):
-    """A single meter of another tenant, in this tenant's count: 0, and left out of his bill line."""
+    """Another tenant's meter (or a «Σ» block with none of his), in this tenant's count: 0, left out of his bill line."""
     meters = block.get('meters') or []
-    if tenant is None or len(meters) != 1:
+    if tenant is None or not meters or block.get('join') == 'sum':
         return False
+    if len(meters) > 1:  # a «Σ» block with none of his meters
+        return not any(owner_of(pk) == tenant for pk in meters)
     owner = owner_of(meters[0])
     return owner is not None and owner != tenant
 

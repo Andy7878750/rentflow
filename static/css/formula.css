@@ -178,21 +178,8 @@
 .fx-ucustom input { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 6px; font: inherit; font-size: 13px; }
 .fx-ucustom input:focus { outline: none; border-color: var(--color-accent); }
 .fx-ucustom button { flex: none; width: 28px; height: 28px; border: 0; border-radius: 6px; background: var(--color-accent); color: #fff; cursor: pointer; }
-/* A meter's window: its meters with a tick and «чей» */
-.fx-mrows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-.fx-mrow { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; align-items: center; font-size: 13px; }
-.fx-mrow input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--fx-accent); }
-.fx-mrow .fx-usel { height: 30px; font-size: 13px; }
-.fx-mrow .fx-locked { overflow: hidden; color: var(--fx-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 /* Not connected to any service (its readings can't be typed): seen, but greyed; a click says why. */
 .fx-chip.is-off { opacity: .55; border-style: dashed; cursor: help; }
-.fx-mrow.is-off { color: var(--fx-muted); cursor: help; }
-.fx-mrow.is-off input { cursor: help; }
-.fx-seg { display: inline-flex; margin-bottom: 8px; padding: 2px; border-radius: 8px; background: #eef2f4; }
-.fx-seg button { padding: 4px 12px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px; color: var(--fx-text); cursor: pointer; }
-.fx-seg button.is-on { background: var(--fx-accent); color: #fff; }
-.fx-seg.is-off { opacity: .45; }
-.fx-seg button:disabled { cursor: default; }
 /* A block's small window (v2): the ready ones on top, a new one below */
 .fx-pop.is-wide { width: 560px; }
 .fx-pop .fx-or { margin: 4px 0 6px; }
@@ -236,6 +223,10 @@
 .fx-mline.is-off .fx-ico { opacity: .5; }
 .fx-example.is-warn { color: var(--fx-danger); }
 .fx-example:empty { display: none; }
+/* «Σ»: what it stands for — the meters and whose they are */
+.fx-sumlist { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; padding: 0; list-style: none; font-size: 13px; }
+.fx-sumlist li { display: flex; justify-content: space-between; gap: 10px; }
+.fx-sumlist li span + span { color: var(--fx-muted); white-space: nowrap; }
 .fx-example { min-height: 36px; margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: #f4f6f8; font-size: 12px; }
 
 @media (max-width: 640px) {

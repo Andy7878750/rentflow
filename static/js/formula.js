@@ -170,11 +170,19 @@
     }
     function unitLabel(v) { return (v.unit || '') + (v.per ? (v.unit ? ' за ' : 'за ') + v.per : ''); }
 
-    function modeNow() {
-      if (!TENANTS.length) return 'total';
-      return blocks.some(function (b) {
-        return b.type === 'meter' && ((b.meters.length > 1 && b.join === 'each') || (b.meters.length === 1 && tenantOf(b.meters[0])));
-      }) ? 'each' : 'total';
+    // The tenants whose meters stand in the formula — alone or in a «Σ» block (a short way to write «сч1 + сч2 + сч3»);
+    // a «весь объект» block (the examples' whole usage) is one number for all and counts none.
+    function tenantsIn() {
+      var found = [];
+      blocks.forEach(function (b) {
+        if (b.type !== 'meter' || b.join === 'sum') return;
+        b.meters.forEach(function (id) { var t = tenantOf(id); if (t !== null && found.indexOf(t) < 0) found.push(t); });
+      });
+      return TENANTS.map(function (t) { return t.id; }).filter(function (id) { return found.indexOf(id) >= 0; });
+    }
+    function modeNow() { return TENANTS.length && tenantsIn().length ? 'each' : 'total'; }
+    function meterCount(n) {
+      return n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'счётчик' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'счётчика' : 'счётчиков');
     }
 
     // ---------- The DOM of the window ----------
@@ -216,11 +224,7 @@
         var short = shortOf(b.key);
         if (!b.meters.length) return short + ' · ?';
         if (b.meters.length === 1) return oneName(b);
-        if (modeNow() === 'total' || b.join === 'sum') {
-          var all = METERS.filter(function (m) { return m.key === b.key; }).length === b.meters.length;
-          return short + ' · ' + (all ? 'все вместе' : b.meters.map(whoShort).join(' + '));
-        }
-        return short + ' · у каждого';
+        return 'Σ ' + short + (b.join === 'sum' ? ' · весь объект' : '');
       }
       return valueOf(b).label;
     }
@@ -239,7 +243,8 @@
     }
     function chipParts(b) {
       if (b.type === 'meter' && b.meters.length === 1) return [oneName(b), whoShort(b.meters[0]) + ' · ' + kindOf(b.key).unit];
-      if (b.type === 'meter') { var short = shortOf(b.key); return ['Σ ' + short, chipText(b).slice(short.length + 3) + ' · ' + kindOf(b.key).unit]; }
+      // «Σ» (2026-11-22): all the meters of one group — a short way to write «сч1 + сч2 + сч3»; a click shows them.
+      if (b.type === 'meter') return ['Σ ' + shortOf(b.key), (b.join === 'sum' ? 'весь объект' : meterCount(b.meters.length)) + ' · ' + kindOf(b.key).unit];
       var v = valueOf(b), val = chipValue(b).replace(' за ', '/');
       return [v.label, v.type === 'month' ? (val ? val + ' · каждый месяц' : 'каждый месяц') : (val || 'число')];
     }
@@ -314,6 +319,7 @@
           return { v: 0, u: unitsOf(k.unit, ''), parts: [{ num: '0', word: chipText(b), foreign: true }] };
         }
         if (b.meters.length > 1 && tenantId !== null && b.join !== 'sum') ids = b.meters.filter(function (id) { return tenantOf(id) === tenantId; });
+        if (!ids.length) return { v: 0, u: unitsOf(k.unit, ''), parts: [{ num: '0', word: chipText(b), foreign: true }] };
         var v = ids.reduce(function (s, id) { return s + usageOf(id); }, 0);
         var word = chipText(b);
         if (tenantId !== null && b.meters.length > 1 && b.join !== 'sum') word = shortOf(b.key) + ' · ' + firstName(tenantById(tenantId).name);
@@ -448,17 +454,9 @@
         return;
       }
       if (modeNow() === 'each') {
-        var meterBlocks = blocks.filter(function (b) { return b.type === 'meter'; });
-        var own = meterBlocks.filter(function (b) { return b.meters.length > 1 && b.join === 'each'; });
-        var named = [];
-        meterBlocks.forEach(function (b) { if (b.meters.length === 1 && tenantOf(b.meters[0]) && named.indexOf(tenantOf(b.meters[0])) < 0) named.push(tenantOf(b.meters[0])); });
-        var payers = own.length ? TENANTS.filter(function (t) { return own.every(function (b) { return b.meters.some(function (id) { return tenantOf(id) === t.id; }); }); }).map(function (t) { return t.id; })
-          : named;
-        // Several tenants' meters: each pays by his own (window v2).
-        if (own.length && !payers.length) {
-          ok = false;
-          fail('Ни у одного арендатора нет своего счётчика в формуле — укажите у счётчиков, чьи они.');
-        } else {
+        // Every tenant with a meter of his in the formula pays by his own ones (another's meter is 0 for him).
+        var payers = tenantsIn();
+        {
           // Counted first: the part of those who don't pay may go to those who do (as the server does).
           var got = {}, onIds = [], offSum = 0, base = 0, all = 0, counted = 0;
           payers.forEach(function (id) {
@@ -811,9 +809,16 @@
 
     // ---------- «Расход счётчиков» (window v2): every meter of the object with a tick, no groups ----------
     function activeOf(keys) { return METERS.filter(function (m) { return keys.indexOf(m.key) >= 0 && isActive(m); }).map(function (m) { return m.id; }); }
-    // The ticked meters into the formula: each a block of its own; several — «( А + Б )».
+    // The ticked meters into the formula: each a block of its own; all the meters of one group (two or more) — one
+    // «Σ» block (2026-11-22, only shorter to read: counted as «сч1 + сч2 + сч3»); several blocks — «( А + Б )».
     function meterBlocks(ids) {
-      var list = ids.map(function (id) { return { id: ++uid, type: 'meter', key: meterById(id).key, meters: [id], join: 'each' }; });
+      var keys = [], list = [];
+      ids.forEach(function (id) { var k = meterById(id).key; if (keys.indexOf(k) < 0) keys.push(k); });
+      keys.forEach(function (k) {
+        var mine = ids.filter(function (id) { return meterById(id).key === k; });
+        if (mine.length > 1 && mine.length === activeOf([k]).length) list.push({ id: ++uid, type: 'meter', key: k, meters: mine, join: 'each' });
+        else mine.forEach(function (id) { list.push({ id: ++uid, type: 'meter', key: k, meters: [id], join: 'each' }); });
+      });
       if (list.length < 2) return list;
       var out = [op('(')];
       list.forEach(function (b, n) { if (n) out.push(op('+')); out.push(b); });
@@ -823,7 +828,7 @@
     // Meters already standing in the formula as blocks of their own: one meter goes in once.
     function inFormula() {
       var ids = [];
-      blocks.forEach(function (b) { if (b.type === 'meter' && b.meters.length === 1) ids.push(b.meters[0]); });
+      blocks.forEach(function (b) { if (b.type === 'meter' && b.join !== 'sum') b.meters.forEach(function (id) { ids.push(id); }); });
       return ids;
     }
     function openMeters(anchor, at) {
@@ -855,14 +860,13 @@
         '<button type="button" class="fx-btn is-primary" data-add disabled>Добавить</button></div>';
       overlay.appendChild(pop);
       placePop(anchor);
-      function count(n) { return n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'счётчик' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'счётчика' : 'счётчиков'); }
       function refresh() {
         pop.querySelectorAll('[data-m]:not(:disabled)').forEach(function (box) { box.checked = picked.indexOf(Number(box.dataset.m)) >= 0; });
         var mixed = isMixed(picked.concat(formulaMeters()));
         var add = pop.querySelector('[data-add]'), note = pop.querySelector('[data-mnote]');
         add.disabled = !picked.length || mixed;
-        add.textContent = picked.length ? 'Добавить ' + count(picked.length) : 'Добавить';
-        note.textContent = mixed ? MIXED : picked.length > 1 ? 'В формулу встанут через «+» в скобках.' : '';
+        add.textContent = picked.length ? 'Добавить ' + meterCount(picked.length) : 'Добавить';
+        note.textContent = mixed ? MIXED : picked.length > 1 ? 'В формулу встанут через «+» в скобках; все счётчики одной группы — одной плашкой «Σ».' : '';
         note.classList.toggle('is-warn', mixed);
       }
       pop.addEventListener('change', function (ev) {
@@ -891,39 +895,6 @@
       refresh();
     }
 
-    function meterPopBody(b) {
-      var k = kindOf(b.key), u = k.unit ? ' ' + k.unit : '';
-      var many = b.meters.length > 1;
-      // Each meter of this kind: a connected one — a tick, whose it is and where its readings are typed («чей» is changed
-      // there); one no service types — greyed, a click says why it can't be taken.
-      var rows = METERS.filter(function (m) { return m.key === b.key; }).map(function (m) {
-        var num = '<span>№ ' + esc(m.serial || '—') + (m.dn ? ' · день / ночь' : '') + '</span>';
-        if (!isActive(m)) {
-          return '<div class="fx-mrow is-off" data-off="' + m.id + '" title="' + esc(offText(m)) + '"><input type="checkbox" disabled>' + num +
-            '<span class="fx-locked">не подключён к услуге</span></div>';
-        }
-        return '<label class="fx-mrow"><input type="checkbox" data-meter="' + m.id + '"' + (b.meters.indexOf(m.id) >= 0 ? ' checked' : '') + '>' + num +
-          '<span class="fx-locked" title="Показания вводятся в услуге «' + esc(m.typed[0]) + '», там же меняется, чей счётчик">' +
-          esc(whoLabel(m.id)) + ' · в «' + esc(m.typed[0]) + '»</span></label>';
-      }).join('');
-      var example;
-      if (!b.meters.length) example = 'Отметьте хотя бы один счётчик.';
-      else if (!many) {
-        var t = tenantById(tenantOf(b.meters[0]));
-        example = t ? 'Только ' + t.name + ': ' + fmt(usageOf(b.meters[0])) + u + '. Остальные по этой формуле не платят.'
-          : 'Один счётчик: ' + fmt(usageOf(b.meters[0])) + u + ' — одно число для всех.';
-      } else if (b.join === 'sum') {
-        example = b.meters.map(function (id) { return fmt(usageOf(id)); }).join(' + ') + ' = ' +
-          fmt(b.meters.reduce(function (s, id) { return s + usageOf(id); }, 0)) + u + ' — одно число в формуле для всех.';
-      } else {
-        example = b.meters.map(function (id) { return whoShort(id) + ' — ' + fmt(usageOf(id)) + u; }).join(' · ') + ' — каждому по его счётчику.';
-      }
-      return '<div class="fx-meter-body"><div class="fx-f">Какие счётчики и чьи</div><div class="fx-mrows">' + rows + '</div>' +
-        '<div class="fx-seg' + (many ? '' : ' is-off') + '">' +
-        [['each', 'У каждого свой'], ['sum', 'Складываем']].map(function (p) {
-          return '<button type="button" data-join="' + p[0] + '"' + (b.join === p[0] ? ' class="is-on"' : '') + (many ? '' : ' disabled') + '>' + p[1] + '</button>';
-        }).join('') + '</div><p class="fx-example">' + esc(example) + '</p></div>';
-    }
     function openPop(b, anchor) {
       closePop();
       if (!b || b.type === 'op') return;
@@ -939,50 +910,21 @@
         pop.innerHTML = '<h4>' + esc(meterName(m)) + '</h4><p class="fx-example">Расход за месяц' + (k.unit ? ', ' + esc(k.unit) : '') +
           ' · ' + esc(whoLabel(m.id)) + (m.typed && m.typed.length ? ' · показания вводятся в «' + esc(m.typed[0]) + '»' : '') + '.</p>';
       } else {
-        pop.innerHTML = '<h4>' + esc(kindOf(b.key).name) + ' — расход за месяц</h4>' + meterPopBody(b);
+        // «Σ»: nothing to set up — only what it stands for.
+        pop.innerHTML = '<h4>Σ ' + esc(kindOf(b.key).name) + '</h4><p class="fx-example">' +
+          (b.join === 'sum' ? 'Весь расход объекта — одно число для всех: ' : 'Сумма ' + meterCount(b.meters.length) + ': ') +
+          esc('(' + b.meters.map(function (id) { return oneName({ key: b.key, meters: [id] }); }).join(' + ') + ')') + '</p>' +
+          '<ul class="fx-sumlist">' + b.meters.map(function (id) {
+            return '<li><span>' + esc(meterName(meterById(id))) + '</span><span>' + esc(whoLabel(id)) + '</span></li>';
+          }).join('') + '</ul>';
       }
       pop.insertAdjacentHTML('beforeend', '<div class="fx-acts"><button type="button" class="fx-btn is-danger" data-del>Убрать из формулы</button><button type="button" class="fx-btn is-primary" data-ok>Готово</button></div>');
       overlay.appendChild(pop);
       placePop(anchor);
       if (b.type === 'val') wireValue(valueOf(b), render);
-      else if (b.meters.length > 1) wireMeter(b);
       pop.querySelector('[data-ok]').onclick = closePop;
       pop.querySelector('[data-del]').onclick = function () { blocks = blocks.filter(function (x) { return x !== b; }); closePop(); render(); };
     }
-    function wireMeter(b) {
-      function redraw() { pop.querySelector('.fx-meter-body').outerHTML = meterPopBody(b); wireWho(); render(); }
-      function wireWho() {
-        pop.querySelectorAll('[data-who]').forEach(function (btn) {
-          btn.addEventListener('click', function (ev) {
-            ev.preventDefault();
-            var id = Number(btn.dataset.who);
-            var options = [['', 'Общий']].concat(TENANTS.map(function (t) { return [String(t.id), t.name]; }), [['free', 'Собственник']]);
-            openMenu(btn, options, owners[id] || '', false, function (value) { owners[id] = value; redraw(); });
-          });
-        });
-      }
-      pop.addEventListener('change', function (ev) {
-        if (ev.target.dataset.meter === undefined) return;
-        var id = Number(ev.target.dataset.meter);
-        b.meters = ev.target.checked ? METERS.filter(function (m) { return m.key === b.key && (m.id === id || b.meters.indexOf(m.id) >= 0); }).map(function (m) { return m.id; })
-          : b.meters.filter(function (x) { return x !== id; });
-        redraw();
-      });
-      pop.addEventListener('click', function (ev) {
-        var off = ev.target.closest('[data-off]');
-        if (off) {
-          // The explanation right in this window, where the example usually is.
-          var note = pop.querySelector('.fx-example');
-          note.textContent = offText(meterById(Number(off.dataset.off)));
-          note.classList.add('is-warn');
-          return;
-        }
-        var btn = ev.target.closest('[data-join]'); if (!btn || btn.disabled) return;
-        b.join = btn.dataset.join; redraw();
-      });
-      wireWho();
-    }
-
     // Our own menus (no browser list): units with «свой вариант…», a meter's «чей».
     function closeUnitMenu() {
       overlay.querySelectorAll('.fx-umenu').forEach(function (m) { m.remove(); });
