@@ -260,3 +260,9 @@
 .fx-almost-btn { height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--fx-accent); color: #fff; font: inherit;
   font-size: 13px; font-weight: 600; cursor: pointer; }
 .fx-almost-btn:hover { filter: brightness(1.08); }
+/* «Какой знак?» — the four signs as in the palette */
+.fx-almost-sign { width: 36px; height: 32px; border: 1px solid #bfe3da; border-radius: 8px; background: var(--fx-accent-soft); color: var(--fx-accent);
+  font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.fx-almost-sign:hover { border-color: var(--fx-accent); background: var(--fx-accent); color: #fff; }
+.fx-almost-text + .fx-almost-sign { margin-left: 4px; }
+.fx-almost .fx-almost-sign + .fx-almost-sign { margin-left: -4px; }

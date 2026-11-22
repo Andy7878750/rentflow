@@ -299,9 +299,9 @@
         if (operand || isOp(b, ['('])) {
           if (!expect) {
             var f = ++fixes;
-            ghost(i, '×', f);
+            ghost(i, '?', f);
             fixed[i] = f;
-            marks[i] = 'Между «' + nameOf(blocks[i - 1]) + '» и «' + nameOf(b) + '» нужен знак — нажмите на пунктирный «×» или поставьте свой.';
+            marks[i] = 'Между «' + nameOf(blocks[i - 1]) + '» и «' + nameOf(b) + '» нужен знак — нажмите на «?» и выберите: + − × ÷.';
           }
           if (operand) expect = false; else { stack.push(i); expect = true; }
         } else if (isOp(b, [')'])) {
@@ -366,10 +366,11 @@
     }
     function alike(a, b) { var ua = itemUnits(a), ub = itemUnits(b); return !ua || !ub || sameUnits(ua, ub); }
     // A click on a dashed bracket or sign: put every piece of that fix (both brackets of a pair).
-    function applyFix(fix) {
+    // sign — what was picked for a «?» (a missing sign is never guessed, 2026-11-22).
+    function applyFix(fix, sign) {
       var hint = analyze();
       hint.ghosts.filter(function (g) { return g.fix === fix; }).sort(function (a, b) { return b.at - a.at; })
-        .forEach(function (g) { blocks.splice(g.at, 0, make('op:' + g.op)); });
+        .forEach(function (g) { blocks.splice(g.at, 0, make('op:' + (g.op === '?' ? sign : g.op))); });
       render();
     }
 
@@ -383,7 +384,7 @@
           el.className = 'fx-ghost';
           el.dataset.fix = g.fix;
           el.textContent = g.op;
-          el.title = 'Поставить «' + g.op + '» сюда';
+          el.title = g.op === '?' ? 'Выбрать знак: + − × ÷' : 'Поставить «' + g.op + '» сюда';
           strip.appendChild(el);
         });
       }
@@ -562,13 +563,21 @@
         hint.ghosts.forEach(function (g) { (groups[g.fix] = groups[g.fix] || []).push(g.op); });
         var keys = Object.keys(groups);
         var first = Object.keys(hint.marks).map(Number).sort(function (a, b) { return a - b; })[0];
-        var text = keys.length ? ({ '×': 'Не хватает знака между блоками.', ')': 'Не хватает закрывающей скобки.', '()': 'Сначала сложить, потом умножить?' })[
+        var text = keys.length ? ({ '?': 'Не хватает знака между блоками — какой?', ')': 'Не хватает закрывающей скобки.', '()': 'Сначала сложить, потом умножить?' })[
           groups[keys[0]].slice().sort().join('').replace(')(', '()')] || hint.marks[first] : hint.marks[first];
         calm.innerHTML = '<span class="fx-almost-text"></span>';
         calm.querySelector('.fx-almost-text').textContent = text;
         if (root === overlay) {
           keys.forEach(function (k) {
             var ops = groups[k].slice().sort().join('').replace(')(', '()');
+            if (ops === '?') {
+              // the four signs, as in the palette: the owner picks
+              ['+', '−', '×', '÷'].forEach(function (sign) {
+                calm.insertAdjacentHTML('beforeend', '<button type="button" class="fx-almost-sign" data-fixit="' + k + '" data-sign="' + sign + '" ' +
+                  'title="Поставить «' + sign + '»">' + sign + '</button>');
+              });
+              return;
+            }
             calm.insertAdjacentHTML('beforeend', '<button type="button" class="fx-almost-btn" data-fixit="' + k + '">' +
               (ops === '()' ? 'Поставить скобки' : 'Поставить «' + esc(ops) + '»') + '</button>');
           });
@@ -688,7 +697,14 @@
     overlay.addEventListener('pointerdown', function (e) {
       if (e.target === overlay) { closeFormula(false); return; }
       var fix = e.target.closest('.fx-ghost, [data-fixit]');
-      if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix || fix.dataset.fixit)); return; }
+      if (fix && fix.classList.contains('fx-ghost') && fix.textContent === '?') {
+        // «?» in the line: a menu of the four signs right at it
+        e.preventDefault(); closePop();
+        var id = Number(fix.dataset.fix);
+        openMenu(fix, [['+', '+'], ['−', '−'], ['×', '×'], ['÷', '÷']], '', false, function (sign) { applyFix(id, sign); });
+        return;
+      }
+      if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix || fix.dataset.fixit), fix.dataset.sign); return; }
       var pin = e.target.closest('.fx-pin');
       if (pin) { e.preventDefault(); openNote(pin.closest('.fx-chip'), 'Подсказка', pin.dataset.say); return; }
       var del = e.target.closest('.fx-del');
