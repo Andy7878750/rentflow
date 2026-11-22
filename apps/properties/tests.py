@@ -225,15 +225,16 @@ class PropertyPagesTests(TestCase):
         self.assertContains(response, f'href="{reverse("property_edit", args=[second.pk])}" class="sv-nav-item" data-modal data-obj-go')
         self.assertContains(response, 'Новый объект')  # «+ Новый объект» while another one is open
         self.assertNotContains(response, 'Чужой объект')
-        self.assertContains(response, 'data-part="object">')  # the object part is open first
-        self.assertContains(response, 'data-part="meters" hidden')
+        # One long sheet, as before: every part is there, the menu only rolls to it.
+        for part in ('object', 'meters', 'tenants'):
+            self.assertContains(response, f'data-part="{part}">')
+        self.assertContains(response, 'is-mode is-on" data-opart="object"')
 
     def test_object_window_opens_the_part_with_an_error(self):
         self.client.force_login(self.user)
         response = self.client.post(reverse('property_create'), form_data(
             tenants=[{'name': 'Аптека', 'share': '150'}]), HTTP_X_MODAL='1')
-        self.assertContains(response, 'data-part="tenants">')
-        self.assertContains(response, 'data-part="object" hidden')
+        self.assertContains(response, 'is-mode is-on" data-opart="tenants"')  # rolled up to the part with the error
         self.assertContains(response, 'class="ow-dot"', count=1)
 
     def test_create_assigns_owner(self):

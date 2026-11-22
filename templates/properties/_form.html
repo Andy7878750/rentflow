@@ -1,6 +1,7 @@
 {% comment %}Окно объекта (2026-11-22, макет docs/mockups/2026-11-22-object-window.html) — в каркасе окна услуг (svcwin):
-   слева три раздела (Объект · Счётчики · Арендаторы) и ниже другие объекты владельца; справа — раздел формы, как был.
-   Одна кнопка внизу сохраняет всё сразу; раздел с ошибкой открывается первым, у него в меню красная точка.{% endcomment %}
+   слева три раздела (Объект · Счётчики · Арендаторы) и ниже другие объекты владельца; справа — вся форма, как была (одной
+   лентой). Клик в меню подкатывает раздел к верху, при прокрутке в меню подсвечен раздел, где вы. Одна кнопка сохраняет всё;
+   у раздела с ошибкой в меню красная точка.{% endcomment %}
 <div class="modal-panel svcwin objwin">
   <header class="svcwin-head">
     <h1>Объекты <span>· {% if property %}{{ property.name }}{% else %}Новый объект{% endif %}</span></h1>
@@ -43,7 +44,7 @@
         <div class="sv-body ow-body">
     {% if form.non_field_errors %}<ul class="errorlist">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 
-    <section class="form-section" data-part="object"{% if open_part != 'object' %} hidden{% endif %}>
+    <section class="form-section" data-part="object">
       <h2 class="form-section-head">Объект и УК / ТСЖ</h2>
       <div class="form-section-body">
         <div class="form-grid grid-2">
@@ -108,7 +109,7 @@
       </div>
     </section>
 
-    <section class="form-section" data-items="meter" data-part="meters"{% if open_part != 'meters' %} hidden{% endif %}>
+    <section class="form-section" data-items="meter" data-part="meters">
       <div class="form-section-head">
         <h2>Счётчики <span class="help" tabindex="0" role="button" aria-label="Подсказка: Счётчики" data-tip-title="Счётчики" data-tip="Счётчики помещения: свет, вода и свои. Кто платит по счётчику, отмечается в окне арендатора.">?</span></h2>
         <span class="head-badge" data-items-count></span>
@@ -124,7 +125,7 @@
       </div>
     </section>
 
-    <section class="form-section" data-items="tenant" data-part="tenants"{% if open_part != 'tenants' %} hidden{% endif %}>
+    <section class="form-section" data-items="tenant" data-part="tenants">
       <div class="form-section-head">
         <h2>Кто пользуется объектом <span class="help" tabindex="0" role="button" aria-label="Подсказка: Кто пользуется объектом" data-tip-title="Кто пользуется объектом" data-tip="Доли нужны, чтобы делить расходы между арендаторами. Незанятая доля остаётся на вас.">?</span></h2>
         <div class="segmented seg-fill seg-sm head-seg" role="radiogroup" aria-label="Кто пользуется объектом">

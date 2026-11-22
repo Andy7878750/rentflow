@@ -1590,15 +1590,52 @@
     form.dataset.objwinReady = '1';
     var start = '';
     setTimeout(function () { start = formState(form); }, 0);  // once the rows of meters and tenants are drawn
-    // A part of the menu: show its block (the others stay in the form and are saved with it).
+    // The form stays one long sheet, as before (2026-11-22); the menu only rolls a part up to the top, and while scrolling
+    // the part you are in is lit in the menu.
+    var pane = form.querySelector('.svcwin-pane');
+    var top = form.querySelector('.sv-top');
+    var body = form.querySelector('.ow-body');
+    var parts = Array.prototype.slice.call(form.querySelectorAll('[data-part]'));
+    var rolling = false;
+    function headH() { return top ? top.offsetHeight : 0; }
+    function light(name) {
+      form.querySelectorAll('[data-opart]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.opart === name); });
+    }
+    // Room under the last part, so that it too can come up to the top.
+    function roomForLast() {
+      if (!pane || !body || !parts.length) return;
+      body.style.paddingBottom = '';
+      var last = parts[parts.length - 1];
+      var foot = form.querySelector('.sv-foot');
+      var need = pane.clientHeight - headH() - (foot ? foot.offsetHeight : 0) - last.offsetHeight - 20;
+      if (need > 0) body.style.paddingBottom = (24 + need) + 'px';
+    }
+    function partTop(sec) { return sec.offsetTop - headH() - 20; }
     form.addEventListener('click', function (event) {
       var part = event.target.closest('[data-opart]');
-      if (!part) return;
-      form.querySelectorAll('[data-opart]').forEach(function (b) { b.classList.toggle('is-on', b === part); });
-      form.querySelectorAll('[data-part]').forEach(function (sec) { sec.hidden = sec.dataset.part !== part.dataset.opart; });
-      var pane = form.querySelector('.svcwin-pane');
-      if (pane) pane.scrollTop = 0;
+      if (!part || !pane) return;
+      var sec = form.querySelector('[data-part="' + part.dataset.opart + '"]');
+      light(part.dataset.opart);
+      rolling = true;
+      pane.scrollTo({ top: Math.max(0, partTop(sec)), behavior: 'smooth' });
+      clearTimeout(form.rollTimer);
+      form.rollTimer = setTimeout(function () { rolling = false; }, 600);
     });
+    if (pane) {
+      pane.addEventListener('scroll', function () {
+        if (rolling) return;
+        var at = parts[0];
+        parts.forEach(function (sec) { if (partTop(sec) <= pane.scrollTop + 8) at = sec; });
+        light(at.dataset.part);
+      });
+      setTimeout(roomForLast, 0);
+      if (window.ResizeObserver) new ResizeObserver(roomForLast).observe(parts[parts.length - 1]);
+      // The part with an error: rolled up to it once drawn.
+      var open = form.querySelector('[data-opart].is-on');
+      if (open && open.dataset.opart !== 'object') {
+        setTimeout(function () { pane.scrollTop = Math.max(0, partTop(form.querySelector('[data-part="' + open.dataset.opart + '"]'))); }, 0);
+      }
+    }
     // The name in the head follows the field.
     var name = form.querySelector('input[name=name]');
     var head = form.querySelector('[data-oname]');

@@ -318,7 +318,9 @@
 .ow-cnt { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--color-text-muted); }
 .ow-dot { flex: none; margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); }
 .ow-dot + .ow-cnt { margin-left: 6px; }
-.ow-body { padding: 20px 32px 24px; }
+.ow-body { display: flex; flex-direction: column; gap: 28px; padding: 20px 32px 24px; }
+/* the fields' floating labels sit at z-index 2: the sticky head and bottom bar go above them when the form scrolls under */
+.objwin .sv-top, .objwin .sv-foot { z-index: 6; }
 /* the parts without frames, as the service window's blocks: a caption in capitals, then what is in it */
 .objwin .pform .form-section { margin: 0; border: 0; border-radius: 0; }
 .objwin .pform .form-section-head { min-height: 20px; padding: 0 0 8px; border: 0; border-radius: 0; background: none;
