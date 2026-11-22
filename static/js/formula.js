@@ -195,8 +195,6 @@
       '<p class="fx-desc">Соберите расчёт из четырёх блоков. Внизу сразу видно, сколько выйдет у каждого арендатора.</p>' +
       '<div class="fx-examples">Примеры:' +
       '<button type="button" data-example="sewage">Водоотведение</button>' +
-      '<button type="button" data-example="usage">Сумма по расходу</button>' +
-      '<button type="button" data-example="heat">Отопление</button>' +
       '<button type="button" data-example="one">Только арендатору 1</button></div>' +
       // Four blocks of one size (2026-11-21, window v2): a click opens a small window — pick a ready one or make a new one.
       '<div class="fx-palette">' +
@@ -301,7 +299,7 @@
             var f = ++fixes;
             ghost(i, '?', f);
             fixed[i] = f;
-            marks[i] = 'Между «' + nameOf(blocks[i - 1]) + '» и «' + nameOf(b) + '» нужен знак — нажмите на «?» и выберите: + − × ÷.';
+            marks[i] = 'Между «' + nameOf(blocks[i - 1]) + '» и «' + nameOf(b) + '» нужен знак — нажмите на мигающую плашку и выберите его.';
           }
           if (operand) expect = false; else { stack.push(i); expect = true; }
         } else if (isOp(b, [')'])) {
@@ -383,8 +381,10 @@
           var el = document.createElement('span');
           el.className = 'fx-ghost';
           el.dataset.fix = g.fix;
-          el.textContent = g.op;
-          el.title = g.op === '?' ? 'Выбрать знак: + − × ÷' : 'Поставить «' + g.op + '» сюда';
+          el.dataset.op = g.op;
+          el.textContent = g.op === '?' ? '' : g.op;
+          if (g.op === '?') el.classList.add('is-blank');
+          el.title = g.op === '?' ? 'Выбрать знак' : 'Поставить «' + g.op + '» сюда';
           strip.appendChild(el);
         });
       }
@@ -554,39 +554,8 @@
       function fail(text) { var p = document.createElement('p'); p.className = 'fx-note ' + (soft ? 'is-warn' : 'is-err'); p.textContent = text; box.appendChild(p); }
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
       var ok = true;
-      // Almost right (2026-11-22): what the line's hints say — calm, one line, the fix as a button; red is for real errors.
+      // Almost right (2026-11-22): the line shows the fix; here only the reasons, in orange — red is for real errors.
       var hint = analyze();
-      if (Object.keys(hint.marks).length) {
-        var calm = document.createElement('div');
-        calm.className = 'fx-almost';
-        var groups = {};
-        hint.ghosts.forEach(function (g) { (groups[g.fix] = groups[g.fix] || []).push(g.op); });
-        var keys = Object.keys(groups);
-        var first = Object.keys(hint.marks).map(Number).sort(function (a, b) { return a - b; })[0];
-        var text = keys.length ? ({ '?': 'Не хватает знака между блоками — какой?', ')': 'Не хватает закрывающей скобки.', '()': 'Сначала сложить, потом умножить?' })[
-          groups[keys[0]].slice().sort().join('').replace(')(', '()')] || hint.marks[first] : hint.marks[first];
-        calm.innerHTML = '<span class="fx-almost-text"></span>';
-        calm.querySelector('.fx-almost-text').textContent = text;
-        if (root === overlay) {
-          keys.forEach(function (k) {
-            var ops = groups[k].slice().sort().join('').replace(')(', '()');
-            if (ops === '?') {
-              // the four signs, as in the palette: the owner picks
-              ['+', '−', '×', '÷'].forEach(function (sign) {
-                calm.insertAdjacentHTML('beforeend', '<button type="button" class="fx-almost-sign" data-fixit="' + k + '" data-sign="' + sign + '" ' +
-                  'title="Поставить «' + sign + '»">' + sign + '</button>');
-              });
-              return;
-            }
-            calm.insertAdjacentHTML('beforeend', '<button type="button" class="fx-almost-btn" data-fixit="' + k + '">' +
-              (ops === '()' ? 'Поставить скобки' : 'Поставить «' + esc(ops) + '»') + '</button>');
-          });
-        } else {
-          calm.insertAdjacentHTML('beforeend', '<span class="fx-almost-text is-muted">— нажмите «Изменить формулу»</span>');
-        }
-        calm.classList.add('is-question');
-        box.appendChild(calm);
-      }
       // While the line has a fix to put, what doesn't count yet is a warning (orange), not an error (red).
       var soft = Object.keys(hint.marks).length > 0;
       if (isMixed(formulaMeters())) {
@@ -696,15 +665,15 @@
 
     overlay.addEventListener('pointerdown', function (e) {
       if (e.target === overlay) { closeFormula(false); return; }
-      var fix = e.target.closest('.fx-ghost, [data-fixit]');
-      if (fix && fix.classList.contains('fx-ghost') && fix.textContent === '?') {
+      var fix = e.target.closest('.fx-ghost');
+      if (fix && fix.classList.contains('fx-ghost') && fix.dataset.op === '?') {
         // «?» in the line: a menu of the four signs right at it
         e.preventDefault(); closePop();
         var id = Number(fix.dataset.fix);
         openMenu(fix, [['+', '+'], ['−', '−'], ['×', '×'], ['÷', '÷']], '', false, function (sign) { applyFix(id, sign); });
         return;
       }
-      if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix || fix.dataset.fixit), fix.dataset.sign); return; }
+      if (fix) { e.preventDefault(); closePop(); applyFix(Number(fix.dataset.fix)); return; }
       var pin = e.target.closest('.fx-pin');
       if (pin) { e.preventDefault(); openNote(pin.closest('.fx-chip'), 'Подсказка', pin.dataset.say); return; }
       var del = e.target.closest('.fx-del');
@@ -794,22 +763,10 @@
     }
     function val(v) { return { id: ++uid, type: 'val', vid: v.id }; }
     function op(sign) { return make('op:' + sign); }
-    function meterSum(key) { var b = make('meter:' + key); b.join = 'sum'; return b; }
     var EXAMPLES = {
       sewage: { needs: ['hot_water', 'water'], build: function () {
         var t = exampleValue('const', { label: 'Тариф водоотведения', value: 45, unit: '₽', per: 'м³' });
         return meterBlocks(activeOf(['water', 'hot_water'])).concat([op('×'), val(t)]);
-      } },
-      // The receipt's sum × his usage ÷ the whole usage: «Σ» (all meters together) is the one number for all.
-      usage: { needs: ['electricity'], build: function () {
-        var sum = exampleValue('month', { label: 'Сумма по квитанции', unit: '₽' });
-        return [val(sum), op('÷'), meterSum('electricity'), op('×')].concat(meterBlocks(activeOf(['electricity'])));
-      } },
-      heat: { needs: ['hot_water'], build: function () {
-        var heat = exampleValue('month', { label: 'Тепло по квитанции', unit: 'Гкал' });
-        var per = exampleValue('const', { label: 'Подогрев 1 м³', value: 0.06, unit: 'Гкал', per: 'м³' });
-        var tariff = exampleValue('const', { label: 'Тариф тепла', value: 4800, unit: '₽', per: 'Гкал' });
-        return [op('('), val(heat), op('−'), op('('), meterSum('hot_water'), op('×'), val(per), op(')'), op(')'), op('×'), val(tariff)];
       } },
       // The first tenant's own light meter × a tariff: only that tenant pays by this formula.
       one: { needs: ['electricity'], build: function (anchor) {
@@ -961,16 +918,9 @@
 
     // ---------- «Расход счётчиков» (window v2): every meter of the object with a tick, no groups ----------
     function activeOf(keys) { return METERS.filter(function (m) { return keys.indexOf(m.key) >= 0 && isActive(m); }).map(function (m) { return m.id; }); }
-    // The ticked meters into the formula: each a block of its own; all the meters of one group (two or more) — one
-    // «Σ» block (2026-11-22, only shorter to read: counted as «сч1 + сч2 + сч3»); several blocks — «( А + Б )».
+    // The ticked meters into the formula: each a block of its own (no sums of meters — 2026-11-22); several — «( А + Б )».
     function meterBlocks(ids) {
-      var keys = [], list = [];
-      ids.forEach(function (id) { var k = meterById(id).key; if (keys.indexOf(k) < 0) keys.push(k); });
-      keys.forEach(function (k) {
-        var mine = ids.filter(function (id) { return meterById(id).key === k; });
-        if (mine.length > 1 && mine.length === activeOf([k]).length) list.push({ id: ++uid, type: 'meter', key: k, meters: mine, join: 'each' });
-        else mine.forEach(function (id) { list.push({ id: ++uid, type: 'meter', key: k, meters: [id], join: 'each' }); });
-      });
+      var list = ids.map(function (id) { return { id: ++uid, type: 'meter', key: meterById(id).key, meters: [id], join: 'each' }; });
       if (list.length < 2) return list;
       var out = [op('(')];
       list.forEach(function (b, n) { if (n) out.push(op('+')); out.push(b); });
@@ -1018,7 +968,7 @@
         var add = pop.querySelector('[data-add]'), note = pop.querySelector('[data-mnote]');
         add.disabled = !picked.length || mixed;
         add.textContent = picked.length ? 'Добавить ' + meterCount(picked.length) : 'Добавить';
-        note.textContent = mixed ? MIXED : picked.length > 1 ? 'В формулу встанут через «+» в скобках; все счётчики одной группы — одной плашкой «Σ».' : '';
+        note.textContent = mixed ? MIXED : picked.length > 1 ? 'В формулу встанут через «+» в скобках.' : '';
         note.classList.toggle('is-warn', mixed);
       }
       pop.addEventListener('change', function (ev) {

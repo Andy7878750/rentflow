@@ -250,19 +250,6 @@
   border: 1.5px dashed var(--fx-accent); border-radius: 8px; background: var(--fx-accent); color: #fff; font-size: 16px; font-weight: 700;
   cursor: pointer; animation: fx-pulse 1.6s ease-in-out infinite; }
 .fx-ghost:hover { animation: none; box-shadow: 0 0 0 4px var(--fx-accent-soft); }
+.fx-ghost.is-blank { width: 24px; }
 @keyframes fx-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(20, 143, 119, .35); } 50% { box-shadow: 0 0 0 5px rgba(20, 143, 119, 0); } }
 @media (prefers-reduced-motion: reduce) { .fx-ghost { animation: none; } }
-/* «Как посчитается» while the formula is almost right: one calm line, the fix as a button */
-.fx-almost { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-radius: 8px;
-  background: #f1f3f5; font-size: 13.5px; }
-.fx-almost-text.is-muted { color: var(--fx-muted); }
-.fx-almost.is-question { margin-bottom: 8px; }
-.fx-almost-btn { height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--fx-accent); color: #fff; font: inherit;
-  font-size: 13px; font-weight: 600; cursor: pointer; }
-.fx-almost-btn:hover { filter: brightness(1.08); }
-/* «Какой знак?» — the four signs as in the palette */
-.fx-almost-sign { width: 36px; height: 32px; border: 1px solid #bfe3da; border-radius: 8px; background: var(--fx-accent-soft); color: var(--fx-accent);
-  font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
-.fx-almost-sign:hover { border-color: var(--fx-accent); background: var(--fx-accent); color: #fff; }
-.fx-almost-text + .fx-almost-sign { margin-left: 4px; }
-.fx-almost .fx-almost-sign + .fx-almost-sign { margin-left: -4px; }
