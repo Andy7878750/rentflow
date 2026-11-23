@@ -826,21 +826,23 @@
       var h = pop.offsetHeight;
       pop.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
     }
+    // HTML: the word that changes with the units — «тариф / сумма / норматив / …» — in bold (2026-11-23).
     function valueSays(v) {
       var n = v.type === 'const' ? fmt(v.value) : 'число';
-      var one = v.per ? ' за 1 ' + v.per : '';
+      var unit = esc(v.unit || ''), one = v.per ? ' за 1 ' + esc(v.per) : '';
+      var is = function (word, rest) { return 'Это <b>' + word + '</b>: ' + rest; };
       if (v.type === 'month') {
         if (!v.unit) return 'Каждый месяц на странице объекта вводите число (без единицы итог в рублях не проверяем).';
-        return 'Каждый месяц на странице объекта вводите ' + (v.unit === '₽' ? 'сумму в ₽' : 'сколько ' + v.unit) + ' — например, из квитанции.';
+        return 'Каждый месяц на странице объекта вводите ' + (v.unit === '₽' ? 'сумму в ₽' : 'сколько ' + unit) + ' — например, из квитанции.';
       }
-      if (!v.unit) return 'Просто число ' + n + ' — например, коэффициент. Без единицы итог в рублях не проверяем.';
-      if (v.unit === '₽') return v.per ? 'Это тариф: ' + n + ' ₽' + one + '.' : 'Это сумма: ' + n + ' ₽ каждый месяц.';
-      return v.per ? 'Это норматив: ' + n + ' ' + v.unit + ' на 1 ' + v.per + '.' : 'Это количество: ' + n + ' ' + v.unit + '.';
+      if (!v.unit) return is('коэффициент', n + '. Без единицы итог в рублях не проверяем.');
+      if (v.unit === '₽') return v.per ? is('тариф', n + ' ₽' + one + '.') : is('сумма', n + ' ₽ каждый месяц.');
+      return v.per ? is('норматив', n + ' ' + unit + ' на 1 ' + esc(v.per) + '.') : is('количество', n + ' ' + unit + '.');
     }
     function unitButton(key, cur) { return '<button type="button" class="fx-usel" data-k="' + key + '" data-v="' + esc(cur || '') + '"><span>' + esc(cur || '—') + '</span>' + CHEV + '</button>'; }
     function valueFields(v) {
       var num = function (n) { return String(n).replace('.', ','); };
-      var name = '<label class="fx-f">Название<input data-k="label" value="' + esc(v.label) + '" placeholder="' +
+      var name = '<label class="fx-f"><span>Название <span class="req">*</span></span><input data-k="label" value="' + esc(v.label) + '" placeholder="' +
         (v.type === 'const' ? 'Например, Тариф тепло' : 'Например, Тепло по квитанции') + '"><small>Так подписано на странице объекта и в счёте</small></label>';
       if (v.type === 'month') {
         return name + '<div class="fx-f">Цифра для проверки формулы<div class="fx-vrow is-one"><span class="fx-vfield">' +
@@ -861,7 +863,7 @@
         var val = ev.target.value;
         if (key === 'value') val = toNumber(val);
         v[key] = val;
-        pop.querySelector('.fx-say').textContent = valueSays(v);
+        pop.querySelector('.fx-say').innerHTML = valueSays(v);
         onChange();
       });
       pop.querySelectorAll('.fx-usel').forEach(function (btn) {
@@ -874,7 +876,7 @@
               v.sample = sampleFor(unit);
               var f = pop.querySelector('.fx-sample'); if (f) f.value = String(v.sample).replace('.', ',');
             }
-            pop.querySelector('.fx-say').textContent = valueSays(v);
+            pop.querySelector('.fx-say').innerHTML = valueSays(v);
             onChange();
           });
         });

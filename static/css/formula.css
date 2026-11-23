@@ -156,6 +156,7 @@
 .fx-pop .fx-vfield input { flex: 1; min-width: 0; height: 100%; border: 0; border-radius: 0; text-align: right; }
 .fx-pop .fx-vfield input:disabled { background: #f7f9fa; color: var(--fx-muted); }
 .fx-pop .fx-say { min-height: 34px; margin: -4px 0 10px; font-size: 12px; }
+.fx-pop .fx-say b { font-weight: 600; color: var(--fx-text); }
 .fx-pop .fx-uses { margin: -4px 0 10px; font-size: 12px; color: var(--fx-muted); }
 .fx-pop .fx-acts .fx-btn { flex: 1 1 0; min-width: 0; padding: 0 4px; }
 .fx-pop .fx-acts .fx-btn.is-danger { flex: none; }
