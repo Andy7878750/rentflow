@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Формула в окне услуг</title>
+<style>
+  :root { --text:#34495e; --muted:#7f8c8d; --border:#e1e4e8; --bg:#f5f6f7; --accent:#148f77; --soft:#e6f4f1;
+          --cold:#2f6fd6; --hot:#d64541; --el:#0e9aa7; --warn:#8a5a00; --warn-bg:#fdf0d5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #e9ecef; font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .lead { max-width: 800px; margin: 0 0 16px; color: var(--muted); }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+  .bar > span { width: 90px; color: var(--muted); font-size: 12px; }
+  .bar button { height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text);
+                font: inherit; font-weight: 600; cursor: pointer; }
+  .bar button.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .note { max-width: 800px; min-height: 40px; margin: 4px 0 12px; color: var(--muted); }
+
+  /* the right part of the service window (800 = 1060 − the 260 menu) */
+  .win { width: 800px; max-width: 100%; border-radius: 14px; background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.14); overflow: hidden; }
+  .top { display: flex; align-items: center; height: 52px; padding: 0 32px; border-bottom: 1px solid var(--border); }
+  .top b { font-size: 15px; }
+  .body { padding: 20px 32px 24px; }
+  .cap { display: flex; align-items: center; gap: 8px; height: 20px; margin: 0 0 8px; color: var(--muted); font-size: 12px;
+         font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+  .blk + .blk { margin-top: 24px; }
+  .panel { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 10px; background: var(--bg); }
+  .btn { flex: none; height: 38px; margin-left: auto; padding: 0 16px; border: 1px solid var(--accent); border-radius: 8px; background: #fff;
+         color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+  .line { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 38px; }
+  .op { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px;
+        background: var(--soft); color: var(--accent); font-weight: 700; }
+  .par { color: var(--muted); font-size: 20px; line-height: 1; }
+
+  /* the pill: colour dot · name · what it is */
+  .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: #fff; white-space: nowrap; }
+  .pill i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+  .pill b { font-weight: 600; }
+  .pill small { color: var(--muted); font-size: 12px; }
+  /* Б1 — two lines, 44px */
+  .s1 .pill { height: 44px; padding: 0 12px; border-radius: 10px; }
+  .s1 .pill span { display: flex; flex-direction: column; line-height: 1.2; }
+  /* Б4 — three lines, 64px: «Σ всех» / icon + name / numbers */
+  .s4 .pill { height: 64px; padding: 0 14px; border-radius: 10px; }
+  .s4 .pill > span { display: flex; flex-direction: column; justify-content: center; gap: 1px; line-height: 1.2; }
+  .s4 .t1 { color: var(--muted); font-size: 12px; }
+  .s4 .t1 em { font-style: normal; font-weight: 700; color: var(--text); }
+  .s4 .t2 { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .s4 .t2 svg { width: 16px; height: 16px; flex: none; }
+  .s4 .t3 { color: var(--muted); font-size: 12px; }
+  /* Б2, Б3 — one line, 30px */
+  .s2 .pill, .s3 .pill { height: 30px; padding: 0 12px; border-radius: 15px; }
+  .cnt { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--bg); color: var(--muted);
+         font-size: 11px; font-weight: 600; }
+  /* Б2 — what each block is, a short line under the formula */
+  .legend { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e8eaec; }
+  .lg { display: grid; grid-template-columns: 16px 130px 1fr; align-items: center; height: 26px; font-size: 13px; }
+  .lg i { width: 8px; height: 8px; border-radius: 50%; }
+  .lg b { font-weight: 600; }
+  .lg span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .panel .col { flex: 1; min-width: 0; }
+
+  /* «Как посчитается» */
+  .calc { border-radius: 10px; background: var(--bg); padding: 4px 16px; }
+  .crow { display: grid; grid-template-columns: 26px 150px 1fr 100px 40px; align-items: center; gap: 10px; height: 40px; }
+  .crow + .crow { border-top: 1px solid #e8eaec; }
+  .no { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+        border: 1px solid var(--border); font-size: 12px; }
+  .who { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .how { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sum { text-align: right; font-weight: 600; }
+  .crow.total .who, .crow.total .sum { font-weight: 700; }
+  .crow.off .who, .crow.off .sum { color: var(--muted); font-weight: 400; }
+  .sw { width: 32px; height: 18px; border-radius: 9px; background: var(--accent); position: relative; justify-self: end; }
+  .sw::after { content: ''; position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+  .tag { display: inline-flex; align-items: center; height: 18px; margin-left: 4px; padding: 0 6px; border-radius: 9px; font-size: 11px; font-weight: 600; }
+  .t-real { background: var(--soft); color: var(--accent); } .t-ex { background: var(--warn-bg); color: var(--warn); }
+</style>
+</head>
+<body>
+<h1>Формула в окне услуг — вариант Б, доработка</h1>
+<p class="lead">Метки формулы не обязаны быть в одну строку. Счётчики одного вида стоят одной меткой, а рядом коротко —
+  чьи они: «у каждого свой», «общие счётчики объекта», «счётчик Аптеки». Внизу три случая — смотрите, как читается.</p>
+
+<div class="bar" id="look"><span>Вид метки</span>
+  <button class="on" data-v="s4">Б4 · Три строки, Σ</button>
+  <button data-v="s1">Б1 · Две строки</button>
+  <button data-v="s2">Б2 · Метки + пояснение ниже</button>
+  <button data-v="s3">Б3 · Всё в одной метке</button>
+</div>
+<div class="bar" id="case"><span>Случай</span>
+  <button class="on" data-c="each">Каждый по своим</button>
+  <button data-c="common">Общие счётчики</button>
+  <button data-c="one">Один арендатор</button>
+</div>
+<p class="note" id="note"></p>
+
+<div class="win"><div class="top"><b id="title"></b></div><div class="body">
+  <div class="blk"><div class="cap">Как начисляется · Своя формула</div><div id="formula"></div></div>
+  <div class="blk"><div class="cap">Как посчитается</div><div class="calc" id="calc"></div></div>
+</div></div>
+
+<script>
+  var COL = { cold: 'var(--cold)', hot: 'var(--hot)', el: 'var(--el)', c: 'var(--accent)' };
+  // a formula: items — [kind, name, what (short), count] for a block, or a sign / bracket
+  var CASES = {
+    each: {
+      title: 'Водоотведение',
+      items: ['(', ['cold', 'Вода хол.', 'у каждого свой', 2, 'Аптека № 111 · Кафе № 222', 'каждому — свой'], '+',
+              ['hot', 'Вода гор.', 'у каждого свой', 2, 'Аптека № 333 · Кафе № 444', 'каждому — свой'], ')', '×',
+              ['c', 'Тариф водоотведения', '45 ₽ за м³', 0, 'постоянное число', 'тариф']],
+      rows: [['Аптека Вита', '(12 + 4) м³ × 45 ₽', 'real', '720,00 ₽'], ['Кафе «Луна»', '(7 + 3) м³ × 45 ₽', 'real', '450,00 ₽'],
+             ['Салон Ирис', 'нет своих счётчиков в формуле', '', '—', true]],
+      total: '1 170,00 ₽'
+    },
+    common: {
+      title: 'Вода на общие нужды',
+      items: [['cold', 'Вода хол.', 'общие счётчики объекта', 2, '№ 555 · № 556', '<em>Σ</em> всех общих'], '×',
+              ['c', 'Норматив ОДН', '0,02', 0, 'постоянное число · без единицы', 'норматив'], '×',
+              ['c', 'Тариф', '52 ₽ за м³', 0, 'постоянное число', 'тариф']],
+      rows: [['Аптека Вита', '27 м³ × 0,02 × 52 ₽ · по долям 45%', 'real', '12,64 ₽'], ['Кафе «Луна»', 'по долям 35%', 'real', '9,83 ₽'],
+             ['Салон Ирис', 'по долям 20%', 'real', '5,62 ₽']],
+      total: '28,08 ₽'
+    },
+    one: {
+      title: 'Свет в подсобке',
+      items: [['el', 'Электричество', 'счётчик Аптеки', 1, 'Аптека № 777', 'Аптека Вита'], '×', ['c', 'Тариф', '9,6 ₽ за кВт·ч', 0, 'постоянное число', 'тариф']],
+      rows: [['Аптека Вита', '84 кВт·ч × 9,6 ₽', 'ex', '806,40 ₽'], ['Кафе «Луна»', 'нет его счётчика в формуле', '', '—', true],
+             ['Салон Ирис', 'нет его счётчика в формуле', '', '—', true]],
+      total: '806,40 ₽'
+    }
+  };
+  var ICON = {
+    cold: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>',
+    hot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>',
+    el: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+    c: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>'
+  };
+  var NOTES = {
+    s4: 'Три строки: сверху серым — чьи («Σ всех общих», «каждому — свой», «Аптека Вита»), в середине иконка вида и название, внизу номера счётчиков или само число.',
+    s1: 'Метка в две строки: сверху что (Вода хол.), снизу серым — чьи счётчики или сколько стоит число. Не надо ничего наводить, всё читается сразу.',
+    s2: 'Строка формулы короткая (метка + число счётчиков), под ней тонкой чертой — по строчке на каждую метку: что это и какие счётчики с номерами.',
+    s3: 'Всё в одной метке через «·» — одна строка, если влезает, а длинная формула переносится.'
+  };
+  var look = 's4', kase = 'each';
+  function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function pill(it) {
+    var dot = '<i style="background:' + COL[it[0]] + '"></i>';
+    var cnt = it[3] > 1 ? '<span class="cnt">' + it[3] + ' сч.</span>' : '';
+    if (look === 's4') {
+      var low = it[0] === 'c' ? it[2] : it[4];
+      return '<span class="pill"><span><span class="t1">' + it[5] + '</span><span class="t2" style="color:' + COL[it[0]] + '">' + ICON[it[0]] +
+        '<b style="color:var(--text)">' + esc(it[1]) + '</b></span><span class="t3">' + esc(low) + '</span></span></span>';
+    }
+    if (look === 's1') return '<span class="pill">' + dot + '<span><b>' + esc(it[1]) + '</b><small>' + esc(it[2]) + '</small></span></span>';
+    if (look === 's2') return '<span class="pill">' + dot + '<b>' + esc(it[1]) + '</b>' + (it[0] === 'c' ? '<small>' + esc(it[2]) + '</small>' : cnt) + '</span>';
+    return '<span class="pill">' + dot + '<b>' + esc(it[1]) + '</b><small>· ' + esc(it[2]) + '</small></span>';
+  }
+  function draw() {
+    var c = CASES[kase];
+    document.getElementById('title').textContent = c.title;
+    var line = c.items.map(function (it) {
+      if (typeof it !== 'string') return pill(it);
+      return it === '(' || it === ')' ? '<span class="par">' + it + '</span>' : '<span class="op">' + it + '</span>';
+    }).join('');
+    var legend = '';
+    if (look === 's2') {
+      legend = '<div class="legend">' + c.items.filter(function (it) { return typeof it !== 'string'; }).map(function (it) {
+        var what = it[0] === 'c' ? it[4] : it[2] + ' — ' + it[4];
+        return '<div class="lg"><i style="background:' + COL[it[0]] + '"></i><b>' + esc(it[1]) + '</b><span>' + esc(what) + '</span></div>';
+      }).join('') + '</div>';
+    }
+    document.getElementById('formula').innerHTML = '<div class="panel s-' + look + ' ' + look + '"><div class="col"><div class="line">' + line +
+      '</div>' + legend + '</div><button class="btn">Изменить формулу</button></div>';
+    var n = 0;
+    document.getElementById('calc').innerHTML = c.rows.map(function (r) {
+      var tag = r[2] === 'real' ? '<span class="tag t-real">октябрь</span>' : r[2] === 'ex' ? '<span class="tag t-ex">пример</span>' : '';
+      return '<div class="crow' + (r[4] ? ' off' : '') + '"><span class="no">' + (++n) + '</span><span class="who">' + esc(r[0]) +
+        '</span><span class="how">' + esc(r[1]) + tag + '</span><span class="sum">' + r[3] + '</span>' + (r[4] ? '<span></span>' : '<span class="sw"></span>') + '</div>';
+    }).join('') + '<div class="crow total"><span></span><span class="who">Всего по услуге</span><span class="how"></span><span class="sum">' + c.total + '</span><span></span></div>';
+    document.getElementById('note').textContent = NOTES[look];
+    document.querySelectorAll('#look button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === look); });
+    document.querySelectorAll('#case button').forEach(function (b) { b.classList.toggle('on', b.dataset.c === kase); });
+  }
+  document.getElementById('look').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { look = b.dataset.v; draw(); } });
+  document.getElementById('case').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { kase = b.dataset.c; draw(); } });
+  draw();
+</script>
+</body>
+</html>

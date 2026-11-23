@@ -43,6 +43,8 @@
 .sv-nav-item.is-mode.is-on .sv-i { color: var(--color-accent); }
 .sv-nav-item .sv-check { width: 16px; height: 16px; color: var(--color-accent); }
 .sv-kind { display: inline-flex; color: var(--rk, var(--color-primary)); }
+/* an own service in «Услуги объекта» — the icon of how it is charged, in the accent (2026-11-23, was a dark «document») */
+.sv-kind.is-own { color: var(--color-accent); }
 .sv-mkind { display: inline-flex; color: var(--mk, #7f8c8d); }
 .sv-mkind .icon { width: 18px; height: 18px; }
 

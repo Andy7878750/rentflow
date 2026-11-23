@@ -137,7 +137,9 @@
       S.services.forEach(function (s) {
         var on = current && current.id === s.id;
         h += '<button type="button" class="sv-nav-item' + (on ? ' is-active' : '') + (s.id === flashId ? ' is-flash' : '') + '" data-svc="' + s.id + '">' +
-          kindIcon(s.kind) + '<span class="fade">' + esc(s.name) + '</span></button>';
+          // an own service (kind «custom») — not the plain «document» for all: the icon of how it is charged (2026-11-23)
+          (s.kind && s.kind !== 'custom' ? kindIcon(s.kind) : '<span class="sv-kind is-own">' + svg(MODE_ICON[s.mode] || MODE_ICON.receipt) + '</span>') +
+          '<span class="fade">' + esc(s.name) + '</span></button>';
       });
       nav.innerHTML = h + '</div>';
       flashId = null;
@@ -469,7 +471,9 @@
       // the same «Как посчитается» — its switches work here too.
       if (s.mode === 'formula') {
         b = '<div class="sv-fxv fx-preview"><div class="fx-strip is-static" data-fx-chips data-fx-open title="Изменить формулу"></div>' +
-          '<button type="button" class="btn btn-primary btn-auto btn-sm" data-fx-open>' + (s.formula ? 'Изменить формулу' : 'Собрать формулу') + '</button></div>';
+          // 2026-11-23: a pencil in the corner (like × in the formula window), not a big button; no formula yet — «Собрать формулу».
+          (s.formula ? '<button type="button" class="fx-x sv-fx-pen" data-fx-open title="Изменить формулу" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></button>'
+            : '<button type="button" class="btn btn-primary btn-auto btn-sm" data-fx-open>Собрать формулу</button>') + '</div>';
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
@@ -502,7 +506,7 @@
         (showExample ? '<button type="button" class="sv-ex-link" data-example>' + svg(CP_ICON.eye) + 'См. пример на странице объекта</button>' : '') +
         (s.id ? '<button type="button" class="subwin-delete" data-delete>Удалить услугу</button>' : '') + '</span>' +
         '<button type="button" class="btn btn-ghost btn-auto sv-cancel" data-modal-close>Отмена</button>' +
-        '<button type="button" class="btn btn-primary btn-auto" data-save-next>Сохранить</button></div>';
+        '<button type="button" class="btn btn-primary btn-auto" data-save-next>' + (s.id ? 'Сохранить' : 'Создать услугу') + '</button></div>';
       if (confirmDelete) {
         h += '<div class="sv-back" data-del-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Удалить услугу">' +
           '<div class="sv-mw-head"><b>Удалить услугу?</b><button type="button" class="sv-x" data-del-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +

@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RentFlow — коммуналка арендаторов без Excel</title>
+<meta name="description" content="RentFlow делит коммунальные платежи между арендаторами и собирает каждому счёт в PDF: по долям, по м², по счётчикам или по своей формуле.">
+<style>
+  /* Colours: slate — text and dark bands; teal — what RentFlow counts, buttons; honey — what YOU enter (as the warm empty
+     number fields in the app). Honey is never a button, never body text on white, never a meter colour or a warning. */
+  :root {
+    --primary: #34495e; --primary-deep: #2c3e50;
+    --accent: #148f77; --accent-hover: #117965; --accent-text: #117965; --accent-soft: #e6f4f1;
+    --honey: #f2b544; --honey-soft: #fdf3dc; --honey-text: #8a6100;
+    --text: #2c3338; --muted: #6b7680; --border: #e1e4e8; --bg: #f5f6f7; --surface: #fff;
+    --el: #0e9aa7; --cold: #2e86c1; --hot: #c0392b; --danger: #c0392b;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --wrap: 1120px; --gut: 24px; --radius: 12px;
+    /* type scale — only these sizes */
+    --fs-h1: 56px; --fs-h2: 40px; --fs-h3: 22px; --fs-lead: 20px; --fs-body: 17px; --fs-sm: 14px; --fs-cap: 13px; --fs-big: 48px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body { margin: 0; font: var(--fs-body)/1.6 var(--font); color: var(--text); background: var(--surface); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  h1, h2, h3 { margin: 0; color: var(--primary); }
+  h1 { font-size: var(--fs-h1); line-height: 1.1; letter-spacing: -.015em; }
+  h2 { font-size: var(--fs-h2); line-height: 1.15; letter-spacing: -.01em; }
+  h3 { font-size: var(--fs-h3); line-height: 1.3; }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; }
+  .wrap { width: 100%; max-width: calc(var(--wrap) + var(--gut) * 2); margin: 0 auto; padding: 0 var(--gut); }
+  .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .mark { background: linear-gradient(transparent 58%, var(--honey) 58%, var(--honey) 92%, transparent 92%); padding: 0 .08em; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 24px; border: 1px solid transparent;
+         border-radius: 10px; font-size: 16px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  .btn-main { background: var(--accent); color: #fff; }
+  .btn-main:hover { background: var(--accent-hover); }
+  .btn-line { border-color: var(--border); background: #fff; color: var(--primary); }
+  .btn-line:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { height: 38px; padding: 0 16px; font-size: var(--fs-sm); }
+  .on-dark .btn-line { border-color: rgba(255,255,255,.3); background: transparent; color: #fff; }
+  .on-dark .btn-line:hover { border-color: #fff; }
+
+  /* header */
+  .head { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+  .head .wrap { display: flex; align-items: center; gap: 32px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--primary); font-size: 18px; }
+  .brand-mark { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 16px; }
+  .nav { display: flex; gap: 28px; margin-right: auto; font-size: 16px; color: var(--muted); }
+  .nav a:hover { color: var(--accent); }
+  .nav .nav-login { display: none; }
+  .head-acts { display: flex; align-items: center; gap: 8px; }
+  .menu-btn { display: none; width: 40px; height: 40px; border: 0; border-radius: 8px; background: none; color: var(--primary); cursor: pointer; }
+
+  /* sections */
+  section { padding: 96px 0; }
+  section.alt { background: var(--bg); }
+  .kicker { margin-bottom: 16px; color: var(--accent-text); font-size: var(--fs-cap); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .sec-head { max-width: 760px; margin-bottom: 48px; }
+  .sec-head p { margin-top: 16px; color: var(--muted); font-size: var(--fs-lead); line-height: 1.5; }
+
+  /* ---------- hero: dark ---------- */
+  .hero { padding: 88px 0 112px; background: var(--primary); color: #fff; }
+  .hero .wrap { display: grid; grid-template-columns: 1fr 520px; align-items: center; gap: 64px; }
+  .hero h1 { color: #fff; }
+  .hero .mark { background: none; padding: 0; color: var(--honey); }  /* honey on slate ≈ 5:1 — readable */
+  .hero .lead { margin-top: 24px; color: rgba(255,255,255,.78); font-size: var(--fs-lead); line-height: 1.5; }
+  .acts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+  .promise { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 24px; color: rgba(255,255,255,.72); font-size: var(--fs-sm); }
+  .promise span { display: inline-flex; align-items: center; gap: 8px; }
+  .promise .ico { width: 18px; height: 18px; color: var(--honey); }
+
+  /* the live calculator */
+  .calc { padding: 24px; border-radius: 16px; background: #fff; color: var(--text); box-shadow: 0 30px 70px rgba(0,0,0,.28); }
+  .calc-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .cap { color: var(--muted); font-size: var(--fs-cap); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .tag-live { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--accent-soft);
+              color: var(--accent-text); font-size: var(--fs-cap); font-weight: 600; }
+  .tag-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .sum-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
+  .sum-row label { font-weight: 600; color: var(--primary); }
+  .sum-in { display: flex; align-items: center; width: 180px; height: 44px; padding: 0 14px; border: 1px solid #ecd9a8; border-radius: 10px; background: var(--honey-soft); }
+  .sum-in:focus-within { border-color: var(--honey); box-shadow: 0 0 0 3px rgba(242,181,68,.3); }
+  .sum-in input { width: 100%; border: 0; background: none; font: 600 18px var(--font); color: var(--text); text-align: right; outline: none; }
+  .sum-in span { margin-left: 6px; color: var(--muted); font-weight: 600; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; height: 40px; margin-top: 16px; padding: 3px; border-radius: 10px; background: #eef0f2; }
+  .seg button { border: 0; border-radius: 8px; background: none; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); cursor: pointer; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .rows { margin-top: 8px; }
+  .trow { display: grid; grid-template-columns: 1fr 72px 112px; align-items: center; gap: 8px 16px; padding: 12px 0; border-bottom: 1px solid #eef0f2; }
+  .trow .who { font-weight: 600; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow .val { color: var(--honey-text); font-size: var(--fs-sm); font-weight: 700; text-align: right; }
+  .trow .amt { text-align: right; font-weight: 700; color: var(--accent-text); }
+  .trow input[type=range] { grid-column: 1 / -1; width: 100%; height: 20px; margin: 0; accent-color: var(--honey); cursor: pointer; }
+  .trow.owner .who { color: var(--muted); font-weight: 400; }
+  .trow.owner .amt { color: var(--muted); }
+  .trow.owner .val { color: var(--muted); font-weight: 400; }
+  .calc-tot { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: 16px; }
+  .calc-tot b { font-size: var(--fs-h3); color: var(--primary); }
+  .calc-tot span { color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .calc-tot .ico { width: 16px; height: 16px; }
+  .calc-hint { margin-top: 8px; color: var(--muted); font-size: var(--fs-sm); }
+
+  /* numbers band */
+  .band { padding: 0; background: var(--primary); }
+  .band .wrap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; padding-top: 40px; padding-bottom: 56px; border-top: 1px solid rgba(255,255,255,.12); }
+  .stat b { display: block; color: #fff; font-size: var(--fs-big); line-height: 1; letter-spacing: -.02em; }
+  .stat span { display: block; margin-top: 12px; color: rgba(255,255,255,.7); font-size: var(--fs-sm); }
+
+  /* ---------- flow: receipt → split → bills ---------- */
+  .flow { display: grid; grid-template-columns: 260px 1fr 1.25fr; align-items: center; gap: 32px; padding: 40px; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+  .paper { position: relative; padding: 24px 20px 28px; border-radius: 10px; background: var(--honey-soft); border: 1px solid #f0e2bd; }
+  .paper::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 10px;
+                  background: linear-gradient(135deg, #fff 33%, transparent 34%) 0 0 / 14px 14px, linear-gradient(-135deg, #fff 33%, transparent 34%) 0 0 / 14px 14px; }
+  .paper .cap { color: var(--honey-text); }
+  .paper .who { margin-top: 8px; font-weight: 600; color: var(--primary); }
+  .paper .row { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e8d39e; font-size: var(--fs-sm); color: var(--muted); }
+  .paper .big { margin-top: 16px; font-size: 28px; font-weight: 700; color: var(--primary); }
+  .split { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); font-size: var(--fs-sm); text-align: center; }
+  .split-line { position: relative; width: 100%; height: 2px; background: var(--border); overflow: hidden; border-radius: 1px; }
+  .split-line::after { content: ''; position: absolute; inset: 0; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .7s ease .2s; }
+  .split b { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 18px; background: var(--accent-soft); color: var(--accent-text); font-size: var(--fs-sm); }
+  .bills { display: grid; gap: 12px; }
+  .mini { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 16px; height: 60px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px;
+          background: #fff; opacity: 0; transform: translateX(16px); transition: opacity .4s ease, transform .4s ease; }
+  .mini b { color: var(--primary); }
+  .mini small { display: block; color: var(--muted); font-size: var(--fs-sm); font-weight: 400; }
+  .mini .amt { font-weight: 700; color: var(--accent-text); }
+  .pdf { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 6px; background: var(--bg); color: var(--primary); font-size: var(--fs-cap); font-weight: 700; }
+  .mini.owner { border-style: dashed; } .mini.owner .amt { color: var(--muted); }
+  .flow.go .split-line::after { transform: scaleX(1); }
+  .flow.go .mini { opacity: 1; transform: none; }
+  .flow.go .mini:nth-child(1) { transition-delay: .8s; } .flow.go .mini:nth-child(2) { transition-delay: 1s; }
+  .flow.go .mini:nth-child(3) { transition-delay: 1.2s; } .flow.go .mini:nth-child(4) { transition-delay: 1.4s; }
+  .flow-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; color: var(--muted); font-size: var(--fs-sm); }
+  .link-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--accent-text); font-weight: 600; font-size: var(--fs-sm); cursor: pointer; }
+  .link-btn .ico { width: 16px; height: 16px; }
+
+  /* ---------- steps with real pieces of the app ---------- */
+  .steps { display: grid; grid-template-columns: 380px 1fr; gap: 32px; align-items: stretch; }
+  .step-list { display: grid; gap: 8px; align-content: start; }
+  .step-btn { display: grid; grid-template-columns: 40px 1fr; gap: 16px; align-items: start; width: 100%; padding: 16px; border: 1px solid transparent; border-radius: var(--radius);
+              background: none; text-align: left; cursor: pointer; transition: background .15s, border-color .15s; }
+  .step-btn:hover { background: #fff; }
+  .step-btn .n { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #fff; border: 1px solid var(--border);
+                 color: var(--muted); font-weight: 700; }
+  .step-btn b { display: block; color: var(--primary); font-size: 18px; line-height: 1.3; }
+  .step-btn span.d { display: block; margin-top: 4px; color: var(--muted); font-size: var(--fs-sm); line-height: 1.45; }
+  .step-btn .when { display: inline-block; margin-top: 8px; color: var(--muted); font-size: var(--fs-cap); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .step-btn.on { background: #fff; border-color: var(--border); box-shadow: 0 8px 24px rgba(52,73,94,.08); }
+  .step-btn.on .n { background: var(--honey); border-color: var(--honey); color: var(--primary-deep); }
+  .step-btn.on .when { color: var(--honey-text); }
+  .screen { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px; background: #fff; box-shadow: 0 20px 50px rgba(52,73,94,.1); overflow: hidden; }
+  .screen-bar { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--border); background: #fbfbfc; color: var(--muted); font-size: var(--fs-sm); }
+  .screen-bar i { width: 10px; height: 10px; border-radius: 50%; background: #e1e4e8; }
+  .screen-bar span { margin-left: 8px; }
+  .screen-body { flex: 1; padding: 24px; }
+  .frag { display: none; }
+  .frag.on { display: block; animation: rise .35s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .fsec { color: var(--muted); font-size: var(--fs-cap); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 8px; }
+  .fsec + .fgrid, .fsec + .list, .fsec + .tiles { margin-top: 0; }
+  .fgrid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .fl small { display: block; margin-bottom: 6px; color: var(--muted); font-size: var(--fs-sm); }
+  .fld { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; }
+  .fld.warm { background: var(--honey-soft); border-color: #ecd9a8; color: var(--muted); }
+  .fld em { font-style: normal; color: var(--muted); }
+  .list { border: 1px solid var(--border); border-radius: 10px; }
+  .li { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center; min-height: 48px; padding: 0 16px; font-size: 16px; }
+  .li + .li { border-top: 1px solid #eef0f2; }
+  .li b { color: var(--primary); font-weight: 600; }
+  .li .m { color: var(--muted); font-size: var(--fs-sm); }
+  .li .v { color: var(--honey-text); font-weight: 700; font-size: var(--fs-sm); min-width: 48px; text-align: right; }
+  .li.free b, .li.free .v { color: var(--muted); font-weight: 400; }
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .tile { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center; height: 68px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; }
+  .tile .ti { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--bg); }
+  .tile b { display: block; color: var(--primary); font-size: 16px; line-height: 1.25; }
+  .tile small { display: block; color: var(--muted); font-size: var(--fs-sm); line-height: 1.3; }
+  .tile.add { border-style: dashed; color: var(--accent-text); font-weight: 600; grid-template-columns: 1fr; justify-items: center; }
+  .modes6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .m6 { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; color: var(--primary); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+  .m6 .ico { color: var(--muted); }
+  .m6.on { border: 1.5px solid var(--accent); color: var(--accent-text); } .m6.on .ico { color: var(--accent); }
+  .gpanel { margin-top: 16px; padding: 16px; border-radius: 10px; background: var(--bg); }
+  .gpanel .li { padding: 0; min-height: 40px; }
+  .gpanel .li + .li { border-top-color: #e4e7ea; }
+  .gpanel .amt { color: var(--accent-text); font-weight: 700; font-size: 16px; }
+  .rd { display: grid; grid-template-columns: 1fr 96px 96px 72px; gap: 12px; align-items: center; min-height: 52px; padding: 0 16px; font-size: 16px; }
+  .rd.h { min-height: 36px; background: var(--bg); color: var(--muted); font-size: var(--fs-sm); border-radius: 8px 8px 0 0; }
+  .rd + .rd { border-top: 1px solid #eef0f2; }
+  .rd .c { display: flex; align-items: center; justify-content: flex-end; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; }
+  .rd .c.warm { background: var(--honey-soft); border-color: #ecd9a8; color: var(--muted); }
+  .rd .r { text-align: right; color: var(--accent-text); font-weight: 700; }
+  .rd b { display: flex; align-items: center; gap: 8px; color: var(--primary); font-weight: 600; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+  .lesson-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
+  .lesson-link .ico { width: 16px; height: 16px; }
+
+  /* ---------- ways of charging: switcher ---------- */
+  .ways { display: grid; grid-template-columns: 380px 1fr; gap: 32px; align-items: stretch; }
+  .way-list { display: grid; gap: 4px; align-content: start; }
+  .way-btn { display: grid; grid-template-columns: 40px 1fr; gap: 16px; align-items: center; height: 64px; padding: 0 16px; border: 0; border-radius: var(--radius);
+             background: none; text-align: left; cursor: pointer; }
+  .way-btn:hover { background: var(--bg); }
+  .way-btn .wi { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; color: var(--muted); }
+  .way-btn b { color: var(--primary); font-size: 18px; }
+  .way-btn.on { background: var(--accent-soft); }
+  .way-btn.on .wi { color: var(--accent); }
+  .way-card { display: flex; flex-direction: column; padding: 32px; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+  .way-card h3 { display: flex; align-items: center; gap: 12px; }
+  .way-card h3 .ico { width: 24px; height: 24px; color: var(--accent); }
+  .way-card .say { margin-top: 12px; color: var(--muted); font-size: var(--fs-lead); line-height: 1.5; }
+  .way-card .good { margin-top: 16px; color: var(--text); }
+  .way-card .good b { color: var(--primary); }
+  .bill-line { margin-top: auto; padding-top: 32px; }
+  .bl { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 16px 20px; border-radius: 10px; background: var(--bg); }
+  .bl b { color: var(--primary); }
+  .bl small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-sm); }
+  .bl .amt { font-size: var(--fs-h3); font-weight: 700; color: var(--accent-text); }
+
+  /* ---------- features with a picture ---------- */
+  .feat { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+  .feat + .feat { margin-top: 96px; }
+  .feat.flip .feat-text { order: 2; }
+  .feat-text h3 { font-size: 32px; line-height: 1.2; }
+  .feat-text > p { margin-top: 16px; color: var(--muted); font-size: var(--fs-lead); line-height: 1.5; }
+  .ticks { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .ticks li { display: grid; grid-template-columns: 24px 1fr; gap: 12px; }
+  .ticks .ico { color: var(--accent); margin-top: 3px; }
+  .card { border: 1px solid var(--border); border-radius: 16px; background: #fff; box-shadow: 0 20px 50px rgba(52,73,94,.1); }
+  .pane { padding: 24px; }
+  /* the formula */
+  .fx { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 16px; border-radius: 10px; background: var(--bg); }
+  .fb { display: flex; flex-direction: column; justify-content: center; gap: 2px; height: 56px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+  .fb .t1 { color: var(--muted); font-size: var(--fs-cap); }
+  .fb b { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 16px; font-weight: 600; }
+  .fb b .ico { width: 16px; height: 16px; }
+  .fo { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .fp { color: var(--muted); font-size: 26px; font-weight: 300; }
+  .crows { margin-top: 16px; padding: 0 16px; border-radius: 10px; background: var(--bg); }
+  .crow { display: grid; grid-template-columns: 1fr auto 96px; gap: 16px; align-items: center; height: 48px; font-size: 16px; }
+  .crow + .crow { border-top: 1px solid #e4e7ea; }
+  .crow span:nth-child(2) { color: var(--muted); font-size: var(--fs-sm); }
+  .crow b { text-align: right; color: var(--accent-text); }
+  .crow.tot span:first-child { font-weight: 700; color: var(--primary); }
+  .crow.tot b { color: var(--primary); }
+  /* the chat */
+  .chat { padding: 0; overflow: hidden; }
+  .chat-h { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 20px; border-bottom: 1px solid var(--border); }
+  .chat-h b { color: var(--primary); }
+  .chat-h small { color: var(--muted); font-size: var(--fs-sm); }
+  .chat-b { display: flex; flex-direction: column; gap: 12px; padding: 24px 20px; background: #eef2f1; }
+  .msg { max-width: 82%; padding: 12px 14px; border-radius: 14px; font-size: 16px; line-height: 1.45; }
+  .msg.out { align-self: flex-end; background: #dff1ec; border-bottom-right-radius: 4px; }
+  .msg.in { align-self: flex-start; background: #fff; border-bottom-left-radius: 4px; }
+  .msg time { display: block; margin-top: 4px; color: var(--muted); font-size: var(--fs-cap); text-align: right; }
+  .file { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; margin-bottom: 8px; padding: 10px; border-radius: 10px; background: #fff; }
+  .file .fi { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; }
+  .file b { display: block; color: var(--primary); font-size: var(--fs-sm); line-height: 1.3; }
+  .file small { color: var(--muted); font-size: var(--fs-cap); }
+  /* payments */
+  .pay { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--fs-sm); }
+  .pay th { height: 40px; padding: 0 12px; background: var(--bg); color: var(--muted); font-weight: 600; text-align: left; white-space: nowrap; }
+  .pay th:first-child { border-radius: 8px 0 0 8px; } .pay th:last-child { border-radius: 0 8px 8px 0; }
+  .pay td { height: 60px; padding: 0 12px; border-bottom: 1px solid #eef0f2; vertical-align: middle; white-space: nowrap; }
+  .pay td b { color: var(--primary); font-size: 16px; }
+  .pay td small { display: block; color: var(--muted); font-size: var(--fs-cap); }
+  .pay .ok { color: var(--accent-text); font-weight: 700; }
+  .pay .no { color: var(--danger); font-weight: 700; }
+  .pay tr:last-child td { border-bottom: 0; }
+  .pay .sm { display: none; }
+  .pay-top { display: flex; align-items: center; gap: 12px; height: 44px; margin-bottom: 16px; padding: 0 16px; border-radius: 10px; background: var(--bg); color: var(--muted); font-size: var(--fs-sm); }
+  .pay-top b { color: var(--danger); }
+
+  /* ---------- comparison ---------- */
+  .cmp { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: #fff; font-size: 16px; }
+  .cmp th, .cmp td { height: 64px; padding: 0 24px; border-bottom: 1px solid #eef0f2; text-align: left; vertical-align: middle; }
+  .cmp thead th { height: 56px; background: var(--bg); color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+  .cmp thead th.us { background: var(--accent); color: #fff; }
+  .cmp td.us { background: #f3faf8; font-weight: 600; color: var(--primary); }
+  .cmp tr:last-child td { border-bottom: 0; }
+  .cmp td:first-child { color: var(--primary); font-weight: 600; width: 34%; }
+  .cmp td { color: var(--muted); }
+  .cmp .y, .cmp .x { display: inline-flex; align-items: center; gap: 8px; }
+  .cmp .y .ico { color: var(--accent); } .cmp .x .ico { color: #b4bcc3; }
+
+  /* ---------- training ---------- */
+  .learn { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: stretch; }
+  .player { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 16px; background: radial-gradient(120% 120% at 80% 100%, #1e6f62 0%, var(--primary) 55%, var(--primary-deep) 100%); color: #fff; }
+  .player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .player-in { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+  .play { display: flex; align-items: center; justify-content: center; width: 80px; height: 80px; border: 0; border-radius: 50%; background: var(--accent); color: #fff;
+          box-shadow: 0 0 0 12px rgba(20,143,119,.25); cursor: pointer; }
+  .play svg { width: 30px; height: 30px; margin-left: 4px; fill: currentColor; }
+  .player-t { font-size: var(--fs-h3); font-weight: 700; }
+  .player-s { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 14px; background: rgba(255,255,255,.12); color: rgba(255,255,255,.85); font-size: var(--fs-sm); }
+  .lesson-about { margin-top: 16px; padding: 20px 24px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+  .lesson-about b { color: var(--primary); }
+  .lesson-about p { margin-top: 4px; color: var(--muted); font-size: 16px; }
+  .lessons { display: flex; flex-direction: column; margin: 0; padding: 8px; list-style: none; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+  .lessons li { flex: 1; display: flex; }
+  .lessons button { flex: 1; display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; align-items: center; width: 100%; min-height: 52px; padding: 8px 12px;
+                    border: 0; border-radius: 10px; background: none; font-size: 16px; text-align: left; cursor: pointer; }
+  .lessons button:hover { background: var(--bg); }
+  .lessons button.on { background: var(--accent-soft); }
+  .lessons .n { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--bg); color: var(--muted); font-weight: 700; font-size: var(--fs-sm); }
+  .lessons button.on .n { background: var(--accent); color: #fff; }
+  .lessons .t { font-weight: 600; color: var(--primary); }
+  .lessons .soon { color: var(--muted); font-size: var(--fs-cap); }
+
+  /* ---------- who + price ---------- */
+  .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .who-i { display: grid; grid-template-columns: 48px 1fr; gap: 16px; }
+  .who-i .wi { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background: #fff; border: 1px solid var(--border); color: var(--accent); }
+  .who-i .wi .ico { width: 24px; height: 24px; }
+  .who-i b { display: block; color: var(--primary); font-size: 18px; }
+  .who-i p { margin-top: 4px; color: var(--muted); font-size: 16px; }
+  .price { display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; margin-top: 64px; padding: 40px; border-radius: 16px; background: #fff; border: 1px solid var(--border); }
+  .price-tag { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 14px; background: var(--honey); color: var(--primary-deep); font-size: var(--fs-cap); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .price h3 { margin-top: 16px; font-size: 32px; }
+  .price p { margin-top: 8px; color: var(--muted); }
+  .price ul { margin: 24px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, auto); justify-content: start; gap: 12px 40px; }
+  .price li { display: flex; align-items: center; gap: 10px; }
+  .price li .ico { color: var(--accent); }
+  .price-r { text-align: center; }
+  .price-r .big { font-size: var(--fs-big); font-weight: 700; color: var(--primary); line-height: 1; }
+  .price-r small { display: block; margin: 8px 0 24px; color: var(--muted); font-size: var(--fs-sm); }
+
+  /* ---------- faq ---------- */
+  .faq-wrap { display: grid; grid-template-columns: 380px 1fr; gap: 32px; }
+  .faq details { border-bottom: 1px solid var(--border); }
+  .faq details:first-child { border-top: 1px solid var(--border); }
+  .faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 12px 0; list-style: none;
+                 color: var(--primary); font-size: 18px; font-weight: 600; cursor: pointer; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary .ico { color: var(--accent); transition: transform .2s; }
+  .faq details[open] summary .ico { transform: rotate(45deg); }
+  .faq details p { padding: 0 48px 24px 0; color: var(--muted); }
+
+  /* ---------- final ---------- */
+  .final { padding: 88px 0; background: var(--accent-soft); text-align: center; }
+  .final p { margin: 16px auto 0; max-width: 560px; color: var(--muted); font-size: var(--fs-lead); }
+  .final .acts { justify-content: center; }
+  .foot { padding: 32px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: var(--fs-sm); }
+  .foot .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; }
+  .foot nav { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-left: auto; }
+  .foot a:hover { color: var(--accent); }
+
+  /* reveal on scroll */
+  .rv { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+  .rv.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .rv { opacity: 1; transform: none; }
+    .mini { opacity: 1; transform: none; }
+    .split-line::after { transform: scaleX(1); }
+  }
+
+  /* ---------- tablet ---------- */
+  @media (max-width: 1080px) {
+    :root { --fs-h1: 46px; --fs-h2: 34px; }
+    .hero .wrap { grid-template-columns: 1fr; gap: 48px; }
+    .calc { max-width: 560px; }
+    .band .wrap { grid-template-columns: repeat(2, 1fr); row-gap: 32px; }
+    .flow { grid-template-columns: 1fr; padding: 24px; }
+    .paper { max-width: 320px; }
+    .split { flex-direction: row; }
+    .split-line { flex: 1; }
+    .steps, .ways, .feat, .learn, .faq-wrap { grid-template-columns: 1fr; }
+    .feat.flip .feat-text { order: 0; }
+    .feat { gap: 32px; }
+    .who { grid-template-columns: 1fr; gap: 24px; }
+    .price { grid-template-columns: 1fr; gap: 32px; }
+    .price-r { text-align: left; }
+  }
+  /* ---------- phone ---------- */
+  @media (max-width: 720px) {
+    :root { --gut: 16px; --fs-h1: 36px; --fs-h2: 28px; --fs-h3: 19px; --fs-lead: 17px; --fs-body: 16px; --fs-big: 36px; }
+    section { padding: 64px 0; }
+    .sec-head { margin-bottom: 32px; }
+    .hero { padding: 48px 0 64px; }
+    .band .wrap { padding-top: 32px; padding-bottom: 48px; gap: 24px 16px; }
+    .nav, .head-acts .btn-line { display: none; }
+    .head .wrap { gap: 16px; }
+    .head-acts { margin-left: auto; }
+    .menu-btn { display: flex; align-items: center; justify-content: center; margin-left: -8px; }
+    .head.open .nav { display: flex; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; gap: 0; padding: 8px var(--gut) 16px;
+                      background: #fff; border-bottom: 1px solid var(--border); }
+    .head.open .nav a { display: flex; align-items: center; height: 48px; color: var(--primary); font-weight: 600; }
+    .acts .btn { flex: 1 1 100%; }
+    .calc { padding: 16px; }
+    .sum-in { width: 150px; }
+    .trow { grid-template-columns: 1fr 64px 104px; gap: 8px 12px; }
+    .flow { padding: 16px; gap: 16px; }
+    .paper { max-width: none; }
+    .mini { grid-template-columns: 1fr auto; } .mini .pdf { display: none; }
+    .screen-body, .pane, .way-card { padding: 16px; }
+    .fgrid { grid-template-columns: 1fr; }
+    .tiles { grid-template-columns: 1fr; }
+    .modes6 { grid-template-columns: repeat(2, 1fr); }
+    .rd { grid-template-columns: 1fr 72px 72px 56px; gap: 8px; padding: 0 8px; font-size: var(--fs-sm); }
+    .rd .c { padding: 0 6px; }
+    .way-btn { height: 56px; }
+    .bl .amt { font-size: 18px; }
+    .feat-text h3, .price h3 { font-size: 26px; }
+    .crow { grid-template-columns: 1fr 96px; } .crow span:nth-child(2) { display: none; }
+    .pay th, .pay td { padding: 0 6px; }
+    .pay th:nth-child(3), .pay td:nth-child(3) { display: none; }
+    .cmp { font-size: var(--fs-sm); }
+    .cmp th, .cmp td { padding: 0 8px; height: 56px; }
+    .cmp td:first-child { width: auto; }
+    .cmp th:nth-child(3), .cmp td:nth-child(3) { display: none; }  /* phone: Excel vs RentFlow */
+    .feat > * { min-width: 0; }
+    .pay th, .pay td { white-space: normal; }
+    .pay .lg { display: none; } .pay .sm { display: inline; }
+    .tag-live { display: none; }
+    .pay { table-layout: fixed; }
+    .pay td:first-child b { font-size: var(--fs-sm); }
+    .pay-top { padding: 0 12px; }
+    .cmp .x .ico, .cmp .y .ico { display: none; }
+    .price { padding: 24px 16px; }
+    .price ul { grid-template-columns: 1fr; }
+    .price-r .btn { width: 100%; }
+    .faq details p { padding-right: 0; }
+    .foot nav { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.2"/></symbol>
+  <symbol id="m-receipt" viewBox="0 0 24 24"><path d="M7 3h10v18l-2.5-1.5L12 21l-2.5-1.5L7 21zM10 8h4M10 12h4"/></symbol>
+  <symbol id="m-fixed" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="m-area" viewBox="0 0 24 24"><path d="M3 15.5 15.5 3 21 8.5 8.5 21z"/><path d="m7 12 2 2M10 9l1.5 1.5M13 6l2 2"/></symbol>
+  <symbol id="m-meters" viewBox="0 0 24 24"><path d="M12 14l3.5-3.5"/><path d="M3.3 17a9.5 9.5 0 1 1 17.4 0"/><circle cx="12" cy="14" r="1.5"/></symbol>
+  <symbol id="m-usage" viewBox="0 0 24 24"><path d="M12 3v7M12 10 5 21M12 10l7 11"/></symbol>
+  <symbol id="m-formula" viewBox="0 0 24 24"><path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/></symbol>
+  <symbol id="w-shop" viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5M4 9v11h16V9M3 9h18M9 20v-6h6v6"/></symbol>
+  <symbol id="w-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></symbol>
+  <symbol id="w-build" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2"/></symbol>
+</svg>
+
+<header class="head" id="top">
+  <div class="wrap">
+    <a href="#top" class="brand"><span class="brand-mark">R</span>RentFlow</a>
+    <nav class="nav" id="nav">
+      <a href="#how">Как работает</a>
+      <a href="#ways">Начисления</a>
+      <a href="#learn">Обучение</a>
+      <a href="#price">Цена</a>
+      <a href="#faq">Вопросы</a>
+      <a href="/accounts/login/" class="nav-login">Войти</a>
+    </nav>
+    <div class="head-acts">
+      <a href="/accounts/login/" class="btn btn-line btn-sm">Войти</a>
+      <a href="/accounts/signup/" class="btn btn-main btn-sm">Начать</a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Меню" aria-expanded="false" id="menuBtn"><svg class="ico"><use href="#i-menu"/></svg></button>
+  </div>
+</header>
+
+<main>
+  <!-- 1. hero with the live calculator -->
+  <section class="hero on-dark">
+    <div class="wrap">
+      <div>
+        <h1>Коммуналка арендаторов — <span class="mark">без&nbsp;Excel</span></h1>
+        <p class="lead">Вы вводите сумму из квитанции и показания счётчиков. RentFlow делит их между арендаторами и собирает каждому понятный счёт в&nbsp;PDF.</p>
+        <div class="acts">
+          <a href="/accounts/signup/" class="btn btn-main">Начать бесплатно</a>
+          <a href="#flow" class="btn btn-line">Как это работает</a>
+        </div>
+        <div class="promise">
+          <span><svg class="ico"><use href="#i-card"/></svg>Без карты</span>
+          <span><svg class="ico"><use href="#i-clock"/></svg>Объект — за 10 минут</span>
+          <span><svg class="ico"><use href="#i-shield"/></svg>Данные в России</span>
+        </div>
+      </div>
+
+      <div class="calc" id="calc" aria-label="Попробуйте: поделите квитанцию">
+        <div class="calc-top"><span class="cap">Попробуйте прямо здесь</span><span class="tag-live">считается сразу</span></div>
+        <div class="sum-row">
+          <label for="sumIn">Сумма квитанции</label>
+          <div class="sum-in"><input id="sumIn" inputmode="decimal" value="12 400" aria-label="Сумма квитанции"><span>₽</span></div>
+        </div>
+        <div class="seg" role="tablist" aria-label="Как делим">
+          <button type="button" class="on" data-how="share">по долям</button>
+          <button type="button" data-how="area">по м²</button>
+          <button type="button" data-how="equal">поровну</button>
+        </div>
+        <div class="rows" id="rows"></div>
+        <div class="calc-tot"><b class="num" id="tot"></b><span><svg class="ico"><use href="#i-check"/></svg>сходится до копейки</span></div>
+        <p class="calc-hint" id="hint"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. numbers band (continues the dark hero) -->
+  <div class="band">
+    <div class="wrap">
+      <div class="stat"><b>5 мин</b><span>в месяц: суммы, показания, отправить</span></div>
+      <div class="stat"><b>0,00 ₽</b><span>расхождения с квитанцией</span></div>
+      <div class="stat"><b>6</b><span>способов начисления — под любую квитанцию</span></div>
+      <div class="stat"><b>PDF</b><span>каждому арендатору — в WhatsApp или Telegram</span></div>
+    </div>
+  </div>
+
+  <!-- 3. flow: one receipt → bills -->
+  <section id="flow">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Что происходит</div>
+        <h2>Одна квитанция на здание — каждому свой счёт</h2>
+        <p>Доля арендатора, пустое помещение, копейки от округления — всё учтено. Ничего не теряется и не придумывается.</p>
+      </div>
+      <div class="flow" id="flowBox">
+        <div class="paper">
+          <div class="cap">Квитанция · ноябрь</div>
+          <div class="who">УК «Просвещения»</div>
+          <div class="row"><span>Коммунальные услуги за всё здание</span></div>
+          <div class="big num">12 400,00 ₽</div>
+        </div>
+        <div class="split">
+          <div class="split-line"></div>
+          <b>делим по долям</b>
+        </div>
+        <div class="bills">
+          <div class="mini"><span><b>Аптека Вита</b><small>45%</small></span><span class="amt num">5 580,00 ₽</span><span class="pdf">PDF</span></div>
+          <div class="mini"><span><b>Кафе «Луна»</b><small>30%</small></span><span class="amt num">3 720,00 ₽</span><span class="pdf">PDF</span></div>
+          <div class="mini"><span><b>Салон Ирис</b><small>20%</small></span><span class="amt num">2 480,00 ₽</span><span class="pdf">PDF</span></div>
+          <div class="mini owner"><span><b>Остаётся на вас</b><small>свободно 5%</small></span><span class="amt num">620,00 ₽</span><span></span></div>
+        </div>
+      </div>
+      <div class="flow-foot">
+        <span>5 580 + 3 720 + 2 480 + 620 = 12 400 ₽ — ровно как в квитанции.</span>
+        <button type="button" class="link-btn" id="replay"><svg class="ico"><use href="#i-redo"/></svg>Ещё раз</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. how it works: steps with real pieces of the app -->
+  <section class="alt" id="how">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Как работает</div>
+        <h2>Настроили один раз — дальше пять минут в месяц</h2>
+        <p>Три шага при первой настройке, четвёртый — каждый месяц. Так выглядят экраны RentFlow.</p>
+      </div>
+      <div class="steps">
+        <div class="step-list" id="stepList">
+          <button type="button" class="step-btn on" data-step="1" data-lesson="2"><span class="n">1</span><span><b>Объект и арендаторы</b><span class="d">Адрес, площадь, кто арендует и какая у кого доля — в % или м².</span><span class="when">Один раз</span></span></button>
+          <button type="button" class="step-btn" data-step="2" data-lesson="3"><span class="n">2</span><span><b>Счётчики</b><span class="d">Номер, начальные показания, тариф. День и ночь — если нужно.</span><span class="when">Один раз</span></span></button>
+          <button type="button" class="step-btn" data-step="3" data-lesson="4"><span class="n">3</span><span><b>Услуги</b><span class="d">Для каждой квитанции — как начисляется и кто платит. Пример виден сразу.</span><span class="when">Один раз</span></span></button>
+          <button type="button" class="step-btn" data-step="4" data-lesson="5"><span class="n">4</span><span><b>Месяц и счёт</b><span class="d">Суммы и показания на одной странице — счета готовы.</span><span class="when">Каждый месяц</span></span></button>
+        </div>
+        <div class="screen">
+          <div class="screen-bar"><i></i><i></i><i></i><span id="screenT">Просвещения 15 · Объект</span></div>
+          <div class="screen-body">
+            <div class="frag on" data-frag="1">
+              <div class="fgrid">
+                <div class="fl"><small>Название</small><div class="fld">Просвещения 15</div></div>
+                <div class="fl"><small>Площадь</small><div class="fld"><span class="num">110</span><em>м²</em></div></div>
+              </div>
+              <div class="fsec">Арендаторы</div>
+              <div class="list">
+                <div class="li"><b>Аптека Вита</b><span class="m num">49,5 м²</span><span class="v num">45%</span></div>
+                <div class="li"><b>Кафе «Луна»</b><span class="m num">33 м²</span><span class="v num">30%</span></div>
+                <div class="li"><b>Салон Ирис</b><span class="m num">22 м²</span><span class="v num">20%</span></div>
+                <div class="li free"><b>Свободно — платите вы</b><span class="m num">5,5 м²</span><span class="v num">5%</span></div>
+              </div>
+            </div>
+            <div class="frag" data-frag="2">
+              <div class="fsec">Счётчики объекта</div>
+              <div class="tiles">
+                <div class="tile"><span class="ti" style="color:var(--el)"><svg class="ico"><use href="#i-bolt"/></svg></span><span><b>Электричество № 0457</b><small>9,50 ₽ за кВт·ч</small></span></div>
+                <div class="tile"><span class="ti" style="color:var(--el)"><svg class="ico"><use href="#i-bolt"/></svg></span><span><b>Электричество № 0458</b><small>день 6,20 / ночь 3,10 ₽</small></span></div>
+                <div class="tile"><span class="ti" style="color:var(--cold)"><svg class="ico"><use href="#i-drop"/></svg></span><span><b>Вода холодная № 111</b><small>52,00 ₽ за м³</small></span></div>
+                <div class="tile"><span class="ti" style="color:var(--hot)"><svg class="ico"><use href="#i-drop"/></svg></span><span><b>Вода горячая № 333</b><small>80,24 ₽ за м³</small></span></div>
+                <div class="tile add">+ Добавить счётчик</div>
+              </div>
+            </div>
+            <div class="frag" data-frag="3">
+              <div class="fsec">Как начисляется</div>
+              <div class="modes6">
+                <span class="m6 on"><svg class="ico"><use href="#m-receipt"/></svg>По квитанции</span>
+                <span class="m6"><svg class="ico"><use href="#m-fixed"/></svg>Фиксированная</span>
+                <span class="m6"><svg class="ico"><use href="#m-area"/></svg>По площади</span>
+                <span class="m6"><svg class="ico"><use href="#m-meters"/></svg>По счётчикам</span>
+                <span class="m6"><svg class="ico"><use href="#m-usage"/></svg>По расходу</span>
+                <span class="m6"><svg class="ico"><use href="#m-formula"/></svg>Своя формула</span>
+              </div>
+              <div class="gpanel">
+                <div class="li"><b>Аптека Вита</b><span class="m">по долям 45%</span><span class="amt num">5 580,00 ₽</span></div>
+                <div class="li"><b>Кафе «Луна»</b><span class="m">по долям 30%</span><span class="amt num">3 720,00 ₽</span></div>
+                <div class="li"><b>Салон Ирис</b><span class="m">по долям 20%</span><span class="amt num">2 480,00 ₽</span></div>
+              </div>
+            </div>
+            <div class="frag" data-frag="4">
+              <div class="fsec">Суммы из квитанций</div>
+              <div class="list" style="margin-bottom:24px">
+                <div class="li"><b>Коммунальные услуги</b><span></span><span class="fld" style="width:140px;justify-content:flex-end"><span class="num">12 400</span>&nbsp;<em>₽</em></span></div>
+              </div>
+              <div class="fsec">Показания счётчиков</div>
+              <div class="list">
+                <div class="rd h"><span>Счётчик</span><span style="text-align:right">Было</span><span style="text-align:right">Стало</span><span style="text-align:right">Расход</span></div>
+                <div class="rd"><b><svg class="ico" style="color:var(--el)"><use href="#i-bolt"/></svg>№ 0457</b><span class="c num">1 251</span><span class="c num">1 642</span><span class="r num">391</span></div>
+                <div class="rd"><b><svg class="ico" style="color:var(--cold)"><use href="#i-drop"/></svg>№ 111</b><span class="c num">478</span><span class="c num">490</span><span class="r num">12</span></div>
+                <div class="rd"><b><svg class="ico" style="color:var(--hot)"><use href="#i-drop"/></svg>№ 333<span class="dot" title="Не введено"></span></b><span class="c num">212</span><span class="c warm">стало</span><span class="r">—</span></div>
+              </div>
+            </div>
+            <a href="#learn" class="lesson-link" id="stepLesson"><svg class="ico"><use href="#i-play"/></svg>Видеоурок к этому шагу</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. ways of charging: switcher -->
+  <section id="ways">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Начисления</div>
+        <h2>Шесть способов — под любую квитанцию</h2>
+        <p>Выберите способ и посмотрите строку, которую арендатор увидит в своём счёте.</p>
+      </div>
+      <div class="ways">
+        <div class="way-list" id="wayList">
+          <button type="button" class="way-btn on" data-way="receipt"><span class="wi"><svg class="ico"><use href="#m-receipt"/></svg></span><b>По квитанции</b></button>
+          <button type="button" class="way-btn" data-way="fixed"><span class="wi"><svg class="ico"><use href="#m-fixed"/></svg></span><b>Фиксированная</b></button>
+          <button type="button" class="way-btn" data-way="area"><span class="wi"><svg class="ico"><use href="#m-area"/></svg></span><b>По площади</b></button>
+          <button type="button" class="way-btn" data-way="meters"><span class="wi"><svg class="ico"><use href="#m-meters"/></svg></span><b>По счётчикам</b></button>
+          <button type="button" class="way-btn" data-way="usage"><span class="wi"><svg class="ico"><use href="#m-usage"/></svg></span><b>По расходу</b></button>
+          <button type="button" class="way-btn" data-way="formula"><span class="wi"><svg class="ico"><use href="#m-formula"/></svg></span><b>Своя формула</b></button>
+        </div>
+        <div class="way-card" id="wayCard" aria-live="polite">
+          <h3><svg class="ico"><use id="wayIco" href="#m-receipt"/></svg><span id="wayT"></span></h3>
+          <p class="say" id="waySay"></p>
+          <p class="good" id="wayGood"></p>
+          <div class="bill-line">
+            <div class="cap" style="margin-bottom:8px">В счёте арендатора</div>
+            <div class="bl"><span><b id="wayLn"></b><small id="wayHow"></small></span><span class="amt num" id="wayAmt"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. features -->
+  <section class="alt">
+    <div class="wrap">
+      <div class="feat">
+        <div class="feat-text rv">
+          <div class="kicker">Своя формула</div>
+          <h3>Сложный расчёт — из понятных блоков</h3>
+          <p>Водоотведение, нормативы, тарифы УК. Соберите формулу из счётчиков и чисел — RentFlow проверит единицы и подскажет, где не хватает скобки.</p>
+          <ul class="ticks">
+            <li><svg class="ico"><use href="#i-check"/></svg>Каждый арендатор платит по своим счётчикам</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Расчёт по каждому виден до сохранения</li>
+          </ul>
+        </div>
+        <div class="card pane">
+          <div class="cap" style="margin-bottom:12px">Водоотведение</div>
+          <div class="fx">
+            <span class="fp">(</span>
+            <span class="fb"><span class="t1">каждому — свой</span><b><svg class="ico" style="color:var(--cold)"><use href="#i-drop"/></svg>Вода хол.</b></span>
+            <span class="fo">+</span>
+            <span class="fb"><span class="t1">каждому — свой</span><b><svg class="ico" style="color:var(--hot)"><use href="#i-drop"/></svg>Вода гор.</b></span>
+            <span class="fp">)</span>
+            <span class="fo">×</span>
+            <span class="fb"><span class="t1">тариф</span><b><svg class="ico" style="color:var(--accent)"><use href="#i-tag"/></svg>45 ₽ за м³</b></span>
+          </div>
+          <div class="crows">
+            <div class="crow"><span>Аптека Вита</span><span class="num">(12 + 4) м³ × 45 ₽</span><b class="num">720,00 ₽</b></div>
+            <div class="crow"><span>Кафе «Луна»</span><span class="num">(7 + 3) м³ × 45 ₽</span><b class="num">450,00 ₽</b></div>
+            <div class="crow tot"><span>Всего по услуге</span><span></span><b class="num">1 170,00 ₽</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat flip">
+        <div class="feat-text rv">
+          <div class="kicker">Отправка</div>
+          <h3>Счёт уходит арендатору в два нажатия</h3>
+          <p>PDF на одну страницу: что, по какому счётчику, как посчитано и итог прописью. Вопрос «откуда такая сумма?» больше не возникает.</p>
+          <ul class="ticks">
+            <li><svg class="ico"><use href="#i-check"/></svg>WhatsApp, Telegram или скачать PDF</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>На телефоне отправляется сам файл</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Счёт уходит только после вашей проверки</li>
+          </ul>
+        </div>
+        <div class="card chat">
+          <div class="chat-h"><span><b>Аптека Вита</b><br><small>арендатор</small></span></div>
+          <div class="chat-b">
+            <div class="msg out">
+              <div class="file"><span class="fi">PDF</span><span><b>Счёт ноябрь 2026 — Аптека Вита.pdf</b><small>1 страница</small></span></div>
+              Здравствуйте! Счёт за ноябрь — <b class="num">10 458,50 ₽</b>. Расчёт по каждой услуге — в файле.
+              <time>10:24</time>
+            </div>
+            <div class="msg in">Спасибо, всё понятно. Оплатим до 10-го.<time>10:31</time></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat">
+        <div class="feat-text rv">
+          <div class="kicker">Оплаты поставщикам</div>
+          <h3>Видно, что оплачено, а что нет</h3>
+          <p>Все объекты и услуги месяца в одной таблице. Отметили галочкой — дата поставится сама. Пометку можно перенести на следующий месяц.</p>
+        </div>
+        <div class="card pane">
+          <div class="pay-top">Ноябрь: не оплачено <b>2</b></div>
+          <table class="pay">
+            <thead><tr><th>Объект</th><th><span class="lg">Коммунальные</span><span class="sm">Ком. услуги</span></th><th>Электричество</th><th>Интернет</th></tr></thead>
+            <tbody>
+              <tr><td><b>Просвещения 15</b><small>3 арендатора</small></td><td><span class="ok num">12 400 ₽</span><small>05.11</small></td><td><span class="ok num">8 250 ₽</span><small>07.11</small></td><td><span class="no">не оплачено</span><small class="num">1 200 ₽</small></td></tr>
+              <tr><td><b>Ленина 4</b><small>2 арендатора</small></td><td><span class="ok num">6 900 ₽</span><small>04.11</small></td><td><span class="no">не оплачено</span><small class="num">3 410 ₽</small></td><td><span class="ok num">900 ₽</span><small>02.11</small></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. comparison -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Сравнение</div>
+        <h2>Почему не Excel и не 1С</h2>
+        <p>Таблица справляется, пока арендатор один. Бухгалтерская программа — когда есть бухгалтер. RentFlow сделан для собственника, который считает сам.</p>
+      </div>
+      <table class="cmp">
+        <thead><tr><th></th><th>Excel</th><th>1С и учётные системы</th><th class="us">RentFlow</th></tr></thead>
+        <tbody>
+          <tr><td>Делит квитанцию по долям и м²</td><td><span class="x"><svg class="ico"><use href="#i-x"/></svg>формулы вручную</span></td><td><span class="x"><svg class="ico"><use href="#i-x"/></svg>доработка</span></td><td class="us"><span class="y"><svg class="ico"><use href="#i-check"/></svg>сам</span></td></tr>
+          <tr><td>Счётчики и тарифы с историей</td><td><span class="x"><svg class="ico"><use href="#i-x"/></svg>копировать листы</span></td><td><span class="y"><svg class="ico"><use href="#i-check"/></svg>есть</span></td><td class="us"><span class="y"><svg class="ico"><use href="#i-check"/></svg>есть</span></td></tr>
+          <tr><td>Понятный счёт арендатору</td><td><span class="x"><svg class="ico"><use href="#i-x"/></svg>собрать самому</span></td><td><span class="x"><svg class="ico"><use href="#i-x"/></svg>бухгалтерский</span></td><td class="us"><span class="y"><svg class="ico"><use href="#i-check"/></svg>PDF с расчётом</span></td></tr>
+          <tr><td>Отправка в мессенджер</td><td><span class="x"><svg class="ico"><use href="#i-x"/></svg>нет</span></td><td><span class="x"><svg class="ico"><use href="#i-x"/></svg>нет</span></td><td class="us"><span class="y"><svg class="ico"><use href="#i-check"/></svg>в два нажатия</span></td></tr>
+          <tr><td>Кто настраивает</td><td>вы</td><td>бухгалтер или программист</td><td class="us">вы, без инструкций</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 8. training -->
+  <section class="alt" id="learn">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Обучение</div>
+        <h2>Короткие видео — по одному на шаг</h2>
+        <p>Один экран и одно действие в каждом уроке. Смотрите по порядку или сразу тот, что нужен.</p>
+      </div>
+      <div class="learn">
+        <div>
+          <!-- To show a video: put its embed link into data-video of the lesson (RuTube / VK Видео / YouTube «embed»). -->
+          <div class="player" id="player">
+            <div class="player-in">
+              <button class="play" type="button" aria-label="Смотреть"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+              <div class="player-t" id="playerT">Обзор RentFlow</div>
+              <div class="player-s">Видео готовим — скоро здесь</div>
+            </div>
+          </div>
+          <div class="lesson-about"><b>Что вы узнаете</b><p id="aboutP"></p></div>
+        </div>
+        <ol class="lessons" id="lessons">
+          <li><button type="button" class="on" data-video="" data-about="Что умеет RentFlow и как выглядит месяц: от квитанции до счёта арендатору."><span class="n">1</span><span class="t">Обзор RentFlow</span><span class="soon">скоро</span></button></li>
+          <li><button type="button" data-video="" data-about="Создаём объект, добавляем арендаторов и их доли — в процентах или в м²."><span class="n">2</span><span class="t">Объект и арендаторы</span><span class="soon">скоро</span></button></li>
+          <li><button type="button" data-video="" data-about="Счётчики, тарифы, день и ночь; кто платит по каждому счётчику."><span class="n">3</span><span class="t">Счётчики и кто платит</span><span class="soon">скоро</span></button></li>
+          <li><button type="button" data-video="" data-about="Шесть способов начисления и как выбрать нужный для каждой квитанции."><span class="n">4</span><span class="t">Услуги и начисления</span><span class="soon">скоро</span></button></li>
+          <li><button type="button" data-video="" data-about="Вводим суммы и показания за месяц, проверяем счёт и отправляем арендатору."><span class="n">5</span><span class="t">Месяц и счёт</span><span class="soon">скоро</span></button></li>
+          <li><button type="button" data-video="" data-about="Собираем свою формулу из блоков и проверяем расчёт по каждому арендатору."><span class="n">6</span><span class="t">Своя формула</span><span class="soon">скоро</span></button></li>
+          <li><button type="button" data-video="" data-about="Отмечаем оплаты поставщикам и пометки, которые переносятся на следующий месяц."><span class="n">7</span><span class="t">Оплаты поставщикам</span><span class="soon">скоро</span></button></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. who + price -->
+  <section id="price">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Для кого</div>
+        <h2>Для собственников, которые сдают сами</h2>
+      </div>
+      <div class="who">
+        <div class="who-i"><span class="wi"><svg class="ico"><use href="#w-shop"/></svg></span><span><b>Коммерческие помещения</b><p>Аптека, кафе и салон в одном здании — одна квитанция, разные доли и свои счётчики.</p></span></div>
+        <div class="who-i"><span class="wi"><svg class="ico"><use href="#w-build"/></svg></span><span><b>Несколько объектов</b><p>Все объекты, услуги и оплаты — в одном месте, по месяцам.</p></span></div>
+        <div class="who-i"><span class="wi"><svg class="ico"><use href="#w-home"/></svg></span><span><b>Квартиры и дома</b><p>Сдаёте квартиру или комнаты — счётчики жильцов и счёт каждому.</p></span></div>
+      </div>
+      <div class="price rv">
+        <div>
+          <span class="price-tag">Пилот</span>
+          <h3>Сейчас — бесплатно</h3>
+          <p>Пока идёт пилот, RentFlow можно пользоваться полностью. О тарифах предупредим заранее.</p>
+          <ul>
+            <li><svg class="ico"><use href="#i-check"/></svg>Все способы начисления</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Счета в PDF и мессенджеры</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Оплаты поставщикам</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Без карты при регистрации</li>
+          </ul>
+        </div>
+        <div class="price-r">
+          <div class="big num">0 ₽</div>
+          <small>на время пилота</small>
+          <a href="/accounts/signup/" class="btn btn-main">Начать бесплатно</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. faq -->
+  <section class="alt" id="faq">
+    <div class="wrap faq-wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Вопросы</div>
+        <h2>Частые вопросы</h2>
+        <p>Не нашли ответ — загляните в <a href="#learn" style="color:var(--accent-text);font-weight:600">видеоуроки</a>.</p>
+      </div>
+      <div class="faq">
+        <details open><summary>Сойдутся ли суммы с квитанцией до копейки?<svg class="ico"><use href="#i-plus"/></svg></summary>
+          <p>Да. Копейки округляются по правилам, а остаток округления и незанятая доля остаются на собственнике — в строке «Остаётся на вас».</p></details>
+        <details><summary>Что, если арендатор съехал или помещение пустует?<svg class="ico"><use href="#i-plus"/></svg></summary>
+          <p>Отметьте, что он не платит. Его часть останется на вас или поделится между остальными — как выберете.</p></details>
+        <details><summary>Как делится общий счётчик?<svg class="ico"><use href="#i-plus"/></svg></summary>
+          <p>По долям, поровну или по м². В счёте арендатора видно, какую часть он оплачивает.</p></details>
+        <details><summary>Тариф поменялся — пересчитаются прошлые месяцы?<svg class="ico"><use href="#i-plus"/></svg></summary>
+          <p>Нет. Новый тариф действует с текущего месяца, прошлые счета остаются как были.</p></details>
+        <details><summary>Где хранятся данные?<svg class="ico"><use href="#i-plus"/></svg></summary>
+          <p>На серверах в России. Пароль от личного кабинета управляющей компании мы не храним — только вашу подсказку к нему.</p></details>
+        <details><summary>Нужно что-то устанавливать?<svg class="ico"><use href="#i-plus"/></svg></summary>
+          <p>Нет. RentFlow работает в браузере на компьютере и телефоне. Войти можно по почте, через Яндекс ID или VK ID.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. final -->
+  <section class="final">
+    <div class="wrap">
+      <h2>Первый счёт — уже в этом месяце</h2>
+      <p>Настройте объект один раз, и каждый следующий месяц займёт несколько минут.</p>
+      <div class="acts">
+        <a href="/accounts/signup/" class="btn btn-main">Начать бесплатно</a>
+        <a href="#learn" class="btn btn-line">Смотреть обучение</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a href="#top" class="brand"><span class="brand-mark">R</span>RentFlow</a>
+    <span>© 2026 RentFlow</span>
+    <nav>
+      <a href="#how">Как работает</a>
+      <a href="#learn">Обучение</a>
+      <a href="#price">Цена</a>
+      <a href="#faq">Вопросы</a>
+      <a href="/accounts/login/">Войти</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function () {
+  function rub(kop) { return (kop / 100).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽'; }
+  function fmt(n, d) { return Number(n).toLocaleString('ru-RU', { maximumFractionDigits: d === undefined ? 1 : d }); }
+
+  /* ---- phone menu ---- */
+  var head = document.querySelector('.head'), menuBtn = document.getElementById('menuBtn');
+  menuBtn.addEventListener('click', function () { menuBtn.setAttribute('aria-expanded', head.classList.toggle('open')); });
+  document.getElementById('nav').addEventListener('click', function (e) {
+    if (e.target.closest('a')) { head.classList.remove('open'); menuBtn.setAttribute('aria-expanded', 'false'); }
+  });
+
+  /* ---- the live calculator: as month_bill does — kopecks ROUND_HALF_UP, the rest is on the owner ---- */
+  var AREA = 110;
+  var T = [{ name: 'Аптека Вита', share: 45, area: 49.5 }, { name: 'Кафе «Луна»', share: 30, area: 33 }, { name: 'Салон Ирис', share: 20, area: 22 }];
+  var how = 'share', sumKop = 1240000;
+  var rows = document.getElementById('rows'), sumIn = document.getElementById('sumIn');
+  function weight(t) { return how === 'share' ? t.share / 100 : how === 'area' ? t.area / AREA : 1 / T.length; }
+  function label(t) { return how === 'share' ? fmt(t.share, 0) + '%' : how === 'area' ? fmt(t.area) + ' м²' : '1/' + T.length; }
+  function build() {
+    rows.innerHTML = T.map(function (t, i) {
+      var max = how === 'share' ? 100 : AREA, step = how === 'share' ? 1 : 0.5;
+      return '<div class="trow"><span class="who">' + t.name + '</span><span class="val num" data-v="' + i + '"></span><span class="amt num" data-a="' + i + '"></span>' +
+        (how === 'equal' ? '' : '<input type="range" min="0" max="' + max + '" step="' + step + '" value="' + (how === 'share' ? t.share : t.area) +
+        '" data-i="' + i + '" aria-label="' + (how === 'share' ? 'Доля, %' : 'Площадь, м²') + ': ' + t.name + '">') + '</div>';
+    }).join('') + '<div class="trow owner"><span class="who">Остаётся на вас</span><span class="val num" id="ownV"></span><span class="amt num" id="ownA"></span></div>';
+    count();
+  }
+  function count() {
+    // half up per tenant; if that went a kopeck over the receipt, the extra kopeck comes off the last ones — «на вас» never below zero
+    var ks = T.map(function (t) { return Math.round(sumKop * weight(t) + 1e-9); });
+    var over = ks.reduce(function (s, k) { return s + k; }, 0) - sumKop;
+    for (var j = ks.length - 1; over > 0 && j >= 0; j--) { if (ks[j] > 0) { ks[j]--; over--; } }
+    var given = 0;
+    T.forEach(function (t, i) {
+      given += ks[i];
+      rows.querySelector('[data-v="' + i + '"]').textContent = label(t);
+      rows.querySelector('[data-a="' + i + '"]').textContent = rub(ks[i]);
+    });
+    var own = sumKop - given;
+    var used = how === 'share' ? T.reduce(function (s, t) { return s + t.share; }, 0) : how === 'area' ? T.reduce(function (s, t) { return s + t.area; }, 0) : 0;
+    document.getElementById('ownV').textContent = how === 'share' ? fmt(100 - used, 0) + '%' : how === 'area' ? fmt(AREA - used) + ' м²' : '';
+    document.getElementById('ownA').textContent = rub(own);
+    document.getElementById('tot').textContent = 'Всего ' + rub(sumKop);
+    document.getElementById('hint').textContent = how === 'equal'
+      ? 'Поровну на троих: копейки от округления — на вас, всё сходится.'
+      : 'Двигайте ' + (how === 'share' ? 'доли' : 'площади') + ' — свободная часть ляжет на вас.';
+  }
+  rows.addEventListener('input', function (e) {
+    var r = e.target.closest('input[type=range]'); if (!r) return;
+    var i = +r.dataset.i, key = how === 'share' ? 'share' : 'area', cap = how === 'share' ? 100 : AREA;
+    var others = T.reduce(function (s, t, j) { return j === i ? s : s + t[key]; }, 0);
+    var v = Math.min(+r.value, cap - others);
+    if (+r.value !== v) r.value = v;
+    T[i][key] = v;
+    if (key === 'share') T[i].area = Math.round(v / 100 * AREA * 2) / 2; else T[i].share = Math.round(v / AREA * 100);
+    count();
+  });
+  document.querySelector('.seg').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    how = b.dataset.how;
+    document.querySelectorAll('.seg button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    build();
+  });
+  function readSum() {
+    var n = parseFloat(sumIn.value.replace(/[\s ]/g, '').replace(',', '.'));
+    sumKop = isFinite(n) && n >= 0 ? Math.round(n * 100) : 0;
+    count();
+  }
+  sumIn.addEventListener('input', function () {
+    // groups of digits while typing, as in the app
+    var raw = sumIn.value.replace(/[^\d,.]/g, '').replace('.', ',');
+    var parts = raw.split(','), int = parts[0].replace(/^0+(?=\d)/, '');
+    sumIn.value = int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (parts.length > 1 ? ',' + parts[1].slice(0, 2) : '');
+    readSum();
+  });
+  build();
+
+  /* ---- flow: plays when it comes into view ---- */
+  var flow = document.getElementById('flowBox');
+  function play() { flow.classList.remove("go"); void flow.offsetWidth; flow.classList.add("go"); }
+  document.getElementById('replay').addEventListener('click', play);
+
+  /* ---- reveal on scroll ---- */
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        if (e.target === flow) play(); else e.target.classList.add('in');
+        io.unobserve(e.target);
+      });
+    }, { threshold: .25 });
+    io.observe(flow);
+    document.querySelectorAll('.rv').forEach(function (el) { io.observe(el); });
+  } else {
+    flow.classList.add("go");
+    document.querySelectorAll('.rv').forEach(function (el) { el.classList.add('in'); });
+  }
+
+  /* ---- steps ---- */
+  var TITLES = { 1: 'Просвещения 15 · Объект', 2: 'Просвещения 15 · Счётчики', 3: 'Коммунальные услуги · Как начисляется', 4: 'Просвещения 15 · Ноябрь 2026' };
+  var stepLesson = 2;
+  document.getElementById('stepList').addEventListener('click', function (e) {
+    var b = e.target.closest('.step-btn'); if (!b) return;
+    document.querySelectorAll('.step-btn').forEach(function (x) { x.classList.toggle('on', x === b); });
+    document.querySelectorAll('.frag').forEach(function (f) { f.classList.toggle('on', f.dataset.frag === b.dataset.step); });
+    document.getElementById('screenT').textContent = TITLES[b.dataset.step];
+    stepLesson = +b.dataset.lesson;
+  });
+  document.getElementById('stepLesson').addEventListener('click', function () {
+    showLesson(document.querySelectorAll('#lessons button')[stepLesson - 1]);
+  });
+
+  /* ---- ways of charging ---- */
+  var WAYS = {
+    receipt: ['По квитанции', 'Сумма из квитанции делится по долям, поровну или по м².', '<b>Для:</b> коммунальных услуг, охраны, уборки.', 'Коммунальные услуги', '12 400,00 ₽ × 45%', '5 580,00 ₽'],
+    fixed: ['Фиксированная', 'Одна и та же сумма каждый месяц — вводить ничего не нужно.', '<b>Для:</b> интернета, вывоза снега, обслуживания.', 'Интернет', '1 200,00 ₽ в месяц × 45%', '540,00 ₽'],
+    area: ['По площади', 'Тариф × м² или × число человек. Новый тариф — с текущего месяца, прошлые счета не меняются.', '<b>Для:</b> вывоза мусора, капремонта, содержания.', 'Вывоз мусора', '49,5 м² × 18,40 ₽', '910,80 ₽'],
+    meters: ['По счётчикам', 'Каждый платит за свой расход по тарифу счётчика. Общий счётчик делится по долям.', '<b>Для:</b> электричества и воды, когда у арендаторов свои счётчики.', 'Электричество, № 0457', '1 251 → 1 642 = 391 кВт·ч × 9,50 ₽', '3 714,50 ₽'],
+    usage: ['По расходу', 'Сумма квитанции делится пропорционально расходу счётчиков — тариф знать не нужно.', '<b>Для:</b> квитанций, где тариф меняется каждый месяц.', 'Вода, № 111', '9 360,00 ₽ × 12 м³ из 36 м³', '3 120,00 ₽'],
+    formula: ['Своя формула', 'Собираете расчёт из блоков: расход счётчиков, тарифы, числа за месяц.', '<b>Для:</b> водоотведения, нормативов и всего необычного.', 'Водоотведение', '(12 + 4) м³ × 45 ₽', '720,00 ₽']
+  };
+  function showWay(key) {
+    var w = WAYS[key];
+    document.getElementById('wayIco').setAttribute('href', '#m-' + key);
+    document.getElementById('wayT').textContent = w[0];
+    document.getElementById('waySay').textContent = w[1];
+    document.getElementById('wayGood').innerHTML = w[2];
+    document.getElementById('wayLn').textContent = w[3];
+    document.getElementById('wayHow').textContent = w[4];
+    document.getElementById('wayAmt').textContent = w[5];
+    document.querySelectorAll('.way-btn').forEach(function (x) { x.classList.toggle('on', x.dataset.way === key); });
+  }
+  document.getElementById('wayList').addEventListener('click', function (e) { var b = e.target.closest('.way-btn'); if (b) showWay(b.dataset.way); });
+  showWay('receipt');
+
+  /* ---- lessons ---- */
+  var player = document.getElementById('player'), inner = player.innerHTML;
+  function showLesson(b) {
+    document.querySelectorAll('#lessons button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    var src = b.dataset.video;
+    if (src) {
+      player.innerHTML = '<iframe src="' + src + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="' + b.querySelector('.t').textContent + '"></iframe>';
+    } else {
+      player.innerHTML = inner;
+      document.getElementById('playerT').textContent = b.querySelector('.t').textContent;
+    }
+    document.getElementById('aboutP').textContent = b.dataset.about;
+  }
+  document.getElementById('lessons').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) showLesson(b); });
+  document.querySelectorAll('#lessons button').forEach(function (b) { if (b.dataset.video) b.querySelector('.soon').textContent = ''; });
+  showLesson(document.querySelector('#lessons button.on'));
+})();
+</script>
+</body>
+</html>
