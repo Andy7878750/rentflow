@@ -11,7 +11,7 @@
   </header>
 
   <form method="post" action="{% if property %}{% url 'property_edit' property.pk %}{% else %}{% url 'property_create' %}{% endif %}"
-        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form data-objwin novalidate>
+        class="pform{% if form.occupancy.value == 'owner' %} is-owner{% endif %}" data-property-form data-modal-form data-objwin{% if open_meter %} data-open-meter="{{ open_meter }}"{% endif %} novalidate>
     {% csrf_token %}
     <div class="svcwin-body">
       <nav class="svcwin-nav" aria-label="Разделы объекта">

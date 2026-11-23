@@ -1576,6 +1576,11 @@
       return !item.hidden && item.querySelector('.errorlist');
     })[0];
     if (broken) openItem(broken, false);
+    // «Тарифы» → a meter's row (2026-11-23): the object window opens right on that meter's small window.
+    else if (form.dataset.openMeter) {
+      var idInput = form.querySelector('[data-item-store] [data-item="meter"] input[name$="-id"][value="' + form.dataset.openMeter + '"]');
+      if (idInput) openItem(idInput.closest('[data-item]'), false);
+    }
   }
 
   // ---------- The object window (2026-11-22): the service window's frame — parts on the left, one save for all ----------

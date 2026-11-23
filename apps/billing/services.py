@@ -845,7 +845,8 @@ _MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', '
 
 def tariff_table(owner, today=None):
     """«Услуги → Тарифы»: every tariff in force of the owner's services, grouped by object. Read-only — a tariff
-    is changed in its service window (the one place), a row opens it. A row: the service · what the tariff is for
+    is changed where it lives (2026-11-23): a meter's — in its meter (the object window, `meter` in the row), the
+    rest — in the service window. A row: the service · what the tariff is for
     (a meter, «за м²», a formula's «Тариф / норматив») · the price · since when · the price before."""
     from apps.properties.models import Property
 
@@ -861,10 +862,10 @@ def tariff_table(owner, today=None):
             for row in receipt.tariffs.all():
                 history.setdefault(row.key, []).append(row)
 
-            def add(what, price, key_rows, kind='', note='', before_text=None):
+            def add(what, price, key_rows, kind='', note='', before_text=None, meter=None):
                 since, before = _tariff_since(key_rows, month)
                 rows.append({
-                    'receipt': receipt, 'what': what, 'kind': kind, 'note': note, 'price': price, 'since': since,
+                    'receipt': receipt, 'meter': meter, 'what': what, 'kind': kind, 'note': note, 'price': price, 'since': since,
                     'before': before_text(before) if before is not None and before_text else '',
                 })
 
@@ -908,7 +909,8 @@ def tariff_table(owner, today=None):
 
                     what = 'Все счётчики' if key == '*' else meter.name + (f' № {meter.serial}' if meter.serial else '')
                     add(what, price, key_rows, kind=meter.kind if meter.kind in READY_METER_KINDS else 'custom',
-                        note='день / ночь' if meter.day_night and key != '*' else '', before_text=before_text)
+                        note='день / ночь' if meter.day_night and key != '*' else '', before_text=before_text,
+                        meter=None if key == '*' else meter)
         groups.append({'property': property_obj, 'rows': rows})
     return groups
 

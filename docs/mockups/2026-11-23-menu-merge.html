@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Меню — Услуги, Тарифы, Счётчики вместе</title>
+<style>
+  :root { --text:#34495e; --muted:#7f8c8d; --border:#e1e4e8; --bg:#f4f6f8; --accent:#148f77; --accent-h:#117a65; --soft:#e6f4f1; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #eef1f3; font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .lead { margin: 0 0 20px; color: var(--muted); }
+  .grid { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .col { width: 272px; }
+  .col.wide { width: 640px; max-width: 100%; }
+  .col.wide .frame { overflow-x: auto; }
+  .col.wide .side { flex: none; }
+  .col.wide .page { min-width: 300px; }
+  .tabs { overflow: hidden; }
+  .col > b { display: block; font-size: 15px; }
+  .col > p { min-height: 56px; margin: 2px 0 8px; font-size: 12px; color: var(--muted); }
+  .frame { display: flex; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.08); }
+  .rail { width: 16px; background: #2c3e50; }
+  .side { width: 256px; padding: 12px; border-right: 1px solid var(--border); background: #fff; }
+  .g { margin-bottom: 6px; }
+  .gh { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .gh svg, .ico { width: 18px; height: 18px; flex: none; }
+  .gh .chev { width: 16px; height: 16px; margin-left: auto; color: var(--muted); }
+  .gh.closed .chev { transform: rotate(-90deg); }
+  .gh .cnt { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--muted); }
+  .items { margin: 4px 0 8px 21px; padding: 0 0 0 8px; list-style: none; border-left: 1px solid var(--border); }
+  .it { position: relative; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .it:hover { background: var(--bg); }
+  .it.on { background: var(--soft); color: var(--accent-h); font-weight: 600; }
+  .it .cnt { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .it.on .cnt { color: inherit; }
+  .it.add { color: var(--accent); font-weight: 600; }
+  .it.add:hover { background: var(--soft); }
+  .it .plus { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-right: -6px; border-radius: 6px; color: var(--accent); font-size: 18px; font-weight: 600; }
+  .it .plus:hover { background: var(--soft); }
+  .it .cnt + .plus { margin-left: 6px; }
+  .sub { margin: 0 0 0 0; font-size: 11px; color: var(--muted); }
+  .menu { position: absolute; z-index: 2; left: 8px; top: 38px; width: 200px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+  .menu .it { font-weight: 400; color: var(--text); }
+  .muted { color: var(--muted); }
+  .sp { height: 70px; }
+
+  /* Г — the page with tabs */
+  .page { flex: 1; padding: 18px 20px; background: var(--bg); min-width: 0; }
+  .page h2 { margin: 0 0 12px; font-size: 20px; }
+  .tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .tab { padding: 8px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab em { font-style: normal; font-weight: 400; margin-left: 4px; }
+  .tabs .addbtn { margin-left: auto; height: 32px; padding: 0 12px; border: 1px solid var(--accent); border-radius: 8px; background: #fff; color: var(--accent); font: inherit; font-weight: 600; }
+  .rows div { height: 44px; margin-bottom: 6px; border-radius: 8px; background: #fff; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="gauge" viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0M12 16l4-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 12h2" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z M9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+</svg>
+
+<h1>Меню: «Услуги», «Тарифы», «Счётчики» — в одном разделе</h1>
+<p class="lead">Сейчас это два раздела и 6 строк. Остальное меню не трогаем (Объекты свёрнуты для краткости).</p>
+
+<div class="grid">
+
+  <div class="col">
+    <b>А · Один раздел, две «Добавить»</b>
+    <p>Раздел «Услуги»: Все услуги · Тарифы · Счётчики, ниже две зелёные строки. Было 2 раздела + 6 строк → 1 раздел + 5 строк.</p>
+    <div class="frame"><div class="rail"></div><div class="side">
+      <div class="g"><div class="gh closed"><svg><use href="#home"/></svg>Объекты<svg class="chev"><use href="#chev"/></svg></div></div>
+      <div class="g"><div class="gh"><svg><use href="#gauge"/></svg>Услуги<svg class="chev"><use href="#chev"/></svg></div>
+        <ul class="items">
+          <li class="it on">Все услуги<span class="cnt">13</span></li>
+          <li class="it">Тарифы</li>
+          <li class="it">Счётчики<span class="cnt">15</span></li>
+          <li class="it add">+ Добавить услугу</li>
+          <li class="it add">+ Добавить счётчик</li>
+        </ul></div>
+      <div class="g"><div class="gh"><svg><use href="#wallet"/></svg>Оплаты</div></div>
+      <div class="g"><div class="gh closed"><svg><use href="#doc"/></svg>Счета<svg class="chev"><use href="#chev"/></svg></div></div>
+    </div></div>
+  </div>
+
+  <div class="col">
+    <b>Б · Одна «+ Добавить» с выбором</b>
+    <p>Одна зелёная строка «+ Добавить…», клик — маленькое меню «Услугу · Счётчик». 1 раздел + 4 строки.</p>
+    <div class="frame"><div class="rail"></div><div class="side">
+      <div class="g"><div class="gh closed"><svg><use href="#home"/></svg>Объекты<svg class="chev"><use href="#chev"/></svg></div></div>
+      <div class="g"><div class="gh"><svg><use href="#gauge"/></svg>Услуги<svg class="chev"><use href="#chev"/></svg></div>
+        <ul class="items">
+          <li class="it on">Все услуги<span class="cnt">13</span></li>
+          <li class="it">Тарифы</li>
+          <li class="it">Счётчики<span class="cnt">15</span></li>
+          <li class="it add">+ Добавить…
+            <div class="menu"><div class="it">Услугу</div><div class="it">Счётчик</div></div></li>
+        </ul></div>
+      <div class="sp"></div>
+      <div class="g"><div class="gh"><svg><use href="#wallet"/></svg>Оплаты</div></div>
+      <div class="g"><div class="gh closed"><svg><use href="#doc"/></svg>Счета<svg class="chev"><use href="#chev"/></svg></div></div>
+    </div></div>
+  </div>
+
+  <div class="col">
+    <b>В · «+» прямо в строке</b>
+    <p>Строк «Добавить» нет: зелёный «+» справа у «Все услуги» и «Счётчики», после числа. 1 раздел + 3 строки — самое короткое.</p>
+    <div class="frame"><div class="rail"></div><div class="side">
+      <div class="g"><div class="gh closed"><svg><use href="#home"/></svg>Объекты<svg class="chev"><use href="#chev"/></svg></div></div>
+      <div class="g"><div class="gh"><svg><use href="#gauge"/></svg>Услуги<svg class="chev"><use href="#chev"/></svg></div>
+        <ul class="items">
+          <li class="it on">Все услуги<span class="cnt">13</span><span class="plus" title="Добавить услугу">+</span></li>
+          <li class="it">Тарифы</li>
+          <li class="it">Счётчики<span class="cnt">15</span><span class="plus" title="Добавить счётчик">+</span></li>
+        </ul></div>
+      <div class="g"><div class="gh"><svg><use href="#wallet"/></svg>Оплаты</div></div>
+      <div class="g"><div class="gh closed"><svg><use href="#doc"/></svg>Счета<svg class="chev"><use href="#chev"/></svg></div></div>
+    </div></div>
+  </div>
+
+  <div class="col wide">
+    <b>Г · Одна строка меню, вкладки на странице</b>
+    <p>В меню одна строка «Услуги» без подпунктов. На странице сверху вкладки «Услуги 13 · Тарифы · Счётчики 15», справа одна кнопка «+ Добавить» (что добавить — по открытой вкладке). Меню короче всего, но тарифы и счётчики видны только на странице.</p>
+    <div class="frame"><div class="rail"></div><div class="side">
+      <div class="g"><div class="gh closed"><svg><use href="#home"/></svg>Объекты<svg class="chev"><use href="#chev"/></svg></div></div>
+      <div class="g"><div class="gh" style="background:var(--soft);color:var(--accent-h)"><svg><use href="#gauge"/></svg>Услуги<span class="cnt" style="color:inherit">13</span></div></div>
+      <div class="g"><div class="gh"><svg><use href="#wallet"/></svg>Оплаты</div></div>
+      <div class="g"><div class="gh closed"><svg><use href="#doc"/></svg>Счета<svg class="chev"><use href="#chev"/></svg></div></div>
+    </div>
+    <div class="page"><h2>Услуги</h2>
+      <div class="tabs"><span class="tab on">Услуги<em>13</em></span><span class="tab">Тарифы</span><span class="tab">Счётчики<em>15</em></span><button class="addbtn">+ Добавить услугу</button></div>
+      <div class="rows"><div></div><div></div><div></div></div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>

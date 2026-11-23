@@ -10,11 +10,8 @@
       <a href="{% url 'property_list' %}" class="rail-link{% if url_name|slice:':9' == 'property_' %} is-active{% endif %}" title="Объекты">
         <svg class="icon"><use href="#i-building"/></svg>
       </a>
-      <a href="{% url 'receipt_list' %}" class="rail-link{% if url_name == 'receipt_list' %} is-active{% endif %}" title="Услуги">
+      <a href="{% url 'receipt_list' %}" class="rail-link{% if url_name == 'receipt_list' or url_name == 'tariff_list' or url_name == 'meter_list' %} is-active{% endif %}" title="Услуги">
         <svg class="icon"><use href="#i-gauge"/></svg>
-      </a>
-      <a href="{% url 'meter_list' %}" class="rail-link{% if url_name == 'meter_list' %} is-active{% endif %}" title="Счётчики">
-        <svg class="icon"><use href="#i-meter"/></svg>
       </a>
       <a href="{% url 'payment_list' %}" class="rail-link{% if url_name == 'payment_list' %} is-active{% endif %}" title="Оплаты">
         <svg class="icon"><use href="#i-wallet"/></svg>
@@ -55,16 +52,21 @@
         </ul>
       </details>
 
-      <details class="nav-group"{% if url_name == 'receipt_list' or url_name == 'tariff_list' %} open{% endif %}>
+      {% comment %}«Услуги» = services, tariffs and meters in one section (variant В, 2026-11-23): no «Добавить …» lines —
+         a green «+» right in the row, after the count (.nav-plus).{% endcomment %}
+      <details class="nav-group"{% if url_name == 'receipt_list' or url_name == 'tariff_list' or url_name == 'meter_list' %} open{% endif %}>
         <summary>
           <svg class="icon"><use href="#i-gauge"/></svg>
           <span>Услуги</span>
           <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
         </summary>
         <ul class="nav-items">
-          <li>
+          <li class="nav-row">
             <a href="{% url 'receipt_list' %}" class="nav-item{% if url_name == 'receipt_list' %} is-active{% endif %}">
               <span>Все услуги</span><span class="nav-count">{{ sidebar_receipt_count }}</span>
+            </a>
+            <a href="{% url 'receipt_add' %}" data-modal class="nav-plus" title="Добавить услугу" aria-label="Добавить услугу">
+              <svg class="icon"><use href="#i-plus"/></svg>
             </a>
           </li>
           <li>
@@ -72,29 +74,12 @@
               <span>Тарифы</span>
             </a>
           </li>
-          <li>
-            <a href="{% url 'receipt_add' %}" data-modal class="nav-item nav-item-add">
-              <svg class="icon"><use href="#i-plus"/></svg><span>Добавить услугу</span>
-            </a>
-          </li>
-        </ul>
-      </details>
-
-      <details class="nav-group"{% if url_name == 'meter_list' %} open{% endif %}>
-        <summary>
-          <svg class="icon"><use href="#i-meter"/></svg>
-          <span>Счётчики</span>
-          <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
-        </summary>
-        <ul class="nav-items">
-          <li>
+          <li class="nav-row">
             <a href="{% url 'meter_list' %}" class="nav-item{% if url_name == 'meter_list' %} is-active{% endif %}">
-              <span>Все счётчики</span><span class="nav-count">{{ sidebar_meter_count }}</span>
+              <span>Счётчики</span><span class="nav-count">{{ sidebar_meter_count }}</span>
             </a>
-          </li>
-          <li>
-            <a href="{% url 'meter_add' %}" data-modal class="nav-item nav-item-add">
-              <svg class="icon"><use href="#i-plus"/></svg><span>Добавить счётчик</span>
+            <a href="{% url 'meter_add' %}" data-modal class="nav-plus" title="Добавить счётчик" aria-label="Добавить счётчик">
+              <svg class="icon"><use href="#i-plus"/></svg>
             </a>
           </li>
         </ul>
@@ -141,7 +126,7 @@
        close the others). The section of the current page is always open. Runs right here, so nothing flickers.{% endcomment %}
     <script>
       (function () {
-        var KEY = 'rentflow.navOpen';
+        var KEY = 'rentflow.navOpen2';  // «2» — the sections changed (2026-11-23), the old saved order does not fit
         var groups = document.querySelectorAll('.sidebar-nav details.nav-group');
         var saved = null;
         try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}

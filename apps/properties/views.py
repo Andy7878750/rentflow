@@ -116,10 +116,16 @@ def _property_form(request, property_obj=None):
     others = Property.objects.filter(owner=request.user).order_by('name')
     if property_obj:
         others = others.exclude(pk=property_obj.pk)
+    # «?meter=<id>» (from «Тарифы», 2026-11-23): open on that meter — its part, its small window.
+    open_meter = None
+    if property_obj and data is None and request.GET.get('meter', '').isdigit():
+        open_meter = property_obj.meters.filter(pk=int(request.GET['meter'])).values_list('pk', flat=True).first()
+    open_part = next((part for part in ('object', 'meters', 'tenants') if errors[part]), 'meters' if open_meter else 'object')
     template = 'properties/_form.html' if is_modal else 'properties/form.html'
     return render(request, template, {
         'errors': errors,
-        'open_part': next((part for part in ('object', 'meters', 'tenants') if errors[part]), 'object'),
+        'open_part': open_part,
+        'open_meter': open_meter,
         'other_properties': others,
         'form': form,
         'formset': formset,

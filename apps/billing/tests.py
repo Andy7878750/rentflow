@@ -260,7 +260,8 @@ class ReceiptViewTests(TestCase):
         return services.save_receipt(receipt, meter_ids=[m.pk for m in meters], tariffs={})
 
     def test_tariffs_page(self):
-        # 2026-11-17: «Услуги → Тарифы» — every tariff in force; a row opens the service, where it is changed.
+        # 2026-11-17: «Услуги → Тарифы» — every tariff in force; a row opens where it is changed (2026-11-23):
+        # a meter's — the object window on that meter, the rest — the service. Nothing is added or deleted here.
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч', serial='222')
         self._light_service(light)
         receipt = self.prop.receipts.get()
@@ -275,9 +276,22 @@ class ReceiptViewTests(TestCase):
         self.assertContains(response, '7,12\xa0₽/м²')
         self.assertContains(response, 'с начала')
         window = reverse('service_window', args=[self.prop.pk])
-        self.assertContains(response, f'data-row-modal="{window}?svc={receipt.pk}"')
+        edit = reverse('property_edit', args=[self.prop.pk])
+        self.assertContains(response, f'data-row-modal="{edit}?meter={light.pk}"')
+        self.assertNotContains(response, f'data-row-modal="{window}?svc={receipt.pk}"')
         self.assertContains(response, f'data-row-modal="{window}?svc={area.pk}"')
         self.assertNotContains(response, stranger.name)
+        self.assertNotContains(response, reverse('receipt_delete', args=[area.pk]))
+        self.assertNotContains(response, 'btn btn-primary')  # no «Добавить услугу» on the page (the menu's «+» stays)
+
+        # The object window opened from such a row: on the meters, that meter's small window; a stranger's id — ignored.
+        response = self.client.get(f'{edit}?meter={light.pk}', HTTP_X_MODAL='1')
+        self.assertContains(response, f'data-open-meter="{light.pk}"')
+        self.assertEqual(response.context['open_part'], 'meters')
+        other_meter = Meter.objects.create(property=make_property(self.other), kind='gas', name='Газ', unit='м³')
+        response = self.client.get(f'{edit}?meter={other_meter.pk}', HTTP_X_MODAL='1')
+        self.assertNotContains(response, 'data-open-meter')
+        self.assertEqual(response.context['open_part'], 'object')
 
         # A new price starts this month; the page says since when and what it was before.
         MeterTariff.objects.filter(meter=light).update(valid_from=date(2026, 1, 1))

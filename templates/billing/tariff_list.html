@@ -3,13 +3,11 @@
 {% block app_content %}
 <div class="page-head">
   <div class="page-title"><h1>Тарифы</h1></div>
-  <a href="{% url 'receipt_add' %}" data-modal class="btn btn-primary btn-auto">
-    <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
-  </a>
 </div>
 
-{% comment %}All tariffs in force (2026-11-17), the same table as «Все услуги». Nothing is edited here: a tariff lives in its
-   service window (the one place) — a row opens it. data-row-modal in app.js.{% endcomment %}
+{% comment %}All tariffs in force (2026-11-17), the same table as «Все услуги». Nothing is edited or added here: a row opens
+   where the tariff lives (2026-11-23) — a meter's: the object window on that meter; the rest: the service window.
+   data-row-modal in app.js.{% endcomment %}
 {% if has_tariffs %}
   <div class="svc-wrap">
   <table class="svc-table">
@@ -18,8 +16,8 @@
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
-        {% url 'service_window' row.receipt.property_id as window_url %}
-        <tr data-row-modal="{{ window_url }}?svc={{ row.receipt.pk }}" title="Открыть услугу «{{ row.receipt.name }}» — тариф меняется там">
+        {% url 'service_window' row.receipt.property_id as window_url %}{% url 'property_edit' row.receipt.property_id as edit_url %}
+        <tr data-row-modal="{% if row.meter %}{{ edit_url }}?meter={{ row.meter.pk }}{% else %}{{ window_url }}?svc={{ row.receipt.pk }}{% endif %}" title="{% if row.meter %}Открыть счётчик — тариф меняется там{% else %}Открыть услугу «{{ row.receipt.name }}» — тариф меняется там{% endif %}">
           <td class="svc-name"><div class="svc-name-cell">
             <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ row.receipt.kind }}"/></svg></span>
             <span class="svc-name-body">
@@ -43,11 +41,8 @@
                 <svg class="icon"><use href="#i-more"/></svg>
               </summary>
               <div class="dropdown-menu" role="menu">
-                <a href="{{ window_url }}?svc={{ row.receipt.pk }}" data-modal class="dropdown-item" role="menuitem">
+                <a href="{% if row.meter %}{{ edit_url }}?meter={{ row.meter.pk }}{% else %}{{ window_url }}?svc={{ row.receipt.pk }}{% endif %}" data-modal class="dropdown-item" role="menuitem">
                   <svg class="icon"><use href="#i-edit"/></svg>Изменить
-                </a>
-                <a href="{% url 'receipt_delete' row.receipt.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
-                  <svg class="icon"><use href="#i-trash"/></svg>Удалить
                 </a>
               </div>
             </details>
@@ -60,10 +55,7 @@
 {% else %}
   <section class="empty-state">
     <h2>Тарифов пока нет</h2>
-    <p>Тариф задаётся в услуге — «По счётчикам», «По площади» или в своей формуле. Здесь они соберутся одним списком.</p>
-    <a href="{% url 'receipt_add' %}" data-modal class="btn btn-primary btn-auto">
-      <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
-    </a>
+    <p>Тариф задаётся у счётчика, в услуге «По площади» или в своей формуле. Здесь они соберутся одним списком.</p>
   </section>
 {% endif %}
 {% endblock %}

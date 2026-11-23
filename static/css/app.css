@@ -212,6 +212,40 @@
   background: none;
 }
 
+/* «Все услуги 13 +» (2026-11-23): the green «+» sits in the row after the count; the row's link leaves room for it. */
+.nav-row {
+  position: relative;
+}
+
+.nav-row .nav-item {
+  padding-right: 40px;
+}
+
+.nav-plus {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  border-radius: 6px;
+  color: var(--color-accent);
+}
+
+.nav-plus .icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+
+.nav-plus:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-hover);
+}
+
 .sidebar-collapse {
   display: flex;
   align-items: center;
