@@ -2302,7 +2302,8 @@
       };
       for (var step = 0; step < 50; step++) {
         var r = moving.row.getBoundingClientRect(), middle = r.top + r.height / 2;
-        var rows = orderRows(), at = rows.indexOf(moving.row);
+        // only inside its own block (2026-11-23): the neighbours are the rows of the same group
+        var rows = Array.prototype.slice.call(moving.row.parentNode.querySelectorAll('[data-order-row]')), at = rows.indexOf(moving.row);
         var prev = rows[at - 1], next = rows[at + 1];
         if (prev && middle < rest(prev)) slide(function () { prev.before(moving.row); }, moving.row);
         else if (next && middle > rest(next)) slide(function () { next.after(moving.row); }, moving.row);

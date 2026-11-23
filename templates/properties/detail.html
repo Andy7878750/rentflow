@@ -103,20 +103,18 @@
     {% csrf_token %}
     <input type="hidden" name="month" value="{{ month }}">
 
-    {% comment %}«⇅ Порядок» (2026-11-17, variant Г): the services as short rows, dragged by the whole row (app.js); the order
-       is the bill's order and the order of the blocks below. data-live — the sums stay fresh.{% endcomment %}
+    {% comment %}«⇅ Порядок» (2026-11-17, variant Г; 2026-11-23 — within the blocks): the services as short rows under the
+       same captions as the blocks below, a row moves only inside its block (app.js) — what is seen is what you get.
+       The order is also the bill's order. data-live — the sums stay fresh.{% endcomment %}
     {% if bill.entries|length > 1 %}
       <div class="morder" id="morder" data-live>
-        <p class="morder-hint">Перетащите услуги в нужном порядке — так же они пойдут в счёт арендатора.</p>
-        {% for entry in bill.entries %}
-          <div class="morder-row" data-order-row data-receipt-id="{{ entry.receipt.pk }}">
-            <span class="morder-grip" aria-hidden="true"><svg class="icon"><use href="#i-grip"/></svg></span>
-            <span class="receipt-icon rk-{{ entry.receipt.kind }}"><svg class="icon"><use href="#i-r-{{ entry.receipt.kind }}"/></svg></span>
-            <span class="morder-name fade">{{ entry.receipt.name }}</span>
-            {% if entry.receipt.provider %}<span class="morder-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
-            <span class="morder-sum">{% if entry.total is not None %}{{ entry.total|floatformat:"2g" }}&nbsp;{{ entry.receipt.currency_symbol }}{% else %}—{% endif %}</span>
-          </div>
-        {% endfor %}
+        <p class="morder-hint">Перетащите услугу выше или ниже в её блоке — так же она пойдёт в счёт арендатора.</p>
+        {% if input.sums %}<div class="morder-group" data-order-group><span class="morder-cap">Суммы из квитанций</span>
+          {% for row in input.sums %}{% include "properties/_order_row.html" with entry=row.entry %}{% endfor %}</div>{% endif %}
+        {% if input.meters %}<div class="morder-group" data-order-group><span class="morder-cap">Показания счётчиков</span>
+          {% for entry, rows in input.meters %}{% include "properties/_order_row.html" %}{% endfor %}</div>{% endif %}
+        {% if input.auto %}<div class="morder-group" data-order-group><span class="morder-cap">Считается само</span>
+          {% for entry in input.auto %}{% include "properties/_order_row.html" %}{% endfor %}</div>{% endif %}
         <div class="morder-done"><button type="button" class="btn btn-primary btn-auto btn-sm" data-order-off>Готово</button></div>
       </div>
     {% endif %}

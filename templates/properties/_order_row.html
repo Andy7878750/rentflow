@@ -1,0 +1,7 @@
+<div class="morder-row" data-order-row data-receipt-id="{{ entry.receipt.pk }}">
+  <span class="morder-grip" aria-hidden="true"><svg class="icon"><use href="#i-grip"/></svg></span>
+  <span class="receipt-icon rk-{{ entry.receipt.kind }}"><svg class="icon"><use href="#i-r-{{ entry.receipt.kind }}"/></svg></span>
+  <span class="morder-name fade">{{ entry.receipt.name }}</span>
+  {% if entry.receipt.provider %}<span class="morder-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
+  <span class="morder-sum">{% if entry.total is not None %}{{ entry.total|floatformat:"2g" }}&nbsp;{{ entry.receipt.currency_symbol }}{% else %}—{% endif %}</span>
+</div>
