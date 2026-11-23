@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сумма квитанции по расходу счётчиков</title>
+<style>
+  :root { --text:#34495e; --ink:#2c3338; --muted:#7f8c8d; --border:#e1e4e8; --bg:#f5f6f7; --accent:#148f77; --soft:#e6f4f1;
+          --warm:#fff8e1; --el:#0e9aa7; --el-soft:#eef8f9; --warn:#8a5a00; --warn-bg:#fdf0d5; --info:#1d5b8f; --info-bg:#e3f0fb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #e9ecef; font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .lead { max-width: 1060px; margin: 0 0 16px; color: var(--muted); }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs button { height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text);
+                 font: inherit; font-weight: 600; cursor: pointer; }
+  .tabs button.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .note { max-width: 1060px; min-height: 40px; margin: 0 0 12px; color: var(--muted); }
+  .part { margin: 28px 0 8px; font-size: 15px; font-weight: 700; }
+
+  /* the service window */
+  .win { display: flex; width: 1060px; max-width: 100%; height: 720px; overflow: hidden; border-radius: 14px; background: #fff;
+         box-shadow: 0 12px 40px rgba(0,0,0,.14); }
+  .nav { flex: none; width: 260px; padding: 16px 14px; border-right: 1px solid var(--border); background: #fbfbfc; }
+  .nav-cap { margin: 0 0 6px 10px; font-size: 12px; color: var(--muted); }
+  .nav-it { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 8px; white-space: nowrap; }
+  .nav-it svg { width: 16px; height: 16px; flex: none; color: var(--muted); }
+  .nav-it.on { background: var(--soft); color: var(--accent); font-weight: 600; }
+  .nav-it.on svg { color: var(--accent); }
+  .nav-it .ck { margin-left: auto; }
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .top { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 32px; border-bottom: 1px solid var(--border); }
+  .top b { width: 190px; font-size: 15px; white-space: nowrap; }
+  .top input { height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; font: inherit; color: var(--text); }
+  .top .n { flex: 1 1 220px; max-width: 280px; } .top .p { flex: 1 1 180px; }
+  .body { flex: 1; overflow: auto; padding: 20px 32px; }
+  .cap { display: flex; align-items: center; gap: 8px; min-height: 20px; margin: 0 0 8px; color: var(--muted); font-size: 12px;
+         font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+  .blk + .blk { margin-top: 24px; }
+  .panel { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px 16px; border-radius: 10px; background: var(--bg); }
+  .panel svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+  .seg { display: inline-flex; gap: 2px; height: 38px; padding: 3px; border-radius: 8px; background: #eef0f2; }
+  .seg span { display: flex; align-items: center; padding: 0 14px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+  .seg span.on { background: var(--accent); color: #fff; }
+  .seg span.new { position: relative; }
+  .seg span.new::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: #e8870e; }
+  .seg span.on.new::after { display: none; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tile { display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; }
+  .tile.on { border: 1.5px solid var(--accent); }
+  .tile .ic { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--el-soft); color: var(--el); }
+  .tile .ic svg { width: 18px; height: 18px; }
+  .tile b { display: block; font-size: 14px; } .tile small { color: var(--muted); font-size: 12px; }
+  .tbl { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .tr { display: grid; grid-template-columns: 30px 1fr 220px 190px; align-items: center; gap: 10px; height: 64px; padding: 0 14px;
+        border-top: 1px solid var(--border); }
+  .tr.h { height: 36px; border-top: 0; background: var(--bg); color: var(--muted); font-size: 12px; }
+  .tr .ic { color: var(--el); } .tr .ic svg { width: 16px; height: 16px; }
+  .tr b { display: block; font-size: 15px; } .tr small { display: block; height: 20px; color: var(--muted); font-size: 12px; }
+  .pick { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 12px; border: 1px solid var(--border);
+          border-radius: 8px; white-space: nowrap; }
+  .pick::after { content: '⌄'; color: var(--muted); }
+  .seg.sm { height: 38px; } .seg.sm span { padding: 0 12px; font-size: 13px; }
+  .calc { border-radius: 10px; background: var(--bg); padding: 4px 16px; }
+  .crow { display: grid; grid-template-columns: 26px 1fr auto 110px; align-items: center; gap: 10px; height: 40px; }
+  .crow + .crow { border-top: 1px solid #e8eaec; }
+  .num { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+         border: 1px solid var(--border); font-size: 12px; }
+  .crow .how { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .crow .sum { text-align: right; font-weight: 600; }
+  .crow.total { font-weight: 700; } .crow.total .sum { font-weight: 700; }
+  .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+           text-transform: none; letter-spacing: 0; }
+  .b-info { background: var(--info-bg); color: var(--info); } .b-warn { background: var(--warn-bg); color: var(--warn); }
+  .foot { display: flex; align-items: center; gap: 8px; height: 64px; padding: 0 32px; border-top: 1px solid var(--border); }
+  .btn { height: 38px; padding: 0 18px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font: inherit; font-weight: 600; color: var(--text); }
+  .btn.pri { border-color: var(--accent); color: var(--accent); }
+  .foot .l { color: #c0392b; } .foot .sp { flex: 1; }
+  .hl { outline: 2px dashed #e8870e; outline-offset: 4px; border-radius: 10px; }
+
+  /* the object page and the bill */
+  .row2 { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .card { width: 560px; max-width: 100%; border: 1px solid var(--border); border-radius: 12px; background: #fff; overflow: hidden; }
+  .card-h { display: grid; grid-template-columns: 1fr 72px 120px 90px; gap: 10px; align-items: center; height: 40px; padding: 0 16px;
+            background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .card-h span { text-align: right; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .card-h span:first-child { text-align: left; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+  .grp { margin: 8px; padding: 6px 8px 4px; border-radius: 10px; background: var(--el-soft); }
+  .gname { display: flex; align-items: center; gap: 8px; height: 30px; color: var(--text); font-size: 15px; font-weight: 600; }
+  .gname svg { width: 18px; height: 18px; color: var(--el); }
+  .mr { display: grid; grid-template-columns: 1fr 72px 120px 90px; gap: 10px; align-items: center; height: 52px; }
+  .mr .who { padding-left: 30px; font-size: 12px; font-weight: 600; } .mr .who small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
+  .mr .prev { text-align: right; color: var(--muted); font-size: 12px; }
+  .in { height: 38px; padding: 0 10px; border: 1px solid #e5dcb8; border-radius: 8px; background: var(--warm); text-align: right; line-height: 36px; }
+  .in.done { border-color: var(--border); background: #fff; }
+  .use { text-align: right; } .use span { display: inline-block; padding: 1px 8px; border-radius: 10px; background: #eef0f2; font-size: 11px; }
+  .sumrow { display: grid; grid-template-columns: 1fr 72px 120px 90px; gap: 10px; align-items: center; height: 52px; padding: 0 0 2px; }
+  .sumrow .who { padding-left: 30px; font-size: 12px; font-weight: 600; }
+  .share { text-align: right; color: var(--muted); font-size: 11px; }
+  .bill { width: 360px; max-width: 100%; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+  .bill .bc { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .03em; }
+  .bill h3 { margin: 2px 0 12px; font-size: 18px; }
+  .bg { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .bg-h { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .bl { display: flex; justify-content: space-between; font-weight: 600; }
+  .bf { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .bf + .bf { margin-top: 0; }
+  .mw { width: 680px; max-width: 100%; padding: 0 24px 22px; border-radius: 14px; background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.14); }
+  .mw-h { display: flex; align-items: center; gap: 12px; height: 56px; margin: 0 -24px 16px; padding: 0 24px; border-bottom: 1px solid var(--border);
+          border-radius: 14px 14px 0 0; background: var(--bg); }
+  .mw-h b { font-size: 20px; }
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fl label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--muted); }
+  .fl .box { display: flex; height: 38px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .fl .box span { flex: 1; padding: 0 12px; line-height: 36px; }
+  .fl .box i { padding: 0 10px; border-left: 1px solid var(--border); background: var(--bg); font-style: normal; line-height: 36px; color: var(--muted); }
+  .fl .box.off span { color: var(--muted); background: #fafbfb; }
+  .hint { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="eq" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="sq" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 4l16 16" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="gauge" viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0M12 16l4-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="split" viewBox="0 0 24 24"><path d="M12 3v7M12 10 5 21M12 10l7 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="fx" viewBox="0 0 24 24"><path d="M10 4c-3 0-3 3-3 6v10M4 10h7M14 10l6 8M20 10l-6 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
+
+<h1>Электричество: сумма квитанции делится по расходу счётчиков</h1>
+<p class="lead">Пример — ваш счёт за октябрь, Просвещения 15: квитанция <b>17 868,08 ₽</b>, по счётчикам Аптека 800 кВт·ч и Салон 577,728 кВт·ч.
+Каждый месяц вводите только сумму квитанции и показания; цену за кВт·ч — нигде. Вопрос — <b>где это включается в окне услуги</b>.</p>
+
+<div class="tabs"><button class="on" data-v="a">А · «Делим: по расходу»</button><button data-v="b">Б · своя плашка «По расходу»</button></div>
+<p class="note" id="note"></p>
+
+<div class="win">
+  <div class="nav">
+    <p class="nav-cap">Начисление</p>
+    <div class="nav-it" id="nav-receipt"><svg><use href="#doc"/></svg>По квитанции<span class="ck">✓</span></div>
+    <div class="nav-it"><svg><use href="#eq"/></svg>Фиксированная сумма</div>
+    <div class="nav-it"><svg><use href="#sq"/></svg>По тарифу</div>
+    <div class="nav-it"><svg><use href="#gauge"/></svg>По счётчикам</div>
+    <div class="nav-it" id="nav-usage" hidden><svg><use href="#split"/></svg>По расходу<span class="ck">✓</span></div>
+    <div class="nav-it"><svg><use href="#fx"/></svg>Своя формула</div>
+  </div>
+  <div class="main">
+    <div class="top"><b><svg style="width:16px;height:16px;vertical-align:-2px;color:var(--el)"><use href="#bolt"/></svg> Электричество</b><input class="n" value="Электричество"><input class="p" value='АО "ПСК"'></div>
+    <div class="body">
+      <div class="blk">
+        <div class="cap" id="how-cap">Как начисляется · По квитанции</div>
+        <div class="panel" id="how-panel"><svg><use href="#doc"/></svg><span id="how-text">Каждый месяц вводите сумму из квитанции — она делится между арендаторами.</span></div>
+      </div>
+      <div class="blk" id="split-blk">
+        <div class="cap">Делим</div>
+        <div class="seg hl"><span>по долям</span><span>поровну</span><span>по м²</span><span class="on new">по расходу счётчиков</span></div>
+      </div>
+      <div class="blk">
+        <div class="cap">Чьи счётчики · выберите группу</div>
+        <div class="tiles">
+          <div class="tile on"><span class="ic"><svg><use href="#bolt"/></svg></span><span><b>Электричество</b><small>2 счётчика · № 58008028, № 013117</small></span></div>
+        </div>
+      </div>
+      <div class="blk">
+        <div class="cap">Кто платит</div>
+        <div class="tbl">
+          <div class="tr h"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>
+          <div class="tr"><span class="ic"><svg><use href="#bolt"/></svg></span><span><b>№ 58008028</b><small>посл. 344 736 кВт·ч</small></span>
+            <span class="pick">Аптека "ЗдравСити"</span><span class="seg sm"><span class="on">Было / стало</span><span>Расход</span></span></div>
+          <div class="tr"><span class="ic"><svg><use href="#bolt"/></svg></span><span><b>№ 013117</b><small>посл. 99 643 кВт·ч</small></span>
+            <span class="pick">Салон "Ногти" (Роман)</span><span class="seg sm"><span class="on">Было / стало</span><span>Расход</span></span></div>
+        </div>
+      </div>
+      <div class="blk">
+        <div class="cap">Как посчитается <span class="badge b-info">на числах октября</span></div>
+        <div class="calc">
+          <div class="crow"><span class="num">1</span><span>Аптека "ЗдравСити"</span><span class="how">17 868,08 ₽ × 800 / 1 377,728 кВт·ч</span><span class="sum">10 375,39 ₽</span></div>
+          <div class="crow"><span class="num">2</span><span>Салон "Ногти" (Роман)</span><span class="how">17 868,08 ₽ × 577,728 / 1 377,728 кВт·ч</span><span class="sum">7 492,69 ₽</span></div>
+          <div class="crow total"><span></span><span>Всего по услуге</span><span class="how">≈ 12,97 ₽ за кВт·ч</span><span class="sum">17 868,08 ₽</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span class="l">Удалить услугу</span><span class="sp"></span><button class="btn">Отмена</button><button class="btn pri">Сохранить</button></div>
+  </div>
+</div>
+
+<p class="part">Страница объекта — «Ввод за месяц» (одинаково для А и Б)</p>
+<div class="row2">
+  <div class="card">
+    <div class="card-h"><span>Показания счётчиков</span><span>Было</span><span>Стало</span><span>Расход</span></div>
+    <div class="grp">
+      <div class="gname"><svg><use href="#bolt"/></svg>Электричество</div>
+      <div class="sumrow"><span class="who">Сумма квитанции</span><span></span><span class="in">17 868,08 ₽</span><span class="share">≈ 12,97 ₽/кВт·ч</span></div>
+      <div class="mr"><span class="who">Аптека "ЗдравСити"<small>№ 58008028</small></span><span class="prev">344 736</span><span class="in done">345 536</span><span class="use"><span>800 кВт·ч</span></span></div>
+      <div class="mr"><span class="who">Салон "Ногти" (Роман)<small>№ 013117</small></span><span class="prev">99 643</span><span class="in">&nbsp;</span><span class="use">—</span></div>
+    </div>
+  </div>
+  <div class="bill">
+    <div class="bc">СЧЁТ · ОКТЯБРЬ 2026</div>
+    <h3>Аптека "ЗдравСити"</h3>
+    <div class="bg"><div class="bg-h">По счётчикам</div>
+      <div class="bl"><span>Электричество</span><span>10 375,39</span></div>
+      <div class="bf">счётчик № 58008028 · 344 736 → 345 536 = 800 кВт·ч</div>
+      <div class="bf">квитанция 17 868,08 ₽ × 800 / 1 377,728 кВт·ч</div>
+    </div>
+  </div>
+</div>
+
+<p class="part">Окно счётчика — тариф не нужен, когда счётчик в такой услуге</p>
+<div class="mw">
+  <div class="mw-h"><b>Электричество</b><span class="badge b-info">№ 58008028</span></div>
+  <div class="f2">
+    <div class="fl"><label>Начальное *</label><div class="box"><span>344 736</span><i>кВт·ч</i></div></div>
+    <div class="fl"><label>Тариф</label><div class="box off"><span>из квитанции</span><i>₽/кВт·ч</i></div></div>
+  </div>
+  <p class="hint">Счётчик в услуге «Электричество» — сумма квитанции делится по расходу, тариф не вводится.</p>
+</div>
+
+<script>
+  var notes = {
+    a: 'А — без новой плашки: «По квитанции» как сейчас, в «Делим» четвёртый вариант «по расходу счётчиков». Выбрали его — ниже группа счётчиков и «Кто платит» (как в «По счётчикам», но без тарифа). Логика: сумма та же квитанция, меняется только как делим.',
+    b: 'Б — шестая плашка слева «По расходу» рядом с «По счётчикам»: «Сумма квитанции делится по расходу счётчиков». «Делим» не нужен. Нагляднее в списке, но плашек становится 6, и «По счётчикам» / «По расходу» легко спутать.'
+  };
+  function show(v) {
+    document.querySelectorAll('.tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === v); });
+    document.getElementById('note').textContent = notes[v];
+    var a = v === 'a';
+    document.getElementById('split-blk').hidden = !a;
+    document.getElementById('nav-usage').hidden = a;
+    document.getElementById('nav-receipt').classList.toggle('on', a);
+    document.getElementById('nav-usage').classList.toggle('on', !a);
+    document.getElementById('nav-receipt').querySelector('.ck').hidden = !a;
+    document.getElementById('how-cap').textContent = 'Как начисляется · ' + (a ? 'По квитанции' : 'По расходу');
+    document.getElementById('how-text').textContent = a
+      ? 'Каждый месяц вводите сумму из квитанции — она делится между арендаторами.'
+      : 'Каждый месяц вводите сумму из квитанции — она делится по расходу счётчиков: кто больше нажёг, тот больше платит.';
+  }
+  document.querySelectorAll('.tabs button').forEach(function (b) { b.onclick = function () { show(b.dataset.v); }; });
+  show('a');
+</script>
+</body>
+</html>
