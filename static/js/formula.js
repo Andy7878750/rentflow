@@ -847,11 +847,12 @@
           '<input data-k="sample" class="fx-sample" disabled value="' + num(v.sample || sampleFor(v.unit)) + '">' + unitButton('unit', v.unit) +
           '</span></div></div><p class="fx-say">' + valueSays(v) + '</p>';
       }
-      // One field, two menus right in it (2026-11-22): «45 [₽ ▾] за [м³ ▾]»; «—» in both — a coefficient.
-      return name + '<div class="fx-f">Сколько<span class="fx-vfield is-pair">' +
+      // Two fields side by side (variant Г, 2026-11-23): «Сколько [45 | ₽ ▾]» · «За [1 м³ ▾]»; «—» in both — a coefficient.
+      return name + '<div class="fx-two"><div class="fx-f">Сколько<span class="fx-vfield">' +
         '<input data-k="value" inputmode="decimal" value="' + (v.value ? num(v.value) : '') + '" placeholder="0">' +
-        unitButton('unit', v.unit) + '<span class="fx-za">за</span>' + unitButton('per', v.per) +
-        '</span></div><p class="fx-say">' + valueSays(v) + '</p>';
+        unitButton('unit', v.unit) + '</span></div>' +
+        '<div class="fx-f">За<span class="fx-vfield is-per"><span class="fx-one">1</span>' + unitButton('per', v.per) +
+        '</span></div></div><p class="fx-say">' + valueSays(v) + '</p>';
     }
     // The number's fields write into v; «change» of a unit refreshes the sample and the sentence.
     function wireValue(v, onChange) {

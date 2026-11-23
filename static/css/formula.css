@@ -185,10 +185,12 @@
 /* A block's small window (v2): the ready ones on top, a new one below */
 .fx-pop.is-wide { width: 560px; }
 .fx-pop .fx-or { margin: 4px 0 6px; }
-/* «Сколько»: one field — the number, then «[₽ ▾] за [м³ ▾]» in its grey end (2026-11-22) */
-.fx-vfield.is-pair .fx-usel { width: 76px; }
-.fx-vfield.is-pair .fx-usel + .fx-za + .fx-usel { border-left: 0; }
-.fx-za { flex: none; display: flex; align-items: center; height: 100%; padding: 0 2px; background: #f7f9fa; font-size: 12px; color: var(--fx-muted); }
+/* «Сколько» · «За» — two fields 50/50 (variant Г, 2026-11-23): the number with its unit; «1 м³ ▾» (no «1» for «—») */
+.fx-pop .fx-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.fx-vfield.is-per .fx-usel { flex: 1; width: auto; padding-left: 4px; border-left: 0; background: #fff; }
+.fx-one { flex: none; padding-left: 10px; color: var(--fx-muted); }
+.fx-vfield.is-per:has(.fx-usel[data-v=""]) .fx-one { display: none; }
+.fx-vfield.is-per:has(.fx-usel[data-v=""]) .fx-usel { padding-left: 10px; }
 .fx-ready-list { display: flex; flex-direction: column; gap: 6px; max-height: 172px; overflow: auto; margin-bottom: 10px; }
 .fx-ready-row { display: flex; gap: 6px; }
 .fx-ready { --c: var(--fx-muted); flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px;

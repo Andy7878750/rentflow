@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Постоянное число — варианты поля «Сколько»</title>
+<style>
+  :root { --text:#34495e; --muted:#7f8c8d; --border:#dfe3e6; --accent:#148f77; --soft:#e8f4f1; --grey:#f7f9fa; --warm:#fffbea; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #eef1f3; font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .lead { margin: 0 0 20px; color: var(--muted); }
+  .grid { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .col { width: 340px; }
+  .col > b { display: block; margin-bottom: 2px; font-size: 15px; }
+  .col > p { min-height: 40px; margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+  .pop { width: 340px; padding: 14px; border-radius: 12px; background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.14); }
+  .pop h4 { margin: 0 0 10px; font-size: 14px; }
+  .f { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+  .f small { font-size: 11px; }
+  input { height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 14px; color: var(--text); background: #fff; width: 100%; }
+  input:focus { outline: none; border-color: var(--accent); }
+  input.num { text-align: right; }
+  input.num:placeholder-shown { background: var(--warm); }
+  .say { min-height: 34px; margin: -4px 0 10px; font-size: 12px; color: var(--muted); }
+  .acts { display: flex; gap: 8px; }
+  .btn { flex: 1; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font: inherit; color: var(--text); cursor: pointer; }
+  .btn.pri { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .chev { width: 14px; height: 14px; flex: none; color: var(--muted); }
+
+  /* field with grey end (current) */
+  .vf { display: flex; align-items: center; height: 34px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+  .vf:focus-within { border-color: var(--accent); }
+  .vf input { flex: 1; min-width: 0; height: 100%; border: 0; border-radius: 0; }
+  .sel { display: inline-flex; align-items: center; justify-content: space-between; gap: 4px; height: 100%; padding: 0 8px 0 10px; border: 0;
+    border-left: 1px solid var(--border); background: var(--grey); font: inherit; font-size: 14px; color: var(--text); cursor: pointer; white-space: nowrap; }
+  .za { display: flex; align-items: center; height: 100%; padding: 0 2px; background: var(--grey); font-size: 12px; color: var(--muted); }
+  .sel.w76 { width: 76px; } .sel.w76 + .za + .sel { border-left: 0; }
+  .sel.w-pair { width: 128px; }
+  .sel.w-unit { width: 64px; }
+
+  /* Б — seg */
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); padding: 3px; gap: 3px; margin-bottom: 10px; border-radius: 9px; background: #eef1f3; }
+  .seg button { height: 28px; border: 0; border-radius: 7px; background: none; font: inherit; font-size: 13px; color: var(--text); cursor: pointer; }
+  .seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+  .fixed { display: flex; align-items: center; height: 100%; padding: 0 10px; background: var(--grey); border-left: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+
+  /* В — menu of pairs */
+  .menu { margin: -6px 0 10px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .menu .grp { padding: 6px 8px 2px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .menu .it { display: flex; justify-content: space-between; height: 30px; align-items: center; padding: 0 8px; border-radius: 6px; cursor: pointer; }
+  .menu .it:hover { background: var(--grey); }
+  .menu .it.on { background: var(--soft); color: var(--accent); font-weight: 600; }
+  .menu .it em { font-style: normal; font-size: 12px; color: var(--muted); }
+
+  /* Г — two fields */
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .two .f { margin-bottom: 10px; }
+  .two .sel { width: 68px; }
+  .two .pref { display: flex; align-items: center; height: 100%; padding: 0 0 0 10px; color: var(--muted); }
+  .two .vf .sel.full { flex: 1; width: auto; border-left: 0; background: #fff; padding-left: 4px; }
+
+  /* Д — phrase */
+  .phrase { display: flex; align-items: baseline; gap: 6px; height: 44px; padding: 0 12px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 18px; }
+  .phrase:focus-within { border-color: var(--accent); }
+  .phrase input { width: 84px; height: 42px; padding: 0; border: 0; font-size: 18px; font-weight: 600; text-align: right; background: none; }
+  .phrase input:placeholder-shown { background: none; }
+  .phrase .u { color: var(--accent); border-bottom: 1px dashed var(--accent); cursor: pointer; }
+  .phrase .w { color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<h1>«Постоянное число» — как задать «Сколько»</h1>
+<p class="lead">Окно одной ширины (340), всё остальное — как сейчас. Пример: норматив 52 кВт·ч на 1 м³ и тариф 45 ₽ за 1 м³.</p>
+
+<div class="grid">
+
+  <!-- А -->
+  <div class="col">
+    <b>А · Как сейчас</b>
+    <p>Одно поле, в сером конце два меню: единица «за» единица. Под полем — фраза, что получилось.</p>
+    <div class="pop">
+      <h4>Постоянное число</h4>
+      <label class="f">Название<input placeholder="Например, Тариф тепло"><small>Так подписано на странице объекта и в счёте</small></label>
+      <div class="f">Сколько
+        <div class="vf"><input class="num" value="52"><button class="sel w76">кВт·ч<svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button><span class="za">за</span><button class="sel w76">м³<svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+      </div>
+      <p class="say">Это норматив: 52 кВт·ч на 1 м³.</p>
+      <div class="acts"><button class="btn">Отмена</button><button class="btn pri">В формулу</button></div>
+    </div>
+  </div>
+
+  <!-- Б -->
+  <div class="col">
+    <b>Б · Сначала «что это»</b>
+    <p>Переключатель из 4 слов. Поле само подстраивается: у тарифа рубли уже стоят — выбрать только «за что». Фраза под полем не нужна.</p>
+    <div class="pop" id="b">
+      <h4>Постоянное число</h4>
+      <label class="f">Название<input placeholder="Например, Тариф тепло"><small>Так подписано на странице объекта и в счёте</small></label>
+      <div class="seg">
+        <button data-t="tariff" class="on">Тариф</button><button data-t="norm">Норматив</button><button data-t="sum">Сумма</button><button data-t="k">Коэф.</button>
+      </div>
+      <div class="f"><span data-lbl>Сколько рублей</span>
+        <div class="vf" data-field></div>
+      </div>
+      <div class="acts"><button class="btn">Отмена</button><button class="btn pri">В формулу</button></div>
+    </div>
+  </div>
+
+  <!-- В -->
+  <div class="col">
+    <b>В · Одно меню готовых пар</b>
+    <p>Справа одна кнопка «₽ за м³». В меню — частые пары по группам, внизу «Без единицы» и «Своя…». Два выбора → один.</p>
+    <div class="pop">
+      <h4>Постоянное число</h4>
+      <label class="f">Название<input placeholder="Например, Тариф тепло"><small>Так подписано на странице объекта и в счёте</small></label>
+      <div class="f">Сколько
+        <div class="vf"><input class="num" value="45"><button class="sel w-pair">₽ за м³<svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+      </div>
+      <div class="menu">
+        <div class="grp">Тариф</div>
+        <div class="it on">₽ за м³</div><div class="it">₽ за кВт·ч</div><div class="it">₽ за Гкал</div><div class="it">₽ за м²</div><div class="it">₽ за чел.</div>
+        <div class="grp">Сумма</div>
+        <div class="it">₽ в месяц</div>
+        <div class="grp">Норматив</div>
+        <div class="it">кВт·ч за м³</div><div class="it">м³ за чел.</div>
+        <div class="grp">Другое</div>
+        <div class="it">Без единицы <em>коэффициент</em></div><div class="it">Своя…</div>
+      </div>
+      <div class="acts"><button class="btn">Отмена</button><button class="btn pri">В формулу</button></div>
+    </div>
+  </div>
+
+  <!-- Г -->
+  <div class="col">
+    <b>Г · Два поля рядом</b>
+    <p>Как «Начальное · Тариф» в окне счётчика: слева число с единицей, справа «За» с единицей. У каждого поля своя подпись.</p>
+    <div class="pop">
+      <h4>Постоянное число</h4>
+      <label class="f">Название<input placeholder="Например, Тариф тепло"><small>Так подписано на странице объекта и в счёте</small></label>
+      <div class="two">
+        <div class="f">Сколько
+          <div class="vf"><input class="num" value="45"><button class="sel">₽<svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+        </div>
+        <div class="f">За
+          <div class="vf"><span class="pref">1</span><button class="sel full">м³<svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+        </div>
+      </div>
+      <p class="say">Это тариф: 45 ₽ за 1 м³.</p>
+      <div class="acts"><button class="btn">Отмена</button><button class="btn pri">В формулу</button></div>
+    </div>
+  </div>
+
+  <!-- Д -->
+  <div class="col">
+    <b>Д · Фраза вместо поля</b>
+    <p>Одна крупная строка читается как предложение. Число вводится, единицы — подчёркнутые слова, клик открывает меню.</p>
+    <div class="pop">
+      <h4>Постоянное число</h4>
+      <label class="f">Название<input placeholder="Например, Тариф тепло"><small>Так подписано на странице объекта и в счёте</small></label>
+      <div class="f">Сколько
+        <div class="phrase"><input class="num" value="45"><span class="u">₽</span><span class="w">за 1</span><span class="u">м³</span></div>
+      </div>
+      <div class="acts"><button class="btn">Отмена</button><button class="btn pri">В формулу</button></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Б: the switch rebuilds the field
+  var CH = '<svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+  var B = {
+    tariff: ['Сколько рублей', '<input class="num" value="45"><span class="fixed">₽ за</span><button class="sel w-unit" style="border-left:0">м³' + CH + '</button>'],
+    norm:   ['Сколько на единицу', '<input class="num" value="52"><button class="sel w76">кВт·ч' + CH + '</button><span class="za">за</span><button class="sel w76">м³' + CH + '</button>'],
+    sum:    ['Сколько рублей', '<input class="num" value="1 200"><span class="fixed">₽ в месяц</span>'],
+    k:      ['Число', '<input class="num" value="1,2">']
+  };
+  var b = document.getElementById('b');
+  function show(t) {
+    b.querySelectorAll('.seg button').forEach(function (x) { x.classList.toggle('on', x.dataset.t === t); });
+    b.querySelector('[data-lbl]').textContent = B[t][0];
+    b.querySelector('[data-field]').innerHTML = B[t][1];
+  }
+  b.querySelector('.seg').onclick = function (e) { if (e.target.dataset.t) show(e.target.dataset.t); };
+  show('tariff');
+</script>
+</body>
+</html>
