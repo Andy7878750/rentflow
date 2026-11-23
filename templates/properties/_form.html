@@ -25,12 +25,16 @@
         <button type="button" class="sv-nav-item is-mode{% if open_part == 'tenants' %} is-on{% endif %}" data-opart="tenants">
           <svg class="sv-i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5"/></svg><span class="fade">Арендаторы</span>{% if errors.tenants %}<span class="ow-dot" title="Есть ошибка"></span>{% endif %}<span class="ow-cnt" data-ocount="tenant"></span>
         </button>
-        {% if other_properties or property %}
+        {% if owner_properties %}
           <div class="sv-nav-svcs">
             <div class="sv-nav-sep"></div>
-            {% if other_properties %}<div class="sv-nav-cap">Объекты · {{ other_properties|length }}</div>{% endif %}
-            {% for other in other_properties %}
-              <a href="{% url 'property_edit' other.pk %}" class="sv-nav-item" data-modal data-obj-go><svg class="icon"><use href="#i-building"/></svg><span class="fade">{{ other.name }}</span></a>
+            <div class="sv-nav-cap">Объекты · {{ owner_properties|length }}</div>
+            {% for other in owner_properties %}
+              {% if property and other.pk == property.pk %}
+                <span class="sv-nav-item is-active" aria-current="true"><svg class="icon"><use href="#i-building"/></svg><span class="fade">{{ other.name }}</span></span>
+              {% else %}
+                <a href="{% url 'property_edit' other.pk %}" class="sv-nav-item" data-modal data-obj-go><svg class="icon"><use href="#i-building"/></svg><span class="fade">{{ other.name }}</span></a>
+              {% endif %}
             {% endfor %}
             {% if property %}
               <a href="{% url 'property_create' %}" class="sv-nav-item ow-add" data-modal data-obj-go><svg class="icon"><use href="#i-plus"/></svg><span class="fade">Новый объект</span></a>

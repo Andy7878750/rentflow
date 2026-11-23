@@ -113,9 +113,8 @@ def _property_form(request, property_obj=None):
         'tenants': bool(data is not None and data.get('occupancy') != Property.Occupancy.OWNER
                         and (formset.non_form_errors() or any(formset.errors))),
     }
-    others = Property.objects.filter(owner=request.user).order_by('name')
-    if property_obj:
-        others = others.exclude(pk=property_obj.pk)
+    # Every object stays in the list below, the open one lit (2026-11-23) — as the open service in the service window.
+    owner_properties = Property.objects.filter(owner=request.user).order_by('name')
     # «?meter=<id>» (from «Тарифы», 2026-11-23): open on that meter — its part, its small window.
     open_meter = None
     if property_obj and data is None and request.GET.get('meter', '').isdigit():
@@ -126,7 +125,7 @@ def _property_form(request, property_obj=None):
         'errors': errors,
         'open_part': open_part,
         'open_meter': open_meter,
-        'other_properties': others,
+        'owner_properties': owner_properties,
         'form': form,
         'formset': formset,
         'meter_formset': meter_formset,
