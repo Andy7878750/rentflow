@@ -463,7 +463,7 @@
         b = cp('area', '<span>Тариф</span>' + field('rate', s.rate, '₽', 'w-tariff') + '<span>за</span>' + unitPick(s) +
           '<span class="sv-op">×</span>' + field('volume', v, s.unit, 'w-vol', '0') + '<span class="sv-cp-total">= ' + money(t) + '</span>');
       }
-      if (s.mode === 'usage') b = cp('usage', '<span>Каждый месяц вводите <b>сумму из квитанции</b> — она делится по <b>расходу счётчиков</b>: кто больше потратил, тот больше платит.</span>');
+      if (s.mode === 'usage') b = cp('usage', '<span>Сумму из квитанции вводите <b>каждый месяц</b> — она делится по <b>расходу счётчиков</b>.</span>');
       if (s.mode === 'meters') b = cp('meters', '<span>Каждый платит по своему счётчику: <b>расход</b> <span class="sv-op">×</span> <b>тариф счётчика</b>. Общий счётчик — делим.</span>');
       // «Своя формула» (2026-11-22): the formula as the same blocks as in its window (a click opens it), and under it
       // the same «Как посчитается» — its switches work here too.
