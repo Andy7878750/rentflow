@@ -1496,9 +1496,9 @@ input.masked {
   transform: rotate(180deg);
 }
 
-/* Opened: more air under it, 6 → 14 px to «УК / ТСЖ» (2026-11-23) */
+/* Opened: more air under it, 6 → 20 px to «УК / ТСЖ» (2026-11-23) */
 .uk-toggle[aria-expanded="true"] {
-  margin-bottom: 4px;
+  margin-bottom: 10px;
 }
 
 .uk-fields {
