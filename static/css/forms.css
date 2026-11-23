@@ -1835,9 +1835,11 @@ input.masked {
 
 .subwin-sub {
   flex: 0 0 auto;
-  color: var(--color-text-muted);
-  font-size: 14px;
   white-space: nowrap;
+}
+
+.subwin-sub[hidden] {
+  display: none;
 }
 
 .subwin-head .modal-close {

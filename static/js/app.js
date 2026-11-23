@@ -1314,7 +1314,7 @@
       var item = current.item;
       var title = sub.querySelector('[data-subwin-title]');
       var note = sub.querySelector('[data-subwin-sub]');
-      var name, text = '';
+      var name, text = '', warn = false;
       if (current.kind === 'tenant') {
         name = val(item, 'name').trim();
         var unit = shareUnit() === '%' ? '%' : ' м²';
@@ -1323,9 +1323,10 @@
         if (share !== null) {
           var hint = item.querySelector('[data-share-hint]');
           text = formatNumber(share) + unit + (hint && hint.textContent ? ' · ' + hint.textContent : '');
-          if (free !== null && share > free) text += ' · можно до ' + formatNumber(free) + unit;
+          if (free !== null && share > free) { text += ' · можно до ' + formatNumber(free) + unit; warn = true; }
         } else if (free !== null) {
           text = free > 0 ? 'можно до ' + formatNumber(free) + unit : 'объект занят полностью';
+          warn = !(free > 0);
         }
         title.textContent = name || (current.isNew ? 'Новый арендатор' : 'Арендатор ' + current.number);
       } else {
@@ -1335,7 +1336,10 @@
         text = serial ? '№ ' + serial : '';
       }
       title.classList.toggle('is-empty', !name);
+      // in a badge (2026-11-23): blue; more than is free / the object full — orange
       note.textContent = text;
+      note.hidden = !text;
+      note.className = 'subwin-sub badge ' + (warn ? 'badge-warn' : 'badge-info');
     }
 
     function syncTenantMeters() {
