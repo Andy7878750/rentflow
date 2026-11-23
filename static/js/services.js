@@ -9,6 +9,7 @@
     fixed: '<path d="M5 9h14M5 15h14"/>',
     area: '<path d="M4 4h16v16H4zM4 4l16 16"/>',
     meters: '<path d="M4 16a8 8 0 1 1 16 0M12 16l4-5"/>',
+    usage: '<path d="M12 3v7M12 10 5 21M12 10l7 11"/>',
     formula: '<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>'
   };
   var CP_ICON = {
@@ -20,7 +21,8 @@
     eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     warn: '<path d="M12 3 2 20h20zM12 10v4M12 17h.01"/>',
     formula: '<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>',
-    check: '<path d="M5 12l5 5L20 7"/>'
+    check: '<path d="M5 12l5 5L20 7"/>',
+    usage: '<path d="M12 3v7M12 10 5 21M12 10l7 11"/>'
   };
   var SPLITS = [['shares', 'по долям'], ['equal', 'поровну'], ['area', 'по м²']];
   var SAMPLE = 5800;  // a sum for the example of «По квитанции» — the receipt's sum is not known yet
@@ -80,6 +82,8 @@
     function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
     function copy(s) { return JSON.parse(JSON.stringify(s)); }
     function tname(id) { var t = byId(T, id); return t ? t.name : ''; }
+    // «По счётчикам» and «По расходу» (2026-11-23): a group of meters and who pays by each
+    function byMeters(mode) { return mode === 'meters' || mode === 'usage'; }
     function modeName(mode) { return S.modes.filter(function (m) { return m[0] === mode; })[0][1]; }
 
     function startNew(mode) {
@@ -107,6 +111,8 @@
       S.meters.forEach(function (m) {
         if (g.meters.indexOf(m.id) >= 0 && !m.service) { m.who = T.length ? '' : 'owner'; m.input = 'readings'; }
       });
+      // «По расходу» has no «Общий»: such a meter's payer is chosen again
+      if (current.mode === 'usage') S.meters.forEach(function (m) { if (g.meters.indexOf(m.id) >= 0 && m.who === 'common') m.who = ''; });
       if (!String(current.name || '').trim() || current.autoName) { current.name = g.name; current.autoName = true; }
     }
     // a new service is not saved anyway: no «Есть несохранённые изменения» on it
@@ -341,7 +347,7 @@
     }
     // «Кто платит» (вариант Б, 2026-11-20): a table — Счётчик | Кто платит | Ввод показаний; one line per meter,
     // every row of the same height. A common meter: «Общий · по долям»; the parts — a badge, ✎ right after it — the window «Делим».
-    function payerMenu(m) {
+    function payerMenu(m, usage) {
       var opt = function (v, label) {
         var sel = String(m.who) === String(v);
         return '<li class="sv-sel-row' + (sel ? ' is-selected' : '') + '"><button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':' + v + '">' +
@@ -352,18 +358,22 @@
         '<button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':common"><span>Общий — делим</span></button>' +
         '<button type="button" class="sv-sel-edit" data-who-edit="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button></li>';
       return '<div class="sv-sel-menu sv-payer-menu"><ul>' + T.map(function (t) { return opt(t.id, t.name); }).join('') +
-        (T.length ? '<li class="sv-sel-sep"></li>' + common : '') + opt('owner', 'Платите вы') + '</ul></div>';
+        // «По расходу»: a meter is a tenant's or yours — a common one's usage would only land on you
+        (T.length ? '<li class="sv-sel-sep"></li>' + (usage ? '' : common) : '') + opt('owner', 'Платите вы') + '</ul></div>';
     }
     function meterTable(s) {
+      var usage = s.mode === 'usage';  // «По расходу»: no tariff — the receipt's sum is divided by the usage
       var rows = s.meters.map(function (id) {
         var m = byId(S.meters, id), empty = m.who === '' || m.who == null, common = m.who === 'common';
+        var sub = usage
+          ? '<span class="fade">' + esc(m.last || 'нет показаний') + (m.dn ? ' · день / ночь' : '') + '</span>'
+          : '<span class="fade' + (m.tariff ? '' : ' sv-none') + '">' + esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span>' +
+            (m.last ? '<span class="sv-mt-last fade">' + esc(m.last) + '</span>' : '') + meterParts(m);
         return '<div class="sv-mt-row sv-mt-line">' + meterIcon(m.kind) +
-          '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="sv-mt-sub"><span class="fade' + (m.tariff ? '' : ' sv-none') + '">' +
-          esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span>' +
-          (m.last ? '<span class="sv-mt-last fade">' + esc(m.last) + '</span>' : '') + meterParts(m) + '</span></span>' +
+          '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="sv-mt-sub">' + sub + '</span></span>' +
           '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '">' +
           '<span class="fade">' + (empty ? 'Выберите' : payerName(m)) + '</span><svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
-          (pickOpen === m.id ? payerMenu(m) : '') + '</span>' +
+          (pickOpen === m.id ? payerMenu(m, usage) : '') + '</span>' +
           '<div class="sv-seg sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
           '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div></div>';
       }).join('');
@@ -393,9 +403,10 @@
     function example(s) {
       var name = '<span class="sv-pv-name"><span class="fade">' + esc(s.name || 'Новая услуга') + '</span><svg class="icon"><use href="#i-edit"/></svg></span>' +
         (s.provider ? '<span class="sv-pv-sub fade">' + esc(s.provider) + '</span>' : '');
-      if (s.mode === 'receipt') {
-        return '<div class="sv-pv-card"><div class="sv-pv-head">Суммы из квитанций<span class="badge badge-accent">за весь объект</span></div>' +
+      if (s.mode === 'receipt' || s.mode === 'usage') {
+        var card = '<div class="sv-pv-card"><div class="sv-pv-head">Суммы из квитанций<span class="badge badge-accent">за весь объект</span></div>' +
           '<div class="sv-pv-row"><span class="sv-pv-who">' + name + '</span><span class="sv-pv-field"><span>' + num(SAMPLE) + '</span><span class="sv-num-unit">₽</span></span></div></div>';
+        if (s.mode === 'receipt') return card;
       }
       if (s.mode === 'fixed' || s.mode === 'area') {
         var total = serviceTotal(s);
@@ -415,7 +426,7 @@
             '</span><span class="sv-pr-v">…</span><span class="sv-pr-in"></span><span class="sv-pr-use"><span>— ' + esc(m.unit) + '</span></span></div>';
         }).join('');
       }).join('');
-      return '<div class="sv-pv-cap"><span class="sv-l">Показания счётчиков</span><span>Было</span><span>Стало</span><span>Расход</span></div>' +
+      return (card || '') + '<div class="sv-pv-cap"><span class="sv-l">Показания счётчиков</span><span>Было</span><span>Стало</span><span>Расход</span></div>' +
         '<div class="sv-pv-group' + (mixed ? '' : ' mk-' + esc(kinds[0])) + '"><div class="sv-pv-gname">' +
         (mixed ? svg(CP_ICON.meters) : meterIcon(kinds[0])) + '<span class="fade">' + esc(s.name || 'Новая услуга') + '</span><svg class="icon sv-pen"><use href="#i-edit"/></svg></div>' + rows + '</div>';
     }
@@ -452,6 +463,7 @@
         b = cp('area', '<span>Тариф</span>' + field('rate', s.rate, '₽', 'w-tariff') + '<span>за</span>' + unitPick(s) +
           '<span class="sv-op">×</span>' + field('volume', v, s.unit, 'w-vol', '0') + '<span class="sv-cp-total">= ' + money(t) + '</span>');
       }
+      if (s.mode === 'usage') b = cp('usage', '<span>Каждый месяц вводите <b>сумму из квитанции</b> — она делится по <b>расходу счётчиков</b>: кто больше потратил, тот больше платит.</span>');
       if (s.mode === 'meters') b = cp('meters', '<span>Каждый платит по своему счётчику: <b>расход</b> <span class="sv-op">×</span> <b>тариф счётчика</b>. Общий счётчик — делим.</span>');
       // «Своя формула» (2026-11-22): the formula as the same blocks as in its window (a click opens it), and under it
       // the same «Как посчитается» — its switches work here too.
@@ -461,7 +473,7 @@
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
-      h += block('Как начисляется · ' + modeName(s.mode) + warn + (s.mode === 'meters' && s.isNew ? busyBadges() : ''), b);
+      h += block('Как начисляется · ' + modeName(s.mode) + warn + (byMeters(s.mode) && s.isNew ? busyBadges() : ''), b);
       if (s.mode === 'formula') {
         if (s.formula) {
           h += '<div class="sv-sec fx-preview" data-fx-check><h3>Как посчитается <span class="fx-badge" data-check-badge></span> ' +
@@ -469,20 +481,21 @@
         }
       } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
         h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
-      } else if (s.mode === 'meters') {
+      } else if (byMeters(s.mode)) {
         if (s.isNew) h += block('Выберите группу счётчиков', groupTiles(s));
         // «Кто платит» only once a group is chosen — no empty box before that (2026-11-20)
         var todo = s.meters.filter(function (id) { var m = byId(S.meters, id); return m.who === '' || m.who == null; }).length;
         if (s.group) h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));
       }
-      var showExample = s.mode !== 'formula' && (s.mode !== 'meters' || s.group);
+      var showExample = s.mode !== 'formula' && (!byMeters(s.mode) || s.group);
       h += '</div>';
       if (exampleOpen && s.mode !== 'formula') {
         h += '<div class="sv-back" data-ex-close><div class="sv-mw sv-ex" role="dialog" aria-modal="true" aria-label="На странице объекта">' +
           '<div class="sv-mw-head"><b>На странице объекта</b>' + (s.mode === 'receipt' ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : '') +
           '<button type="button" class="sv-x" data-ex-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
           '<div class="sv-mw-body"><p class="sv-note">' + (s.mode === 'receipt' ? 'Каждый месяц вы вводите сюда сумму из квитанции.' :
-            s.mode === 'meters' ? 'Каждый месяц вы вводите сюда показания счётчиков.' : 'Сумма считается сама — вводить ничего не нужно.') + '</p>' + example(s) + '</div></div></div>';
+            s.mode === 'meters' ? 'Каждый месяц вы вводите сюда показания счётчиков.' :
+            s.mode === 'usage' ? 'Каждый месяц вы вводите сюда сумму из квитанции и показания счётчиков.' : 'Сумма считается сама — вводить ничего не нужно.') + '</p>' + example(s) + '</div></div></div>';
       }
       // The bottom bar: on the left «См. пример на странице объекта» (2026-11-20) and «Удалить услугу»; «Сохранить» — the main button.
       h += '<div class="sv-foot"><span class="sv-foot-left">' +
@@ -554,7 +567,7 @@
         pane.querySelector('[data-f="' + need + '"]').focus();
         return;
       }
-      if (s.mode === 'meters') {
+      if (byMeters(s.mode)) {
         if (!s.group) { status('Выберите группу счётчиков', 'is-error'); return; }
         var todo = s.meters.map(function (id) { return byId(S.meters, id); }).filter(function (m) { return m.who === '' || m.who == null; })[0];
         if (todo) { status('Выберите, кто платит по № ' + (todo.serial || '—'), 'is-error'); return; }
@@ -587,7 +600,7 @@
       var data = { id: s.id, kind: s.kind, name: s.name, provider: s.provider, mode: s.mode, split: s.split,
                    excluded: s.excluded, owner_takes: s.owner_takes, fixed: s.fixed, rate: s.rate, unit: s.unit,
                    volume: s.mode === 'area' ? volume(s) : null };
-      if (s.mode === 'meters') {
+      if (byMeters(s.mode)) {
         data.group = s.group;
         data.meters = s.meters.map(function (id) {
           var m = byId(S.meters, id);
@@ -833,7 +846,7 @@
         if (f) { f.who = m.who; f.input = m.input; f.split = m.split; f.excluded = m.excluded; f.owner_takes = m.owner_takes; }
       });
       current = draftBack.current; changed = draftBack.changed; editing = !!current.isNew;
-      if (current.mode === 'meters' && current.group && groupOf(current.group)) {
+      if (byMeters(current.mode) && current.group && groupOf(current.group)) {
         var added = groupOf(current.group).meters.filter(function (id) { return current.meters.indexOf(id) < 0; });
         added.forEach(function (id) { var m = byId(S.meters, id); if (!m.service) { m.who = T.length ? '' : 'owner'; m.input = 'readings'; } });
         current.meters = groupOf(current.group).meters.slice();

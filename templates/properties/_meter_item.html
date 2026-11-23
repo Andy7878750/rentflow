@@ -1,6 +1,6 @@
 {% comment %}One meter of the object: its fields live hidden in the object form; app.js shows them in a small
    window («Счётчик N») and one info row in «Счётчики». Who pays by it (`owner`) is ticked in the tenant window.{% endcomment %}
-<div class="item" data-item="meter"{% if mform.DELETE.value %} hidden{% endif %}{% if mform.instance.pk %}{% with in_services=mform.instance.receipts.all %}{% if in_services %} data-services="{% for service in in_services %}«{{ service.name }}»{% if not forloop.last %}, {% endif %}{% endfor %}" data-service-url="{% url 'service_window' mform.instance.property_id %}?svc={{ in_services.0.pk }}"{% endif %}{% endwith %}{% endif %}>
+<div class="item" data-item="meter"{% if mform.DELETE.value %} hidden{% endif %}{% if mform.instance.pk %}{% with in_services=mform.instance.receipts.all %}{% if in_services %}{% for service in in_services %}{% if service.split == 'usage' and not service.metered %} data-by-usage{% endif %}{% endfor %} data-services="{% for service in in_services %}«{{ service.name }}»{% if not forloop.last %}, {% endif %}{% endfor %}" data-service-url="{% url 'service_window' mform.instance.property_id %}?svc={{ in_services.0.pk }}"{% endif %}{% endwith %}{% endif %}>
   {{ mform.id }}{{ mform.kind }}{{ mform.name }}{{ mform.unit }}{{ mform.owner }}
   <span class="visually-hidden">{{ mform.DELETE }}</span>
   <section class="form-section">
@@ -64,7 +64,7 @@
             {% if mform.initial.errors or mform.initial_night.errors %}<ul class="errorlist">{% for error in mform.initial.errors %}<li>{{ error }}</li>{% endfor %}{% for error in mform.initial_night.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
           </div>
         <div class="field fl fl-unit">
-          <label for="{{ mform.tariff.id_for_label }}">Тариф<span data-day-label> · день / ночь</span> <span class="req">*</span></label>
+          <label for="{{ mform.tariff.id_for_label }}">Тариф<span data-day-label> · день / ночь</span></label>
           <div class="unit-input dn-input">
             <span class="unit-value">{{ mform.tariff }}</span>
             <span class="dn-slash" data-night-field aria-hidden="true">/</span>

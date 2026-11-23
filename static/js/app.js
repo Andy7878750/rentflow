@@ -1070,8 +1070,10 @@
       line.appendChild(startCell(item));
       // Its tariff (2026-11-19): «9,6 / 4,2 ₽/кВт·ч», or a red «нет тарифа».
       var day = val(item, 'tariff'), nightTariff = val(item, 'tariff_night');
-      var tariff = el('span', 'info-cell mt-tariff-cell' + (day ? '' : ' is-none'),
-        day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : 'нет тарифа');
+      // In a «По расходу» service (2026-11-23) no tariff is needed: «из квитанции», grey.
+      var fromReceipt = !day && 'byUsage' in item.dataset;
+      var tariff = el('span', 'info-cell mt-tariff-cell' + (day || fromReceipt ? '' : ' is-none'),
+        day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : fromReceipt ? 'из квитанции' : 'нет тарифа');
       line.appendChild(tariff);
       row.appendChild(line);
       var who = meterWho(item);
@@ -1438,7 +1440,7 @@
     function check(item) {
       var empty = [];
       var need = item.dataset.item === 'meter'
-        ? ['initial', 'tariff'].concat(isDayNight(item) ? ['initial_night', 'tariff_night'] : [])
+        ? ['initial'].concat(isDayNight(item) ? ['initial_night'] : [])  // the tariff is optional (2026-11-23)
         : ['name', 'share'];
       need.forEach(function (suffix) {
         var input = item.querySelector('input[name$="-' + suffix + '"]');

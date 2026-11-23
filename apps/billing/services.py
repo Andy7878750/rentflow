@@ -1402,7 +1402,8 @@ def bill_groups(payer):
     common, metered = [], []
     for line in payer.lines:
         receipt = line.receipt
-        (metered if receipt.metered or receipt.split == Receipt.Split.METERS else common).append(line)
+        # «По расходу» (2026-11-23) — by the tenant's own meter too: «По счётчикам»
+        (metered if receipt.metered or receipt.split in (Receipt.Split.METERS, Receipt.Split.USAGE) else common).append(line)
     groups = []
     if common:
         title = 'Общие'
@@ -1998,6 +1999,9 @@ def month_bill(property_obj, month):
                 meter.two_zones = two_zones(receipt, meter)
                 meter.mode = meter_mode(receipt, meter)
                 meter.tariff_text = ''
+                meter.payer_text = meter_payer_text(meter, tenants)
+                meter.icon_kind = meter.kind if meter.kind in READY_METER_KINDS else 'custom'
+            entry.mixed = len({meter.icon_kind for meter, _ in entry.readings}) > 1
             mark_negative(receipt, entry.readings)
             entry.modes = {meter.mode for meter, _ in entry.readings}
             entry.all_usage = entry.modes == {Receipt.InputMode.USAGE}

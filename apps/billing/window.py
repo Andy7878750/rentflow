@@ -18,15 +18,21 @@ MODES = [
     ('fixed', 'Фиксированная сумма'),
     ('area', 'По тарифу'),
     ('meters', 'По счётчикам'),
+    ('usage', 'По расходу'),  # 2026-11-23: the receipt's sum divided by the meters' usage (no tariff)
     ('formula', 'Своя формула'),
 ]
 SPLITS = [Receipt.Split.SHARES, Receipt.Split.EQUAL, Receipt.Split.AREA]
 BASE_UNITS = ['м²', 'чел.', 'м³']
 
 
+BY_METERS = ('meters', 'usage')  # the modes where a group of meters is chosen and who pays by each
+
+
 def mode_of(receipt):
     if receipt.metered:
         return 'meters'
+    if services.by_usage(receipt):
+        return 'usage'
     return {
         Receipt.AmountMode.FORMULA: 'formula',
         Receipt.AmountMode.FIXED: 'fixed',
@@ -156,8 +162,8 @@ def service_state(receipt, today=None):
         'owner_takes': receipt.owner_takes,
         'fixed': _number(receipt.fixed_amount),
         'rate': _number(receipt.rate), 'unit': unit, 'volume': _number(volume),
-        'meters': [meter.pk for meter in receipt.meters.all()] if mode == 'meters' else [],
-        'group': next((services.meter_kind_key(m) for m in receipt.meters.all()), None) if mode == 'meters' else None,
+        'meters': [meter.pk for meter in receipt.meters.all()] if mode in BY_METERS else [],
+        'group': next((services.meter_kind_key(m) for m in receipt.meters.all()), None) if mode in BY_METERS else None,
         'formula': _formula_text(receipt) if mode == 'formula' else '',
         # «Своя формула»: what its window draws; fx_each — each pays by his own meters (nothing to divide)
         'fx': services.formula_context(receipt, today=today) if mode == 'formula' else None,
@@ -207,8 +213,8 @@ def save_service(property_obj, data, today=None):
     split = data.get('split') if data.get('split') in SPLITS else Receipt.Split.SHARES
     receipt.owner_takes = bool(data.get('owner_takes', True))
     excluded = _tenant_ids(property_obj, data.get('excluded'))
-    if mode == 'meters':
-        return _save_meters(receipt, data, today)
+    if mode in BY_METERS:
+        return _save_meters(receipt, data, today, usage=mode == 'usage')
     if mode == 'formula':
         return _save_formula(receipt, data, split, excluded, today)
 
@@ -253,9 +259,11 @@ def _save_formula(receipt, data, split, excluded, today):
     return receipt
 
 
-def _save_meters(receipt, data, today):
+def _save_meters(receipt, data, today, usage=False):
     """«По счётчикам» (2026-11-20): every meter of one kind (data['group']) and, per meter, who pays — a tenant,
-    the owner, or common (divided) — and what is typed each month («Было / стало» or «Расход»)."""
+    the owner, or common (divided) — and what is typed each month («Было / стало» or «Расход»).
+    usage — «По расходу» (2026-11-23): the same meters, but the month's sum is the receipt's, divided in proportion to
+    their usage; no tariff, and a meter is a tenant's or the owner's (a common one's part is the owner's)."""
     property_obj = receipt.property
     tenants = set(property_obj.tenants.values_list('pk', flat=True))
     busy = services.busy_meters(receipt)
@@ -271,7 +279,7 @@ def _save_meters(receipt, data, today):
         who = row.get('who')
         if property_obj.is_owner_used or who == 'owner':
             meter.tenant, meter.vacant, meter.split = None, not property_obj.is_owner_used, ''
-        elif who == 'common':
+        elif who == 'common' and not usage:
             meter.tenant, meter.vacant = None, False
             meter.split = row.get('split') if row.get('split') in SPLITS else Receipt.Split.SHARES
             meter.owner_takes = bool(row.get('owner_takes', True))
@@ -285,12 +293,17 @@ def _save_meters(receipt, data, today):
         if meter.split:
             meter.excluded.set(_tenant_ids(property_obj, row.get('excluded')))
     receipt.kind = meters[0].kind if meters[0].kind in Receipt.Kind.values else Receipt.Kind.CUSTOM
-    receipt.metered = True
     receipt.amount_mode = Receipt.AmountMode.MONTHLY
-    receipt.layout = Receipt.Layout.COMMON if property_obj.is_owner_used else Receipt.Layout.TENANTS
-    receipt.split = Receipt.Split.OWNER if property_obj.is_owner_used else Receipt.Split.METERS
-    receipt.zones = 2 if any(meter.day_night for meter in meters) else 1
-    receipt.unit = services.meter_unit(meters[0]) or receipt.unit or 'ед.'
+    if usage:
+        receipt.metered = False
+        receipt.layout = Receipt.Layout.COMMON
+        receipt.split = Receipt.Split.OWNER if property_obj.is_owner_used else Receipt.Split.USAGE
+    else:
+        receipt.metered = True
+        receipt.layout = Receipt.Layout.COMMON if property_obj.is_owner_used else Receipt.Layout.TENANTS
+        receipt.split = Receipt.Split.OWNER if property_obj.is_owner_used else Receipt.Split.METERS
+        receipt.zones = 2 if any(meter.day_night for meter in meters) else 1
+        receipt.unit = services.meter_unit(meters[0]) or receipt.unit or 'ед.'
     receipt.fixed_amount = receipt.rate = receipt.volume = None
     receipt.rate_unit = ''
     services.normalize(receipt)

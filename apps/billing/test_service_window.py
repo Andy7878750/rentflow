@@ -178,6 +178,32 @@ class ServiceWindowViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Receipt.objects.filter(name='Ещё').exists())
 
+    def test_by_usage_the_receipt_divided_by_the_meters(self):
+        # «По расходу» (2026-11-23): the receipt's sum in proportion to each meter's usage, no tariff.
+        first = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', serial='1', unit='кВт·ч')
+        second = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', serial='2', unit='кВт·ч')
+        response = self.post(name='Электричество', provider='ПСК', mode='usage', group='electricity', meters=[
+            {'id': first.pk, 'who': self.viktor.pk}, {'id': second.pk, 'who': self.vlad.pk, 'input': 'usage'}])
+        self.assertEqual(response.status_code, 200)
+        receipt = Receipt.objects.get(property=self.prop)
+        self.assertEqual((receipt.metered, receipt.split, receipt.amount_mode), (False, Receipt.Split.USAGE, 'monthly'))
+        self.assertEqual(set(receipt.meters.all()), {first, second})
+        state = next(s for s in response.json()['services'] if s['id'] == receipt.pk)
+        self.assertEqual((state['mode'], state['group']), ('usage', 'electricity'))
+        services.save_month_input(self.prop, OCT, {
+            f'amount-{receipt.pk}': '17 868,08', f'prev-{first.pk}': '0', f'cur-{first.pk}': '800',
+            f'use-{second.pk}': '577,728'})
+        bill = services.month_bill(self.prop, OCT)
+        self.assertEqual({p.tenant.name: sum(line.amount for line in p.lines) for p in bill.payers},
+                         {'Виктор': Decimal('10375.39'), 'Владислав': Decimal('7492.69')})
+        self.assertEqual(sum((line.amount for line in bill.owner.lines), Decimal('0')), 0)
+        payer = bill.payer_for(self.viktor.pk)
+        self.assertEqual([g['title'] for g in services.bill_groups(payer)], ['По счётчикам'])
+        # «Общий» is not offered here: a common meter has to get a payer
+        response = self.post(id=receipt.pk, name='Электричество', provider='ПСК', mode='usage', group='electricity',
+                             meters=[{'id': first.pk, 'who': 'common'}, {'id': second.pk, 'who': self.vlad.pk}])
+        self.assertEqual(response.status_code, 400)
+
     def test_by_meters_every_meter_needs_who_pays(self):
         first, second = self.meter(), self.meter()
         response = self.post(name='Вода', provider='Водоканал', mode='meters', group='water',
