@@ -1746,46 +1746,117 @@
   }
   initFades(document);
 
-  // «Все услуги», «Тарифы», «Счётчики» (2026-11-23): the object switch and the search over the table's rows
-  // (tr[data-obj]). The object is remembered for all three pages; the search is not.
-  document.querySelectorAll('[data-table-filter]').forEach(function (bar) {
-    var KEY = 'rentflow.tableObject';
-    var table = bar.nextElementSibling && bar.nextElementSibling.querySelector('table');
-    if (!table) return;
-    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr[data-obj]'));
-    var search = bar.querySelector('[data-table-search]');
-    var none = document.createElement('p');
+  // «Все услуги», «Тарифы», «Счётчики» (2026-11-23): filters right in the row of column names. th[data-filter]:
+  // «text» — a search field in its menu, «list» — the column's values (one chosen, «Все» — off). A list value is the
+  // cell's link or tag («Тест Круг», «по долям»). The object (data-filter-key="obj") is remembered for all three pages.
+  var FILTER_OBJ = 'rentflow.tableObject';
+  var CHEV_SVG = '<svg class="icon"><use href="#i-chevron-down"/></svg>';
+  function cellValue(cell) {
+    var el = cell && cell.querySelector('a, .tag');
+    return ((el || cell || {}).textContent || '').replace(/\s+/g, ' ').trim();
+  }
+  document.querySelectorAll('table.svc-table').forEach(function (table) {
+    var heads = Array.prototype.slice.call(table.querySelectorAll('thead th[data-filter]'));
+    if (!heads.length) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    var none = document.createElement('tr');
     none.className = 'tbl-none';
-    none.textContent = 'Ничего не найдено.';
     none.hidden = true;
-    bar.nextElementSibling.after(none);
-    function chosen() {
-      var on = bar.querySelector('input[name=tbl_obj]:checked');
-      return on ? on.value : '';
-    }
+    none.innerHTML = '<td colspan="' + table.querySelectorAll('thead th').length + '">Ничего не найдено. <button type="button" class="link-button">Сбросить фильтры</button></td>';
+    table.querySelector('tbody').appendChild(none);
+    var filters = heads.map(function (th) {
+      var col = Array.prototype.indexOf.call(th.parentNode.children, th);
+      var f = { th: th, col: col, type: th.dataset.filter, value: '', key: th.dataset.filterKey || '' };
+      var label = th.textContent.trim();
+      th.innerHTML = '';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'th-filter';
+      btn.innerHTML = '<span></span>' + CHEV_SVG;
+      btn.querySelector('span').textContent = label;
+      th.appendChild(btn);
+      f.btn = btn;
+      f.label = label;
+      if (f.key === 'obj') {
+        var saved = '';
+        try { saved = localStorage.getItem(FILTER_OBJ) || ''; } catch (e) {}
+        if (saved && rows.some(function (r) { return cellValue(r.children[col]) === saved; })) f.value = saved;
+      }
+      return f;
+    });
     function apply() {
-      var obj = chosen();
-      var words = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
       var shown = 0;
       rows.forEach(function (row) {
-        var text = row.textContent.toLowerCase();
-        var ok = (!obj || row.dataset.obj === obj) && words.every(function (w) { return text.indexOf(w) >= 0; });
+        var ok = filters.every(function (f) {
+          if (!f.value) return true;
+          var cell = row.children[f.col];
+          if (f.type === 'list') return cellValue(cell) === f.value;
+          var text = (cell ? cell.textContent : '').toLowerCase();
+          return f.value.toLowerCase().split(/\s+/).filter(Boolean).every(function (w) { return text.indexOf(w) >= 0; });
+        });
         row.hidden = !ok;
         if (ok) shown += 1;
       });
-      bar.nextElementSibling.hidden = !shown;
       none.hidden = !!shown;
+      filters.forEach(function (f) {
+        f.btn.classList.toggle('is-on', !!f.value);
+        f.btn.title = f.value ? f.label + ': ' + f.value : 'Фильтр: ' + f.label;
+      });
     }
-    var saved = '';
-    try { saved = localStorage.getItem(KEY) || ''; } catch (e) {}
-    var pick = saved && bar.querySelector('input[name=tbl_obj][value="' + saved + '"]');
-    if (pick) pick.checked = true;
-    bar.addEventListener('change', function (event) {
-      if (event.target.name !== 'tbl_obj') return;
-      try { localStorage.setItem(KEY, chosen()); } catch (e) {}
+    var menu = null;
+    function closeMenu() { if (menu) { menu.remove(); menu = null; } filters.forEach(function (f) { f.btn.classList.remove('is-open'); }); }
+    function setValue(f, value) {
+      f.value = value;
+      if (f.key === 'obj') { try { localStorage.setItem(FILTER_OBJ, value); } catch (e) {} }
+      apply();
+    }
+    function openMenu(f) {
+      closeMenu();
+      f.btn.classList.add('is-open');
+      menu = document.createElement('div');
+      menu.className = 'th-menu';
+      if (f.type === 'text') {
+        menu.innerHTML = '<label class="tbl-search"><svg class="icon"><use href="#i-search"/></svg><input type="search" autocomplete="off"></label>';
+        var input = menu.querySelector('input');
+        input.placeholder = f.th.dataset.filterHint || 'Найти';
+        input.value = f.value;
+        input.addEventListener('input', function () { setValue(f, input.value.trim()); });
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); closeMenu(); } });
+      } else {
+        var values = [];
+        rows.forEach(function (r) { var v = cellValue(r.children[f.col]); if (v && values.indexOf(v) < 0) values.push(v); });
+        values.sort(function (a, b) { return a.localeCompare(b, 'ru'); });
+        [''].concat(values).forEach(function (v) {
+          var item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'th-item' + (v === f.value ? ' is-on' : '');
+          item.innerHTML = '<span class="fade"></span><svg class="icon"><use href="#i-check"/></svg>';
+          item.querySelector('span').textContent = v || 'Все';
+          item.addEventListener('click', function () { setValue(f, v); closeMenu(); });
+          menu.appendChild(item);
+        });
+      }
+      document.body.appendChild(menu);
+      var r = f.btn.getBoundingClientRect();
+      menu.style.top = (r.bottom + 6) + 'px';
+      menu.style.left = Math.max(8, Math.min(r.left - 8, innerWidth - menu.offsetWidth - 8)) + 'px';
+      var field = menu.querySelector('input');
+      if (field) field.focus();
+    }
+    filters.forEach(function (f) {
+      f.btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (f.btn.classList.contains('is-open')) closeMenu(); else openMenu(f);
+      });
+    });
+    none.querySelector('button').addEventListener('click', function () {
+      filters.forEach(function (f) { f.value = ''; if (f.key === 'obj') { try { localStorage.setItem(FILTER_OBJ, ''); } catch (e) {} } });
       apply();
     });
-    search.addEventListener('input', apply);
+    document.addEventListener('click', function (e) { if (menu && !menu.contains(e.target)) closeMenu(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+    window.addEventListener('scroll', function (e) { if (menu && !menu.contains(e.target)) closeMenu(); }, true);
+    window.addEventListener('resize', closeMenu);
     apply();
   });
 

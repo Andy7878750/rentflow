@@ -12,11 +12,10 @@
    or, for a meter in no service, «Новая услуга» with the tiles, the matching tile picked and this meter switched on.
    «…» → «Удалить»: a confirmation, or «привязан к услуге» (meter_remove). data-row-modal in app.js.{% endcomment %}
 {% if has_meters %}
-  {% include "billing/_table_filter.html" with placeholder="Найти счётчик, № или арендатора" %}
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
-      <tr><th>Счётчик</th><th>Объект</th><th>Кто платит</th><th>Услуга</th><th class="svc-num">Последнее показание</th><th><span class="visually-hidden">Действия</span></th></tr>
+      <tr><th data-filter="text" data-filter-hint="Название или №">Счётчик</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">Кто платит</th><th data-filter="list">Услуга</th><th class="svc-num">Последнее показание</th><th><span class="visually-hidden">Действия</span></th></tr>
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}

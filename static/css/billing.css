@@ -1712,41 +1712,123 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   color: var(--mk, var(--color-text-muted)); }
 .mread-kind svg { width: 16px; height: 16px; margin: 1px; }
 
-/* ---------- Filter over «Все услуги», «Тарифы», «Счётчики» (2026-11-23): object switch · search ---------- */
-.tbl-filter {
-  display: flex;
+/* ---------- Filters in the row of column names: «Все услуги», «Тарифы», «Счётчики» (2026-11-23) ---------- */
+.th-filter {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.tbl-objects {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.tbl-objects label {
-  flex: none;
-}
-
-.tbl-objects span {
-  padding: 0 14px;
-  font-size: 13.5px;
+  gap: 4px;
+  max-width: 100%;
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   cursor: pointer;
 }
 
-.tbl-search {
+.th-filter span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.th-filter .icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s;
+}
+
+.th-filter:hover,
+.th-filter.is-open {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.th-filter.is-open .icon {
+  transform: rotate(180deg);
+}
+
+/* A filter that is on: the name and the arrow in the accent colour — nothing moves */
+.th-filter.is-on {
+  color: var(--color-accent);
+}
+
+.th-menu {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+.th-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.th-item .fade {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.th-item .icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--color-accent);
+  visibility: hidden;
+}
+
+.th-item:hover {
+  background: var(--color-bg);
+}
+
+.th-item.is-on {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.th-item.is-on .icon {
+  visibility: visible;
+}
+
+.th-menu .tbl-search {
   position: relative;
-  flex: 0 0 280px;
-  margin-left: auto;
+  display: block;
+  width: 260px;
+  padding: 4px;
 }
 
 .tbl-search .icon {
   position: absolute;
   top: 50%;
-  left: 12px;
+  left: 16px;
   width: 16px;
   height: 16px;
   margin-top: -8px;
@@ -1755,6 +1837,7 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 }
 
 .tbl-search input {
+  box-sizing: border-box;
   width: 100%;
   height: 38px;
   padding: 0 12px 0 36px;
@@ -1771,17 +1854,18 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   border-color: var(--color-accent);
 }
 
-.tbl-none {
-  margin: 0;
+.svc-table tr.tbl-none td {
   padding: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: #fff;
   color: var(--color-text-muted);
   text-align: center;
 }
 
-@media (max-width: 720px) {
-  .tbl-filter { flex-direction: column; align-items: stretch; }
-  .tbl-search { flex-basis: auto; margin-left: 0; }
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--color-accent);
+  font-weight: 600;
+  cursor: pointer;
 }

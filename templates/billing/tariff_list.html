@@ -9,11 +9,10 @@
    where the tariff lives (2026-11-23) — a meter's: the object window on that meter; the rest: the service window.
    data-row-modal in app.js.{% endcomment %}
 {% if has_tariffs %}
-  {% include "billing/_table_filter.html" with placeholder="Найти услугу или счётчик" %}
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
-      <tr><th>Услуга</th><th>Объект</th><th>За что</th><th>Действует</th><th class="svc-num">Тариф</th><th><span class="visually-hidden">Действия</span></th></tr>
+      <tr><th data-filter="text" data-filter-hint="Название или поставщик">Услуга</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="text" data-filter-hint="Счётчик, «за м²»…">За что</th><th>Действует</th><th class="svc-num">Тариф</th><th><span class="visually-hidden">Действия</span></th></tr>
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
