@@ -15,7 +15,7 @@
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
-      <tr><th data-filter="text" data-filter-hint="Название или №">Счётчик</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">Кто платит</th><th data-filter="list">Услуга</th><th class="svc-num">Последнее показание</th><th><span class="visually-hidden">Действия</span></th></tr>
+      <tr><th data-filter="list">Счётчик</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">Кто платит</th><th data-filter="list">Услуга</th><th class="svc-num">Последнее показание</th><th><span class="visually-hidden">Действия</span></th></tr>
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
@@ -23,7 +23,7 @@
         {% if row.service %}{% url 'service_window' group.property.pk as open_url %}{% else %}{% url 'service_window' group.property.pk as create_url %}{% endif %}
         <tr data-obj="{{ group.property.pk }}" data-row-modal="{% if row.service %}{{ open_url }}?svc={{ row.service.pk }}{% else %}{{ create_url }}?meter={{ meter.pk }}{% endif %}"
             title="{% if row.service %}Открыть услугу «{{ row.service.name }}»{% else %}Создать услугу по этому счётчику{% endif %}">
-          <td class="svc-name"><div class="svc-name-cell">
+          <td class="svc-name" data-v="{{ meter.name }}"><div class="svc-name-cell">
             <span class="receipt-icon is-meter rk-{{ row.kind }}">{% include "billing/_meter_icon.html" with kind=row.kind %}</span>
             <span class="svc-name-body">
               <span class="svc-name-line">

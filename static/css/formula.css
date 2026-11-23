@@ -23,6 +23,10 @@
 .sv-sec.fx-preview h3 .fx-badge { margin-left: 0; }
 .fx-modal { box-sizing: border-box; width: 100%; max-width: 940px;  /* a bit bigger (2026-11-23), was 820 */ display: flex; flex-direction: column; gap: 14px;
   padding: 22px 24px; border-radius: 16px; background: var(--color-surface); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+/* A fixed height from the start (2026-11-23): with two tenants and «Остаётся на вас» (723 px) the window doesn't grow
+   as the formula is built — the buttons stay at the bottom; more tenants — it grows, the overlay scrolls. */
+.fx-modal { min-height: 724px; }
+.fx-modal > .fx-acts { margin-top: auto; }
 .fx-modal h2 { margin: 0; font-size: 20px; }
 /* The window's head: the title and × on the right (2026-11-22) */
 .fx-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

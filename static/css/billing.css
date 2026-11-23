@@ -1716,10 +1716,10 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .th-filter {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   max-width: 100%;
-  margin: -4px -6px;
-  padding: 4px 6px;
+  margin: -5px -8px;
+  padding: 5px 8px;
   border: 0;
   border-radius: 6px;
   background: none;
@@ -1735,11 +1735,12 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   text-overflow: ellipsis;
 }
 
+/* The funnel is always there, in the accent colour — a column you can filter is seen at once (2026-11-23) */
 .th-filter .icon {
   flex: none;
   width: 14px;
   height: 14px;
-  transition: transform 0.15s;
+  color: var(--color-accent);
 }
 
 .th-filter:hover,
@@ -1748,13 +1749,14 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   color: var(--color-text);
 }
 
-.th-filter.is-open .icon {
-  transform: rotate(180deg);
+/* A filter that is on: the name becomes a light-green plaque, the funnel filled — the same size, nothing moves */
+.th-filter.is-on {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-hover);
 }
 
-/* A filter that is on: the name and the arrow in the accent colour — nothing moves */
-.th-filter.is-on {
-  color: var(--color-accent);
+.th-filter.is-on .icon {
+  fill: currentColor;
 }
 
 .th-menu {

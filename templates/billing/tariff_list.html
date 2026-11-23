@@ -12,7 +12,7 @@
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
-      <tr><th data-filter="text" data-filter-hint="Название или поставщик">Услуга</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="text" data-filter-hint="Счётчик, «за м²»…">За что</th><th>Действует</th><th class="svc-num">Тариф</th><th><span class="visually-hidden">Действия</span></th></tr>
+      <tr><th data-filter="list">Услуга</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">За что</th><th>Действует</th><th class="svc-num">Тариф</th><th><span class="visually-hidden">Действия</span></th></tr>
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
@@ -26,7 +26,7 @@
             </span>
           </div></td>
           <td class="svc-object"><a href="{% url 'property_detail' group.property.pk %}" class="fade">{{ group.property.name }}</a></td>
-          <td data-label="За что">
+          <td data-label="За что" data-v="{{ row.what }}">
             {{ row.what }}
             {% if row.note %}<span class="tag tag-muted">{{ row.note }}</span>{% endif %}
           </td>
