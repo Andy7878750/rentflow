@@ -1932,7 +1932,9 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 /* «Суммы из квитанций» / «Считается само» (2026-11-23): the service's icon before the name, as at the meters' groups —
    22px in its colour, the name starts where the meters' rows start (30px). */
 .mread-who.has-icon { position: relative; padding-left: 30px; }
-.mread-who.has-icon > .mi-icon { position: absolute; top: 50%; left: 0; width: 22px; height: 22px; transform: translateY(-50%);
+/* the same as a meters' group head (2026-11-23): the name 15px in the primary colour, the icon level with the name line */
+.mread-who.has-icon .mi-name { color: var(--color-primary); font-size: 15px; line-height: 22px; }
+.mread-who.has-icon > .mi-icon { position: absolute; top: 0; left: 0; width: 22px; height: 22px;
   background: none; color: var(--rk, var(--color-text-muted)); }
 .mread-who.has-icon > .mi-icon svg { width: 18px; height: 18px; }
 
