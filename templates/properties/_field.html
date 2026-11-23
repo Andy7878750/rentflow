@@ -31,6 +31,8 @@
       </div>
     </div>
     <span class="share-hint" data-share-hint></span>
+  {% elif prefix %}
+    <div class="pre-input"><span class="pre-mark" aria-hidden="true">{{ prefix }}</span>{{ field }}</div>
   {% else %}
     {{ field }}
   {% endif %}

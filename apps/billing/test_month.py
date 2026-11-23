@@ -191,6 +191,28 @@ class MonthBillTests(TestCase):
         self.assertEqual(line.formula, '120 кВт·ч × 6,5 ₽')
         self.assertEqual(self.line(bill, self.vlad, receipt).amount, Decimal('195.00'))
 
+    def test_usage_counter_adds_up(self):
+        # «Расход» meter (2026-11-23): «Было» = the start reading + every usage typed before this month.
+        receipt = self.add('electricity', tariff=Decimal('6.5'), input_mode=Receipt.InputMode.USAGE)
+        meter = receipt.meters.get(tenant=self.viktor)
+        meter.initial = Decimal('800')
+        meter.save()
+        services.save_month_input(self.prop, AUG, {f'use-{meter.pk}': '4'})
+        services.save_month_input(self.prop, SEPT, {f'use-{meter.pk}': '6'})
+        meters = Meter.objects.filter(pk=meter.pk).prefetch_related('readings')
+        (_, aug), = services._readings_for(meters, AUG)
+        (_, sept), = services._readings_for(meters, SEPT)
+        (_, octo), = services._readings_for(meters, datetime.date(2026, 10, 1))
+        self.assertEqual((aug.counter, sept.counter, octo.counter), (Decimal('800'), Decimal('804'), Decimal('810')))
+
+    def test_meter_number_without_sign(self):
+        from .forms import MeterForm
+
+        form = MeterForm(data={'serial': '№ 58008028', 'initial': '1', 'day_night': '0', 'kind': 'electricity',
+                               'name': 'Электричество', 'unit': 'кВт·ч', 'tariff': '5'})
+        form.is_valid()
+        self.assertEqual(form.cleaned_data['serial'], '58008028')
+
     def test_usage_day_night(self):
         receipt = self.add('electricity', zones=2, tariff=Decimal('7'), tariff_night=Decimal('3'),
                            input_mode=Receipt.InputMode.USAGE, layout=Receipt.Layout.COMMON,

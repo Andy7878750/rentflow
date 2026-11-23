@@ -263,6 +263,9 @@
 /* always 20px (the badge's height) — the № above does not move when the badge comes */
 .sv-mt-sub { display: flex; align-items: center; gap: 6px; min-width: 0; height: 20px; }
 .sv-mt-sub > .fade { flex-shrink: 0; }
+/* the last reading after the tariff (2026-11-23): «80,24 ₽/м³ · посл. 478 м³» — gives way first */
+.sv-mt-sub > .sv-mt-last { flex-shrink: 1; min-width: 0; margin-left: -2px; }
+.sv-mt-sub > .sv-mt-last::before { content: '· '; }
 /* a common meter's parts «А 60% · Б 40%» — a grey badge next to the tariff */
 .sv-mt-no .sv-parts { flex-shrink: 1; min-width: 0; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px;
   background: #eef0f3; color: var(--color-text); text-overflow: ellipsis; }
@@ -323,6 +326,8 @@
 .objwin .sv-top, .objwin .sv-foot { z-index: 6; }
 /* the parts without frames, as the service window's blocks: a caption in capitals, then what is in it */
 .objwin .pform .form-section { margin: 0; border: 0; border-radius: 0; }
+/* the tenant window: «Счётчики · Имя» — a part of its own, air above it (2026-11-23) */
+.objwin .pform .subwin-body .tenant-meters { margin-top: 24px; }
 .objwin .pform .form-section-head { min-height: 20px; padding: 0 0 8px; border: 0; border-radius: 0; background: none;
   color: var(--color-text-muted); font-size: 12px; font-weight: 600; letter-spacing: .03em; }
 .objwin .pform .form-section-body,

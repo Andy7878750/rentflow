@@ -288,6 +288,48 @@
     }
   });
 
+  // ---------- E-mail: checked when leaving the field (2026-11-23), the same rule as the server ----------
+  var EMAIL_LOCAL = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*";
+  var EMAIL_HOST = '([A-Za-z0-9\\u00a1-\\uffff]([A-Za-z0-9\\u00a1-\\uffff-]{0,61}[A-Za-z0-9\\u00a1-\\uffff])?\\.)+[A-Za-z\\u00a1-\\uffff]{2,63}';
+  var EMAIL_RE = new RegExp('^' + EMAIL_LOCAL + '@' + EMAIL_HOST + '$');
+
+  function emailProblem(value) {
+    if (!value || EMAIL_RE.test(value)) return '';
+    var at = value.indexOf('@');
+    if (at > 0 && /[^\x00-\x7f]/.test(value.slice(0, at))) return 'До «@» — только латинские буквы и цифры.';
+    return 'Введите правильный адрес электронной почты.';
+  }
+
+  function dropEmailError(field) {
+    field.querySelectorAll('[data-email-error]').forEach(function (node) { node.parentNode.removeChild(node); });
+  }
+
+  document.addEventListener('focusout', function (event) {
+    var input = event.target;
+    if (!input.matches || !input.matches('input[type=email]')) return;
+    var field = input.closest('.field');
+    if (!field) return;
+    input.value = input.value.trim();
+    dropEmailError(field);
+    var problem = emailProblem(input.value);
+    if (!problem || field.querySelector('.errorlist')) return;
+    var list = document.createElement('ul');
+    list.className = 'errorlist';
+    list.dataset.emailError = '';
+    list.dataset.clientError = '';
+    var line = document.createElement('li');
+    line.textContent = problem;
+    list.appendChild(line);
+    field.appendChild(list);
+  });
+
+  document.addEventListener('input', function (event) {
+    var input = event.target;
+    if (input.matches && input.matches('input[type=email]') && input.closest('.field')) {
+      dropEmailError(input.closest('.field'));
+    }
+  });
+
   // ---------- Date picker ----------
   // A card under the field: month with arrows, a click on the title switches to months
   // (and years with the arrows), «Сегодня» / «Очистить» at the bottom. Always 6 rows,
@@ -1137,6 +1179,7 @@
       });
       var badge = item.querySelector('[data-subwin-badge]');
       if (badge) badge.textContent = name + (dn ? ' · день / ночь' : '');
+      if (current && current.item === item) syncHead();
     }
 
     function closeMenus(except) {
@@ -1264,6 +1307,37 @@
       return section;
     }
 
+    // The small window's grey head (2026-11-23): what is typed — the tenant's name and, after it, the share
+    // in short («45% · ≈ 49,5 м²»; nothing typed yet — «можно до 55%»); a meter — its kind and №.
+    function syncHead() {
+      if (!current) return;
+      var item = current.item;
+      var title = sub.querySelector('[data-subwin-title]');
+      var note = sub.querySelector('[data-subwin-sub]');
+      var name, text = '';
+      if (current.kind === 'tenant') {
+        name = val(item, 'name').trim();
+        var unit = shareUnit() === '%' ? '%' : ' м²';
+        var share = parseNumber(val(item, 'share'));
+        var free = freeShare(item);
+        if (share !== null) {
+          var hint = item.querySelector('[data-share-hint]');
+          text = formatNumber(share) + unit + (hint && hint.textContent ? ' · ' + hint.textContent : '');
+          if (free !== null && share > free) text += ' · можно до ' + formatNumber(free) + unit;
+        } else if (free !== null) {
+          text = free > 0 ? 'можно до ' + formatNumber(free) + unit : 'объект занят полностью';
+        }
+        title.textContent = name || (current.isNew ? 'Новый арендатор' : 'Арендатор ' + current.number);
+      } else {
+        var serial = val(item, 'serial').trim().replace(/^№\s*/, '');
+        name = val(item, 'name');
+        title.textContent = current.isNew && !serial ? 'Новый счётчик' : name;
+        text = serial ? '№ ' + serial : '';
+      }
+      title.classList.toggle('is-empty', !name);
+      note.textContent = text;
+    }
+
     function syncTenantMeters() {
       if (!current || current.kind !== 'tenant') return;
       var title = sub.querySelector('[data-tm-title]');
@@ -1307,9 +1381,7 @@
       body.innerHTML = '';
       body.appendChild(item);
       current = { item: item, kind: kind, holder: holder, isNew: isNew, snap: snapshot(item), number: number };
-      var title = sub.querySelector('[data-subwin-title]');
       if (kind === 'meter') {
-        title.textContent = isNew ? 'Новый счётчик' : 'Счётчик ' + number;
         var head = item.querySelector('.form-section-head');
         if (head && !head.querySelector('[data-subwin-badge]')) {
           var badge = el('span', 'head-badge');
@@ -1318,14 +1390,10 @@
         }
         syncMeter(item);
       } else {
-        title.textContent = isNew ? 'Новый арендатор' : 'Арендатор ' + number;
         body.appendChild(tenantMeters(item));
         syncTenantMeters();
       }
-      var free = kind === 'tenant' ? freeShare(item) : null;
-      var unit = shareUnit() === '%' ? '%' : ' м²';
-      sub.querySelector('[data-subwin-sub]').textContent = free === null ? ''
-        : free > 0 ? ' · можно до ' + formatNumber(free) + unit : ' · объект уже занят полностью';
+      syncHead();
       var del = sub.querySelector('[data-subwin-delete]');
       del.hidden = isNew;
       del.textContent = kind === 'meter' ? 'Удалить счётчик' : 'Удалить арендатора';
@@ -1372,6 +1440,13 @@
         var input = item.querySelector('input[name$="-' + suffix + '"]');
         if (input && !input.value.trim()) {
           clientError(input.closest('.field'), 'Заполните поле.');
+          empty.push(input);
+        }
+      });
+      item.querySelectorAll('input[type=email]').forEach(function (input) {
+        var problem = emailProblem(input.value.trim());
+        if (problem) {
+          clientError(input.closest('.field'), problem);
           empty.push(input);
         }
       });
@@ -1550,6 +1625,7 @@
         event.target.closest('.select-add').querySelector('[data-msel-add]').hidden = !event.target.value.trim();
       }
       if (current && current.kind === 'tenant' && event.target.matches('input[name$="-name"]')) syncTenantMeters();
+      if (current && current.item.contains(event.target)) syncHead();
     });
 
     form.addEventListener('change', function (event) {

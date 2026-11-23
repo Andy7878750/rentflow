@@ -1810,10 +1810,38 @@ input.masked {
   font-size: 20px;
 }
 
-.subwin-sub {
-  margin: 2px 0 0;
+/* The grey head (2026-11-23): the name as it is typed, then the share / № in short; one line, 56px. */
+.subwin-panel .modal-head.subwin-head {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  height: 56px;
+  margin: -22px -24px 16px;
+  padding: 0 14px 0 24px;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 14px 14px 0 0;
+  background: var(--color-bg);
+}
+
+.subwin-head h1 {
+  min-width: 0;
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.subwin-head h1.is-empty {
   color: var(--color-text-muted);
-  font-size: 13px;
+}
+
+.subwin-sub {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.subwin-head .modal-close {
+  margin-left: auto;
 }
 
 .subwin-body .form-section {
@@ -2299,3 +2327,23 @@ input.masked {
 .dn-input .dn-slash[hidden], .dn-input .unit-value[hidden] { display: none; }
 .dn-input:has(.dn-slash:not([hidden])) .unit-value input:not([type=radio]):not([type=checkbox]) { padding-left: 10px; padding-right: 10px; }
 .dn-input:has(.dn-slash:not([hidden])) .unit-value:first-child input { padding-left: 12px; }
+
+/* A mark inside the field before the value: «№ 58008028» (2026-11-23). */
+.pre-input {
+  position: relative;
+}
+
+.pre-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.fl .pre-input input:not([type=radio]):not([type=checkbox]) {
+  padding-left: 32px;
+}

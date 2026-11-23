@@ -424,7 +424,7 @@ class ReceiptViewTests(TestCase):
         page = self.client.get(reverse('property_detail', args=[self.prop.pk]) + '?month=2026-11')
         self.assertContains(page, f'name="cur-{one.pk}"')
         self.assertContains(page, f'name="use-{two.pk}"')
-        self.assertContains(page, 'за&nbsp;мес.')  # a «Расход» meter: no «было», the field is the month's usage (2026-11-18)
+        self.assertContains(page, 'class="mread-in is-add" data-zone="+"')  # a «Расход» meter: the field adds to the meter (2026-11-23)
         receipt = Receipt.objects.get(name='Свет')
         self.assertEqual(services.used(receipt, Reading.objects.get(meter=one)), (Decimal('10'), None))
         self.assertEqual(services.used(receipt, Reading.objects.get(meter=two))[0], Decimal('7'))

@@ -31,7 +31,7 @@
             </div>
           </div>
         </div>
-        {% include "properties/_field.html" with field=mform.serial label="№ счётчика" %}
+        {% include "properties/_field.html" with field=mform.serial label="Номер счётчика" prefix="№" %}
         <div class="field seg-field">
           <div class="segmented seg-fill" role="radiogroup" aria-label="Тариф">
             {% for value, label in mform.fields.day_night.choices %}

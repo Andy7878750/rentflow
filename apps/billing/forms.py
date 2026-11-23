@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 from django import forms
@@ -89,6 +90,10 @@ class MeterForm(forms.ModelForm):
         if not meter.pk and not self.initial.get('name'):
             # A new meter: electricity by default, as the first item of the menu.
             self.initial.update({'kind': Receipt.Kind.ELECTRICITY, 'name': 'Электричество', 'unit': 'кВт·ч'})
+
+    def clean_serial(self):
+        # «№» stands in the field already (2026-11-23): one typed by hand is not part of the number.
+        return re.sub(r'^\s*(№|#)\s*', '', self.cleaned_data.get('serial') or '')
 
     def clean(self):
         from . import services

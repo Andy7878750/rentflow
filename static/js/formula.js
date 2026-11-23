@@ -395,7 +395,7 @@
       blocks.forEach(function (b, i) {
         ghosts(i);
         var el = chipEl(b);
-        el.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Убрать из формулы" aria-label="Убрать из формулы">×</span>');
+        el.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Убрать из формулы" aria-label="Убрать из формулы"><svg class="icon"><use href="#i-x"/></svg></span>');
         if (hint.marks[i] && !hint.onGhost[i]) {
           el.classList.add('is-mark');
           el.insertAdjacentHTML('beforeend', '<span class="fx-pin" title="' + esc(hint.marks[i]) + '">!</span>');
@@ -559,9 +559,9 @@
       function hint(text, cls) { var h = document.createElement('p'); h.className = 'fx-hint' + (cls ? ' ' + cls : ''); h.textContent = text; box.appendChild(h); return h; }
       var ok = true;
       // Almost right (2026-11-22): the line shows the fix; here only the reasons, in orange — red is for real errors.
-      var hint = analyze();
+      var found = analyze();
       // While the line has a fix to put, what doesn't count yet is a warning (orange), not an error (red).
-      var soft = Object.keys(hint.marks).length > 0;
+      var soft = Object.keys(found.marks).length > 0;
       if (isMixed(formulaMeters())) {
         fail(MIXED);
         badge.textContent = 'есть ошибка'; badge.className = 'fx-badge is-bad';

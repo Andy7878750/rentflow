@@ -39,6 +39,15 @@ def _number(value):
     return None if value is None else float(value)
 
 
+def _meter_last_text(meter):
+    """«посл. 478 м³» — the meter's last reading (or the start one); '' — none."""
+    value, _when = services._last_reading_text(meter)
+    if not value:
+        return ''
+    unit = services.meter_unit(meter)
+    return f'посл. {value} {unit}' if not value.startswith('расход') else f'{value} {unit}'
+
+
 def _meter_tariff_text(meter, today):
     """«9,6 / 4,2 ₽/кВт·ч» — the meter's tariff now; '' — none."""
     row = services.meter_tariff_at(meter, services.first_of_month(today))
@@ -87,7 +96,7 @@ def window_state(property_obj, selected=None, today=None):
             for meter in receipt.meters.all():
                 owner_of.setdefault(meter.pk, receipt)
     meters = []
-    for meter in property_obj.meters.prefetch_related('tariff_history', 'excluded'):
+    for meter in property_obj.meters.prefetch_related('tariff_history', 'excluded', 'readings'):
         service = owner_of.get(meter.pk)
         meters.append({
             'id': meter.pk, 'kind': meter.kind or 'custom', 'name': meter.name, 'serial': meter.serial,
@@ -95,6 +104,7 @@ def window_state(property_obj, selected=None, today=None):
             'input': meter.input_mode or Receipt.InputMode.READINGS,
             'unit': services.meter_unit(meter), 'dn': meter.day_night,
             'tariff': _meter_tariff_text(meter, today),
+            'last': _meter_last_text(meter),
             'who': meter.tenant_id or ('owner' if meter.vacant else 'common'),
             'split': meter.split or Receipt.Split.SHARES,
             'excluded': [tenant.pk for tenant in meter.excluded.all()],

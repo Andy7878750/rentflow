@@ -1550,7 +1550,6 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .mi-field .num-wrap { display: block; }
 .mi .mread.is-dn .mread-prev,
 .mi .mread.is-dn .mread-use { display: flex; flex-direction: column; gap: 22px; }
-.mi-usage-note { font-size: 12px; }
 
 /* Each service's meters on a light tint of its own colour (electricity turquoise, hot water red…), so the groups
    stand apart; the columns stay where the other blocks have them (negative margin = the inner padding).
@@ -1923,3 +1922,17 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .head-actions .view-switch {
   align-self: center;  /* .segmented sits at the top of its row elsewhere; here — in the middle of the button */
 }
+
+/* Object page, a «Расход» meter (2026-11-23): «Было» is what the meter shows (last «стало» + the usages typed since),
+   the field adds to it — a small accent «+» inside, nothing else changes in the row. */
+.mread-in.is-add::before { color: var(--color-accent); font-size: 13px; font-weight: 600; }
+.mread-in.is-add .num-input { padding-left: 22px; }
+.mread-in.is-add[data-zone*=" "] .num-input { padding-left: 30px; }
+
+/* «Суммы из квитанций» / «Считается само» (2026-11-23): the service's icon before the name, as at the meters' groups —
+   22px in its colour, the name starts where the meters' rows start (30px). */
+.mread-who.has-icon { position: relative; padding-left: 30px; }
+.mread-who.has-icon > .mi-icon { position: absolute; top: 50%; left: 0; width: 22px; height: 22px; transform: translateY(-50%);
+  background: none; color: var(--rk, var(--color-text-muted)); }
+.mread-who.has-icon > .mi-icon svg { width: 18px; height: 18px; }
+

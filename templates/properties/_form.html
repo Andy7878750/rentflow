@@ -162,11 +162,9 @@
     {# The small window for one meter or one tenant: app.js moves the item's fields in and back. #}
     <div class="subwin" data-subwin hidden>
       <div class="subwin-panel" role="dialog" aria-modal="true" aria-labelledby="subwin-title">
-        <header class="modal-head">
-          <div>
-            <h1 id="subwin-title" data-subwin-title></h1>
-            <p class="subwin-sub">{{ form.name.value|default:"Новый объект" }}<span data-subwin-sub></span></p>
-          </div>
+        <header class="modal-head subwin-head">
+          <h1 id="subwin-title" class="fade" data-subwin-title></h1>
+          <span class="subwin-sub" data-subwin-sub></span>
           <button type="button" class="icon-button modal-close" data-subwin-cancel aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
         </header>
         <div class="subwin-body" data-subwin-body></div>

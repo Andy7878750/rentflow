@@ -359,7 +359,8 @@
         var m = byId(S.meters, id), empty = m.who === '' || m.who == null, common = m.who === 'common';
         return '<div class="sv-mt-row sv-mt-line">' + meterIcon(m.kind) +
           '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="sv-mt-sub"><span class="fade' + (m.tariff ? '' : ' sv-none') + '">' +
-          esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span>' + meterParts(m) + '</span></span>' +
+          esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span>' +
+          (m.last ? '<span class="sv-mt-last fade">' + esc(m.last) + '</span>' : '') + meterParts(m) + '</span></span>' +
           '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '">' +
           '<span class="fade">' + (empty ? 'Выберите' : payerName(m)) + '</span><svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
           (pickOpen === m.id ? payerMenu(m) : '') + '</span>' +
@@ -513,8 +514,8 @@
       }
       if (created) {
         h += '<div class="sv-back"><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Услуга добавлена">' +
-          '<div class="sv-mw-head"><b>Услуга добавлена</b></div>' +
-          '<div class="sv-mw-body"><p class="sv-note">«' + esc(created.name) + '» теперь в списке «Услуги объекта» слева и в счетах.</p></div>' +
+          '<div class="sv-mw-head"><b class="fade">Услуга «' + esc(created.name) + '» добавлена</b></div>' +
+          '<div class="sv-mw-body"><p class="sv-note">Она теперь в списке «Услуги объекта» слева и в счетах.</p></div>' +
           '<div class="sv-mw-foot"><button type="button" class="btn btn-primary btn-auto" data-created-ok>Понятно</button></div></div></div>';
       }
       if (meterOpen != null) h += meterWindow();
@@ -527,6 +528,20 @@
       if (menu && foot && menu.getBoundingClientRect().bottom > foot.getBoundingClientRect().top - 8) menu.classList.add('is-up');
     }
     function render() { renderNav(); renderPane(); }
+
+    // A notice at the top that goes away by itself (2026-11-23): an old service saved. Inside the dialog —
+    // a page-level notice would stay under the modal.
+    function toast(text) {
+      var host = box.closest('dialog') || document.body;
+      var list = host.querySelector(':scope > .toasts');
+      if (!list) { list = document.createElement('div'); list.className = 'toasts'; list.setAttribute('role', 'status'); host.appendChild(list); }
+      var note = document.createElement('div');
+      note.className = 'toast';
+      note.innerHTML = '<svg class="icon toast-icon"><use href="#i-check"/></svg><span></span>';
+      note.querySelector('span').textContent = text;
+      list.appendChild(note);
+      setTimeout(function () { note.classList.add('is-leaving'); setTimeout(function () { note.remove(); }, 250); }, 3000);
+    }
 
     // ---------- saving ----------
     var saving = false, closed = false, afterSave = null;
@@ -621,6 +636,7 @@
         }
         renderNav();
         if (current === sent && !pane.querySelector('[data-f]:focus')) renderPane();
+        toast('Услуга «' + (sent.name || '') + '» сохранена');
         done();
         if (afterSave) { var next = afterSave; afterSave = null; next(); }
       }).catch(function () { saving = false; afterSave = null; status('Нет связи — не сохранено', 'is-error'); done(); });

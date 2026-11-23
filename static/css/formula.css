@@ -69,8 +69,9 @@
 /* Signs stand out (2026-11-22): a pale accent fill and the sign in the accent colour — in the palette and in the line */
 .fx-chip.k-op { border-color: #bfe3da; background: var(--fx-accent-soft); color: var(--fx-accent); font-size: 16px; }
 .fx-chip.k-op:hover { border-color: var(--fx-accent); }
-.fx-chip.mk-electricity { --c: #0e9aa7; } .fx-chip.mk-water { --c: #2e86c1; } .fx-chip.mk-hot_water { --c: #c0392b; }
-.fx-chip.mk-heating { --c: #e67e22; } .fx-chip.mk-gas { --c: #5b6bc0; }
+/* a meter's kind colour (3 classes: stronger than «.fx-chip.k-meter» below — hot water was blue, 2026-11-23) */
+.fx-chip.k-meter.mk-electricity { --c: #0e9aa7; } .fx-chip.k-meter.mk-water { --c: #2e86c1; } .fx-chip.k-meter.mk-hot_water { --c: #c0392b; }
+.fx-chip.k-meter.mk-heating { --c: #e67e22; } .fx-chip.k-meter.mk-gas { --c: #5b6bc0; } .fx-chip.k-meter.mk-custom { --c: #6b7680; }
 .fx-chip.k-new { background: var(--color-surface); border-style: dashed; border-color: #cfd8de; color: var(--fx-muted); }
 .fx-chip.k-new.k-month { --c: #8a6420; }
 .fx-chip.is-ghost { position: fixed; z-index: 100; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: grabbing; }
@@ -106,7 +107,8 @@
 /* × on a block — a small white circle on its corner, like an attachment's */
 .fx-strip .fx-del { position: absolute; top: -7px; right: -7px; z-index: 2; display: none; align-items: center; justify-content: center;
   box-sizing: border-box; width: 18px; height: 18px; border: 1px solid var(--fx-border); border-radius: 50%; background: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--fx-muted); font-size: 13px; line-height: 1; cursor: pointer; }
+  box-shadow: 0 1px 3px rgba(0,0,0,.15); color: var(--fx-muted); line-height: 0; cursor: pointer; }
+.fx-strip .fx-del svg { width: 10px; height: 10px; }
 .fx-strip .fx-chip:hover .fx-del { display: inline-flex; }
 .fx-strip .fx-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
 @media (hover: none) { .fx-strip .fx-del { display: inline-flex; } }

@@ -128,7 +128,8 @@
         <div class="mi-body">
           {% for row in input.sums %}
             <div class="mread">
-              <div class="mread-who">
+              <div class="mread-who has-icon">
+                <span class="receipt-icon mi-icon rk-{{ row.entry.receipt.kind }}"><svg class="icon"><use href="#i-r-{{ row.entry.receipt.kind }}"/></svg></span>
                 <span class="mi-name"><label for="{{ row.field }}" class="fade">{{ row.entry.receipt.name }}</label><a href="{% url 'service_window' property.pk %}?svc={{ row.entry.receipt.pk }}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ row.entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
                 {% if row.sub %}<span class="mread-meta fade">{{ row.sub }}</span>{% endif %}
               </div>
@@ -163,14 +164,14 @@
                   <span class="mread-meta fade">№ {{ meter.serial|default:'—' }}{% if meter.tariff_text %} · {{ meter.tariff_text }}{% endif %}</span>
                 </div>
                 <span class="mread-prev">
-                  {% if mode == 'usage' %}<span class="mi-usage-note">за&nbsp;мес.</span>
+                  {% if mode == 'usage' %}<span>{% if reading.counter is not None %}{{ reading.counter|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.counter_night is not None %}{{ reading.counter_night|num }}{% else %}—{% endif %}</span>{% endif %}
                   {% else %}<span>{% if reading.previous is not None %}{{ reading.previous|num }}{% else %}—{% endif %}</span>{% if dn %}<span>{% if reading.previous_night is not None %}{{ reading.previous_night|num }}{% else %}—{% endif %}</span>{% endif %}{% endif %}
                 </span>
                 <span class="mread-ins">
                   {% if mode == 'usage' %}
-                    <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="use-{{ meter.pk }}"
+                    <label class="mread-in is-add" data-zone="+{% if dn %} д{% endif %}" title="Расход за месяц — прибавится к показанию"><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="use-{{ meter.pk }}"
                            value="{{ reading.usage|num }}" placeholder=" " aria-label="{{ meter.who }}: расход{% if dn %} днём{% endif %} за {{ month_name }}"></label>
-                    {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in" data-zone="н">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="usen-{{ meter.pk }}"
+                    {% if dn %}{% if receipt.split == 'usage' %}<span class="mread-in has-weight"><button type="button" class="nw-btn" data-night-weight="{% url 'receipt_night_weight' receipt.pk %}" data-value="{{ receipt.night_weight|num }}" title="Сколько стоит ночной кВт·ч по сравнению с дневным — нажмите, чтобы изменить">н×{{ receipt.night_weight|num|default:'1' }}</button>{% else %}<label class="mread-in is-add" data-zone="+ н" title="Расход ночью за месяц — прибавится к показанию">{% endif %}<input type="text" inputmode="decimal" class="num-input{% if reading.bad_night %} is-bad{% endif %}" name="usen-{{ meter.pk }}"
                            value="{{ reading.usage_night|num }}" placeholder=" " aria-label="{{ meter.who }}: расход ночью за {{ month_name }}">{% if receipt.split == 'usage' %}</span>{% else %}</label>{% endif %}{% endif %}
                   {% else %}
                     <label class="mread-in"{% if dn %} data-zone="д"{% endif %}><input type="text" inputmode="decimal" class="num-input{% if reading.bad %} is-bad{% endif %}" name="cur-{{ meter.pk }}"
@@ -204,7 +205,8 @@
         <div class="mi-body" id="mi-auto" data-live>
           {% for entry in input.auto %}
             <div class="mread">
-              <div class="mread-who">
+              <div class="mread-who has-icon">
+                <span class="receipt-icon mi-icon rk-{{ entry.receipt.kind }}"><svg class="icon"><use href="#i-r-{{ entry.receipt.kind }}"/></svg></span>
                 <span class="mi-name"><span class="fade">{{ entry.receipt.name }}</span><a href="{% url 'service_window' property.pk %}?svc={{ entry.receipt.pk }}" data-modal class="head-icon" title="Настроить услугу" aria-label="Настроить «{{ entry.receipt.name }}»"><svg class="icon"><use href="#i-edit"/></svg></a></span>
                 {% if entry.receipt.provider %}<span class="mread-meta fade">{{ entry.receipt.provider }}</span>{% endif %}
               </div>

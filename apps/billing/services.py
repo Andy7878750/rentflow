@@ -1577,6 +1577,17 @@ def _readings_for(meters, month):
         for use, last in (('usage', 'last_usage'), ('usage_night', 'last_usage_night')):
             earlier = [r for r in readings if r.month < month and getattr(r, use) is not None]
             setattr(reading, last, getattr(earlier[-1], use) if earlier else None)
+        # «Расход» meters: what the meter shows before this month — the last «стало» (or the start reading) plus every
+        # usage typed after it (2026-11-23: «804 + расход», the next month adds on). None — can't be told.
+        for counter, cur, use, initial in (('counter', 'current', 'usage', 'initial'),
+                                           ('counter_night', 'current_night', 'usage_night', 'initial_night')):
+            value = getattr(meter, initial)
+            for r in sorted((r for r in readings if r.month < month), key=lambda r: r.month):
+                if getattr(r, cur) is not None:
+                    value = getattr(r, cur)
+                elif getattr(r, use) is not None and value is not None:
+                    value += getattr(r, use)
+            setattr(reading, counter, value)
         result.append((meter, reading))
     return result
 
