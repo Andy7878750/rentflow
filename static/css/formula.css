@@ -254,9 +254,11 @@
   cursor: pointer; animation: fx-pulse 1.6s ease-in-out infinite; }
 .fx-ghost:hover { animation: none; box-shadow: 0 0 0 4px var(--fx-accent-soft); }
 /* A missing sign (variant Д, 2026-11-23): white, orange dashed border glowing outwards, grey «+ −» over «× ÷» */
-.fx-ghost.is-blank { flex-direction: column; gap: 2px; width: 32px; padding: 0; white-space: nowrap; border-color: var(--color-warning, #e67e22); background: #fff; color: #a3adb5;
+.fx-ghost.is-blank { position: relative; flex-direction: column; gap: 2px; width: 32px; padding: 0; white-space: nowrap; border-color: var(--color-warning, #e67e22); background: #fff; color: #a3adb5;
   font-size: 12px; line-height: 1; animation-name: fx-pulse-warn; }
 .fx-ghost.is-blank:hover { animation: none; box-shadow: 0 0 0 4px rgba(230, 126, 34, .18); }
+/* «!» on the plaque — the same orange circle as on a block, smaller and above its corner */
+.fx-ghost.is-blank .fx-pin { top: -9px; right: -9px; font-style: normal; cursor: pointer; }
 @keyframes fx-pulse-warn { 0%, 100% { box-shadow: 0 0 0 0 rgba(230, 126, 34, .35); } 50% { box-shadow: 0 0 0 5px rgba(230, 126, 34, 0); } }
 /* Its menu — the six signs as the palette's «Знаки», 3 × 2 */
 .fx-umenu.fx-signmenu { display: grid; grid-template-columns: repeat(3, 44px); gap: 6px; padding: 8px; }

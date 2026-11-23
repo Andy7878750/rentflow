@@ -290,16 +290,18 @@
     function isOp(b, ops) { return b && b.type === 'op' && ops.indexOf(b.op) >= 0; }
     function nameOf(b) { return b.type === 'op' ? b.op : chipParts(b)[0]; }
     function analyze() {
-      var marks = {}, fixed = {}, ghosts = [], fixes = 0, stack = [], expect = true;
-      function ghost(at, op, fix) { ghosts.push({ at: at, op: op, fix: fix }); }
+      var marks = {}, fixed = {}, ghosts = [], onGhost = {}, fixes = 0, stack = [], expect = true;
+      function ghost(at, op, fix, say) { ghosts.push({ at: at, op: op, fix: fix, say: say }); }
       blocks.forEach(function (b, i) {
         var operand = b.type !== 'op';
         if (operand || isOp(b, ['('])) {
           if (!expect) {
             var f = ++fixes;
-            ghost(i, '?', f);
             fixed[i] = f;
             marks[i] = 'Между «' + nameOf(blocks[i - 1]) + '» и «' + nameOf(b) + '» нужен знак — нажмите на мигающую плашку и выберите его.';
+            // «!» stands on the plaque itself, the block keeps no frame (2026-11-23)
+            ghost(i, '?', f, marks[i]);
+            onGhost[i] = true;
           }
           if (operand) expect = false; else { stack.push(i); expect = true; }
         } else if (isOp(b, [')'])) {
@@ -322,7 +324,7 @@
         marks[at] = 'У скобки «(» нет пары — нажмите на пунктирную «)» в конце или поставьте её сами.';
       });
       if (!Object.keys(marks).length) precedence(0, blocks.length);
-      return { marks: marks, fixed: fixed, ghosts: ghosts };
+      return { marks: marks, fixed: fixed, ghosts: ghosts, onGhost: onGhost };
 
       // «A + B × C»: B alone is multiplied — offer brackets around the sum. One level (inside a pair of brackets) at a time.
       function precedence(from, to) {
@@ -385,7 +387,8 @@
           if (g.op === '?') el.innerHTML = '<span>+ −</span><span>× ÷</span>';
           else el.textContent = g.op;
           if (g.op === '?') el.classList.add('is-blank');
-          el.title = g.op === '?' ? 'Выбрать знак' : 'Поставить «' + g.op + '» сюда';
+          el.title = g.op === '?' ? g.say : 'Поставить «' + g.op + '» сюда';
+          if (g.op === '?') el.insertAdjacentHTML('beforeend', '<i class="fx-pin">!</i>');
           strip.appendChild(el);
         });
       }
@@ -393,7 +396,7 @@
         ghosts(i);
         var el = chipEl(b);
         el.insertAdjacentHTML('beforeend', '<span class="fx-del" title="Убрать из формулы" aria-label="Убрать из формулы">×</span>');
-        if (hint.marks[i]) {
+        if (hint.marks[i] && !hint.onGhost[i]) {
           el.classList.add('is-mark');
           el.insertAdjacentHTML('beforeend', '<span class="fx-pin" title="' + esc(hint.marks[i]) + '">!</span>');
           el.querySelector('.fx-pin').dataset.say = hint.marks[i];
