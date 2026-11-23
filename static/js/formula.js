@@ -382,7 +382,8 @@
           el.className = 'fx-ghost';
           el.dataset.fix = g.fix;
           el.dataset.op = g.op;
-          el.textContent = g.op === '?' ? '' : g.op;
+          if (g.op === '?') el.innerHTML = '<span>+ −</span><span>× ÷</span>';
+          else el.textContent = g.op;
           if (g.op === '?') el.classList.add('is-blank');
           el.title = g.op === '?' ? 'Выбрать знак' : 'Поставить «' + g.op + '» сюда';
           strip.appendChild(el);

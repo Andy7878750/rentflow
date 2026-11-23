@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пропущенный знак — варианты плашки</title>
+<style>
+  :root { --text:#34495e; --muted:#7f8c8d; --border:#dfe3e6; --accent:#148f77; --soft:#e8f4f1; --warn:#e67e22; --warn-soft:#fdf2e9; --sign:#a3adb5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #eef1f3; font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .lead { margin: 0 0 20px; color: var(--muted); }
+  .v { max-width: 720px; margin-bottom: 18px; padding: 14px; border-radius: 12px; background: #fff; }
+  .v > b { font-size: 15px; }
+  .v > p { margin: 2px 0 10px; font-size: 12px; color: var(--muted); }
+  .strip { display: flex; align-items: center; gap: 4px; padding: 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+  .blk { display: flex; flex-direction: column; justify-content: center; width: 186px; height: 44px; padding: 0 9px; border: 1px solid var(--border);
+    border-left: 3px solid #0e9aa7; border-radius: 8px; background: #fff; }
+  .blk.c2 { border-left-color: #148f77; }
+  .blk i { font-style: normal; font-size: 12.5px; } .blk small { font-size: 11px; color: var(--muted); }
+  .op { display: flex; align-items: center; justify-content: center; min-width: 24px; height: 44px; padding: 0 5px; border-radius: 8px;
+    background: var(--soft); color: var(--accent); font-weight: 700; font-size: 16px; }
+
+  /* the plaque — common: orange border, grey signs inside */
+  .gap { position: relative; display: flex; align-items: center; justify-content: center; height: 44px; border: 1.5px solid var(--warn);
+    border-radius: 8px; background: #fff; color: var(--sign); font-weight: 700; cursor: pointer; overflow: hidden; }
+  .gap:hover { background: var(--warn-soft); }
+
+  /* А — one sign at a time: + → − → × → ÷ (fade) */
+  .a { width: 32px; font-size: 18px; }
+  .a span { position: absolute; opacity: 0; animation: a 4s infinite; }
+  .a span:nth-child(2) { animation-delay: 1s; } .a span:nth-child(3) { animation-delay: 2s; } .a span:nth-child(4) { animation-delay: 3s; }
+  @keyframes a { 0% { opacity: 0; } 8%, 22% { opacity: 1; } 30%, 100% { opacity: 0; } }
+
+  /* Б — all four, 2×2, breathing together */
+  .b { width: 32px; display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 6px 4px; font-size: 12px; line-height: 1; }
+  .b span { animation: b 1.6s ease-in-out infinite; }
+  @keyframes b { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+  /* В — 2×2, signs light up one after another (round) */
+  .c { width: 32px; display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 6px 4px; font-size: 12px; line-height: 1; }
+  .c span { opacity: .3; animation: c 2s infinite; }
+  .c span:nth-child(2) { animation-delay: .5s; } .c span:nth-child(4) { animation-delay: 1s; } .c span:nth-child(3) { animation-delay: 1.5s; }
+  @keyframes c { 0%, 30% { opacity: 1; color: var(--warn); } 40%, 100% { opacity: .3; } }
+
+  /* Г — signs running through, like a ticker */
+  .d { width: 32px; justify-content: flex-start; font-size: 16px; }
+  .d div { display: flex; gap: 10px; padding-left: 8px; animation: d 3.2s linear infinite; }
+  @keyframes d { from { transform: translateX(0); } to { transform: translateX(-80px); } }
+
+  /* Д — dashed orange, grey «+ −» over «× ÷», the border breathes */
+  .e { width: 32px; flex-direction: column; gap: 2px; border-style: dashed; font-size: 12px; line-height: 1; animation: e 1.6s ease-in-out infinite; }
+  @keyframes e { 0%, 100% { box-shadow: 0 0 0 0 rgba(230,126,34,.35); } 50% { box-shadow: 0 0 0 5px rgba(230,126,34,0); } }
+
+  @media (prefers-reduced-motion: reduce) { .gap, .gap * { animation: none !important; opacity: 1 !important; } }
+</style>
+</head>
+<body>
+<h1>Пропущенный знак между блоками</h1>
+<p class="lead">Везде: белая плашка с оранжевой рамкой, высота 44 как у блоков, знаки внутри серые. Клик — меню из 6 знаков (как сейчас).</p>
+
+<div class="v"><b>А · Знаки по очереди</b><p>Внутри один крупный серый знак, сменяется плавно: + → − → × → ÷. Самый спокойный.</p>
+  <div class="strip"><div class="blk"><i>Расход электричества</i><small>Аптека · кВт·ч</small></div>
+    <div class="gap a"><span>+</span><span>−</span><span>×</span><span>÷</span></div>
+    <div class="blk c2"><i>Тариф электричество</i><small>₽ за кВт·ч</small></div></div></div>
+
+<div class="v"><b>Б · Четыре знака, дышат вместе</b><p>Все четыре мелко, квадратом 2×2, вместе то бледнеют, то темнеют. Сразу видно «здесь нужен знак».</p>
+  <div class="strip"><div class="blk"><i>Расход электричества</i><small>Аптека · кВт·ч</small></div>
+    <div class="gap b"><span>+</span><span>−</span><span>×</span><span>÷</span></div>
+    <div class="blk c2"><i>Тариф электричество</i><small>₽ за кВт·ч</small></div></div></div>
+
+<div class="v"><b>В · Четыре знака, загораются по кругу</b><p>Квадрат 2×2 серый, знаки по одному вспыхивают оранжевым по кругу — как «загрузка», но со знаками.</p>
+  <div class="strip"><div class="blk"><i>Расход электричества</i><small>Аптека · кВт·ч</small></div>
+    <div class="gap c"><span>+</span><span>−</span><span>÷</span><span>×</span></div>
+    <div class="blk c2"><i>Тариф электричество</i><small>₽ за кВт·ч</small></div></div></div>
+
+<div class="v"><b>Г · Бегущая строка</b><p>Серые знаки медленно проплывают через плашку справа налево.</p>
+  <div class="strip"><div class="blk"><i>Расход электричества</i><small>Аптека · кВт·ч</small></div>
+    <div class="gap d"><div><span>+</span><span>−</span><span>×</span><span>÷</span><span>+</span><span>−</span><span>×</span><span>÷</span></div></div>
+    <div class="blk c2"><i>Тариф электричество</i><small>₽ за кВт·ч</small></div></div></div>
+
+<div class="v"><b>Д · Пунктир, мерцает рамка</b><p>Знаки стоят на месте (+ − над × ÷), а оранжевая пунктирная рамка мягко «светится» наружу.</p>
+  <div class="strip"><div class="blk"><i>Расход электричества</i><small>Аптека · кВт·ч</small></div>
+    <div class="gap e"><span>+ −</span><span>× ÷</span></div>
+    <div class="blk c2"><i>Тариф электричество</i><small>₽ за кВт·ч</small></div></div></div>
+</body>
+</html>

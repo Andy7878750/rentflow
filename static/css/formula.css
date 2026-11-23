@@ -253,7 +253,11 @@
   border: 1.5px dashed var(--fx-accent); border-radius: 8px; background: var(--fx-accent); color: #fff; font-size: 16px; font-weight: 700;
   cursor: pointer; animation: fx-pulse 1.6s ease-in-out infinite; }
 .fx-ghost:hover { animation: none; box-shadow: 0 0 0 4px var(--fx-accent-soft); }
-.fx-ghost.is-blank { width: 24px; }
+/* A missing sign (variant Д, 2026-11-23): white, orange dashed border glowing outwards, grey «+ −» over «× ÷» */
+.fx-ghost.is-blank { flex-direction: column; gap: 2px; width: 32px; padding: 0; white-space: nowrap; border-color: var(--color-warning, #e67e22); background: #fff; color: #a3adb5;
+  font-size: 12px; line-height: 1; animation-name: fx-pulse-warn; }
+.fx-ghost.is-blank:hover { animation: none; box-shadow: 0 0 0 4px rgba(230, 126, 34, .18); }
+@keyframes fx-pulse-warn { 0%, 100% { box-shadow: 0 0 0 0 rgba(230, 126, 34, .35); } 50% { box-shadow: 0 0 0 5px rgba(230, 126, 34, 0); } }
 /* Its menu — the six signs as the palette's «Знаки», 3 × 2 */
 .fx-umenu.fx-signmenu { display: grid; grid-template-columns: repeat(3, 44px); gap: 6px; padding: 8px; }
 .fx-signmenu .fx-chip.k-op { --fx-accent: var(--color-accent); --fx-accent-soft: var(--color-accent-soft); justify-content: center; width: 44px;
