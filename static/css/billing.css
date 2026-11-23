@@ -1218,10 +1218,8 @@
 /* ---------- The service cards change places (2026-11-17, variant Г): «⇅ Порядок» folds them into short rows ---------- */
 .section-actions { display: flex; flex-shrink: 0; flex-wrap: nowrap; justify-content: flex-end; gap: 8px; }
 @media (max-width: 480px) { .section-actions { flex-wrap: wrap; } }
-.order-off { display: none; }
 .obj-month.is-ordering .order-on,
 .obj-month.is-ordering .order-add { display: none; }
-.obj-month.is-ordering .order-off { display: inline-flex; }
 
 .morder { display: none; }
 .obj-month.is-ordering .morder { display: flex; flex-direction: column; gap: 6px; }
