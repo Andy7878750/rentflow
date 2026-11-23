@@ -9,6 +9,7 @@
    where the tariff lives (2026-11-23) — a meter's: the object window on that meter; the rest: the service window.
    data-row-modal in app.js.{% endcomment %}
 {% if has_tariffs %}
+  {% include "billing/_table_filter.html" with placeholder="Найти услугу или счётчик" %}
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
@@ -17,7 +18,7 @@
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
         {% url 'service_window' row.receipt.property_id as window_url %}{% url 'property_edit' row.receipt.property_id as edit_url %}
-        <tr data-row-modal="{% if row.meter %}{{ edit_url }}?meter={{ row.meter.pk }}{% else %}{{ window_url }}?svc={{ row.receipt.pk }}{% endif %}" title="{% if row.meter %}Открыть счётчик — тариф меняется там{% else %}Открыть услугу «{{ row.receipt.name }}» — тариф меняется там{% endif %}">
+        <tr data-obj="{{ group.property.pk }}" data-row-modal="{% if row.meter %}{{ edit_url }}?meter={{ row.meter.pk }}{% else %}{{ window_url }}?svc={{ row.receipt.pk }}{% endif %}" title="{% if row.meter %}Открыть счётчик — тариф меняется там{% else %}Открыть услугу «{{ row.receipt.name }}» — тариф меняется там{% endif %}">
           <td class="svc-name"><div class="svc-name-cell">
             <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ row.receipt.kind }}"/></svg></span>
             <span class="svc-name-body">

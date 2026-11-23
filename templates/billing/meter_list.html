@@ -12,6 +12,7 @@
    or, for a meter in no service, «Новая услуга» with the tiles, the matching tile picked and this meter switched on.
    «…» → «Удалить»: a confirmation, or «привязан к услуге» (meter_remove). data-row-modal in app.js.{% endcomment %}
 {% if has_meters %}
+  {% include "billing/_table_filter.html" with placeholder="Найти счётчик, № или арендатора" %}
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
@@ -21,7 +22,7 @@
       {% for group in groups %}{% for row in group.rows %}
         {% with meter=row.meter %}
         {% if row.service %}{% url 'service_window' group.property.pk as open_url %}{% else %}{% url 'service_window' group.property.pk as create_url %}{% endif %}
-        <tr data-row-modal="{% if row.service %}{{ open_url }}?svc={{ row.service.pk }}{% else %}{{ create_url }}?meter={{ meter.pk }}{% endif %}"
+        <tr data-obj="{{ group.property.pk }}" data-row-modal="{% if row.service %}{{ open_url }}?svc={{ row.service.pk }}{% else %}{{ create_url }}?meter={{ meter.pk }}{% endif %}"
             title="{% if row.service %}Открыть услугу «{{ row.service.name }}»{% else %}Создать услугу по этому счётчику{% endif %}">
           <td class="svc-name"><div class="svc-name-cell">
             <span class="receipt-icon is-meter rk-{{ row.kind }}">{% include "billing/_meter_icon.html" with kind=row.kind %}</span>

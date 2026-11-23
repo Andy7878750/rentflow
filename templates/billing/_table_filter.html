@@ -1,0 +1,17 @@
+{% comment %}Filter over «Все услуги», «Тарифы», «Счётчики» (2026-11-23): the object (switch; only when there are 2+ objects)
+   and a search by any word of the row. Rows carry data-obj="<property id>"; app.js initTableFilter hides the rest.
+   The chosen object is the same on all three pages (rentflow.tableObject).{% endcomment %}
+<div class="tbl-filter" data-table-filter>
+  {% if sidebar_properties|length > 1 %}
+    <div class="segmented seg-fill tbl-objects" role="radiogroup" aria-label="Объект">
+      <label><input type="radio" name="tbl_obj" value="" checked><span>Все объекты</span></label>
+      {% for item in sidebar_properties %}
+        <label><input type="radio" name="tbl_obj" value="{{ item.id }}"><span>{{ item.name }}</span></label>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <label class="tbl-search">
+    <svg class="icon"><use href="#i-search"/></svg>
+    <input type="search" placeholder="{{ placeholder }}" aria-label="Поиск" autocomplete="off" data-table-search>
+  </label>
+</div>

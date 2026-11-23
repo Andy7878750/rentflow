@@ -1746,6 +1746,49 @@
   }
   initFades(document);
 
+  // «Все услуги», «Тарифы», «Счётчики» (2026-11-23): the object switch and the search over the table's rows
+  // (tr[data-obj]). The object is remembered for all three pages; the search is not.
+  document.querySelectorAll('[data-table-filter]').forEach(function (bar) {
+    var KEY = 'rentflow.tableObject';
+    var table = bar.nextElementSibling && bar.nextElementSibling.querySelector('table');
+    if (!table) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr[data-obj]'));
+    var search = bar.querySelector('[data-table-search]');
+    var none = document.createElement('p');
+    none.className = 'tbl-none';
+    none.textContent = 'Ничего не найдено.';
+    none.hidden = true;
+    bar.nextElementSibling.after(none);
+    function chosen() {
+      var on = bar.querySelector('input[name=tbl_obj]:checked');
+      return on ? on.value : '';
+    }
+    function apply() {
+      var obj = chosen();
+      var words = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      var shown = 0;
+      rows.forEach(function (row) {
+        var text = row.textContent.toLowerCase();
+        var ok = (!obj || row.dataset.obj === obj) && words.every(function (w) { return text.indexOf(w) >= 0; });
+        row.hidden = !ok;
+        if (ok) shown += 1;
+      });
+      bar.nextElementSibling.hidden = !shown;
+      none.hidden = !!shown;
+    }
+    var saved = '';
+    try { saved = localStorage.getItem(KEY) || ''; } catch (e) {}
+    var pick = saved && bar.querySelector('input[name=tbl_obj][value="' + saved + '"]');
+    if (pick) pick.checked = true;
+    bar.addEventListener('change', function (event) {
+      if (event.target.name !== 'tbl_obj') return;
+      try { localStorage.setItem(KEY, chosen()); } catch (e) {}
+      apply();
+    });
+    search.addEventListener('input', apply);
+    apply();
+  });
+
   // Object window: «Информация об УК ▾» opens and closes the management company fields.
   document.addEventListener('click', function (event) {
     var toggle = event.target.closest && event.target.closest('[data-uk-toggle]');

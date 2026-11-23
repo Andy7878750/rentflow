@@ -9,6 +9,7 @@
 </div>
 
 {% if receipts %}
+  {% include "billing/_table_filter.html" with placeholder="Найти услугу или поставщика" %}
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
@@ -16,7 +17,7 @@
     </thead>
     <tbody>
       {% for receipt in receipts %}
-        <tr>
+        <tr data-obj="{{ receipt.property_id }}">
           <td class="svc-name"><div class="svc-name-cell">
             <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ receipt.kind }}"/></svg></span>
             <span class="svc-name-body">
