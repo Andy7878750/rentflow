@@ -10,9 +10,19 @@
       <a href="?month={{ next_month }}" class="icon-button" aria-label="Следующий месяц"><svg class="icon"><use href="#i-chevron-right"/></svg></a>
     </div>
   </div>
-  <a href="{% url 'property_create' %}" data-modal class="btn btn-primary btn-auto">
-    <svg class="icon"><use href="#i-plus"/></svg>Добавить объект
-  </a>
+  <div class="head-actions">
+    {% if properties %}
+      {% comment %}How the objects are shown (2026-11-23): «Плашки» (default) or «Таблица»; remembered in rentflow.objView,
+         set on the page before it is drawn (the script under the list) — nothing flickers.{% endcomment %}
+      <div class="segmented seg-fill view-switch" role="radiogroup" aria-label="Вид">
+        <label title="Плашками"><input type="radio" name="obj_view" value="cards" checked><span><svg class="icon"><use href="#i-blocks"/></svg>Плашки</span></label>
+        <label title="Таблицей"><input type="radio" name="obj_view" value="table"><span><svg class="icon"><use href="#i-menu"/></svg>Таблица</span></label>
+      </div>
+    {% endif %}
+    <a href="{% url 'property_create' %}" data-modal class="btn btn-primary btn-auto">
+      <svg class="icon"><use href="#i-plus"/></svg>Добавить объект
+    </a>
+  </div>
 </div>
 
 <section class="kpi-row">
@@ -35,6 +45,7 @@
 </section>
 
 {% if properties %}
+  <div class="obj-views" data-obj-views>
   <section class="property-grid">
     {% for property in properties %}
       <article class="property-card is-clickable" id="property-{{ property.id }}" data-card-href="{% url 'property_detail' property.pk %}">
@@ -93,6 +104,73 @@
       </article>
     {% endfor %}
   </section>
+
+  {% comment %}«Таблица» (2026-11-23): one row per object, the same style as «Все услуги» (.svc-table); a row opens the object.{% endcomment %}
+  <div class="svc-wrap obj-table-wrap">
+    <table class="svc-table obj-table">
+      <thead>
+        <tr><th>Объект</th><th>Адрес · УК</th><th>Арендаторы</th><th>Показания</th><th class="svc-num">Начисления</th><th><span class="visually-hidden">Действия</span></th></tr>
+      </thead>
+      <tbody>
+        {% for property in properties %}
+          <tr data-card-href="{% url 'property_detail' property.pk %}" title="Открыть «{{ property.name }}»">
+            <td class="svc-name"><div class="svc-name-cell">
+              <span class="receipt-icon"><svg class="icon"><use href="{% if property.kind == 'commercial' %}#i-building{% else %}#i-home{% endif %}"/></svg></span>
+              <span class="svc-name-body">
+                <a href="{% url 'property_detail' property.pk %}" class="fade">{{ property.name }}</a>
+                <span class="svc-meta fade">{{ property.kind_label }}</span>
+              </span>
+            </div></td>
+            <td data-label="Адрес · УК">
+              <span class="fade obj-line">{{ property.address|default:"—" }}</span>
+              {% if property.management_company %}<span class="svc-meta fade">{{ property.management_company }}</span>{% endif %}
+            </td>
+            <td data-label="Арендаторы">
+              {% if property.is_owner_used %}<span class="tag tag-muted">собственник</span>
+              {% else %}
+                {% with tenants=property.tenants.all %}
+                  {% if tenants %}<span class="fade obj-line">{% for tenant in tenants %}{{ tenant.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+                  <span class="svc-meta">{{ tenants|length }} · доли {% for tenant in tenants %}{% if property.share_unit == 'area' %}{{ tenant.area|floatformat:"-2" }} м²{% else %}{{ tenant.share_percent|floatformat:"-2" }}%{% endif %}{% if not forloop.last %} / {% endif %}{% endfor %}</span>
+                  {% else %}<span class="svc-muted">нет</span>{% endif %}
+                {% endwith %}
+              {% endif %}
+            </td>
+            <td data-label="Показания">
+              {% if property.setup.complete %}
+                {% if property.bill.readings_total %}
+                  <span class="tag{% if property.bill.readings_done != property.bill.readings_total %} tag-muted{% endif %}">{{ property.bill.readings_done }} из {{ property.bill.readings_total }}</span>
+                {% else %}<span class="svc-muted">—</span>{% endif %}
+                <span class="svc-meta">услуг: {{ property.bill.entries|length }}</span>
+              {% else %}<span class="setup-badge">Настройка {{ property.setup.done }} из {{ property.setup.total }}</span>{% endif %}
+            </td>
+            <td class="svc-num svc-strong" data-label="Начисления">{% if property.setup.complete %}{{ property.bill.to_invoice|floatformat:"2g" }}&nbsp;₽{% else %}<span class="svc-muted">—</span>{% endif %}</td>
+            <td class="svc-actions">{% include "properties/_actions.html" %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  </div>
+  <script>
+    (function () {
+      var box = document.querySelector('[data-obj-views]');
+      var KEY = 'rentflow.objView';
+      var view = 'cards';
+      try { view = localStorage.getItem(KEY) === 'table' ? 'table' : 'cards'; } catch (e) {}
+      function show(v) {
+        box.dataset.view = v;
+        var radio = document.querySelector('input[name=obj_view][value="' + v + '"]');
+        if (radio) radio.checked = true;
+      }
+      show(view);
+      document.querySelectorAll('input[name=obj_view]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+          show(radio.value);
+          try { localStorage.setItem(KEY, radio.value); } catch (e) {}
+        });
+      });
+    })();
+  </script>
 {% else %}
   <section class="empty-state">
     <h2>Начните с первого объекта</h2>

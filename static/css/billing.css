@@ -1871,3 +1871,55 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ---------- «Объекты»: plaques or a table (2026-11-23), the switch next to «Добавить объект» ---------- */
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-switch {
+  --fl-h: 38px;
+}
+
+.view-switch span {
+  gap: 6px;
+  padding: 0 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.view-switch .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.obj-views[data-view="cards"] .obj-table-wrap,
+.obj-views[data-view="table"] .property-grid {
+  display: none;
+}
+
+.obj-table tbody tr[data-card-href] {
+  cursor: pointer;
+}
+
+.obj-table .obj-line {
+  display: block;
+}
+
+@container (min-width: 721px) {
+  .svc-table.obj-table th:nth-child(1) { width: 24%; }
+  .svc-table.obj-table th:nth-child(2) { width: 26%; }
+  .svc-table.obj-table th:nth-child(3) { width: 20%; }
+  .svc-table.obj-table th:nth-child(4) { width: 13%; }
+  .svc-table.obj-table th:nth-child(6) { width: 68px; }
+}
+
+@media (max-width: 720px) {
+  .view-switch span { padding: 0 8px; }
+}
+
+.head-actions .view-switch {
+  align-self: center;  /* .segmented sits at the top of its row elsewhere; here — in the middle of the button */
+}
