@@ -1496,6 +1496,11 @@ input.masked {
   transform: rotate(180deg);
 }
 
+/* Opened: more air under it, 6 → 14 px to «УК / ТСЖ» (2026-11-23) */
+.uk-toggle[aria-expanded="true"] {
+  margin-bottom: 4px;
+}
+
 .uk-fields {
   display: flex;
   flex-direction: column;
