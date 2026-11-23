@@ -253,7 +253,8 @@
 .fx-strip .fx-chip.is-mark { outline: 1.5px solid var(--color-warning); outline-offset: 1px; }
 .fx-pin { position: absolute; top: -8px; right: -8px; z-index: 3; display: inline-flex; align-items: center; justify-content: center; width: 18px;
   height: 18px; border-radius: 50%; background: var(--color-warning); color: #fff; font-size: 11px; font-weight: 700; cursor: help; }
-.fx-strip .fx-chip.is-mark:hover .fx-del { display: none; }
+/* «!» on a block with a problem — its top-left corner, so × (top-right) still removes it (2026-11-23) */
+.fx-strip .fx-chip.is-mark .fx-pin { right: auto; left: -8px; }
 /* The fix to put — the one thing to notice: filled with the accent, gently pulsing (2026-11-22) */
 .fx-ghost { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 24px; height: 44px; padding: 0 5px;
   border: 1.5px dashed var(--fx-accent); border-radius: 8px; background: var(--fx-accent); color: #fff; font-size: 16px; font-weight: 700;
