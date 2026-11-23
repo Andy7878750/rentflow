@@ -381,6 +381,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 47px;  /* the height of its button: a page without one (Тарифы) keeps the same head — nothing jumps */
   margin-bottom: 24px;
 }
 
