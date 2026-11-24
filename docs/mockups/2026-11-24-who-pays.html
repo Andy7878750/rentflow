@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кто платит — варианты</title>
+<style>
+  :root { --p: #34495e; --acc: #148f77; --acc-soft: #e6f4f1; --bd: #e1e4e8; --bg: #f5f6f7; --mut: #6b7680; --tx: #2c3338;
+          --hw: #c0392b; --warm: #fff8e6; --warm-bd: #ecd9a8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); font: 14px -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tx); }
+  .wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  h1 { margin: 0; font-size: 20px; color: var(--p); }
+  .note { margin: -12px 0 0; color: var(--mut); font-size: 13px; }
+  .v { background: #fff; border: 1px solid var(--bd); border-radius: 12px; padding: 16px 20px 20px; }
+  .v-name { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .v-name b { font-size: 16px; color: var(--p); } .v-name span { font-size: 13px; color: var(--mut); }
+  .cap { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mut); }
+  .cap:first-of-type { margin-top: 0; }
+  .warn { padding: 1px 8px; border-radius: 10px; background: #fdf3e3; color: #a0670c; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  button { font: inherit; color: inherit; }
+  .fade { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .ic { display: flex; flex-shrink: 0; color: var(--hw); } .ic svg { width: 18px; height: 18px; fill: currentColor; }
+  .box { border: 1px solid var(--bd); border-radius: 8px; background: #fff; overflow: hidden; }
+  .ck { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px; border-radius: 4px; background: var(--acc); }
+  .ck svg { width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 3; }
+
+  /* the meter list above (as in the app now) */
+  .ml { display: grid; grid-template-columns: 1fr 1fr; }
+  .mli { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px; min-width: 0; }
+  .mli:nth-child(odd) { border-right: 1px solid var(--bd); }
+  .mli:nth-child(n+3) { border-top: 1px solid var(--bd); }
+  .t2 { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .t2 b { font-weight: 600; } .t2 small { font-size: 12px; color: var(--mut); }
+  .mli .ck { margin-left: auto; }
+
+  /* a row of «Кто платит» */
+  .head { display: grid; align-items: center; gap: 12px; height: 36px; padding: 0 12px; background: #f1f3f5; border-bottom: 1px solid var(--bd); font-size: 12px; color: var(--mut); }
+  .row { display: grid; align-items: center; gap: 12px; height: 56px; padding: 0 12px; }
+  .row + .row { border-top: 1px solid var(--bd); }
+  .cols { grid-template-columns: 18px minmax(0, 1fr) 170px 184px; }
+  .pick { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 10px 0 12px; border: 1px solid var(--bd); border-radius: 8px; background: #fff; min-width: 0; }
+  .pick.empty { background: var(--warm); border-color: var(--warm-bd); color: #9a7b2f; }
+  .pick .chev { margin-left: auto; flex-shrink: 0; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; opacity: .6; }
+  .pick .two { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+  .pick .two small { font-size: 11px; color: var(--mut); }
+  .seg { display: flex; padding: 3px; border: 1px solid var(--bd); border-radius: 8px; height: 38px; }
+  .seg span { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 13px; white-space: nowrap; padding: 0 8px; }
+  .seg .on { background: var(--acc); color: #fff; font-weight: 600; }
+  .parts { display: inline-block; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px; background: #eef0f3; font-size: 12px; white-space: nowrap; }
+  .pen { width: 14px; height: 14px; fill: none; stroke: var(--acc); stroke-width: 2; flex-shrink: 0; }
+  .lnk { font-size: 12px; color: #117965; }
+
+  /* В — a payer as chips */
+  .chips { display: flex; gap: 6px; flex-wrap: nowrap; min-width: 0; }
+  .chip { height: 30px; padding: 0 10px; border: 1px solid var(--bd); border-radius: 15px; background: #fff; font-size: 13px; white-space: nowrap; display: flex; align-items: center; }
+  .chip.on { border-color: var(--acc); background: var(--acc-soft); color: #117965; font-weight: 600; }
+  .rowc { grid-template-columns: 18px 150px minmax(0, 1fr) 110px; }
+  .mini { font-size: 12px; color: var(--mut); text-align: right; white-space: nowrap; }
+  .mini b { color: var(--tx); font-weight: 600; }
+
+  /* Г — two columns, like the list above */
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; }
+  .card { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-width: 0; }
+  .g2 .card:nth-child(odd) { border-right: 1px solid var(--bd); }
+  .g2 .card:nth-child(n+3) { border-top: 1px solid var(--bd); }
+  .card-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .card-bot { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 8px; }
+  .card .seg span { padding: 0 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>«Кто платит» под стиль списка счётчиков</h1>
+  <p class="note">Три счётчика горячей воды: один ещё не выбран, один у «Салон Ногти», один общий. Сверху в каждом варианте — список счётчиков, как он сейчас в приложении.</p>
+  <div id="out"></div>
+</div>
+<script>
+  var DROP = '<span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2s7 7.6 7 12.2A7 7 0 0 1 5 14.2C5 9.6 12 2 12 2z"/></svg></span>';
+  var CK = '<span class="ck"><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9l5-6"/></svg></span>';
+  var CHEV = '<svg class="chev" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg>';
+  var PEN = '<svg class="pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+  var M = [
+    { no: '254125-65', who: '' },
+    { no: '1147899', who: 'Салон «Ногти»', short: 'Салон 100%' },
+    { no: '3300417', who: 'common', short: 'Аптека 60% · Кафе 40%' }
+  ];
+  var TAR = '80,7 ₽/м³';
+  function list() {
+    return '<p class="cap">Выберите счётчики</p><div class="box ml">' + M.map(function (m) {
+      return '<div class="mli">' + DROP + '<span class="t2"><b>Вода горячая</b><small>№ ' + m.no + '</small></span>' + CK + '</div>';
+    }).join('') + '<div class="mli"></div></div>';
+  }
+  function cap() { return '<p class="cap">Кто платит <span class="warn">не выбрано: 1</span></p>'; }
+  function seg() { return '<div class="seg"><span class="on">Было / стало</span><span>Расход</span></div>'; }
+  function pick(m, two) {
+    if (!m.who) return '<div class="pick empty"><span class="fade">Выберите</span>' + CHEV + '</div>';
+    if (m.who === 'common') return two
+      ? '<div class="pick"><span class="two"><span class="fade">Общий</span><small class="fade">Аптека 60% · Кафе 40%</small></span>' + CHEV + '</div>'
+      : '<div class="pick"><span class="fade">Общий по долям</span>' + CHEV + '</div>';
+    return '<div class="pick"><span class="fade">' + m.who + '</span>' + CHEV + '</div>';
+  }
+  var V = [
+    ['А', 'две строки, доля в поле', 'слева «Вода горячая» / «№ · тариф» мельче — как в списке; у общего части — второй строкой в поле «Кто платит»; бейджа нет', function () {
+      return cap() + '<div class="box"><div class="head cols"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' +
+        M.map(function (m) {
+          return '<div class="row cols">' + DROP + '<span class="t2"><b class="fade">Вода горячая</b><small class="fade">№ ' + m.no + ' · ' + TAR + '</small></span>' + pick(m, true) + seg() + '</div>';
+        }).join('') + '</div>';
+    }],
+    ['Б', 'две строки, доля бейджем справа от вида', 'как А, но части общего — серый бейдж в первой строке рядом с «Вода горячая», ✎ сразу за ним', function () {
+      return cap() + '<div class="box"><div class="head cols"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' +
+        M.map(function (m) {
+          var badge = m.who ? ' <span class="parts">' + m.short + '</span>' + (m.who === 'common' ? PEN : '') : '';
+          return '<div class="row cols">' + DROP + '<span class="t2"><span style="display:flex;align-items:center;gap:6px;min-width:0"><b class="fade" style="flex-shrink:0">Вода горячая</b>' + badge + '</span><small class="fade">№ ' + m.no + ' · ' + TAR + '</small></span>' + pick(m) + seg() + '</div>';
+        }).join('') + '</div>';
+    }],
+    ['В', 'плательщик — плашками', 'без выпадающего меню: арендаторы, «Общий», «Вы» — плашки в строке (до 4 арендаторов); ввод — короткой ссылкой справа', function () {
+      var who = ['Аптека', 'Кафе', 'Салон', 'Общий', 'Вы'];
+      return cap() + '<div class="box">' + M.map(function (m) {
+        var sel = m.who === 'common' ? 'Общий' : m.who ? 'Салон' : '';
+        return '<div class="row rowc">' + DROP + '<span class="t2"><b class="fade">Вода горячая</b><small class="fade">№ ' + m.no + ' · ' + TAR + '</small></span>' +
+          '<div class="chips">' + who.map(function (w) { return '<span class="chip' + (w === sel ? ' on' : '') + '">' + w + '</span>'; }).join('') + '</div>' +
+          '<span class="mini">Ввод: <b>было / стало</b></span></div>';
+      }).join('') + '</div>';
+    }],
+    ['Г', 'два столбца, как список', 'каждый счётчик — ячейка, как в списке выше: вид / № · тариф, под ними «Кто платит» и «Было / стало | Расход»', function () {
+      return cap() + '<div class="box g2">' + M.map(function (m) {
+        return '<div class="card"><div class="card-top">' + DROP + '<span class="t2"><b class="fade">Вода горячая</b><small class="fade">№ ' + m.no + ' · ' + TAR + '</small></span></div>' +
+          '<div class="card-bot">' + pick(m, true) + seg() + '</div></div>';
+      }).join('') + '<div class="card"></div></div>';
+    }]
+  ];
+  document.getElementById('out').innerHTML = V.map(function (v) {
+    return '<div class="v"><div class="v-name"><b>' + v[0] + ' · ' + v[1] + '</b></div><p class="note" style="margin:-8px 0 14px">' + v[2] + '</p>' + list() + v[3]() + '</div>';
+  }).join('');
+</script>
+</body>
+</html>

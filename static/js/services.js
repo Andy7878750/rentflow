@@ -312,24 +312,16 @@
       });
       return out;
     }
-    // A common meter: «А 60% · Б 40%» in a badge next to its tariff (the full names — in its tooltip).
-    // The badge is always there once «кто платит» is chosen: a tenant — «Б 100%», «Платите вы» — «Вы 100%»;
-    // a common one — its parts and the owner's «Вы …» (three shown, «+N»; the full names — in its tooltip), ✎ — «Делим».
-    function meterParts(m) {
-      if (m.who === '' || m.who == null) return '';
+    // A common meter's parts «Аптека 60% · Кафе 40%» (2026-11-24, вариант А): the second line inside its «Кто платит» field;
+    // three shown, «+N», the owner's «Вы …» last; the full names — in the field's tooltip.
+    function commonParts(m) {
       var short = shortNames(), list = [];
-      if (m.who === 'owner') list.push(['Вы', 'Вы', '100%']);
-      else if (m.who !== 'common') list.push([short[m.who] || '', tname(m.who), '100%']);
-      else {
-        var how = m.split || 'shares', r = shares(how, m.excluded, m.owner_takes);
-        T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; }).forEach(function (t) { list.push([short[t.id], t.name, partText(how, r, t)]); });
-        if (r.owner > 0.00001) list.push(['Вы', 'Вы', ownerPartText(how, r)]);
-      }
-      var shown = list.slice(0, 3).map(function (x) { return esc(x[0] + ' ' + x[2]); });
+      var how = m.split || 'shares', r = shares(how, m.excluded, m.owner_takes);
+      T.filter(function (t) { return m.excluded.indexOf(t.id) < 0; }).forEach(function (t) { list.push([short[t.id], t.name, partText(how, r, t)]); });
+      if (r.owner > 0.00001) list.push(['Вы', 'Вы', ownerPartText(how, r)]);
+      var shown = list.slice(0, 3).map(function (x) { return x[0] + ' ' + x[2]; });
       if (list.length > 3) shown.push('+' + (list.length - 3));
-      var full = list.map(function (x) { return x[1] + ' ' + x[2]; }).join(' · ');
-      return '<span class="sv-parts" title="' + esc(full) + '">' + shown.join(' · ') + '</span>' + (m.who !== 'common' ? '' :
-        '<button type="button" class="sv-mt-edit" data-meter="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button>');
+      return { shown: shown.join(' · '), full: list.map(function (x) { return x[1] + ' ' + x[2]; }).join(' · ') };
     }
     // «Выберите счётчики» (вариант Д, 2026-11-24, `2026-11-24-meter-tiles.html`): a list in 2 columns, a row of 40px per meter —
     // icon · kind with «№ …» smaller under it · a check on the right (2026-11-24: no badge). In another service — grey «в «…»» instead of the check (a
@@ -345,25 +337,45 @@
         var attr = svc ? ' data-svc="' + svc.id + '" title="Открыть «' + esc(svc.name) + '»"' : other ? ' disabled' : ' data-mtile="' + id + '" aria-pressed="' + on + '"';
         return '<button type="button" class="sv-mli' + (on ? ' is-on' : '') + (svc ? ' is-busy' : '') + (other ? ' is-other' : '') + '"' + attr + '>' +
           meterIcon(m.kind) + '<span class="sv-mli-t"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mli-no fade">№ ' + esc(m.serial || '—') + '</span></span>' +
-          (svc ? '<span class="sv-mli-svc fade">в «' + esc(svc.name) + '»</span>' : '<span class="sv-mli-ck">' + svg(CP_ICON.check) + '</span>') + '</button>';
+          (svc ? '<span class="sv-mli-svc"><span>в услуге</span><span class="fade">«' + esc(svc.name) + '»</span></span>' : '<span class="sv-mli-ck">' + svg(CP_ICON.check) + '</span>') + '</button>';
       }).join('') + '</div>' + add;
     }
-    // a row (2026-11-24): «№ 358479-65 · 55,7 ₽/м³» on top, the payer badge under it on the left; no last reading, no switch
+    // The «Кто платит» menu: the tenants | «Общий — делим» (✎ — the window «Делим») · «Платите вы».
+    function payerMenu(m, usage) {
+      var opt = function (v, label) {
+        var sel = String(m.who) === String(v);
+        return '<li class="sv-sel-row' + (sel ? ' is-selected' : '') + '"><button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':' + v + '">' +
+          '<span>' + esc(label) + '</span>' + svg(CP_ICON.check, 'sv-ck') + '</button></li>';
+      };
+      // «Общий — делим» with ✎ instead of the check: ✎ opens «Делим» right away (the meter is common after «Готово»)
+      var common = '<li class="sv-sel-row sv-sel-common' + (m.who === 'common' ? ' is-selected' : '') + '">' +
+        '<button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':common"><span>Общий — делим</span></button>' +
+        '<button type="button" class="sv-sel-edit" data-who-edit="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button></li>';
+      return '<div class="sv-sel-menu sv-payer-menu"><ul>' + T.map(function (t) { return opt(t.id, t.name); }).join('') +
+        // «По расходу»: a meter is a tenant's or yours — a common one's usage would only land on you
+        (T.length ? '<li class="sv-sel-sep"></li>' + (usage ? '' : common) : '') + opt('owner', 'Платите вы') + '</ul></div>';
+    }
+    // a row (вариант А1, 2026-11-24, `2026-11-24-who-pays-a.html`): the kind / «№ · тариф» smaller under it — as in the list
+    // above; «Кто платит» — a quiet 32px field (a common one: «Общий» / its parts under it); the input — a grey track. 52px.
     function meterTable(s) {
       var usage = s.mode === 'usage';  // «По расходу»: no tariff — the receipt's sum is divided by the usage
       var rows = s.meters.map(function (id) {
-        var m = byId(S.meters, id), empty = m.who === '' || m.who == null;
+        var m = byId(S.meters, id), g = groupOf(m.group), empty = m.who === '' || m.who == null;
         var tar = (usage ? '' : ' · <span class="' + (m.tariff ? '' : 'sv-none') + '">' + esc(m.tariff || 'нет тарифа') + '</span>') + (m.dn ? ' · день / ночь' : '');
+        var parts = m.who === 'common' ? commonParts(m) : null;
+        var label = empty ? '<span class="fade">Выберите</span>'
+          : parts ? '<span class="sv-pick-two"><span class="fade">Общий</span><small class="fade">' + esc(parts.shown) + '</small></span>'
+          : '<span class="fade">' + (m.who === 'owner' ? 'Платите вы' : esc(tname(m.who))) + '</span>';
         return '<div class="sv-mt-row sv-mt-line">' + meterIcon(m.kind) +
-          '<span class="sv-mt-no"><span class="sv-mt-top"><b class="fade">№ ' + esc(m.serial || '—') + '</b>' + (tar ? '<span class="sv-mt-tar">' + tar + '</span>' : '') + '</span>' +
-          '<span class="sv-mt-sub">' + meterParts(m) + '</span></span>' +
-          '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '">' +
-          '<span class="fade">' + (empty ? 'Выберите' : payerName(m)) + '</span><svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
+          '<span class="sv-mt-no"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mt-sub fade">№ ' + esc(m.serial || '—') + tar + '</span></span>' +
+          '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '"' +
+          (parts ? ' title="' + esc(parts.full) + '"' : '') + '>' + label + '<svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
           (pickOpen === m.id ? payerMenu(m, usage) : '') + '</span>' +
-          '<div class="sv-seg sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
+          '<div class="sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
           '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div></div>';
       }).join('');
-      return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>';
+      // no head row (В1, 2026-11-24): the rows speak for themselves — as the meter list above
+      return '<div class="sv-mt">' + rows + '</div>';
     }
     // «изменить» under a common meter: only how it is divided (who pays by it is chosen in its row).
     function meterWindow() {

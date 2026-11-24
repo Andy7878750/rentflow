@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кто платит — вариант А</title>
+<style>
+  :root { --p: #34495e; --acc: #148f77; --acc-t: #117965; --acc-soft: #e6f4f1; --bd: #e1e4e8; --bg: #f5f6f7; --mut: #6b7680; --tx: #2c3338;
+          --hw: #c0392b; --warm: #fff8e6; --warm-bd: #ecd9a8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); font: 14px -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tx); }
+  .wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  h1 { margin: 0; font-size: 20px; color: var(--p); }
+  .note { margin: -12px 0 0; color: var(--mut); font-size: 13px; }
+  .v { background: #fff; border: 1px solid var(--bd); border-radius: 12px; padding: 16px 20px 20px; }
+  .v-name { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: var(--p); }
+  .v-note { margin: 0 0 14px; font-size: 13px; color: var(--mut); }
+  .cap { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mut); }
+  .warn { padding: 1px 8px; border-radius: 10px; background: #fdf3e3; color: #a0670c; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  .fade { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .ic { display: flex; flex-shrink: 0; color: var(--hw); } .ic svg { width: 18px; height: 18px; fill: currentColor; }
+  .box { border: 1px solid var(--bd); border-radius: 8px; background: #fff; overflow: hidden; }
+  .head, .row { display: grid; grid-template-columns: 18px minmax(0, 1fr) 190px 172px; align-items: center; gap: 12px; padding: 0 12px; }
+  .head { height: 34px; background: #f1f3f5; border-bottom: 1px solid var(--bd); font-size: 12px; color: var(--mut); }
+  .row { height: 52px; }
+  .row + .row { border-top: 1px solid var(--bd); }
+  .t2 { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .t2 b { font-weight: 600; } .t2 small { font-size: 12px; color: var(--mut); }
+  .chev { flex-shrink: 0; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; opacity: .55; }
+  .two { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; text-align: left; }
+  .two small { font-size: 11px; color: var(--mut); }
+
+  /* ---- А1: the field 32px, thin border, the toggle grey track ---- */
+  .a1 .pick { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px 0 10px; border: 1px solid var(--bd); border-radius: 6px; font-size: 13px; }
+  .a1 .pick .chev { margin-left: auto; }
+  .a1 .pick.empty { background: var(--warm); border-color: var(--warm-bd); color: #9a7b2f; }
+  .a1 .tg { display: flex; height: 28px; padding: 2px; border-radius: 6px; background: #eef0f3; }
+  .a1 .tg span { flex: 1; padding: 0 8px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; color: var(--mut); white-space: nowrap; }
+  .a1 .tg .on { background: #fff; color: var(--tx); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+  /* ---- А2: no border — text + ▾ (a border on hover); the toggle — two words, the chosen one accent-underlined ---- */
+  .a2 .pick { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: 30px; padding: 0 6px; margin-left: -6px; border: 1px solid transparent; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .a2 .pick:hover { border-color: var(--bd); }
+  .a2 .pick.empty { color: #9a7b2f; background: var(--warm); }
+  .a2 .tg { display: flex; gap: 14px; font-size: 12px; color: var(--mut); }
+  .a2 .tg span { padding: 3px 0; border-bottom: 2px solid transparent; white-space: nowrap; cursor: pointer; }
+  .a2 .tg .on { color: var(--acc-t); font-weight: 600; border-bottom-color: var(--acc); }
+
+  /* ---- А3: the field 32px with a light grey fill, no border; the toggle — one line «Было / стало ▾» (a small menu) ---- */
+  .a3 .pick { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px 0 10px; border-radius: 6px; background: #f3f4f6; font-size: 13px; }
+  .a3 .pick .chev { margin-left: auto; }
+  .a3 .pick.empty { background: var(--warm); color: #9a7b2f; }
+  .a3 .tg { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px 0 10px; border-radius: 6px; background: #f3f4f6; font-size: 13px; }
+  .a3 .tg .chev { margin-left: auto; }
+  .a3 .tg { display: flex; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>«Кто платит», вариант А — скромнее</h1>
+  <p class="note">Слева как в списке счётчиков (вид / № · тариф мельче). Меняются только поле «Кто платит» и переключатель ввода. Строка 52 px.</p>
+  <div id="out"></div>
+</div>
+<script>
+  var DROP = '<span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2s7 7.6 7 12.2A7 7 0 0 1 5 14.2C5 9.6 12 2 12 2z"/></svg></span>';
+  var CHEV = '<svg class="chev" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg>';
+  var M = [
+    { no: '254125-65', who: '', input: 'r' },
+    { no: '1147899', who: 'Салон «Ногти»', input: 'r' },
+    { no: '3300417', who: 'common', input: 'u' }
+  ];
+  function pick(m) {
+    var inner = !m.who ? '<span class="fade">Выберите</span>'
+      : m.who === 'common' ? '<span class="two"><span class="fade">Общий</span><small class="fade">Аптека 60% · Кафе 40%</small></span>'
+      : '<span class="fade">' + m.who + '</span>';
+    return '<span class="pick' + (m.who ? '' : ' empty') + '">' + inner + CHEV + '</span>';
+  }
+  function tg(m, menu) {
+    if (menu) return '<span class="tg"><span class="fade">' + (m.input === 'r' ? 'Было / стало' : 'Расход') + '</span>' + CHEV + '</span>';
+    return '<span class="tg"><span' + (m.input === 'r' ? ' class="on"' : '') + '>Было / стало</span><span' + (m.input === 'u' ? ' class="on"' : '') + '>Расход</span></span>';
+  }
+  var V = [
+    ['a1', 'А1 · тише, но привычно', 'Поле 32 px, тонкая рамка, текст 13 px. Переключатель — серая дорожка 28 px, выбранное белое (без зелёной заливки).'],
+    ['a2', 'А2 · без рамок', 'Поле — просто текст с ▾ (рамка только при наведении), пустое — жёлтое. Переключатель — два слова, выбранное подчёркнуто акцентом.'],
+    ['a3', 'А3 · серые поля', 'Оба — одинаковые серые поля 32 px без рамки: «Кто платит ▾» и «Было / стало ▾» (маленькое меню из двух пунктов).']
+  ];
+  document.getElementById('out').innerHTML = V.map(function (v) {
+    return '<div class="v ' + v[0] + '"><p class="v-name">' + v[1] + '</p><p class="v-note">' + v[2] + '</p>' +
+      '<p class="cap">Кто платит <span class="warn">не выбрано: 1</span></p><div class="box"><div class="head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' +
+      M.map(function (m) {
+        return '<div class="row">' + DROP + '<span class="t2"><b class="fade">Вода горячая</b><small class="fade">№ ' + m.no + ' · 80,7 ₽/м³</small></span>' +
+          '<span style="min-width:0">' + pick(m) + '</span>' + tg(m, v[0] === 'a3') + '</div>';
+      }).join('') + '</div></div>';
+  }).join('');
+</script>
+</body>
+</html>

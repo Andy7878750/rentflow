@@ -162,7 +162,7 @@
 
 .sv-sub { font-size: 12px; color: var(--color-text-muted); min-width: 0; }
 .sv-none { color: var(--color-danger); }
-.sv-add-link { color: var(--color-accent); font-weight: 600; font-size: 13px; text-decoration: none; }
+.sv-add-link { color: var(--color-accent); font-weight: 400; font-size: 13px; text-decoration: none; }
 .sv-add-row { text-align: right; }  /* under the right edge of the meters table (2026-11-20) */
 
 /* a small window over the window: who pays by the meter, the example */
@@ -255,57 +255,51 @@
 .svcwin .sv-mli-ck .sv-i { width: 12px; height: 12px; stroke-width: 3; visibility: hidden; }
 .sv-mli.is-on .sv-mli-ck { background: var(--color-accent); border-color: var(--color-accent); }
 .svcwin .sv-mli.is-on .sv-mli-ck .sv-i { visibility: visible; }
-.sv-mli-svc { flex-shrink: 1; margin-left: auto; font-size: 12px; color: var(--color-accent-hover); }
+/* in another service: «в услуге» / «Электричество» in two lines, right-aligned (2026-11-24) */
+.sv-mli-svc { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 1; min-width: 0; max-width: 50%; margin-left: auto;
+  font-size: 12px; line-height: 1.3; color: var(--color-accent-hover); }
+.sv-mli-svc .fade { max-width: 100%; }
 .sv-mli.is-busy { background: #fafbfc; }
 .sv-mli.is-busy b { color: var(--color-text-muted); }
-.sv-mli.is-other { opacity: .45; cursor: default; }
-.sv-mli.is-other:hover { background: #fff; }
+.sv-mli.is-other { background: #fafbfc; cursor: default; }
+.sv-mli.is-other > * { opacity: .45; }
+.sv-mli.is-other:hover { background: #fafbfc; }
 
-/* «Кто платит» (вариант Б): Счётчик | Кто платит | Ввод показаний; every row 64px, nothing under it */
+/* «Кто платит» (вариант А1, 2026-11-24, `2026-11-24-who-pays-a.html`): Счётчик | Кто платит | Ввод показаний; rows 52px */
 .sv-mt { border: 1px solid var(--color-border); border-radius: var(--radius); background: #fff; }
-.sv-mt-head, .sv-mt-line { display: grid; grid-template-columns: 18px minmax(0, 1fr) 170px 184px; align-items: center; gap: 12px; }
-.sv-mt-head { height: 36px; padding: 0 14px; background: #f1f3f5; border-bottom: 1px solid var(--color-border);
-  border-radius: var(--radius) var(--radius) 0 0; font-size: 12px; color: var(--color-text-muted); }
-.sv-mt-row { height: 64px; padding: 0 14px; }
+.sv-mt-line { display: grid; grid-template-columns: 18px minmax(0, 1fr) 190px 172px; align-items: center; gap: 12px; }
+.sv-mt-row { height: 52px; padding: 0 12px; font-size: 14px; }  /* 14px — as the meter list above */
 .sv-mt-row + .sv-mt-row { border-top: 1px solid var(--color-border); }
-.sv-mt-no { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+/* the kind / «№ · тариф» smaller under it — as in the meter list above */
+.sv-mt-no { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
 .sv-mt-no b { font-weight: 600; white-space: nowrap; overflow: hidden; }
-.sv-mt-no span { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
-/* always 20px (the badge's height) — the № above does not move when the badge comes */
-.sv-mt-sub { display: flex; align-items: center; gap: 6px; min-width: 0; height: 20px; }
-.sv-mt-sub > .fade { flex-shrink: 0; }
-/* the top line (2026-11-24): «№ 358479-65 · 55,7 ₽/м³» — the tariff grey after the number */
-.sv-mt-no .sv-mt-top { display: flex; align-items: baseline; min-width: 0; font-size: 14px; color: var(--color-text); }
-.sv-mt-top b { min-width: 0; }
-.sv-mt-no .sv-mt-tar { flex-shrink: 0; margin-left: 4px; font-size: 13px; }
-/* a common meter's parts «А 60% · Б 40%» — a grey badge next to the tariff */
-.sv-mt-no .sv-parts { flex-shrink: 1; min-width: 0; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px;
-  background: #eef0f3; color: var(--color-text); text-overflow: ellipsis; }
+.sv-mt-no .sv-mt-sub { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
 .sv-mt-no span.sv-none { color: var(--color-danger); }
-.sv-mt-pick { position: relative; }
-.sv-mt-pick .sv-pick { width: 100%; font-weight: 400; }
+/* «Кто платит» — quiet: 32px, a thin border, 13px; empty — warm; a common one — «Общий» / its parts under it */
+.sv-mt-pick { position: relative; min-width: 0; }
+.sv-mt-pick .sv-pick { width: 100%; height: 32px; padding: 0 8px 0 10px; border-radius: 6px; font-weight: 400; font-size: 13px; }
 .sv-mt-pick .sv-pick .fade { white-space: nowrap; overflow: hidden; }
-.sv-mt-pick .sv-pick small { margin-left: 6px; font-size: 12px; color: var(--color-text-muted); }
-/* ✎ right after the parts badge — the window «Делим» */
-.sv-mt-edit { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px; padding: 0;
-  border: 0; border-radius: 6px; background: none; color: var(--color-accent); cursor: pointer; }
-.sv-mt-edit .icon { width: 14px; height: 14px; }
-.sv-mt-edit:hover { background: #eef7f4; }
+.sv-pick-two { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; text-align: left; }
+.sv-pick-two small { font-size: 11px; color: var(--color-text-muted); }
 .sv-mt-pick .sv-pick.is-empty { background: var(--input-warm, #fff8e6); border-color: var(--input-warm-border, #ecd9a8); color: #9a7b2f; }
 .sv-mt-pick .sv-pick[aria-expanded="true"] { border-color: var(--color-accent); }
+/* the input — a grey track 28px, the chosen one white (no accent fill) */
+.sv-mt-seg { display: flex; height: 28px; padding: 2px; border-radius: 6px; background: #eef0f3; }
+.sv-mt-seg button { flex: 1; padding: 0 8px; border: 0; border-radius: 4px; background: none; font: 12px var(--font); color: var(--color-text-muted);
+  white-space: nowrap; cursor: pointer; }
+.sv-mt-seg button:hover { color: var(--color-text); }
+.sv-mt-seg button.is-on { background: #fff; color: var(--color-text); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 /* «Кто платит»: wider than the field when names are long, every item in one line; 7 tenants and more — it scrolls */
 .sv-payer-menu { width: max-content; min-width: 100%; max-width: 320px; max-height: 292px; overflow-y: auto; }
 .sv-payer-menu .sv-sel-opt { white-space: nowrap; }
 .sv-payer-menu.is-up { top: auto; bottom: calc(100% + 6px); }
 .sv-payer-menu .sv-sel-opt span { overflow: hidden; text-overflow: ellipsis; }
 .sv-sel-sep { height: 1px; margin: 4px 6px; background: var(--color-border); }
-.sv-mt-seg button { height: 30px; flex: auto; padding: 0 8px; white-space: nowrap; }
 
 @media (max-width: 760px) {
   .sv-ml { grid-template-columns: 1fr; }
   .sv-mli:nth-child(2) { border-top: 1px solid var(--color-border); }
   .sv-mli:nth-child(odd) { border-right: 0; }
-  .sv-mt-head { display: none; }
   .sv-mt-row { height: auto; padding: 10px 14px; row-gap: 8px; }
   .sv-mt-line { grid-template-columns: 18px minmax(0, 1fr); }
   .sv-mt-pick, .sv-mt-seg { grid-column: 1 / -1; }

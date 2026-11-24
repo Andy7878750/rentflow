@@ -1081,20 +1081,26 @@
       return start;
     }
 
+    // A meter row (2026-11-24, the style of the service window's list): the kind's icon — the same outline icon as there;
+    // the name, whose it is in a badge right after it; under it smaller «№ … · tariff»; ✎ × at the end. 52px.
     function meterTile(item, row) {
       var kind = meterKind(item);
       row.className = 'info-row meter-tile mk-' + kind;
       var icon = el('span', 'mt-icon');
-      icon.innerHTML = METER_ICONS[kind];
+      icon.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#' + (kind === 'custom' ? 'i-gauge' : 'i-r-' + kind) + '"/></svg>';
       row.appendChild(icon);
+      var body = el('span', 'mt-body');
+      var top = el('span', 'mt-top');
       var main = el('span', 'info-cell info-main', val(item, 'name'));
       if (isDayNight(item)) main.appendChild(el('span', 'info-label', ' день / ночь'));
-      row.appendChild(main);
-      var acts = el('span', 'mt-acts');
-      row.appendChild(acts);
+      top.appendChild(main);
+      var who = meterWho(item);
+      var whoEl = el('span', 'who-badge mt-who ' + who.cls, who.text);
+      whoEl.title = who.text;
+      top.appendChild(whoEl);
+      body.appendChild(top);
       var line = el('span', 'mt-line');
       line.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
-      line.appendChild(startCell(item));
       // Its tariff (2026-11-19): «9,6 / 4,2 ₽/кВт·ч», or a red «нет тарифа».
       var day = val(item, 'tariff'), nightTariff = val(item, 'tariff_night');
       // In a «По расходу» service (2026-11-23) no tariff is needed: «из квитанции», grey.
@@ -1102,11 +1108,10 @@
       var tariff = el('span', 'info-cell mt-tariff-cell' + (day || fromReceipt ? '' : ' is-none'),
         day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : fromReceipt ? 'из квитанции' : 'нет тарифа');
       line.appendChild(tariff);
-      row.appendChild(line);
-      var who = meterWho(item);
-      var badge = el('span', 'who-badge mt-who ' + who.cls, who.text);
-      badge.title = who.text;
-      row.appendChild(badge);
+      body.appendChild(line);
+      row.appendChild(body);
+      var acts = el('span', 'mt-acts');
+      row.appendChild(acts);
       row.title = 'Изменить счётчик';
       return acts;
     }
@@ -1159,12 +1164,16 @@
         var all = items(kind);
         all.forEach(function (item, i) { list.appendChild(infoRow(item, i + 1, kind)); });
         if (kind === 'meter') {
-          // Meters are tiles; the last tile adds one more.
-          var addTile = el('button', 'meter-add-tile');
-          addTile.type = 'button';
-          addTile.dataset.itemAdd = '';
-          addTile.innerHTML = '<svg class="icon"><use href="#i-plus"/></svg>Добавить счётчик';
-          list.appendChild(addTile);
+          // «+ Добавить счётчик» — a link under the frame on the right, as in the service window (2026-11-24)
+          list.hidden = !all.length;
+          if (!block.querySelector('.meter-add-row')) {
+            var addRow = el('div', 'meter-add-row');
+            var addLink = el('button', 'meter-add-link', '+ Добавить счётчик');
+            addLink.type = 'button';
+            addLink.dataset.itemAdd = '';
+            addRow.appendChild(addLink);
+            list.after(addRow);
+          }
         } else if (!all.length) {
           list.appendChild(el('p', 'info-empty', kind === 'meter' ? 'Счётчиков пока нет' : 'Арендаторов пока нет'));
         }
