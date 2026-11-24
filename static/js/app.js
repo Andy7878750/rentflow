@@ -1105,7 +1105,7 @@
         day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : fromReceipt ? 'из квитанции' : 'нет тарифа');
       line.appendChild(tariff);
       body.appendChild(line);
-      // Whose it is — the third line (2026-11-25: less noise next to the name).
+      // Whose it is — the third line (2026-11-24: less noise next to the name).
       var who = meterWho(item);
       var whoEl = el('span', 'who-badge mt-who ' + who.cls, who.text);
       whoEl.title = who.text;

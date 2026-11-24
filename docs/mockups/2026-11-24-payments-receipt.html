@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Оплаты · несколько услуг в одной квитанции</title>
+<style>
+:root {
+  --primary: #34495e; --accent: #148f77; --accent-soft: #e6f4f1; --accent-text: #117965;
+  --danger: #c0392b; --bg: #f5f6f7; --surface: #fff; --border: #e1e4e8; --text: #2c3338; --muted: #6b7680;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 var(--font); }
+.page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
+h1 { margin: 0 0 6px; color: var(--primary); font-size: 24px; }
+.lead { margin: 0 0 20px; color: var(--muted); }
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+  color: var(--primary); font: 600 14px var(--font); cursor: pointer; }
+.tab.is-on { border-color: var(--accent); background: var(--accent); color: #fff; }
+.tab small { font-weight: 400; opacity: .8; }
+.variant { display: none; }
+.variant.is-on { display: block; }
+.card { margin-bottom: 16px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.card h2 { margin: 0 0 4px; color: var(--primary); font-size: 18px; }
+.card > p { margin: 0 0 16px; color: var(--muted); }
+.cap { margin: 18px 0 8px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.cap:first-of-type { margin-top: 0; }
+.pros { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.pros div { padding: 12px 14px; border-radius: 10px; background: var(--bg); font-size: 13px; }
+.pros b { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+.pros .plus b { color: var(--accent-text); }
+.pros .minus b { color: var(--danger); }
+.rec { display: inline-block; margin-left: 8px; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft);
+  color: var(--accent-text); font-size: 12px; font-weight: 600; vertical-align: 2px; }
+
+/* the payments table — as /payments/ (billing.css .pay-*) */
+.wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+th, td { height: 62px; padding: 6px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; }
+thead th { height: 34px; padding: 0 6px; color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+.obj { width: 150px; padding-left: 14px; border-right: 1px solid var(--border); color: var(--primary); font-weight: 600; text-align: left; }
+thead .obj { font-weight: 700; color: var(--muted); }
+.tot { width: 130px; padding-right: 14px; border-left: 1px solid var(--border); text-align: right; }
+.tot b { display: block; font-variant-numeric: tabular-nums; }
+.tot span { display: block; color: var(--danger); font-size: 11px; font-weight: 600; }
+.tot span.ok { color: var(--accent); }
+
+.sq { display: grid; grid-template-columns: minmax(0, 1fr) 15px; grid-template-rows: 1fr 1fr; align-items: center;
+  width: 108px; height: 46px; margin: 0 auto; padding: 4px 6px 4px 8px; border: 1px solid transparent; border-radius: 8px;
+  background: var(--bg); text-align: left; }
+.sq.due { background: #fdf1ef; border-color: #f6dcd7; }
+.sq.paid { background: #eaf6f2; border-color: #cfe9e0; }
+.sum { overflow: hidden; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.due .sum { color: var(--danger); } .paid .sum { color: var(--accent); }
+.sub { overflow: hidden; color: var(--muted); font-size: 10.5px; text-overflow: ellipsis; }
+.due .sub { color: #d37a6c; }
+.ck { justify-self: end; width: 13px; height: 13px; border: 1.5px solid #c9d3da; border-radius: 50%; background: #fff; }
+.paid .ck { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/8px no-repeat; }
+.q { justify-self: end; width: 13px; height: 13px; border-radius: 50%; background: #cfd6db; color: #fff; font: 700 9px/13px var(--font); text-align: center; }
+.none { color: #d5dbdf; }
+
+/* a receipt — one cell for several services */
+.rc .sub { color: var(--accent-text); text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
+.due.rc .sub { color: #b4584a; }
+.rc-ico { display: inline-block; width: 11px; height: 11px; margin-right: 3px; vertical-align: -1px; }
+.th-rc { color: var(--primary); }
+.th-rc .rc-ico { color: var(--accent); }
+
+/* Б: a common head over the parts */
+.grp-h { border-bottom: 0; color: var(--primary); }
+.grp-h span { display: block; margin: 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
+.part { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.part-l { border-left: 1px dashed var(--border); }
+.grp-pay { border-right: 1px dashed var(--border); }
+.grp-bg { background: #fafbfc; }
+
+/* Г: fold */
+.fold { display: inline-flex; align-items: center; gap: 4px; color: var(--primary); cursor: pointer; }
+.fold svg { width: 12px; height: 12px; }
+.opened { background: #f7fbfa; }
+
+/* small windows and pop-ups */
+.pop { width: 340px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  box-shadow: 0 10px 30px rgba(44, 51, 56, .14); overflow: hidden; }
+.pop-h { display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 16px;
+  border-bottom: 1px solid var(--border); color: var(--primary); font-weight: 700; }
+.pop-h .x { color: var(--muted); font-weight: 400; font-size: 18px; }
+.pop-b { padding: 14px 16px; }
+.pop-f { display: flex; justify-content: flex-end; gap: 8px; padding: 0 16px 16px; }
+.btn { height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--primary);
+  font: 600 14px var(--font); }
+.btn.main { border-color: var(--accent); color: var(--accent); }
+.row { display: flex; align-items: center; gap: 10px; height: 36px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.row:last-child { border-bottom: 0; }
+.row .v { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+.row.tot-row { height: 40px; font-weight: 700; color: var(--primary); }
+.box { width: 16px; height: 16px; border: 1.5px solid #c9d3da; border-radius: 4px; flex: none; }
+.box.on { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/10px no-repeat; }
+.lbl { margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+.fld { display: flex; align-items: center; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); }
+.fld .chev { margin-left: auto; color: var(--muted); }
+.muted { color: var(--muted); }
+.side { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.side > .grow { flex: 1 1 520px; min-width: 0; }
+.link { color: var(--accent); font-weight: 600; font-size: 13px; }
+.bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.menu { margin-top: 4px; border: 1px solid var(--border); border-radius: 10px; background: #fff; box-shadow: 0 8px 20px rgba(44,51,56,.1); }
+.menu div { display: flex; align-items: center; height: 36px; padding: 0 12px; font-size: 13px; }
+.menu .sel { color: var(--accent-text); font-weight: 600; }
+.menu .sep { height: 1px; padding: 0; background: var(--border); }
+.menu .add { color: var(--accent); }
+.svc-head { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.new { outline: 2px solid #f2b544; outline-offset: 3px; border-radius: 10px; }
+.note { margin-top: 10px; color: var(--muted); font-size: 12px; }
+@media (max-width: 720px) { .pros { grid-template-columns: 1fr; } .svc-head { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Оплаты: несколько услуг в одной квитанции</h1>
+  <p class="lead">Пример: горячая вода, подогрев (Гкал), экология и водоотведение приходят одной квитанцией ЕИРЦ и оплачиваются одним платежом.
+    В счетах арендаторам услуги остаются отдельными — объединяем только на «Оплатах».</p>
+
+  <div class="tabs">
+    <button class="tab is-on" data-v="a">А · Колонка «квитанция» <small>объединить на «Оплатах»</small></button>
+    <button class="tab" data-v="b">Б · Общая шапка <small>видны все части</small></button>
+    <button class="tab" data-v="c">В · Поле «Квитанция» в услуге</button>
+    <button class="tab" data-v="d">Г · Свернуть / развернуть</button>
+  </div>
+
+  <!-- А -->
+  <section class="variant is-on" data-v="a">
+    <div class="card">
+      <h2>А · Квитанция — одна колонка</h2>
+      <p>Четыре колонки становятся одной: сумма квитанции, одна галочка, одна дата. Состав — по клику на «4 услуги».</p>
+      <div class="side">
+        <div class="grow">
+          <div class="bar"><span class="link">⧉ Объединить в квитанцию</span></div>
+          <div class="wrap"><table>
+            <thead><tr><th class="obj">Объект</th><th>Коммунальные</th><th>Вода холодная</th>
+              <th class="th-rc"><svg class="rc-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>ЕИРЦ</th><th class="tot">Итого</th></tr></thead>
+            <tbody>
+              <tr><th class="obj">Просвет 81</th>
+                <td><div class="sq paid"><span class="sum">5 200,00 ₽</span><span class="ck"></span><span class="sub">24.11.2026</span><span class="q">?</span></div></td>
+                <td><div class="sq due"><span class="sum">450,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+                <td><div class="sq due rc"><span class="sum">1 803,00 ₽</span><span class="ck"></span><span class="sub">4 услуги</span><span class="q">?</span></div></td>
+                <td class="tot"><b>7 453,00 ₽</b><span>осталось 2 253</span></td></tr>
+              <tr><th class="obj">Королева 61</th>
+                <td><div class="sq due"><span class="sum">3 900,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+                <td><div class="sq paid"><span class="sum">210,00 ₽</span><span class="ck"></span><span class="sub">20.11.2026</span><span class="q">?</span></div></td>
+                <td><div class="sq paid rc"><span class="sum">1 190,00 ₽</span><span class="ck"></span><span class="sub">3 услуги</span><span class="q">?</span></div></td>
+                <td class="tot"><b>5 300,00 ₽</b><span>осталось 3 900</span></td></tr>
+            </tbody></table></div>
+          <p class="note">Справа — что видно по клику на «4 услуги» и окно «Объединить в квитанцию».</p>
+        </div>
+        <div>
+          <div class="pop" style="margin-bottom:16px">
+            <div class="pop-h">ЕИРЦ · Просвет 81<span class="x">×</span></div>
+            <div class="pop-b">
+              <div class="row">Вода горячая<span class="v">540,00 ₽</span></div>
+              <div class="row">Подогрев воды<span class="v">312,00 ₽</span></div>
+              <div class="row">Экология<span class="v">96,00 ₽</span></div>
+              <div class="row">Водоотведение<span class="v">855,00 ₽</span></div>
+              <div class="row tot-row">Квитанция<span class="v">1 803,00 ₽</span></div>
+            </div>
+          </div>
+          <div class="pop">
+            <div class="pop-h">Объединить в квитанцию<span class="x">×</span></div>
+            <div class="pop-b">
+              <div class="lbl">Название</div><div class="fld" style="margin-bottom:12px">ЕИРЦ</div>
+              <div class="row"><span class="box"></span>Коммунальные услуги</div>
+              <div class="row"><span class="box"></span>Вода холодная</div>
+              <div class="row"><span class="box on"></span>Вода горячая</div>
+              <div class="row"><span class="box on"></span>Подогрев воды</div>
+              <div class="row"><span class="box on"></span>Экология</div>
+              <div class="row"><span class="box on"></span>Водоотведение</div>
+            </div>
+            <div class="pop-f"><button class="btn">Отмена</button><button class="btn main">Объединить</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="pros"><div class="plus"><b>Хорошо</b>Таблица короче, одна галочка на платёж — как в жизни. Настраивается там, где видно проблему.</div>
+        <div class="minus"><b>Хуже</b>Части не видны сразу — нужен клик. Ещё одна настройка на странице «Оплаты».</div></div>
+    </div>
+  </section>
+
+  <!-- Б -->
+  <section class="variant" data-v="b">
+    <div class="card">
+      <h2>Б · Общая шапка над частями</h2>
+      <p>Колонки остаются, над ними — общая шапка «ЕИРЦ». Части — просто серые суммы без галочек; платёж — одна ячейка в конце группы.</p>
+      <div class="wrap"><table>
+        <thead>
+          <tr><th class="obj" rowspan="2">Объект</th><th rowspan="2">Коммунальные</th><th rowspan="2">Вода холодная</th>
+            <th class="grp-h" colspan="5"><span>Квитанция ЕИРЦ</span></th><th class="tot" rowspan="2">Итого</th></tr>
+          <tr><th class="part-l grp-bg">Вода гор.</th><th class="grp-bg">Подогрев</th><th class="grp-bg">Экология</th><th class="grp-bg">Водоотв.</th><th class="grp-pay grp-bg">Оплата</th></tr>
+        </thead>
+        <tbody>
+          <tr><th class="obj">Просвет 81</th>
+            <td><div class="sq paid"><span class="sum">5 200,00 ₽</span><span class="ck"></span><span class="sub">24.11.2026</span><span class="q">?</span></div></td>
+            <td><div class="sq due"><span class="sum">450,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+            <td class="part part-l grp-bg">540,00</td><td class="part grp-bg">312,00</td><td class="part grp-bg">96,00</td><td class="part grp-bg">855,00</td>
+            <td class="grp-pay grp-bg"><div class="sq due"><span class="sum">1 803,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+            <td class="tot"><b>7 453,00 ₽</b><span>осталось 2 253</span></td></tr>
+          <tr><th class="obj">Королева 61</th>
+            <td><div class="sq due"><span class="sum">3 900,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+            <td><div class="sq paid"><span class="sum">210,00 ₽</span><span class="ck"></span><span class="sub">20.11.2026</span><span class="q">?</span></div></td>
+            <td class="part part-l grp-bg">380,00</td><td class="part grp-bg">220,00</td><td class="part grp-bg none">—</td><td class="part grp-bg">590,00</td>
+            <td class="grp-pay grp-bg"><div class="sq paid"><span class="sum">1 190,00 ₽</span><span class="ck"></span><span class="sub">20.11.2026</span><span class="q">?</span></div></td>
+            <td class="tot"><b>5 300,00 ₽</b><span>осталось 3 900</span></td></tr>
+        </tbody></table></div>
+      <div class="pros"><div class="plus"><b>Хорошо</b>Видно всё и сразу: из чего сложилась квитанция, ничего не прячется.</div>
+        <div class="minus"><b>Хуже</b>Таблица стала шире на 5 колонок; две строки в шапке — плотнее и сложнее глазу.</div></div>
+    </div>
+  </section>
+
+  <!-- В -->
+  <section class="variant" data-v="c">
+    <div class="card">
+      <h2>В · Поле «Квитанция» в окне услуги <span class="rec">предлагаю</span></h2>
+      <p>Квитанция — свойство услуги, как поставщик. Указали один раз при создании — на «Оплатах» услуги с одной квитанцией
+        сами встают одной колонкой (вид — как в А). Отдельной кнопки «Объединить» нет.</p>
+      <div class="cap">Окно услуги · шапка (новое поле — в медовой рамке)</div>
+      <div class="svc-head">
+        <div><div class="lbl">Название в счёте *</div><div class="fld">Водоотведение</div></div>
+        <div><div class="lbl">Поставщик *</div><div class="fld">АО Водоканал</div></div>
+        <div class="new"><div class="lbl">Квитанция</div><div class="fld">ЕИРЦ<span class="chev">▾</span></div>
+          <div class="menu"><div>Отдельная</div><div class="sel">ЕИРЦ · 3 услуги ✓</div><div class="sep"></div><div class="add">+ Новая квитанция…</div></div></div>
+      </div>
+      <div class="cap" style="margin-top:22px">Оплаты — само</div>
+      <div class="wrap"><table>
+        <thead><tr><th class="obj">Объект</th><th>Коммунальные</th><th>Вода холодная</th>
+          <th class="th-rc"><svg class="rc-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>ЕИРЦ</th><th class="tot">Итого</th></tr></thead>
+        <tbody>
+          <tr><th class="obj">Просвет 81</th>
+            <td><div class="sq paid"><span class="sum">5 200,00 ₽</span><span class="ck"></span><span class="sub">24.11.2026</span><span class="q">?</span></div></td>
+            <td><div class="sq due"><span class="sum">450,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+            <td><div class="sq due rc"><span class="sum">1 803,00 ₽</span><span class="ck"></span><span class="sub">4 услуги</span><span class="q">?</span></div></td>
+            <td class="tot"><b>7 453,00 ₽</b><span>осталось 2 253</span></td></tr>
+        </tbody></table></div>
+      <div class="pros"><div class="plus"><b>Хорошо</b>Ноль настроек на «Оплатах»; квитанция одна на все объекты (по названию, как сейчас складываются одноимённые услуги).
+        Позже пригодится и на странице объекта: «Суммы из квитанций» группами по квитанции.</div>
+        <div class="minus"><b>Хуже</b>Ещё одно поле в окне услуги (но необязательное, по умолчанию «Отдельная»). Объединить, глядя на «Оплаты», — надо идти в услугу.</div></div>
+    </div>
+  </section>
+
+  <!-- Г -->
+  <section class="variant" data-v="d">
+    <div class="card">
+      <h2>Г · Свернуть / развернуть</h2>
+      <p>Как А, но у колонки квитанции ▸ — развернуть части прямо в таблице. Галочка — только у квитанции.</p>
+      <div class="cap">Свёрнуто (как А)</div>
+      <div class="wrap"><table>
+        <thead><tr><th class="obj">Объект</th><th>Коммунальные</th><th>Вода холодная</th><th><span class="fold">ЕИРЦ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg></span></th><th class="tot">Итого</th></tr></thead>
+        <tbody><tr><th class="obj">Просвет 81</th>
+          <td><div class="sq paid"><span class="sum">5 200,00 ₽</span><span class="ck"></span><span class="sub">24.11.2026</span><span class="q">?</span></div></td>
+          <td><div class="sq due"><span class="sum">450,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+          <td><div class="sq due"><span class="sum">1 803,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+          <td class="tot"><b>7 453,00 ₽</b><span>осталось 2 253</span></td></tr></tbody></table></div>
+      <div class="cap" style="margin-top:22px">Развёрнуто</div>
+      <div class="wrap"><table>
+        <thead><tr><th class="obj">Объект</th><th>Коммунальные</th><th>Вода холодная</th><th class="opened"><span class="fold">ЕИРЦ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></span></th>
+          <th class="opened">Вода гор.</th><th class="opened">Подогрев</th><th class="opened">Экология</th><th class="opened">Водоотв.</th><th class="tot">Итого</th></tr></thead>
+        <tbody><tr><th class="obj">Просвет 81</th>
+          <td><div class="sq paid"><span class="sum">5 200,00 ₽</span><span class="ck"></span><span class="sub">24.11.2026</span><span class="q">?</span></div></td>
+          <td><div class="sq due"><span class="sum">450,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+          <td class="opened"><div class="sq due"><span class="sum">1 803,00 ₽</span><span class="ck"></span><span class="sub">не оплачено</span><span class="q">?</span></div></td>
+          <td class="part opened">540,00</td><td class="part opened">312,00</td><td class="part opened">96,00</td><td class="part opened">855,00</td>
+          <td class="tot"><b>7 453,00 ₽</b><span>осталось 2 253</span></td></tr></tbody></table></div>
+      <div class="pros"><div class="plus"><b>Хорошо</b>Коротко по умолчанию, подробно — одним кликом и прямо в таблице.</div>
+        <div class="minus"><b>Хуже</b>Таблица «прыгает» по ширине при раскрытии (а у «Оплат» правило — не прыгать). Настройка — как в А или В.</div></div>
+    </div>
+  </section>
+</div>
+<script>
+document.querySelectorAll('.tab').forEach(function (t) {
+  t.onclick = function () {
+    document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('is-on', x === t); });
+    document.querySelectorAll('.variant').forEach(function (v) { v.classList.toggle('is-on', v.dataset.v === t.dataset.v); });
+  };
+});
+</script>
+</body>
+</html>

@@ -1140,7 +1140,7 @@ def drop_if_unused(meter):
 def release_free_meters(property_obj):
     """A meter no service counts by is the premises' common one (2026-11-16, the user's rule): the tenant is seated on
     a meter in a service, so when the service goes or switches the meter off, «чей» goes back to «Общий».
-    A formula only reads a meter (2026-11-25): a meter only formulas have is free too — its readings are typed nowhere."""
+    A formula only reads a meter (2026-11-24): a meter only formulas have is free too — its readings are typed nowhere."""
     typed = Receipt.objects.filter(property=property_obj).exclude(amount_mode=Receipt.AmountMode.FORMULA)
     (Meter.objects.filter(property=property_obj).exclude(receipts__in=typed).exclude(tenant=None, vacant=False)
      .update(tenant=None, vacant=False))
@@ -2623,7 +2623,7 @@ def _last_month(today):
 
 
 def owner_numbers(receipt):
-    """«Или готовое» (2026-11-25): the formula numbers of the owner's other services — on every object of the account.
+    """«Или готовое» (2026-11-24): the formula numbers of the owner's other services — on every object of the account.
     One per name, unit and value (the newest); a monthly number brings only its name and unit, not a month's value."""
     from .models import FormulaNumber
 

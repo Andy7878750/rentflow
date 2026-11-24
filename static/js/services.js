@@ -241,7 +241,7 @@
       };
     }
     // «Своя формула» right in the body (2026-11-24, вариант А of docs/mockups/2026-11-24-formula-in-body.html): a new formula —
-    // the editor is always open, a saved one too, with the examples (2026-11-25).
+    // the editor is always open, a saved one too, with the examples (2026-11-24).
     // Every change of the editor comes here at once (publish) and is saved by «Сохранить» — no «Готово».
     var fxLive = null;
     function fxPublish(s) {
@@ -321,7 +321,7 @@
     // «Выберите счётчики» (вариант Д, 2026-11-24, `2026-11-24-meter-tiles.html`): a list in 2 columns, a row of 40px per meter —
     // icon · kind with «№ …» smaller under it · a check on the right (2026-11-24: no badge). In another service — grey «в «…»» instead of the check (a
     // click opens that service); another kind than the chosen ones — pale, not clickable.
-    // The formulas that read these meters' usage (2026-11-25): a meter typed in no service — the formula can't count.
+    // The formulas that read these meters' usage (2026-11-24): a meter typed in no service — the formula can't count.
     function readersOf(ids) {
       var names = [];
       ids.forEach(function (id) { (byId(S.meters, id) || {}).readers && byId(S.meters, id).readers.forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); }); });
@@ -336,7 +336,7 @@
         ' считаться, пока ' + (ids.length > 1 ? 'счётчики не подключите' : 'счётчик не подключите') + ' к другой услуге. ' +
         (ids.length > 1 ? 'Счётчики станут общими.' : 'Счётчик станет общим.') + '</p>';
     }
-    // Whose the meter is — the third line of a tile (2026-11-25, as in the object window): a tenant green, «Общий» grey.
+    // Whose the meter is — the third line of a tile (2026-11-24, as in the object window): a tenant green, «Общий» grey.
     function whoBadge(m) {
       if (m.who === '' || m.who == null) return '<span class="who-badge sv-mli-who is-free">Не выбрано</span>';
       var text = m.who === 'common' ? 'Общий' : m.who === 'owner' ? 'Платите вы' : tname(m.who);
@@ -741,7 +741,7 @@
         return;
       }
       if (e.target.closest('[data-delete]')) { confirmDelete = true; return renderPane(); }
-      // a meter a formula reads, taken out of its service — asked first (2026-11-25)
+      // a meter a formula reads, taken out of its service — asked first (2026-11-24)
       if (dropAsk != null) {
         if (e.target.closest('[data-drop-yes]')) { dropMeter(dropAsk); dropAsk = null; pickOpen = null; renderPane(); return mark(); }
         if ((t = e.target.closest('[data-drop-close]')) && (e.target === t || t.tagName === 'BUTTON')) { dropAsk = null; renderPane(); }

@@ -336,11 +336,11 @@
 .objwin .pform .form-section-body,
 .objwin .pform [data-items] .form-section-body { padding: 0; }
 
-/* «Формула «…» берёт расход …» (2026-11-25) — a warning in a small window: the text darker, an orange line on the left */
+/* «Формула «…» берёт расход …» (2026-11-24) — a warning in a small window: the text darker, an orange line on the left */
 .sv-note.sv-note-warn { padding: 10px 12px; border-left: 3px solid var(--color-warning); border-radius: 6px;
   background: #fdf3e4; color: var(--color-text); }
 
-/* «Выберите счётчики» (2026-11-25): a third line — whose the meter is (a badge, as in the object window); the tile 76px,
+/* «Выберите счётчики» (2026-11-24): a third line — whose the meter is (a badge, as in the object window); the tile 76px,
    the icon at the name */
 .sv-mli { height: 76px; }
 .sv-mli > .sv-mkind { align-self: flex-start; margin-top: 10px; }

@@ -242,7 +242,7 @@ class ServiceWindowViewTests(TestCase):
 
 
 class OwnerNumbersTests(TestCase):
-    """«Или готовое» (2026-11-25): the formula numbers of every object of the account, not only this service's."""
+    """«Или готовое» (2026-11-24): the formula numbers of every object of the account, not only this service's."""
 
     def test_numbers_of_all_objects(self):
         from .models import FormulaNumber
@@ -268,7 +268,7 @@ class OwnerNumbersTests(TestCase):
 
 
 class DeleteReadMetersTests(TestCase):
-    """2026-11-25: «Вода горячая» deleted — its meters only a formula reads; their readings are typed nowhere."""
+    """2026-11-24: «Вода горячая» deleted — its meters only a formula reads; their readings are typed nowhere."""
 
     setUp, meter, service = MeterTariffTests.setUp, MeterTariffTests.meter, MeterTariffTests.service
 

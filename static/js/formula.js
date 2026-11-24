@@ -16,7 +16,7 @@
   'use strict';
 
   var SAMPLES = { '₽': 6400, 'кВт·ч': 270, 'м³': 5, 'Гкал': 0.42, 'м²': 60, 'чел.': 3 };
-  // A meter without readings (2026-11-25): each meter its own sample usage, by its place among the object's meters —
+  // A meter without readings (2026-11-24): each meter its own sample usage, by its place among the object's meters —
   // «5 м³ + 5 м³» everywhere looked fake.
   var METER_SAMPLES = { 'м³': [3, 2, 5, 4], 'кВт·ч': [270, 180, 320, 240], 'Гкал': [0.42, 0.31, 0.55, 0.38] };
   var SHORT = { electricity: 'Электричество', water: 'Вода хол.', hot_water: 'Вода гор.' };
@@ -211,10 +211,10 @@
       '</div></div></div>';
     if (inline) {
       // the grey panel (as with every way of charging) — a word and the examples, no button; the palette; the line;
-      // in the line's corner × clears it. The palette is always open (2026-11-25: folding it — no).
+      // in the line's corner × clears it. The palette is always open (2026-11-24: folding it — no).
       overlay.className = 'fx-inline fx-preview';
       overlay.setAttribute('data-fx-inline', '');
-      // The grey panel with the examples — a saved formula too (2026-11-25, the user: «верни»).
+      // The grey panel with the examples — a saved formula too (2026-11-24, the user: «верни»).
       overlay.innerHTML = '<div class="sv-cp fx-gpanel fx-examples">' + svg('<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>') +
         '<span class="fx-lead">Соберите из блоков ниже или начните с примера:</span>' +
         '<button type="button" data-example="sewage">Водоотведение</button>' +
@@ -947,7 +947,7 @@
           esc(chipValue(b).replace(' за ', '/') || (type === 'const' ? 'коэффициент' : 'каждый месяц')) + '</span></button>' +
           '<button type="button" class="fx-ready-del" data-drop="' + esc(v.id) + '" title="Удалить число" aria-label="Удалить «' + esc(v.label) + '»">×</button></div>';
       });
-      // The numbers of the account's other services (2026-11-25, every object): a click copies one into this service.
+      // The numbers of the account's other services (2026-11-24, every object): a click copies one into this service.
       // No × — they belong to those services.
       // with rows of this service above (they have ×) — an empty place for × too: all the rows of one width
       var gap = own.length ? '<span class="fx-ready-gap"></span>' : '';
