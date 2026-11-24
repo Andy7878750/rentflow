@@ -268,12 +268,17 @@ def _save_meters(receipt, data, today, usage=False):
     tenants = set(property_obj.tenants.values_list('pk', flat=True))
     busy = services.busy_meters(receipt)
     group = data.get('group')
-    meters = [m for m in property_obj.meters.all() if services.meter_kind_key(m) == group]
-    if not group or not meters:
-        raise WindowError('Выберите группу счётчиков.')
+    rows = {int(row['id']): row for row in data.get('meters') or [] if str(row.get('id', '')).isdigit()}
+    in_group = [m for m in property_obj.meters.all() if services.meter_kind_key(m) == group]
+    if not group or not in_group:
+        raise WindowError('Выберите счётчики.')
+    # Meters are chosen one by one (2026-11-24, tiles): only the meters sent are the service's; a meter outside every
+    # service just stays on the object and is not counted anywhere.
+    meters = [m for m in in_group if m.pk in rows]
+    if not meters:
+        raise WindowError('Выберите счётчики.')
     if any(meter.pk in busy for meter in meters):
         raise WindowError('Эти счётчики уже в другой услуге.')
-    rows = {int(row['id']): row for row in data.get('meters') or [] if str(row.get('id', '')).isdigit()}
     for meter in meters:
         row = rows.get(meter.pk) or {}
         who = row.get('who')

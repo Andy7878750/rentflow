@@ -1,3 +1,4 @@
+{% load billing %}
 {% if not property.is_owner_used %}
   {% with tenants=property.tenants.all %}
     {% if tenants %}
@@ -6,11 +7,7 @@
           <li>
             <span class="fade">{{ tenant.name }}</span>
             <span class="tenant-share">
-              {% if property.share_unit == 'area' %}
-                {{ tenant.area|floatformat:"-2" }} м²{% if tenant.share_percent is not None %} · {{ tenant.share_percent|floatformat:"-2" }}%{% endif %}
-              {% else %}
-                доля {{ tenant.share_percent|floatformat:"-2" }}%
-              {% endif %}
+              {{ tenant|tenant_share }}
             </span>
           </li>
         {% endfor %}

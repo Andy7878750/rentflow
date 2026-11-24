@@ -16,6 +16,32 @@
     return String(rounded).replace('.', ',');
   }
 
+  // Digit groups while typing: «17580» → «17 580», «55.7» → «55,7» (as the server shows numbers); the caret stays
+  // after the same digit. Every number field of the app (2026-11-24: was only on the object page — the meter window kept «55.7»).
+  function groupDigits(input) {
+    var value = input.value;
+    var caret = input.selectionStart == null ? value.length : input.selectionStart;
+    var before = value.slice(0, caret).replace(/[^\d,.\-]/g, '').length;
+    var clean = value.replace(/[\s ]/g, '').replace('.', ',');
+    var match = clean.match(/^(-?)(\d+)(.*)$/);
+    if (!match) return;
+    var grouped = match[1] + match[2].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + match[3];
+    if (grouped === value) return;
+    input.value = grouped;
+    var pos = 0, seen = 0;
+    while (pos < grouped.length && seen < before) {
+      if (/[\d,.\-]/.test(grouped[pos])) seen++;
+      pos++;
+    }
+    if (document.activeElement === input) input.setSelectionRange(pos, pos);
+  }
+
+  document.addEventListener('input', function (event) {
+    var input = event.target;
+    if (!input.isConnected || !input.matches) return;  // the service window redraws its fields on every key
+    if (input.matches('input[inputmode="decimal"]:not(.num-input-coef)')) groupDigits(input);
+  }, true);
+
   function csrfToken(form) {
     var input = form.querySelector('input[name=csrfmiddlewaretoken]');
     return input ? input.value : '';
@@ -835,8 +861,9 @@
         if (value !== null) sum += value;
         var text = '';
         if (value !== null && totalArea) {
-          text = isArea ? '≈ ' + formatNumber(value / totalArea * 100) + '%'
-                        : '≈ ' + formatNumber(value * totalArea / 100) + ' м²';
+          // the other unit, exact — both are stored (2026-11-24: no «≈»)
+          text = isArea ? formatNumber(value / totalArea * 100) + '%'
+                        : formatNumber(value * totalArea / 100) + ' м²';
         }
         hint.textContent = text;
       });
@@ -1098,7 +1125,7 @@
         var share = val(item, 'share');
         var hint = item.querySelector('[data-share-hint]');
         var shareCell = cell('info-share', '', share ? share + (shareUnit() === '%' ? '%' : ' м²') : '', 'доля —');
-        if (share && hint && hint.textContent) shareCell.appendChild(el('span', 'info-label', ' · ' + hint.textContent));
+        if (share && hint && hint.textContent) shareCell.appendChild(el('span', 'info-label share-alt', ' · ' + hint.textContent));
         row.appendChild(shareCell);
         row.appendChild(cell('info-until', 'до', val(item, 'contract_until'), 'договор —'));
         row.appendChild(cell('info-phone', '', val(item, 'phone'), 'телефон —'));
@@ -1310,7 +1337,7 @@
     }
 
     // The small window's grey head (2026-11-23): what is typed — the tenant's name and, after it, the share
-    // in short («45% · ≈ 49,5 м²»; nothing typed yet — «можно до 55%»); a meter — its kind and №.
+    // in short («45% · 49,5 м²»; nothing typed yet — «можно до 55%»); a meter — its kind and №.
     function syncHead() {
       if (!current) return;
       var item = current.item;
@@ -2204,27 +2231,7 @@
         });
     }
 
-    // Digit groups while typing: «17580» → «17 580» (as the server shows numbers); the caret stays after the same digit.
-    function groupDigits(input) {
-      var value = input.value;
-      var caret = input.selectionStart == null ? value.length : input.selectionStart;
-      var before = value.slice(0, caret).replace(/[^\d,.\-]/g, '').length;
-      var clean = value.replace(/[\s ]/g, '').replace('.', ',');
-      var match = clean.match(/^(-?)(\d+)(.*)$/);
-      if (!match) return;
-      var grouped = match[1] + match[2].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + match[3];
-      if (grouped === value) return;
-      input.value = grouped;
-      var pos = 0, seen = 0;
-      while (pos < grouped.length && seen < before) {
-        if (/[\d,.\-]/.test(grouped[pos])) seen++;
-        pos++;
-      }
-      if (document.activeElement === input) input.setSelectionRange(pos, pos);
-    }
-
     monthForm.addEventListener('input', function (event) {
-      if (event.target.matches && event.target.matches('.num-input:not(.num-input-coef)')) groupDigits(event.target);
       status.textContent = '';
       clearTimeout(timer);
       timer = setTimeout(save, 700);

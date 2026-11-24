@@ -54,7 +54,7 @@
       {% for payer in bill.payers %}
         <div class="payer">
           <span class="fade">{{ payer.tenant.name }}</span>
-          <span class="payer-share">{% if property.share_unit == 'area' and payer.tenant.area is not None %}{{ payer.tenant.area|floatformat:"-2" }} м²{% else %}доля {{ payer.tenant.share_percent|floatformat:"-2" }}%{% endif %}</span>
+          <span class="payer-share">{{ payer.tenant|tenant_share }}</span>
         </div>
       {% endfor %}
       {% if bill.owner.lines or property.is_owner_used %}

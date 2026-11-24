@@ -30,7 +30,8 @@
 .svcwin-nav { padding-bottom: 63px; }
 /* a service just added: its row blinks after «Понятно» */
 .sv-nav-item.is-flash { animation: sv-flash 1.6s ease-out 1; }
-@keyframes sv-flash { 0%, 40% { background: var(--color-accent-soft); color: var(--color-accent); } 100% { background: transparent; } }
+/* a new service lights up in honey and fades (2026-11-24, was the accent) */
+@keyframes sv-flash { 0%, 40% { background: rgba(242, 181, 68, .35); color: var(--color-honey-text); } 100% { background: transparent; } }
 .sv-nav-cap { font-size: 12px; color: var(--color-text-muted); padding: 4px 10px 6px; }
 .sv-nav-sep { height: 1px; background: var(--color-border); margin: 10px 10px 12px; }
 .sv-nav-item { width: 100%; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0;
@@ -237,20 +238,28 @@
   .sv-cp { flex-wrap: wrap; }
 }
 
-/* «По счётчикам» (2026-11-20): one service — one kind of meters. «Что считаем» — tiles of the kinds, 3 in a row, 62px */
-.sv-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.sv-tile { display: flex; align-items: center; gap: 12px; min-width: 0; height: 62px; padding: 0 14px; border: 1px solid var(--color-border);
-  border-radius: var(--radius); background: #fff; font: 14px var(--font); color: var(--color-text); text-align: left; cursor: pointer; }
-.sv-tile:hover { border-color: #c3c9cf; }
-.sv-tile .sv-mkind { width: 34px; height: 34px; flex-shrink: 0; border-radius: 8px; align-items: center; justify-content: center;
-  background: var(--mk-soft, #f1f2f4); }
-.sv-tile-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
-.sv-tile-t b { font-weight: 600; white-space: nowrap; overflow: hidden; }
-.sv-tile-t span { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
-.sv-tile.is-on { border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
-.sv-tile.is-busy { background: var(--color-bg); border-color: var(--color-bg); }
-.sv-tile.is-busy b { color: var(--color-text-muted); }
-.sv-tile.is-busy .sv-tile-t span { color: var(--color-accent); }
+/* «Выберите счётчики» (вариант Д, 2026-11-24): a list in 2 columns, 48px rows (kind / № under it); the check on the right */
+.sv-ml { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--color-border); border-radius: var(--radius);
+  background: #fff; overflow: hidden; }
+.sv-mli { display: flex; align-items: center; gap: 10px; min-width: 0; height: 48px; padding: 0 12px; border: 0; border-top: 1px solid var(--color-border);
+  background: #fff; font: 14px var(--font); color: var(--color-text); text-align: left; cursor: pointer; }
+.sv-mli:nth-child(-n+2) { border-top: 0; }
+.sv-mli:nth-child(odd) { border-right: 1px solid var(--color-border); }
+.sv-mli:hover { background: #fafbfc; }
+.sv-mli-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.sv-mli b { font-weight: 600; white-space: nowrap; overflow: hidden; }
+.sv-mli .sv-mkind { flex-shrink: 0; }
+.sv-mli-no { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; }
+.sv-mli-ck { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px; margin-left: auto;
+  border: 1.5px solid #b8c0c7; border-radius: 4px; color: #fff; }
+.svcwin .sv-mli-ck .sv-i { width: 12px; height: 12px; stroke-width: 3; visibility: hidden; }
+.sv-mli.is-on .sv-mli-ck { background: var(--color-accent); border-color: var(--color-accent); }
+.svcwin .sv-mli.is-on .sv-mli-ck .sv-i { visibility: visible; }
+.sv-mli-svc { flex-shrink: 1; margin-left: auto; font-size: 12px; color: var(--color-accent-hover); }
+.sv-mli.is-busy { background: #fafbfc; }
+.sv-mli.is-busy b { color: var(--color-text-muted); }
+.sv-mli.is-other { opacity: .45; cursor: default; }
+.sv-mli.is-other:hover { background: #fff; }
 
 /* «Кто платит» (вариант Б): Счётчик | Кто платит | Ввод показаний; every row 64px, nothing under it */
 .sv-mt { border: 1px solid var(--color-border); border-radius: var(--radius); background: #fff; }
@@ -265,9 +274,10 @@
 /* always 20px (the badge's height) — the № above does not move when the badge comes */
 .sv-mt-sub { display: flex; align-items: center; gap: 6px; min-width: 0; height: 20px; }
 .sv-mt-sub > .fade { flex-shrink: 0; }
-/* the last reading after the tariff (2026-11-23): «80,24 ₽/м³ · посл. 478 м³» — gives way first */
-.sv-mt-sub > .sv-mt-last { flex-shrink: 1; min-width: 0; margin-left: -2px; }
-.sv-mt-sub > .sv-mt-last::before { content: '· '; }
+/* the top line (2026-11-24): «№ 358479-65 · 55,7 ₽/м³» — the tariff grey after the number */
+.sv-mt-no .sv-mt-top { display: flex; align-items: baseline; min-width: 0; font-size: 14px; color: var(--color-text); }
+.sv-mt-top b { min-width: 0; }
+.sv-mt-no .sv-mt-tar { flex-shrink: 0; margin-left: 4px; font-size: 13px; }
 /* a common meter's parts «А 60% · Б 40%» — a grey badge next to the tariff */
 .sv-mt-no .sv-parts { flex-shrink: 1; min-width: 0; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px;
   background: #eef0f3; color: var(--color-text); text-overflow: ellipsis; }
@@ -292,21 +302,15 @@
 .sv-mt-seg button { height: 30px; flex: auto; padding: 0 8px; white-space: nowrap; }
 
 @media (max-width: 760px) {
-  .sv-tiles { grid-template-columns: 1fr; }
+  .sv-ml { grid-template-columns: 1fr; }
+  .sv-mli:nth-child(2) { border-top: 1px solid var(--color-border); }
+  .sv-mli:nth-child(odd) { border-right: 0; }
   .sv-mt-head { display: none; }
   .sv-mt-row { height: auto; padding: 10px 14px; row-gap: 8px; }
   .sv-mt-line { grid-template-columns: 18px minmax(0, 1fr); }
   .sv-mt-pick, .sv-mt-seg { grid-column: 1 / -1; }
 }
 
-/* «Как начисляется · По счётчикам»: groups already in a service — info badges at the right of the head */
-.sv-busy { display: flex; align-items: center; gap: 6px; margin-left: auto; min-width: 0; font-size: 12px; font-weight: 400;
-  text-transform: none; letter-spacing: 0; color: var(--color-text-muted); white-space: nowrap; }
-.sv-busy-link { border: 0; cursor: pointer; font-family: inherit; }
-.sv-busy-link:hover { background: #d3e7f8; }
-/* narrow window: the badges go under the head instead of out of it */
-.sv-sec > h3:has(.sv-busy) { height: auto; min-height: 20px; flex-wrap: wrap; row-gap: 6px; }
-.sv-busy { flex-wrap: wrap; row-gap: 6px; }
 /* «Общий — делим» in the payer menu: ✎ in place of the check — opens «Делим» */
 .sv-sel-edit { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; margin-right: 6px; padding: 0;
   border: 0; border-radius: 6px; background: none; color: var(--color-accent); cursor: pointer; }

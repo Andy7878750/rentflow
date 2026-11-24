@@ -4,6 +4,10 @@
   --color-accent: #148f77;
   --color-accent-hover: #117965;
   --color-accent-soft: #e6f4f1;
+  /* the third colour — honey (2026-11-23 landing, in the app since 2026-11-24): never buttons, body text, meter kinds or warnings */
+  --color-honey: #f2b544;
+  --color-honey-soft: #fdf3dc;
+  --color-honey-text: #8a6100;
   --color-info: #2e86c1;
   --color-info-soft: #e8f2fa;
   --color-danger: #c0392b;
@@ -549,3 +553,11 @@ a {
   font-size: 14px;
 }
 
+
+/* The tenant's share in the other unit, after the main one: «45% · 49,5 м²» (2026-11-24, templatetag tenant_share). */
+.share-alt,
+.info-label.share-alt {
+  color: var(--color-text-muted);
+  font-size: calc(1em - 2px);  /* 2px smaller than the main number (2026-11-24) */
+  font-weight: 400;
+}

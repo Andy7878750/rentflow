@@ -453,10 +453,17 @@ class PropertyFormWithTenantsTests(TestCase):
 
     def test_card_lists_tenants_with_shares(self):
         prop = Property.objects.create(owner=self.user, name='Королёва 61')
-        Tenant.objects.create(property=prop, name='Виктор «Эгоист»', share_percent=Decimal('45'))
+        Tenant.objects.create(property=prop, name='Виктор «Эгоист»', share_percent=Decimal('45'), area=Decimal('49.50'))
+        Tenant.objects.create(property=prop, name='Без площади', share_percent=Decimal('20'))
         response = self.client.get(reverse('property_list'))
         self.assertContains(response, 'Виктор «Эгоист»')
-        self.assertContains(response, 'доля 45%')
+        # both units, the object's own first, the other grey (2026-11-24); only one when the other is unknown
+        self.assertContains(response, '45%<span class="share-alt"> · 49,5\xa0м²</span>')
+        self.assertContains(response, '20%\n')
+        prop.share_unit = 'area'
+        prop.save()
+        response = self.client.get(reverse('property_list'))
+        self.assertContains(response, '49,5\xa0м²<span class="share-alt"> · 45%</span>')
 
 
 class CustomKindTests(TestCase):

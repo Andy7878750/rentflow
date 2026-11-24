@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Плашки счётчиков — варианты</title>
+<style>
+  :root { --p: #34495e; --acc: #148f77; --acc-soft: #e6f4f1; --bd: #e1e4e8; --bg: #f5f6f7; --mut: #6b7680; --tx: #2c3338;
+          --el: #0e9aa7; --cw: #2e86c1; --hw: #c0392b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); font: 14px -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tx); }
+  .wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  h1 { margin: 0; font-size: 20px; color: var(--p); }
+  .note { margin: -12px 0 0; color: var(--mut); font-size: 13px; }
+  .v { background: #fff; border: 1px solid var(--bd); border-radius: 12px; padding: 16px 20px 20px; }
+  .v-name { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .v-name b { font-size: 16px; color: var(--p); }
+  .v-name span { font-size: 13px; color: var(--mut); }
+  .cap { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mut); }
+  .add { display: inline-block; margin-top: 10px; font-size: 13px; color: #117965; text-decoration: none; }
+  button { font: inherit; color: inherit; }
+  .ic { display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 8px; }
+  .ic svg { width: 18px; height: 18px; fill: currentColor; }
+  .el { color: var(--el); --soft: #e3f4f5; } .cw { color: var(--cw); --soft: #e8f2fa; } .hw { color: var(--hw); --soft: #fbecea; }
+  .ic.el, .ic.cw, .ic.hw { background: var(--soft); }
+  .fade { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .is-other { opacity: .45; pointer-events: none; }
+
+  /* А — как сейчас: 3 в ряд, 62px */
+  .a { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .a .t { display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 14px; border: 1px solid var(--bd); border-radius: 8px;
+          background: #fff; text-align: left; cursor: pointer; min-width: 0; }
+  .a .ic { width: 34px; height: 34px; }
+  .a .tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+  .a .tx b { font-weight: 600; } .a .tx span { font-size: 12px; color: var(--mut); }
+  .a .t.on { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
+  .a .t.busy { background: var(--bg); border-color: var(--bg); } .a .t.busy b { color: var(--mut); } .a .t.busy span { color: var(--acc); }
+
+  /* Б — компактнее: 4 в ряд, 48px, галочка в углу */
+  .b { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .b .t { position: relative; display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 10px; border: 1px solid var(--bd);
+          border-radius: 8px; background: #fff; text-align: left; cursor: pointer; min-width: 0; }
+  .b .ic { width: 28px; height: 28px; } .b .ic svg { width: 16px; height: 16px; }
+  .b .tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .b .tx b { font-weight: 600; font-size: 13px; } .b .tx span { font-size: 12px; color: var(--mut); }
+  .b .t.on { border-color: var(--acc); background: var(--acc-soft); }
+  .b .t.busy { background: var(--bg); border-color: var(--bg); } .b .t.busy b { color: var(--mut); } .b .t.busy span { color: var(--acc); }
+
+  /* В — строчки-пилюли 38px: иконка + № (вид — цветом иконки), ширина по тексту */
+  .c { display: flex; flex-wrap: wrap; gap: 8px; }
+  .c .t { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 6px; border: 1px solid var(--bd); border-radius: 19px;
+          background: #fff; cursor: pointer; max-width: 100%; }
+  .c .ic { width: 26px; height: 26px; border-radius: 13px; } .c .ic svg { width: 15px; height: 15px; }
+  .c .t b { font-weight: 600; } .c .t small { font-size: 12px; color: var(--mut); }
+  .c .t.on { border-color: var(--acc); background: var(--acc-soft); }
+  .c .t.busy { background: var(--bg); border-color: var(--bg); } .c .t.busy b { color: var(--mut); } .c .t.busy small { color: var(--acc); }
+
+  /* Г — список с галочками, 2 столбца, строка 40px */
+  .d { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--bd); border-radius: 8px; overflow: hidden; }
+  .d .t { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border: 0; border-top: 1px solid var(--bd);
+          background: #fff; text-align: left; cursor: pointer; min-width: 0; }
+  .d .t:nth-child(-n+2) { border-top: 0; } .d .t:nth-child(odd) { border-right: 1px solid var(--bd); }
+  .d .ck { width: 18px; height: 18px; flex-shrink: 0; border: 1.5px solid #b8c0c7; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+  .d .ck svg { width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 3; display: none; }
+  .d .t.on .ck { background: var(--acc); border-color: var(--acc); } .d .t.on .ck svg { display: block; }
+  .d .ic { width: 22px; height: 22px; background: none !important; } .d .ic svg { width: 16px; height: 16px; }
+  .d .t b { font-weight: 600; } .d .t small { margin-left: auto; padding-left: 8px; font-size: 12px; color: var(--mut); flex-shrink: 0; }
+  .d .t.busy { background: #fafbfc; } .d .t.busy b { color: var(--mut); } .d .t.busy small { color: var(--acc); } .d .t.busy .ck { visibility: hidden; }
+  .d .num { color: var(--mut); font-weight: 400; }
+  /* Д — Г, а номер в сером бейдже (как бейдж «Салон 100%» в «Кто платит») */
+  .d .badge { flex-shrink: 0; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px; background: #eef0f3;
+              font-size: 12px; color: var(--tx); white-space: nowrap; }
+  .d .t.on .badge { background: #d3ece6; }
+  .d .t.busy .badge { color: var(--mut); }
+
+  @media (max-width: 600px) {
+    .a { grid-template-columns: 1fr 1fr; } .b { grid-template-columns: 1fr 1fr; } .d { grid-template-columns: 1fr; }
+    .d .t:nth-child(2) { border-top: 1px solid var(--bd); } .d .t:nth-child(odd) { border-right: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Плашки счётчиков в окне услуги</h1>
+  <p class="note">6 счётчиков. Выбран один счётчик электричества — вода стала бледной (другой вид), третий счётчик электричества уже в другой услуге. Плашки нажимаются.</p>
+  <div id="variants"></div>
+</div>
+<script>
+  var ICON = {
+    el: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>',
+    cw: '<svg viewBox="0 0 24 24"><path d="M12 2s7 7.6 7 12.2A7 7 0 0 1 5 14.2C5 9.6 12 2 12 2z"/></svg>'
+  };
+  ICON.hw = ICON.cw;
+  var M = [
+    { k: 'el', name: 'Электричество', no: '013117', on: true },
+    { k: 'el', name: 'Электричество', no: '58008028' },
+    { k: 'el', name: 'Электричество', no: '77012', busy: 'Свет кафе' },
+    { k: 'cw', name: 'Вода холодная', no: '358479-65' },
+    { k: 'cw', name: 'Вода холодная', no: '0124' },
+    { k: 'hw', name: 'Вода горячая', no: '333' }
+  ];
+  function kindOn() { var x = M.filter(function (m) { return m.on; })[0]; return x && x.k; }
+  function cls(m) { var k = kindOn(); return (m.on ? ' on' : '') + (m.busy ? ' busy' : '') + (!m.on && !m.busy && k && m.k !== k ? ' is-other' : ''); }
+  function ic(m) { return '<span class="ic ' + m.k + '">' + ICON[m.k] + '</span>'; }
+  var V = [
+    ['А', 'как сейчас', '3 в ряд · 62 px · вид и № в две строки', 'a', function (m) {
+      return ic(m) + '<span class="tx"><b class="fade">' + m.name + '</b><span class="fade">№ ' + m.no + (m.busy ? ' · в услуге «' + m.busy + '»' : '') + '</span></span>'; }],
+    ['Б', 'компактнее', '4 в ряд · 48 px · выбранный — бледная заливка акцентом', 'b', function (m) {
+      return ic(m) + '<span class="tx"><b class="fade">' + m.name + '</b><span class="fade">' + (m.busy ? 'в «' + m.busy + '»' : '№ ' + m.no) + '</span></span>'; }],
+    ['В', 'пилюли', '38 px · ширина по тексту · вид — цветом иконки (название — при наведении)', 'c', function (m) {
+      return ic(m) + '<b>№ ' + m.no + '</b>' + (m.busy ? '<small>в «' + m.busy + '»</small>' : ''); }],
+    ['Г', 'список с галочками', '2 столбца · строка 40 px · как «Расход счётчиков» в окне формулы', 'd', function (m) {
+      return '<span class="ck"><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9l5-6"/></svg></span>' + ic(m) +
+        '<b class="fade">' + m.name + ' <span class="num">№ ' + m.no + '</span></b>' + (m.busy ? '<small>в «' + m.busy + '»</small>' : ''); }],
+    ['Д', 'список, № в бейдже', 'как Г · вид словами, номер — серый бейдж', 'd', function (m) {
+      return '<span class="ck"><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9l5-6"/></svg></span>' + ic(m) +
+        '<b class="fade">' + m.name + '</b><span class="badge">№ ' + m.no + '</span>' + (m.busy ? '<small>в «' + m.busy + '»</small>' : ''); }]
+  ];
+  function render() {
+    document.getElementById('variants').innerHTML = V.map(function (v) {
+      return '<div class="v"><div class="v-name"><b>' + v[0] + ' · ' + v[1] + '</b><span>' + v[2] + '</span></div>' +
+        '<p class="cap">Выберите счётчики</p><div class="' + v[3] + '">' + M.map(function (m, i) {
+          return '<button type="button" class="t' + cls(m) + '" data-i="' + i + '" title="' + m.name + ' № ' + m.no + '">' + v[4](m) + '</button>';
+        }).join('') + '</div><a class="add" href="#">+ Добавить счётчик объекта</a></div>';
+    }).join('');
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-i]'); if (!t) return;
+    var m = M[+t.dataset.i]; if (m.busy) return;
+    m.on = !m.on; render();
+  });
+  render();
+</script>
+</body>
+</html>

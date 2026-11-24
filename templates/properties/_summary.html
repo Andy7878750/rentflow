@@ -1,3 +1,4 @@
+{% load billing %}
 <div class="modal-panel summary">
   <header class="modal-head">
     <h1>{{ property.name }}</h1>
@@ -47,7 +48,7 @@
             {% for tenant in tenants %}
               <tr>
                 <td class="summary-name">{{ tenant.name }}</td>
-                <td class="summary-nowrap">{% if property.share_unit == 'area' %}{{ tenant.area|floatformat:"-2" }} м²{% else %}{{ tenant.share_percent|floatformat:"-2" }}%{% endif %}</td>
+                <td class="summary-nowrap">{{ tenant|tenant_share }}</td>
                 <td class="summary-nowrap">{% if tenant.phone %}<a href="tel:{{ tenant.phone|cut:' '|cut:'('|cut:')'|cut:'-' }}">{{ tenant.phone }}</a>{% else %}—{% endif %}</td>
                 <td>{% if tenant.email %}<a href="mailto:{{ tenant.email }}">{{ tenant.email }}</a>{% else %}—{% endif %}</td>
                 <td>{{ tenant.contract|default:"—" }}</td>

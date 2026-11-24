@@ -1,4 +1,5 @@
 from django import template
+from django.utils.html import format_html
 
 from apps.billing import services
 from apps.billing.services import fmt_number
@@ -28,6 +29,22 @@ def bill_share(payer, title, month_label):
 def money_words(value):
     """A sum in words: «Одиннадцать тысяч семьсот пять рублей 80 копеек»."""
     return services.money_words(value)
+
+
+@register.filter
+def tenant_share(tenant):
+    """The tenant's share in both units (2026-11-24): «45% · 49,5 м²» — the object's own unit first, the other grey
+    after it; only one when the other is not known. The bill shows only what the split used — not this."""
+    percent = f'{fmt_number(tenant.share_percent)}%' if tenant.share_percent is not None else ''
+    area = f'{fmt_number(tenant.area)}\xa0м²' if tenant.area is not None else ''
+    main, alt = (area, percent) if tenant.property.share_unit == 'area' else (percent, area)
+    if not main:
+        main, alt = alt, ''
+    if not main:
+        return '—'
+    if not alt:
+        return main
+    return format_html('{}<span class="share-alt"> · {}</span>', main, alt)
 
 
 @register.filter

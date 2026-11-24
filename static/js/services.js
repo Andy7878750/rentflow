@@ -92,28 +92,33 @@
       changed = false; snap = copy(S.meters);
       if (mode === 'meters' && S.start && S.start.meter) {
         var m = byId(S.meters, S.start.meter);
-        if (m && !busyGroup(m.group)) pickGroup(m.group);
+        if (m && !takenBy(m)) addMeter(m.id);
       }
       editing = true;
     }
-    // «По счётчикам» (2026-11-20): one service — one kind of meters. A group is busy when its meters are in another service.
+    // «По счётчикам» / «По расходу» (2026-11-24): every meter of the object is a tile; a click puts it in the service or
+    // takes it out. The groups are not shown — they only sort the tiles and keep one kind per service (the first meter
+    // chosen sets it; the other kinds are grey). A meter in no service just stays on the object, not counted anywhere.
     function groupOf(key) { return S.groups.filter(function (g) { return g.key === key; })[0]; }
-    function busyGroup(key) {
-      var g = groupOf(key);
-      if (!g) return null;
-      var other = S.meters.filter(function (m) { return g.meters.indexOf(m.id) >= 0 && m.service && m.service !== current.id; })[0];
-      return other ? other.service : null;
+    function takenBy(m) { return m.service && m.service !== current.id ? m.service : null; }
+    function allMeterIds() { return [].concat.apply([], S.groups.map(function (g) { return g.meters; })); }
+    function addMeter(id) {
+      var m = byId(S.meters, id), g = groupOf(m.group);
+      if (!current.meters.length) {
+        current.group = m.group; current.kind = g.kind;
+        if (!String(current.name || '').trim() || current.autoName) { current.name = g.name; current.autoName = true; }
+      }
+      if (m.group !== current.group || current.meters.indexOf(id) >= 0) return;
+      // in no service yet: «кто платит» is not chosen (the owner when there are no tenants); «По расходу» has no «Общий»
+      if (!m.service) { m.who = T.length ? '' : 'owner'; m.input = 'readings'; }
+      if (current.mode === 'usage' && m.who === 'common') m.who = '';
+      var order = allMeterIds();
+      current.meters.push(id);
+      current.meters.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
     }
-    function pickGroup(key) {
-      var g = groupOf(key);
-      current.group = key; current.meters = g.meters.slice(); current.kind = g.kind;
-      // A meter in no service yet: «кто платит» is not chosen (the owner when there are no tenants).
-      S.meters.forEach(function (m) {
-        if (g.meters.indexOf(m.id) >= 0 && !m.service) { m.who = T.length ? '' : 'owner'; m.input = 'readings'; }
-      });
-      // «По расходу» has no «Общий»: such a meter's payer is chosen again
-      if (current.mode === 'usage') S.meters.forEach(function (m) { if (g.meters.indexOf(m.id) >= 0 && m.who === 'common') m.who = ''; });
-      if (!String(current.name || '').trim() || current.autoName) { current.name = g.name; current.autoName = true; }
+    function dropMeter(id) {
+      current.meters.splice(current.meters.indexOf(id), 1);
+      if (!current.meters.length) { current.group = null; if (current.autoName) current.name = ''; }
     }
     // a new service is not saved anyway: no «Есть несохранённые изменения» on it
     function mark() { changed = true; if (!current.isNew) status('Есть несохранённые изменения'); }
@@ -326,61 +331,39 @@
       return '<span class="sv-parts" title="' + esc(full) + '">' + shown.join(' · ') + '</span>' + (m.who !== 'common' ? '' :
         '<button type="button" class="sv-mt-edit" data-meter="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button>');
     }
-    // «Выберите группу счётчиков»: only free groups; the ones already in a service — info badges in the head of «Как начисляется».
-    function busyBadges() {
-      var busy = S.groups.filter(function (g) { return busyGroup(g.key); });
-      if (!busy.length) return '';
-      return '<span class="sv-busy">уже в услугах:' + busy.map(function (g) {
-        var svc = byId(S.services, busyGroup(g.key));
-        return '<button type="button" class="badge badge-info sv-busy-link" data-svc="' + svc.id + '" title="Открыть «' + esc(svc.name) + '»">' +
-          esc(g.name) + (svc.name !== g.name ? ' → «' + esc(svc.name) + '»' : '') + '</button>';
-      }).join('') + '</span>';
+    // «Выберите счётчики» (вариант Д, 2026-11-24, `2026-11-24-meter-tiles.html`): a list in 2 columns, a row of 40px per meter —
+    // icon · kind with «№ …» smaller under it · a check on the right (2026-11-24: no badge). In another service — grey «в «…»» instead of the check (a
+    // click opens that service); another kind than the chosen ones — pale, not clickable.
+    function meterTiles(s) {
+      var ids = allMeterIds();
+      var add = '<div class="sv-add-row"><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
+      if (!ids.length) return '<p class="sv-note">У объекта пока нет счётчиков.</p>' + add;
+      return '<div class="sv-ml">' + ids.map(function (id) {
+        var m = byId(S.meters, id), g = groupOf(m.group), on = s.meters.indexOf(id) >= 0;
+        var svc = takenBy(m) && byId(S.services, takenBy(m));
+        var other = !on && !svc && s.meters.length && m.group !== s.group;
+        var attr = svc ? ' data-svc="' + svc.id + '" title="Открыть «' + esc(svc.name) + '»"' : other ? ' disabled' : ' data-mtile="' + id + '" aria-pressed="' + on + '"';
+        return '<button type="button" class="sv-mli' + (on ? ' is-on' : '') + (svc ? ' is-busy' : '') + (other ? ' is-other' : '') + '"' + attr + '>' +
+          meterIcon(m.kind) + '<span class="sv-mli-t"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mli-no fade">№ ' + esc(m.serial || '—') + '</span></span>' +
+          (svc ? '<span class="sv-mli-svc fade">в «' + esc(svc.name) + '»</span>' : '<span class="sv-mli-ck">' + svg(CP_ICON.check) + '</span>') + '</button>';
+      }).join('') + '</div>' + add;
     }
-    function groupTiles(s) {
-      if (!S.groups.length) return '<p class="sv-note">У объекта пока нет счётчиков.</p>';
-      var free = S.groups.filter(function (g) { return !busyGroup(g.key); });
-      var h = free.length ? '<div class="sv-tiles">' + free.map(function (g) {
-        var list = g.meters.map(function (id) { return '№ ' + (byId(S.meters, id).serial || '—'); }).join(', ');
-        var n = g.meters.length, word = n === 1 ? 'счётчик' : n < 5 ? 'счётчика' : 'счётчиков';
-        return '<button type="button" class="sv-tile' + (s.group === g.key ? ' is-on' : '') + '" data-group="' + esc(g.key) + '">' + meterIcon(g.kind) +
-          '<span class="sv-tile-t"><b class="fade">' + esc(g.name) + '</b><span class="fade">' + n + ' ' + word + ' · ' + esc(list) + '</span></span></button>';
-      }).join('') + '</div>' : '<p class="sv-note">Все счётчики объекта уже в услугах.</p>';
-      return h;
-    }
-    // «Кто платит» (вариант Б, 2026-11-20): a table — Счётчик | Кто платит | Ввод показаний; one line per meter,
-    // every row of the same height. A common meter: «Общий · по долям»; the parts — a badge, ✎ right after it — the window «Делим».
-    function payerMenu(m, usage) {
-      var opt = function (v, label) {
-        var sel = String(m.who) === String(v);
-        return '<li class="sv-sel-row' + (sel ? ' is-selected' : '') + '"><button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':' + v + '">' +
-          '<span>' + esc(label) + '</span>' + svg(CP_ICON.check, 'sv-ck') + '</button></li>';
-      };
-      // «Общий — делим» with ✎ instead of the check: ✎ opens «Делим» right away (the meter is common after «Готово»)
-      var common = '<li class="sv-sel-row sv-sel-common' + (m.who === 'common' ? ' is-selected' : '') + '">' +
-        '<button type="button" class="sv-sel-opt" data-who-set="' + m.id + ':common"><span>Общий — делим</span></button>' +
-        '<button type="button" class="sv-sel-edit" data-who-edit="' + m.id + '" title="Как делим" aria-label="Как делим"><svg class="icon"><use href="#i-edit"/></svg></button></li>';
-      return '<div class="sv-sel-menu sv-payer-menu"><ul>' + T.map(function (t) { return opt(t.id, t.name); }).join('') +
-        // «По расходу»: a meter is a tenant's or yours — a common one's usage would only land on you
-        (T.length ? '<li class="sv-sel-sep"></li>' + (usage ? '' : common) : '') + opt('owner', 'Платите вы') + '</ul></div>';
-    }
+    // a row (2026-11-24): «№ 358479-65 · 55,7 ₽/м³» on top, the payer badge under it on the left; no last reading, no switch
     function meterTable(s) {
       var usage = s.mode === 'usage';  // «По расходу»: no tariff — the receipt's sum is divided by the usage
       var rows = s.meters.map(function (id) {
-        var m = byId(S.meters, id), empty = m.who === '' || m.who == null, common = m.who === 'common';
-        var sub = usage
-          ? '<span class="fade">' + esc(m.last || 'нет показаний') + (m.dn ? ' · день / ночь' : '') + '</span>'
-          : '<span class="fade' + (m.tariff ? '' : ' sv-none') + '">' + esc(m.tariff || 'нет тарифа') + (m.dn ? ' · день / ночь' : '') + '</span>' +
-            (m.last ? '<span class="sv-mt-last fade">' + esc(m.last) + '</span>' : '') + meterParts(m);
+        var m = byId(S.meters, id), empty = m.who === '' || m.who == null;
+        var tar = (usage ? '' : ' · <span class="' + (m.tariff ? '' : 'sv-none') + '">' + esc(m.tariff || 'нет тарифа') + '</span>') + (m.dn ? ' · день / ночь' : '');
         return '<div class="sv-mt-row sv-mt-line">' + meterIcon(m.kind) +
-          '<span class="sv-mt-no"><b class="fade">№ ' + esc(m.serial || '—') + '</b><span class="sv-mt-sub">' + sub + '</span></span>' +
+          '<span class="sv-mt-no"><span class="sv-mt-top"><b class="fade">№ ' + esc(m.serial || '—') + '</b>' + (tar ? '<span class="sv-mt-tar">' + tar + '</span>' : '') + '</span>' +
+          '<span class="sv-mt-sub">' + meterParts(m) + '</span></span>' +
           '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '">' +
           '<span class="fade">' + (empty ? 'Выберите' : payerName(m)) + '</span><svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
           (pickOpen === m.id ? payerMenu(m, usage) : '') + '</span>' +
           '<div class="sv-seg sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
           '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div></div>';
       }).join('');
-      return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>' +
-        '<div class="sv-add-row"><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
+      return '<div class="sv-mt"><div class="sv-mt-head"><span></span><span>Счётчик</span><span>Кто платит</span><span>Ввод показаний</span></div>' + rows + '</div>';
     }
     // «изменить» under a common meter: only how it is divided (who pays by it is chosen in its row).
     function meterWindow() {
@@ -416,7 +399,7 @@
           '<div class="sv-pv-row"><span class="sv-pv-who">' + name + '</span><span class="sv-pv-sum">' + (total != null ? money(total) : '—') + '</span></div></div>';
       }
       var list = S.meters.filter(function (m) { return s.meters.indexOf(m.id) >= 0; });
-      if (!list.length) return '<p class="sv-note">Включите счётчики — они появятся на странице объекта.</p>';
+      if (!list.length) return '<p class="sv-note">Выберите счётчики — они появятся на странице объекта.</p>';
       var kinds = list.map(function (m) { return m.kind; }).filter(function (k, i, a) { return a.indexOf(k) === i; });
       var mixed = kinds.length > 1;
       var rows = list.map(function (m) {
@@ -477,7 +460,7 @@
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
-      h += block('Как начисляется · ' + modeName(s.mode) + warn + (byMeters(s.mode) && s.isNew ? busyBadges() : ''), b);
+      h += block('Как начисляется · ' + modeName(s.mode) + warn , b);
       if (s.mode === 'formula') {
         if (s.formula) {
           h += '<div class="sv-sec fx-preview" data-fx-check><h3>Как посчитается <span class="fx-badge" data-check-badge></span> ' +
@@ -486,10 +469,10 @@
       } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
         h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (byMeters(s.mode)) {
-        if (s.isNew) h += block('Выберите группу счётчиков', groupTiles(s));
-        // «Кто платит» only once a group is chosen — no empty box before that (2026-11-20)
+        h += block('Выберите счётчики', meterTiles(s));
+        // «Кто платит» only once a meter is chosen — no empty box before that (2026-11-20)
         var todo = s.meters.filter(function (id) { var m = byId(S.meters, id); return m.who === '' || m.who == null; }).length;
-        if (s.group) h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));
+        if (s.meters.length) h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));
       }
       var showExample = s.mode !== 'formula' && (!byMeters(s.mode) || s.group);
       h += '</div>';
@@ -572,7 +555,7 @@
         return;
       }
       if (byMeters(s.mode)) {
-        if (!s.group) { status('Выберите группу счётчиков', 'is-error'); return; }
+        if (!s.meters.length) { status('Выберите счётчики', 'is-error'); return; }
         var todo = s.meters.map(function (id) { return byId(S.meters, id); }).filter(function (m) { return m.who === '' || m.who == null; })[0];
         if (todo) { status('Выберите, кто платит по № ' + (todo.serial || '—'), 'is-error'); return; }
       }
@@ -683,7 +666,7 @@
         return;
       }
       if ((t = e.target.closest('[data-svc]'))) {
-        var id = +t.dataset.svc, jump = t.classList.contains('sv-busy-link') ? byId(S.services, id).name : null;
+        var id = +t.dataset.svc, jump = t.classList.contains('is-busy') ? byId(S.services, id).name : null;
         leave(function () {
           current = copy(byId(S.services, id)); changed = false; snap = copy(S.meters);
           editing = false; unitOpen = false; exampleOpen = false; meterOpen = null; pickOpen = null;
@@ -756,8 +739,12 @@
       if (unitOpen && !e.target.closest('.sv-sel-menu')) { unitOpen = false; renderPane(); }
       if ((t = e.target.closest('[data-split]'))) { current.split = t.dataset.split; renderPane(); return mark(); }
       if (e.target.closest('[data-owner]')) { current.owner_takes = current.owner_takes === false; renderPane(); return mark(); }
+      if ((t = e.target.closest('[data-mtile]'))) {
+        var mid = +t.dataset.mtile;
+        if (current.meters.indexOf(mid) >= 0) dropMeter(mid); else addMeter(mid);
+        pickOpen = null; renderPane(); return mark();
+      }
       if ((t = e.target.closest('[data-pay]'))) { toggle(current.excluded, +t.dataset.pay); renderPane(); return mark(); }
-      if ((t = e.target.closest('[data-group]'))) { S.meters = copy(snap); pickGroup(t.dataset.group); pickOpen = null; renderPane(); return mark(); }
       if ((t = e.target.closest('[data-who-edit]'))) { pickOpen = null; openMeter(+t.dataset.whoEdit); draft.makeCommon = true; return renderPane(); }
       if ((t = e.target.closest('[data-who-set]'))) {
         var p = t.dataset.whoSet.split(':'), mm = byId(S.meters, +p[0]);
@@ -850,11 +837,11 @@
         if (f) { f.who = m.who; f.input = m.input; f.split = m.split; f.excluded = m.excluded; f.owner_takes = m.owner_takes; }
       });
       current = draftBack.current; changed = draftBack.changed; editing = !!current.isNew;
-      if (byMeters(current.mode) && current.group && groupOf(current.group)) {
-        var added = groupOf(current.group).meters.filter(function (id) { return current.meters.indexOf(id) < 0; });
-        added.forEach(function (id) { var m = byId(S.meters, id); if (!m.service) { m.who = T.length ? '' : 'owner'; m.input = 'readings'; } });
-        current.meters = groupOf(current.group).meters.slice();
-        if (added.length) changed = true;
+      if (byMeters(current.mode)) {
+        // a meter just added to the object joins the service (when it is of the chosen kind, or nothing is chosen yet)
+        var known = draftBack.meters.map(function (m) { return m.id; }), before = current.meters.length;
+        allMeterIds().filter(function (id) { return known.indexOf(id) < 0; }).forEach(addMeter);
+        if (current.meters.length !== before) changed = true;
       }
     } else if (S.start && S.start.mode) startNew(S.start.mode);
     else if (S.start && S.start.meter) startNew('meters');

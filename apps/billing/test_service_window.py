@@ -204,6 +204,29 @@ class ServiceWindowViewTests(TestCase):
                              meters=[{'id': first.pk, 'who': 'common'}, {'id': second.pk, 'who': self.vlad.pk}])
         self.assertEqual(response.status_code, 400)
 
+    def test_a_meter_switched_off_is_free_for_another_service(self):
+        # 2026-11-24: a meter of the group can be switched off — it is not in the service and not counted; another
+        # service of the same kind (its own receipt) can take it. At least one meter has to be on.
+        first, second = self.meter(), self.meter()
+        response = self.post(name='Вода', provider='Водоканал', mode='usage', group='water',
+                             meters=[{'id': first.pk, 'who': self.viktor.pk}])
+        self.assertEqual(response.status_code, 200)
+        receipt = Receipt.objects.get(name='Вода')
+        self.assertEqual(list(receipt.meters.all()), [first])
+        second.refresh_from_db()
+        self.assertEqual((second.tenant, second.vacant), (None, False))  # outside every service — «Общий», not counted
+        response = self.post(name='Вода 2', provider='Водоканал', mode='usage', group='water',
+                             meters=[{'id': second.pk, 'who': self.vlad.pk}])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(Receipt.objects.get(name='Вода 2').meters.all()), [second])
+        # a meter taken by the other service can't be switched on here
+        response = self.post(id=receipt.pk, name='Вода', provider='Водоканал', mode='usage', group='water',
+                             meters=[{'id': first.pk, 'who': self.viktor.pk}, {'id': second.pk, 'who': self.vlad.pk}])
+        self.assertEqual(response.status_code, 400)
+        # all off — nothing to save
+        response = self.post(id=receipt.pk, name='Вода', provider='Водоканал', mode='usage', group='water', meters=[])
+        self.assertEqual((response.status_code, response.json()['error']), (400, 'Выберите счётчики.'))
+
     def test_by_meters_every_meter_needs_who_pays(self):
         first, second = self.meter(), self.meter()
         response = self.post(name='Вода', provider='Водоканал', mode='meters', group='water',
