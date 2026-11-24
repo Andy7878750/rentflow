@@ -2142,7 +2142,7 @@ input.masked {
 .info-row.meter-tile {
   grid-template-columns: 18px minmax(0, 1fr) auto;
   gap: 10px;
-  height: 52px;
+  height: 76px;
   min-height: 0;
   padding: 0 6px 0 12px;
   border: 0;
@@ -2210,12 +2210,18 @@ input.masked {
   font-weight: 400;
 }
 
-/* whose it is — a badge right after the name (who-badge: a tenant green, «общий» grey, «свободен» warm) */
+/* whose it is — a badge on the third line (who-badge: a tenant green, «общий» grey, «свободен» warm) */
 .mt-who {
-  flex: 0 1 auto;
-  min-width: 0;
+  align-self: flex-start;
+  margin-top: 4px;
   padding: 0 8px;
   line-height: 18px;
+}
+
+/* the icon stands at the name, not in the middle of three lines */
+.meter-tile .mt-icon {
+  align-self: start;
+  margin-top: 10px;
 }
 
 .mt-acts {

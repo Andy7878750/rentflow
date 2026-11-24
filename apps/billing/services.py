@@ -1139,9 +1139,25 @@ def drop_if_unused(meter):
 
 def release_free_meters(property_obj):
     """A meter no service counts by is the premises' common one (2026-11-16, the user's rule): the tenant is seated on
-    a meter in a service, so when the service goes or switches the meter off, «чей» goes back to «Общий»."""
-    Meter.objects.filter(property=property_obj, receipts__isnull=True).exclude(tenant=None, vacant=False).update(
-        tenant=None, vacant=False)
+    a meter in a service, so when the service goes or switches the meter off, «чей» goes back to «Общий».
+    A formula only reads a meter (2026-11-25): a meter only formulas have is free too — its readings are typed nowhere."""
+    typed = Receipt.objects.filter(property=property_obj).exclude(amount_mode=Receipt.AmountMode.FORMULA)
+    (Meter.objects.filter(property=property_obj).exclude(receipts__in=typed).exclude(tenant=None, vacant=False)
+     .update(tenant=None, vacant=False))
+
+
+def meter_readers(property_obj):
+    """{meter id: [names of the formulas that read its usage]} — what breaks when the meter leaves its service."""
+    from . import formula as fx
+
+    readers = {}
+    for receipt in property_obj.receipts.filter(amount_mode=Receipt.AmountMode.FORMULA).order_by('position', 'pk'):
+        for block in fx.meter_blocks(receipt.formula or []):
+            for pk in block['meters']:
+                names = readers.setdefault(pk, [])
+                if receipt.name not in names:
+                    names.append(receipt.name)
+    return readers
 
 
 @transaction.atomic
@@ -2606,6 +2622,28 @@ def _last_month(today):
     return date(first.year - 1, 12, 1) if first.month == 1 else date(first.year, first.month - 1, 1)
 
 
+def owner_numbers(receipt):
+    """«Или готовое» (2026-11-25): the formula numbers of the owner's other services — on every object of the account.
+    One per name, unit and value (the newest); a monthly number brings only its name and unit, not a month's value."""
+    from .models import FormulaNumber
+
+    owner_id = receipt.property.owner_id
+    numbers = FormulaNumber.objects.filter(receipt__property__owner_id=owner_id).order_by('-pk')
+    if receipt.pk:
+        numbers = numbers.exclude(receipt=receipt)
+    library, seen = [], set()
+    for number in numbers:
+        value = None if number.monthly or number.value is None else float(number.value)
+        key = (number.label.strip().lower(), number.monthly, number.unit, number.per, value)
+        if key in seen:
+            continue
+        seen.add(key)
+        library.append({'label': number.label, 'monthly': number.monthly, 'unit': number.unit,
+                        'per': number.per, 'value': value})
+    library.sort(key=lambda item: item['label'].lower())
+    return library
+
+
 def formula_context(receipt, data=None, today=None):
     """What the formula window needs (JSON for app.js): the tenants, the object's meters with last month's usage,
     the numbers and the blocks — as posted (a refused save, the way back) or as stored."""
@@ -2655,6 +2693,7 @@ def formula_context(receipt, data=None, today=None):
         'kinds': list(kinds.values()),
         'meters': meters,
         'numbers': numbers,
+        'library': owner_numbers(receipt),
         'blocks': blocks,
         'units': FORMULA_UNITS,
         'symbol': receipt.currency_symbol,

@@ -102,6 +102,7 @@ def window_state(property_obj, selected=None, today=None):
             for meter in receipt.meters.all():
                 owner_of.setdefault(meter.pk, receipt)
     meters = []
+    readers = services.meter_readers(property_obj)
     for meter in property_obj.meters.prefetch_related('tariff_history', 'excluded', 'readings'):
         service = owner_of.get(meter.pk)
         meters.append({
@@ -117,6 +118,7 @@ def window_state(property_obj, selected=None, today=None):
             'owner_takes': meter.owner_takes,
             'service': service.pk if service else None,
             'service_name': service.name if service else '',
+            'readers': readers.get(meter.pk, []),  # the formulas that read its usage (warned before it leaves)
         })
     groups = []  # the kinds of the object's meters: a service «По счётчикам» takes one of them
     for meter in meters:

@@ -1082,7 +1082,7 @@
     }
 
     // A meter row (2026-11-24, the style of the service window's list): the kind's icon — the same outline icon as there;
-    // the name, whose it is in a badge right after it; under it smaller «№ … · tariff»; ✎ × at the end. 52px.
+    // the name; under it smaller «№ … · tariff»; under that whose it is in a badge; ✎ × at the end. 76px.
     function meterTile(item, row) {
       var kind = meterKind(item);
       row.className = 'info-row meter-tile mk-' + kind;
@@ -1094,10 +1094,6 @@
       var main = el('span', 'info-cell info-main', val(item, 'name'));
       if (isDayNight(item)) main.appendChild(el('span', 'info-label', ' день / ночь'));
       top.appendChild(main);
-      var who = meterWho(item);
-      var whoEl = el('span', 'who-badge mt-who ' + who.cls, who.text);
-      whoEl.title = who.text;
-      top.appendChild(whoEl);
       body.appendChild(top);
       var line = el('span', 'mt-line');
       line.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
@@ -1109,6 +1105,11 @@
         day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : fromReceipt ? 'из квитанции' : 'нет тарифа');
       line.appendChild(tariff);
       body.appendChild(line);
+      // Whose it is — the third line (2026-11-25: less noise next to the name).
+      var who = meterWho(item);
+      var whoEl = el('span', 'who-badge mt-who ' + who.cls, who.text);
+      whoEl.title = who.text;
+      body.appendChild(whoEl);
       row.appendChild(body);
       var acts = el('span', 'mt-acts');
       row.appendChild(acts);

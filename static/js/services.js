@@ -65,7 +65,7 @@
     var csrf = (box.querySelector('input[name=csrfmiddlewaretoken]') || {}).value || '';
     var T = S.tenants;
     var current = null, editing = false, unitOpen = false, unitNew = '', addedUnits = [];
-    var meterOpen = null, draft = null, exampleOpen = false, dirty = false, confirmDelete = false;
+    var meterOpen = null, draft = null, exampleOpen = false, dirty = false, confirmDelete = false, dropAsk = null;
     // changed — there are changes not saved yet; asking — «Сохранить изменения?» before leaving this service;
     // pickOpen — the meter whose «Кто платит» menu is open; snap — the meters as they were (to undo «Не сохранять»).
     var changed = false, asking = null, askJump = null, pickOpen = null, snap = copy(S.meters);
@@ -74,7 +74,7 @@
     // After «Сохранить» or «Удалить» — a new service «По квитанции», ready for its name (the user's wish, 2026-11-19).
     function nextNew() {
       startNew('receipt');
-      unitOpen = false; exampleOpen = false; meterOpen = null; confirmDelete = false; pickOpen = null;
+      unitOpen = false; exampleOpen = false; meterOpen = null; confirmDelete = false; dropAsk = null; pickOpen = null;
       render(); pane.scrollTop = 0;
       var input = pane.querySelector('[data-f="name"]'); if (input) input.focus();
     }
@@ -241,10 +241,9 @@
       };
     }
     // «Своя формула» right in the body (2026-11-24, вариант А of docs/mockups/2026-11-24-formula-in-body.html): a new formula —
-    // the editor is open; a saved one — the formula as blocks with ✎, which opens the editor (⌃ in its corner folds it).
+    // the editor is always open, a saved one too, with the examples (2026-11-25).
     // Every change of the editor comes here at once (publish) and is saved by «Сохранить» — no «Готово».
     var fxLive = null;
-    function fxEditing(s) { return !s.id || !s.fx || !!s._fxEdit; }
     function fxPublish(s) {
       return function (data, words, each) {
         var json = JSON.stringify(data);
@@ -322,6 +321,27 @@
     // «Выберите счётчики» (вариант Д, 2026-11-24, `2026-11-24-meter-tiles.html`): a list in 2 columns, a row of 40px per meter —
     // icon · kind with «№ …» smaller under it · a check on the right (2026-11-24: no badge). In another service — grey «в «…»» instead of the check (a
     // click opens that service); another kind than the chosen ones — pale, not clickable.
+    // The formulas that read these meters' usage (2026-11-25): a meter typed in no service — the formula can't count.
+    function readersOf(ids) {
+      var names = [];
+      ids.forEach(function (id) { (byId(S.meters, id) || {}).readers && byId(S.meters, id).readers.forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); }); });
+      return names;
+    }
+    function readersNote(ids, what) {
+      var names = readersOf(ids);
+      if (!names.length) return '';
+      var list = names.map(function (n) { return '«' + esc(n) + '»'; }).join(', ');
+      return '<p class="sv-note sv-note-warn">' + (names.length > 1 ? 'Формулы ' + list + ' берут' : 'Формула ' + list + ' берёт') +
+        ' расход ' + what + '. Показания станет негде вводить — ' + (names.length > 1 ? 'они перестанут' : 'она перестанет') +
+        ' считаться, пока ' + (ids.length > 1 ? 'счётчики не подключите' : 'счётчик не подключите') + ' к другой услуге. ' +
+        (ids.length > 1 ? 'Счётчики станут общими.' : 'Счётчик станет общим.') + '</p>';
+    }
+    // Whose the meter is — the third line of a tile (2026-11-25, as in the object window): a tenant green, «Общий» grey.
+    function whoBadge(m) {
+      if (m.who === '' || m.who == null) return '<span class="who-badge sv-mli-who is-free">Не выбрано</span>';
+      var text = m.who === 'common' ? 'Общий' : m.who === 'owner' ? 'Платите вы' : tname(m.who);
+      return '<span class="who-badge sv-mli-who' + (/^[0-9]+$/.test(String(m.who)) ? ' is-tenant' : '') + '" title="' + esc(text) + '">' + esc(text) + '</span>';
+    }
     function meterTiles(s) {
       var ids = allMeterIds();
       var add = '<div class="sv-add-row"><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
@@ -332,7 +352,8 @@
         var other = !on && !svc && s.meters.length && m.group !== s.group;
         var attr = svc ? ' data-svc="' + svc.id + '" title="Открыть «' + esc(svc.name) + '»"' : other ? ' disabled' : ' data-mtile="' + id + '" aria-pressed="' + on + '"';
         return '<button type="button" class="sv-mli' + (on ? ' is-on' : '') + (svc ? ' is-busy' : '') + (other ? ' is-other' : '') + '"' + attr + '>' +
-          meterIcon(m.kind) + '<span class="sv-mli-t"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mli-no fade">№ ' + esc(m.serial || '—') + '</span></span>' +
+          meterIcon(m.kind) + '<span class="sv-mli-t"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mli-no fade">№ ' + esc(m.serial || '—') + '</span>' +
+          whoBadge(m) + '</span>' +
           (svc ? '<span class="sv-mli-svc"><span>в услуге</span><span class="fade">«' + esc(svc.name) + '»</span></span>' : '<span class="sv-mli-ck">' + svg(CP_ICON.check) + '</span>') + '</button>';
       }).join('') + '</div>' + add;
     }
@@ -464,18 +485,14 @@
       // «Своя формула» (2026-11-22): the formula as the same blocks as in its window (a click opens it), and under it
       // the same «Как посчитается» — its switches work here too.
       if (s.mode === 'formula') {
-        b = fxEditing(s) ? '<div data-fx-host></div>'
-          : '<div class="sv-fxv fx-preview"><div class="fx-strip is-static" data-fx-chips data-fx-edit title="Изменить формулу"></div>' +
-            '<button type="button" class="fx-x sv-fx-pen" data-fx-edit title="Изменить формулу" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></button></div>';
+        b = '<div data-fx-host></div>';
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
       h += block('Как начисляется · ' + modeName(s.mode) + warn , b);
       if (s.mode === 'formula') {
-        if (s.formula || fxEditing(s)) {
-          h += '<div class="sv-sec fx-preview" data-fx-check><h3>Как посчитается <span class="fx-badge" data-check-badge></span> ' +
-            '<span class="fx-badge" data-state-badge></span></h3><div class="fx-check" data-check></div></div>';
-        }
+        h += '<div class="sv-sec fx-preview" data-fx-check><h3>Как посчитается <span class="fx-badge" data-check-badge></span> ' +
+          '<span class="fx-badge" data-state-badge></span></h3><div class="fx-check" data-check></div></div>';
       } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
         h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (byMeters(s.mode)) {
@@ -503,7 +520,8 @@
       if (confirmDelete) {
         h += '<div class="sv-back" data-del-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Удалить услугу">' +
           '<div class="sv-mw-head"><b>Удалить услугу?</b><button type="button" class="sv-x" data-del-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
-          '<div class="sv-mw-body"><p class="sv-note">«' + esc(s.name) + '» больше не будет в счетах; её суммы и тарифы удалятся. Счётчики объекта и их показания останутся.</p></div>' +
+          '<div class="sv-mw-body"><p class="sv-note">«' + esc(s.name) + '» больше не будет в счетах; её суммы и тарифы удалятся. Счётчики объекта и их показания останутся.</p>' +
+          readersNote(byMeters(s.mode) ? s.meters : [], 'этих счётчиков') + '</div>' +
           '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-del-close>Отмена</button>' +
           '<button type="button" class="btn btn-danger btn-auto" data-del-yes>Удалить</button></div></div></div>';
       }
@@ -528,17 +546,21 @@
           '<div class="sv-mw-body"><p class="sv-note">Она теперь в списке «Услуги объекта» слева и в счетах.</p></div>' +
           '<div class="sv-mw-foot"><button type="button" class="btn btn-primary btn-auto" data-created-ok>Понятно</button></div></div></div>';
       }
+      if (dropAsk != null) {
+        var dm = byId(S.meters, dropAsk);
+        h += '<div class="sv-back" data-drop-close><div class="sv-mw" role="dialog" aria-modal="true" aria-label="Убрать счётчик">' +
+          '<div class="sv-mw-head"><b>Убрать счётчик из услуги?</b><button type="button" class="sv-x" data-drop-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button></div>' +
+          '<div class="sv-mw-body">' + readersNote([dropAsk], 'счётчика «' + esc(dm.name) + ' № ' + esc(dm.serial || '—') + '»') + '</div>' +
+          '<div class="sv-mw-foot"><button type="button" class="btn btn-ghost btn-auto" data-drop-close>Отмена</button>' +
+          '<button type="button" class="btn btn-danger btn-auto" data-drop-yes>Убрать</button></div></div></div>';
+      }
       if (meterOpen != null) h += meterWindow();
       if (fxLive) { fxLive.destroy(); fxLive = null; }
       pane.innerHTML = h;
       if (s.mode === 'formula' && window.rentflowFormula) {
-        var fxHost = pane.querySelector('[data-fx-host]');
-        if (fxHost) {
-          fxLive = window.rentflowFormula.inline(Object.assign(fxOpts(s), {
-            host: fxHost, checkEl: pane.querySelector('[data-fx-check]'), publish: fxPublish(s),
-            collapse: s.id && s.fx ? function () { s._fxEdit = false; renderPane(); } : null,
-          }));
-        } else window.rentflowFormula.preview(fxOpts(s), pane.querySelector('[data-fx-chips]'), pane.querySelector('[data-fx-check]'));
+        fxLive = window.rentflowFormula.inline(Object.assign(fxOpts(s), {
+          host: pane.querySelector('[data-fx-host]'), checkEl: pane.querySelector('[data-fx-check]'), publish: fxPublish(s),
+        }));
       }
       // «Кто платит» near the bottom bar: the menu opens upwards
       var menu = pane.querySelector('.sv-payer-menu'), foot = pane.querySelector('.sv-foot');
@@ -719,6 +741,12 @@
         return;
       }
       if (e.target.closest('[data-delete]')) { confirmDelete = true; return renderPane(); }
+      // a meter a formula reads, taken out of its service — asked first (2026-11-25)
+      if (dropAsk != null) {
+        if (e.target.closest('[data-drop-yes]')) { dropMeter(dropAsk); dropAsk = null; pickOpen = null; renderPane(); return mark(); }
+        if ((t = e.target.closest('[data-drop-close]')) && (e.target === t || t.tagName === 'BUTTON')) { dropAsk = null; renderPane(); }
+        return;
+      }
       if (e.target.closest('[data-save-next]')) { saveThen(nextNew); return; }
       // the meter's window
       if (meterOpen != null) {
@@ -739,7 +767,6 @@
         return;
       }
       if (e.target.closest('[data-example]')) { exampleOpen = true; return renderPane(); }
-      if (e.target.closest('[data-fx-edit]')) { current._fxEdit = true; return renderPane(); }
       if (e.target.closest('[data-edit]')) { editing = !editing; renderPane(); if (editing) pane.querySelector('[data-f="name"]').focus(); return; }
       if (e.target.closest('[data-unit-open]')) { unitOpen = !unitOpen; return renderPane(); }
       if ((t = e.target.closest('[data-unit-del]'))) {
@@ -760,6 +787,7 @@
       if (e.target.closest('[data-owner]')) { current.owner_takes = current.owner_takes === false; renderPane(); return mark(); }
       if ((t = e.target.closest('[data-mtile]'))) {
         var mid = +t.dataset.mtile;
+        if (current.meters.indexOf(mid) >= 0 && readersOf([mid]).length) { dropAsk = mid; return renderPane(); }
         if (current.meters.indexOf(mid) >= 0) dropMeter(mid); else addMeter(mid);
         pickOpen = null; renderPane(); return mark();
       }
@@ -823,8 +851,8 @@
         var ok = pane.querySelector('[data-created-ok]'); if (ok) ok.click();
         return;
       }
-      if (e.key === 'Escape' && (meterOpen != null || exampleOpen || unitOpen || confirmDelete || asking || pickOpen != null)) {
-        e.stopPropagation(); meterOpen = null; exampleOpen = false; unitOpen = false; confirmDelete = false; asking = null; pickOpen = null; renderPane(); return;
+      if (e.key === 'Escape' && (meterOpen != null || exampleOpen || unitOpen || confirmDelete || dropAsk != null || asking || pickOpen != null)) {
+        e.stopPropagation(); meterOpen = null; exampleOpen = false; unitOpen = false; confirmDelete = false; dropAsk = null; asking = null; pickOpen = null; renderPane(); return;
       }
       if (e.key === 'Enter' && e.target.dataset && e.target.dataset.f) {
         // Enter — the next field (as everywhere), the last one just leaves.

@@ -16,6 +16,9 @@
   'use strict';
 
   var SAMPLES = { '₽': 6400, 'кВт·ч': 270, 'м³': 5, 'Гкал': 0.42, 'м²': 60, 'чел.': 3 };
+  // A meter without readings (2026-11-25): each meter its own sample usage, by its place among the object's meters —
+  // «5 м³ + 5 м³» everywhere looked fake.
+  var METER_SAMPLES = { 'м³': [3, 2, 5, 4], 'кВт·ч': [270, 180, 320, 240], 'Гкал': [0.42, 0.31, 0.55, 0.38] };
   var SHORT = { electricity: 'Электричество', water: 'Вода хол.', hot_water: 'Вода гор.' };
   var KEYS = { '+': '+', '-': '−', '*': '×', '/': '÷', '(': '(', ')': ')' };
   function svg(d, filled) {
@@ -98,6 +101,7 @@
     var inline = !!opts.inline;
     var ctx = withState(opts.ctx, opts.state);
     var TENANTS = ctx.tenants, METERS = ctx.meters, KINDS = ctx.kinds, SYM = ctx.symbol || '₽';
+    var LIBRARY = ctx.library || [];  // the numbers of the account's other services («Или готовое»)
     var uid = 0, nid = 0;
 
     var values = ctx.numbers.map(function (n) {
@@ -153,7 +157,12 @@
       pop.querySelector('[data-ok]').onclick = closePop;
       pop.querySelector('[data-ok]').focus();
     }
-    function usageOf(meterId) { var m = meterById(meterId); return m && m.last !== null && m.last !== undefined ? m.last : sampleFor(kindOf(m ? m.key : '').unit); }
+    function usageOf(meterId) {
+      var m = meterById(meterId);
+      if (m && m.last !== null && m.last !== undefined) return m.last;
+      var unit = kindOf(m ? m.key : '').unit, list = METER_SAMPLES[unit];
+      return list && m ? list[METERS.indexOf(m) % list.length] : sampleFor(unit);
+    }
     function usageIsSample(meterId) { var m = meterById(meterId); return !m || m.last === null || m.last === undefined; }
     function payBox(tenantId) { return opts.canPay(Number(tenantId)); }
     function isOff(tenantId) { return payBox(tenantId) ? opts.isOff(Number(tenantId)) : false; }
@@ -202,18 +211,16 @@
       '</div></div></div>';
     if (inline) {
       // the grey panel (as with every way of charging) — a word and the examples, no button; the palette; the line;
-      // in the line's corner: × clears (a new formula) or ⌃ folds the editor (a saved one, opts.collapse)
+      // in the line's corner × clears it. The palette is always open (2026-11-25: folding it — no).
       overlay.className = 'fx-inline fx-preview';
       overlay.setAttribute('data-fx-inline', '');
-      overlay.innerHTML = (opts.collapse ? '' :  // a saved formula: no examples (they would replace it)
-        '<div class="sv-cp fx-gpanel fx-examples">' + svg('<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>') +
+      // The grey panel with the examples — a saved formula too (2026-11-25, the user: «верни»).
+      overlay.innerHTML = '<div class="sv-cp fx-gpanel fx-examples">' + svg('<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>') +
         '<span class="fx-lead">Соберите из блоков ниже или начните с примера:</span>' +
         '<button type="button" data-example="sewage">Водоотведение</button>' +
-        '<button type="button" data-example="one">Только арендатору 1</button></div>') + PALETTE +
+        '<button type="button" data-example="one">Только арендатору 1</button></div>' + PALETTE +
         '<div class="fx-strip-wrap"><div class="fx-strip" data-strip></div>' +
-        (opts.collapse ? '<button class="fx-clear fx-fold" type="button" data-fold title="Свернуть" aria-label="Свернуть">' +
-          svg('<path d="M6 15l6-6 6 6"/>') + '</button>'
-          : '<button class="fx-clear" type="button" data-clear title="Очистить формулу" aria-label="Очистить формулу">×</button>') + '</div>' +
+        '<button class="fx-clear" type="button" data-clear title="Очистить формулу" aria-label="Очистить формулу">×</button></div>' +
         '<p class="fx-trash-hint">Нажмите на блок или перетащите его в строку · вытащите из строки — уберётся</p>';
     } else {
     overlay.className = 'fx-overlay';
@@ -812,8 +819,6 @@
     });
     var clearBtn = overlay.querySelector('[data-clear]');
     if (clearBtn) clearBtn.addEventListener('click', function () { closePop(); blocks = []; render(); });
-    var foldBtn = overlay.querySelector('[data-fold]');
-    if (foldBtn) foldBtn.addEventListener('click', function () { closePop(); opts.collapse(); });
 
     // ---------- Examples: a ready formula from this object's own meters; its numbers go to the palette ----------
     // A number of an example is taken from the palette when it is already there (by its name) — pressing twice adds nothing.
@@ -935,13 +940,40 @@
     // A block of the palette (window v2): the ready numbers of this kind on top — a click puts one in the formula,
     // × deletes it; below — a new one, set up and put in the formula.
     function readyRows(type) {
-      return values.filter(function (v) { return v.type === type; }).map(function (v) {
+      var own = values.filter(function (v) { return v.type === type; }).map(function (v) {
         var b = { type: 'val', vid: v.id };
         return '<div class="fx-ready-row"><button type="button" class="fx-ready ' + kindClass(b) + '" data-use="' + esc(v.id) + '">' +
           '<span class="fx-ico">' + iconOf(b) + '</span><span class="fx-ready-nm"></span><span class="fx-ready-v">' +
           esc(chipValue(b).replace(' за ', '/') || (type === 'const' ? 'коэффициент' : 'каждый месяц')) + '</span></button>' +
           '<button type="button" class="fx-ready-del" data-drop="' + esc(v.id) + '" title="Удалить число" aria-label="Удалить «' + esc(v.label) + '»">×</button></div>';
-      }).join('');
+      });
+      // The numbers of the account's other services (2026-11-25, every object): a click copies one into this service.
+      // No × — they belong to those services.
+      // with rows of this service above (they have ×) — an empty place for × too: all the rows of one width
+      var gap = own.length ? '<span class="fx-ready-gap"></span>' : '';
+      var lib = libraryOf(type).map(function (n) {
+        var v = libValue(n), units = unitLabel(v);
+        var text = (type === 'const' ? fmt(v.value) + (units ? ' ' + units : '') : units).replace(' за ', '/') ||
+          (type === 'const' ? 'коэффициент' : 'каждый месяц');
+        return '<div class="fx-ready-row"><button type="button" class="fx-ready k-' + type + '" data-lib="' + LIBRARY.indexOf(n) + '">' +
+          '<span class="fx-ico">' + ICONS[type] + '</span><span class="fx-ready-nm"></span><span class="fx-ready-v">' +
+          esc(text) + '</span></button>' + gap + '</div>';
+      });
+      return own.concat(lib).join('');
+    }
+    function libValue(n) {
+      var unit = cleanUnit(n.unit);
+      return { label: n.label, unit: unit, per: n.monthly ? '' : cleanUnit(n.per), value: n.value || 0,
+        sample: n.monthly ? sampleFor(unit) : 0 };
+    }
+    // The library without what this service already has (the same name, unit and value).
+    function libraryOf(type) {
+      return LIBRARY.filter(function (n) {
+        return (n.monthly ? 'month' : 'const') === type && !values.some(function (v) {
+          return v.type === type && v.label.trim().toLowerCase() === n.label.trim().toLowerCase() &&
+            v.unit === cleanUnit(n.unit) && v.per === cleanUnit(n.per) && (type === 'month' || Number(v.value) === Number(n.value));
+        });
+      });
     }
     function openDraft(type, anchor, at) {
       closePop();
@@ -959,6 +991,11 @@
       pop.querySelectorAll('[data-use]').forEach(function (btn) {
         btn.querySelector('.fx-ready-nm').textContent = valueById(btn.dataset.use).label;
         btn.onclick = function () { closePop(); insertBlock({ id: ++uid, type: 'val', vid: btn.dataset.use }, at); };
+      });
+      pop.querySelectorAll('[data-lib]').forEach(function (btn) {
+        var n = LIBRARY[Number(btn.dataset.lib)];
+        btn.querySelector('.fx-ready-nm').textContent = n.label;
+        btn.onclick = function () { var v = newValue(type, libValue(n)); closePop(); insertBlock({ id: ++uid, type: 'val', vid: v.id }, at); };
       });
       pop.querySelectorAll('[data-drop]').forEach(function (btn) {
         btn.onclick = function () {
@@ -1221,7 +1258,7 @@
       fx.preview(chipsEl, checkEl);
     },
     // The editor right in the service window's body (2026-11-24): opts.host — where, opts.checkEl — «Как посчитается»,
-    // opts.publish — every change, opts.collapse — ⌃ (a saved formula).
+    // opts.publish — every change.
     inline: function (opts) {
       return setup(Object.assign({}, opts, { inline: true }));
     },

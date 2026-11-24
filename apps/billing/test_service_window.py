@@ -239,3 +239,48 @@ class ServiceWindowViewTests(TestCase):
         receipt = Receipt.objects.get(property=self.prop)
         self.assertEqual((receipt.rate_unit, receipt.volume), ('кг', Decimal('10')))
         self.assertEqual(services.rate_total(receipt, OCT)[0], Decimal('133.70'))
+
+
+class OwnerNumbersTests(TestCase):
+    """«Или готовое» (2026-11-25): the formula numbers of every object of the account, not only this service's."""
+
+    def test_numbers_of_all_objects(self):
+        from .models import FormulaNumber
+        user = User.objects.create_user(username='n@example.ru', email='n@example.ru', password='secret1')
+        other = User.objects.create_user(username='o@example.ru', email='o@example.ru', password='secret1')
+        first = Property.objects.create(owner=user, name='Первый')
+        second = Property.objects.create(owner=user, name='Второй')
+        stranger = Property.objects.create(owner=other, name='Чужой')
+        mine = Receipt.objects.create(property=first, kind=Receipt.Kind.CUSTOM, name='Водоотведение')
+        there = Receipt.objects.create(property=second, kind=Receipt.Kind.CUSTOM, name='Водоотведение')
+        theirs = Receipt.objects.create(property=stranger, kind=Receipt.Kind.CUSTOM, name='Тепло')
+        FormulaNumber.objects.create(receipt=mine, label='Своё', unit='₽', per='м³', value=Decimal('1'))
+        FormulaNumber.objects.create(receipt=there, label='Тариф водоотведения', unit='₽', per='м³', value=Decimal('45'))
+        FormulaNumber.objects.create(receipt=there, label='Тариф водоотведения', unit='₽', per='м³', value=Decimal('45'))
+        FormulaNumber.objects.create(receipt=there, label='Сумма УК', monthly=True, unit='₽')
+        FormulaNumber.objects.create(receipt=theirs, label='Чужое', unit='₽', per='Гкал', value=Decimal('9'))
+
+        library = services.owner_numbers(mine)
+        self.assertEqual([(n['label'], n['monthly'], n['value']) for n in library],
+                         [('Сумма УК', True, None), ('Тариф водоотведения', False, 45.0)])
+        # a new service (not saved yet) sees its object's own numbers too
+        self.assertIn('Своё', [n['label'] for n in services.owner_numbers(Receipt(property=first))])
+
+
+class DeleteReadMetersTests(TestCase):
+    """2026-11-25: «Вода горячая» deleted — its meters only a formula reads; their readings are typed nowhere."""
+
+    setUp, meter, service = MeterTariffTests.setUp, MeterTariffTests.meter, MeterTariffTests.service
+
+    def test_meter_only_a_formula_reads_is_common(self):
+        hot = self.meter(tenant=self.viktor)
+        water = self.service(hot)
+        formula = Receipt.objects.create(property=self.prop, kind=Receipt.Kind.CUSTOM, name='Экология',
+                                         amount_mode=Receipt.AmountMode.FORMULA,
+                                         formula=[{'t': 'meter', 'key': 'water', 'meters': [hot.pk], 'join': 'each'}])
+        formula.meters.add(hot)
+        self.assertEqual(services.meter_readers(self.prop), {hot.pk: ['Экология']})
+        services.delete_receipt(water)
+        hot.refresh_from_db()
+        self.assertIsNone(hot.tenant_id)
+        self.assertFalse(hot.vacant)
