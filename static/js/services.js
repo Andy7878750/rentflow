@@ -240,23 +240,19 @@
         toggleOwner: function () { s.owner_takes = s.owner_takes === false; mark(); },
       };
     }
-    function openFormula() {
-      var s = current, last = null, first = null;
-      window.rentflowFormula.open(Object.assign(fxOpts(s), {
-        host: box.closest('dialog') || document.body,
-        // the first publish is the formula as it opened: «Готово» without changes changes nothing
-        publish: function (data, words, each) {
-          last = { data: data, words: words, each: each, json: JSON.stringify(data) };
-          if (first == null) first = last.json;
-        },
-        close: function (keep) {
-          if (keep && last && last.json !== first) {
-            s.fx_data = last.data; s.formula = last.words; s.fx_each = last.each && T.length > 0;
-            mark();
-          }
-          if (current === s) renderPane();
-        }
-      }));
+    // «Своя формула» right in the body (2026-11-24, вариант А of docs/mockups/2026-11-24-formula-in-body.html): a new formula —
+    // the editor is open; a saved one — the formula as blocks with ✎, which opens the editor (⌃ in its corner folds it).
+    // Every change of the editor comes here at once (publish) and is saved by «Сохранить» — no «Готово».
+    var fxLive = null;
+    function fxEditing(s) { return !s.id || !s.fx || !!s._fxEdit; }
+    function fxPublish(s) {
+      return function (data, words, each) {
+        var json = JSON.stringify(data);
+        if (s._fxJson === undefined) { s._fxJson = json; return; }  // the formula as it opened
+        if (json === s._fxJson) return;
+        s._fxJson = json; s.fx_data = data; s.formula = words; s.fx_each = each && T.length > 0;
+        mark();
+      };
     }
 
     // ---------- «По тарифу»: Тариф ₽ за [ед.] × [объём] = итог ----------
@@ -420,7 +416,10 @@
         return parts.map(function (p, j) {
           return '<div class="sv-pr">' + (mixed && j === 0 ? meterIcon(m.kind) : '<span></span>') + '<span class="sv-pr-nm">' +
             (j === 0 ? '<span class="fade">№ ' + esc(m.serial || '—') + (p ? ' <em>' + p + '</em>' : '') + '</span><small class="fade">' + esc(who) + '</small>' : '<em>' + p + '</em>') +
-            '</span><span class="sv-pr-v">…</span><span class="sv-pr-in"></span><span class="sv-pr-use"><span>— ' + esc(m.unit) + '</span></span></div>';
+            '</span><span class="sv-pr-v">…</span>' +
+            // «Расход» (2026-11-24): as on the object page — the month's usage is typed, a green «+» in the field
+            (m.input === 'usage' ? '<span class="sv-pr-in is-add" data-zone="+' + (p ? ' ' + p.charAt(0) : '') + '"></span>' : '<span class="sv-pr-in"></span>') +
+            '<span class="sv-pr-use"><span>— ' + esc(m.unit) + '</span></span></div>';
         }).join('');
       }).join('');
       return (card || '') + '<div class="sv-pv-cap"><span class="sv-l">Показания счётчиков</span><span>Было</span><span>Стало</span><span>Расход</span></div>' +
@@ -465,16 +464,15 @@
       // «Своя формула» (2026-11-22): the formula as the same blocks as in its window (a click opens it), and under it
       // the same «Как посчитается» — its switches work here too.
       if (s.mode === 'formula') {
-        b = '<div class="sv-fxv fx-preview"><div class="fx-strip is-static" data-fx-chips data-fx-open title="Изменить формулу"></div>' +
-          // 2026-11-23: a pencil in the corner (like × in the formula window), not a big button; no formula yet — «Собрать формулу».
-          (s.formula ? '<button type="button" class="fx-x sv-fx-pen" data-fx-open title="Изменить формулу" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></button>'
-            : '<button type="button" class="btn btn-primary btn-auto btn-sm" data-fx-open>Собрать формулу</button>') + '</div>';
+        b = fxEditing(s) ? '<div data-fx-host></div>'
+          : '<div class="sv-fxv fx-preview"><div class="fx-strip is-static" data-fx-chips data-fx-edit title="Изменить формулу"></div>' +
+            '<button type="button" class="fx-x sv-fx-pen" data-fx-edit title="Изменить формулу" aria-label="Изменить формулу"><svg class="icon"><use href="#i-edit"/></svg></button></div>';
       }
       var warn = s.mode === 'area' ? '<span class="sv-badge-warn" title="Объём здесь постоянный. Если есть счётчик — выберите «По счётчикам»: расход возьмётся из показаний.">' +
         svg(CP_ICON.warn) + 'Не для счётчиков</span>' : '';
       h += block('Как начисляется · ' + modeName(s.mode) + warn , b);
       if (s.mode === 'formula') {
-        if (s.formula) {
+        if (s.formula || fxEditing(s)) {
           h += '<div class="sv-sec fx-preview" data-fx-check><h3>Как посчитается <span class="fx-badge" data-check-badge></span> ' +
             '<span class="fx-badge" data-state-badge></span></h3><div class="fx-check" data-check></div></div>';
         }
@@ -531,9 +529,16 @@
           '<div class="sv-mw-foot"><button type="button" class="btn btn-primary btn-auto" data-created-ok>Понятно</button></div></div></div>';
       }
       if (meterOpen != null) h += meterWindow();
+      if (fxLive) { fxLive.destroy(); fxLive = null; }
       pane.innerHTML = h;
       if (s.mode === 'formula' && window.rentflowFormula) {
-        window.rentflowFormula.preview(fxOpts(s), pane.querySelector('[data-fx-chips]'), pane.querySelector('[data-fx-check]'));
+        var fxHost = pane.querySelector('[data-fx-host]');
+        if (fxHost) {
+          fxLive = window.rentflowFormula.inline(Object.assign(fxOpts(s), {
+            host: fxHost, checkEl: pane.querySelector('[data-fx-check]'), publish: fxPublish(s),
+            collapse: s.id && s.fx ? function () { s._fxEdit = false; renderPane(); } : null,
+          }));
+        } else window.rentflowFormula.preview(fxOpts(s), pane.querySelector('[data-fx-chips]'), pane.querySelector('[data-fx-check]'));
       }
       // «Кто платит» near the bottom bar: the menu opens upwards
       var menu = pane.querySelector('.sv-payer-menu'), foot = pane.querySelector('.sv-foot');
@@ -637,6 +642,7 @@
           sent.kind = saved.kind; sent.delete_url = saved.delete_url;
           // the formula as the server keeps it now (numbers with their ids, who pays by each meter)
           sent.fx = saved.fx; sent.formula = saved.formula; sent.fx_each = saved.fx_each; sent.split = saved.split; delete sent.fx_data;
+          delete sent._fxJson; sent._fxEdit = false;
         }
         // A new service: a small window says it is added; after «Понятно» — what was next, and its row blinks on the left.
         if (wasNew) {
@@ -705,6 +711,7 @@
         return;
       }
       if (!current) return;
+      if (e.target.closest('[data-fx-inline]')) return;  // the formula editor handles its own clicks
       // «Удалить услугу» — asked in a small window right here; after it — a new service «По квитанции»
       if (confirmDelete) {
         if (e.target.closest('[data-del-yes]')) { removeCurrent(); return; }
@@ -732,7 +739,7 @@
         return;
       }
       if (e.target.closest('[data-example]')) { exampleOpen = true; return renderPane(); }
-      if (e.target.closest('[data-fx-open]')) { openFormula(); return; }
+      if (e.target.closest('[data-fx-edit]')) { current._fxEdit = true; return renderPane(); }
       if (e.target.closest('[data-edit]')) { editing = !editing; renderPane(); if (editing) pane.querySelector('[data-f="name"]').focus(); return; }
       if (e.target.closest('[data-unit-open]')) { unitOpen = !unitOpen; return renderPane(); }
       if ((t = e.target.closest('[data-unit-del]'))) {

@@ -282,3 +282,17 @@
   height: 34px; padding: 0; cursor: pointer; }
 @keyframes fx-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(20, 143, 119, .35); } 50% { box-shadow: 0 0 0 5px rgba(20, 143, 119, 0); } }
 @media (prefers-reduced-motion: reduce) { .fx-ghost { animation: none; } }
+
+/* The editor right in the service window's body (2026-11-24, вариант А): the grey panel with the examples, the palette,
+   the line — one column with the service's blocks, 14px between them */
+.fx-inline { display: flex; flex-direction: column; gap: 14px; }
+.fx-inline .fx-gpanel { display: flex; align-items: center; gap: 8px; height: 62px; margin: 0; padding: 0 16px; flex-wrap: nowrap; }
+.fx-inline .fx-gpanel > svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--color-accent); stroke-width: 1.8; }
+.fx-inline .fx-lead { margin-right: 4px; color: var(--color-text); }
+.fx-inline .fx-examples button { height: 30px; padding: 0 12px; white-space: nowrap; }
+.fx-inline .fx-trash-hint { margin: -6px 0 0; }
+.fx-inline .fx-strip { min-height: 64px; }
+.fx-fold { display: flex; align-items: center; justify-content: center; color: var(--color-accent); }
+.fx-fold svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+.fx-fold:hover { background: var(--color-accent-soft); color: var(--color-accent); }
+.sv-sec[data-fx-check][hidden] { display: none; }

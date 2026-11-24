@@ -2157,6 +2157,10 @@ input.masked {
 
 @container (min-width: 700px) {
   .meter-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .meter-tiles .meter-add-cell:nth-child(2) { border-top: 0; }
+  .meter-tiles .meter-add-cell:nth-child(odd) { border-right: 1px dashed #c9cfd5; }
+  .meter-tiles .meter-add-fill { display: block; }
+  .meter-tiles .meter-add-cell:first-child + .meter-add-fill { border-top: 0; }
   .info-row.meter-tile:nth-child(2) { border-top: 0; }
   .info-row.meter-tile:nth-child(odd) { border-right: 1px solid var(--color-border); }
 }
@@ -2288,24 +2292,34 @@ input.masked {
   background: var(--color-danger-soft);
 }
 
-/* «+ Добавить счётчик» under the frame, on the right — as in the service window (2026-11-24) */
-.meter-add-row {
-  margin-top: 8px;
-  text-align: right;
-}
-
-.meter-add-link {
-  padding: 0;
+/* «+ Добавить счётчик» — the last cell of the frame, 52px like a meter row (2026-11-24) */
+.meter-add-cell {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 12px 0 40px;
   border: 0;
+  border-top: 1px dashed #c9cfd5;
   background: none;
   color: var(--color-accent);
   font: inherit;
   font-size: 13px;
+  text-align: left;
   cursor: pointer;
 }
 
-.meter-add-link:hover {
-  text-decoration: underline;
+.meter-add-cell:hover,
+.meter-add-cell:focus-visible {
+  background: var(--color-accent-soft);
+  outline: none;
+}
+
+.meter-add-cell:first-child { border-top: 0; }
+
+/* the empty half next to «+ Добавить счётчик» — shown only in two columns */
+.meter-add-fill {
+  display: none;
+  border-top: 1px dashed #c9cfd5;
 }
 
 

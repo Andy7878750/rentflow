@@ -1164,16 +1164,14 @@
         var all = items(kind);
         all.forEach(function (item, i) { list.appendChild(infoRow(item, i + 1, kind)); });
         if (kind === 'meter') {
-          // «+ Добавить счётчик» — a link under the frame on the right, as in the service window (2026-11-24)
-          list.hidden = !all.length;
-          if (!block.querySelector('.meter-add-row')) {
-            var addRow = el('div', 'meter-add-row');
-            var addLink = el('button', 'meter-add-link', '+ Добавить счётчик');
-            addLink.type = 'button';
-            addLink.dataset.itemAdd = '';
-            addRow.appendChild(addLink);
-            list.after(addRow);
-          }
+          // «+ Добавить счётчик» — the last cell of the frame (2026-11-24): with an odd number of meters it fills the
+          // empty half of the last row
+          var addCell = el('button', 'meter-add-cell', '+ Добавить счётчик');
+          addCell.type = 'button';
+          addCell.dataset.itemAdd = '';
+          list.appendChild(addCell);
+          // the add cell starts a new row (an even number of meters): the empty half next to it — a dashed cell too
+          if (all.length % 2 === 0) list.appendChild(el('span', 'meter-add-fill'));
         } else if (!all.length) {
           list.appendChild(el('p', 'info-empty', kind === 'meter' ? 'Счётчиков пока нет' : 'Арендаторов пока нет'));
         }
@@ -1714,8 +1712,7 @@
     var start = '';
     setTimeout(function () { start = formState(form); }, 0);  // once the rows of meters and tenants are drawn
     // The form stays one long sheet, as before (2026-11-22); the menu rolls a part up as far as the sheet goes, and while
-    // scrolling the part you are in is lit in the menu. No empty room under the last part (2026-11-23): the sheet scrolls
-    // only when it is longer than the window; scrolled to the end — the last part is lit.
+    // scrolling the part you are in is lit in the menu. Scrolled to the end by hand — the last part is lit.
     var pane = form.querySelector('.svcwin-pane');
     var top = form.querySelector('.sv-top');
     var parts = Array.prototype.slice.call(form.querySelectorAll('[data-part]'));
@@ -1725,28 +1722,48 @@
       form.querySelectorAll('[data-opart]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.opart === name); });
     }
     function partTop(sec) { return sec.offsetTop - headH() - 20; }
+    // A click in the menu puts that part at the top ALWAYS (2026-11-24): when the sheet is too short, an empty room is added
+    // under the last part — just enough; scrolling back up the room shrinks again, so there is never more than is needed.
+    var room = document.createElement('div');
+    room.className = 'objwin-room';
+    room.setAttribute('aria-hidden', 'true');
+    if (parts.length) parts[parts.length - 1].after(room);
+    function fitRoom() {
+      var bottom = pane.scrollHeight - room.offsetHeight;  // where the sheet ends without the room
+      room.style.height = Math.max(0, Math.ceil(pane.scrollTop + pane.clientHeight - bottom)) + 'px';
+    }
     form.addEventListener('click', function (event) {
       var part = event.target.closest('[data-opart]');
       if (!part || !pane) return;
       var sec = form.querySelector('[data-part="' + part.dataset.opart + '"]');
       light(part.dataset.opart);
+      var to = Math.max(0, partTop(sec));
+      var bottom = pane.scrollHeight - room.offsetHeight;
+      room.style.height = Math.max(room.offsetHeight, Math.ceil(to + pane.clientHeight - bottom)) + 'px';
       rolling = true;
-      pane.scrollTo({ top: Math.max(0, partTop(sec)), behavior: 'smooth' });
+      pane.scrollTo({ top: to, behavior: 'smooth' });
+      // the room is fitted again only once the roll has ended — never in the middle of it (it would cut the roll short)
       clearTimeout(form.rollTimer);
-      form.rollTimer = setTimeout(function () { rolling = false; }, 600);
+      form.rollTimer = setTimeout(function () { rolling = false; }, 1500);
     });
+    if (pane) pane.addEventListener('scrollend', function () { if (rolling) { clearTimeout(form.rollTimer); rolling = false; } fitRoom(); });
     if (pane) {
       pane.addEventListener('scroll', function () {
         if (rolling) return;
+        fitRoom();
         var at = parts[0];
         parts.forEach(function (sec) { if (partTop(sec) <= pane.scrollTop + 8) at = sec; });
-        if (pane.scrollTop > 0 && pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 2) at = parts[parts.length - 1];
+        if (pane.scrollTop > 0 && !room.offsetHeight && pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 2) at = parts[parts.length - 1];
         light(at.dataset.part);
       });
       // The part with an error: rolled up to it once drawn.
       var open = form.querySelector('[data-opart].is-on');
       if (open && open.dataset.opart !== 'object') {
-        setTimeout(function () { pane.scrollTop = Math.max(0, partTop(form.querySelector('[data-part="' + open.dataset.opart + '"]'))); }, 0);
+        setTimeout(function () {
+          var to = Math.max(0, partTop(form.querySelector('[data-part="' + open.dataset.opart + '"]')));
+          room.style.height = Math.max(0, Math.ceil(to + pane.clientHeight - (pane.scrollHeight - room.offsetHeight))) + 'px';
+          pane.scrollTop = to;
+        }, 0);
       }
     }
     // The name in the head follows the field.

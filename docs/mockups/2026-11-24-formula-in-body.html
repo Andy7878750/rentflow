@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Формула в теле услуги</title>
+<style>
+  :root { --p: #34495e; --acc: #148f77; --acc-t: #117965; --acc-soft: #e6f4f1; --bd: #e1e4e8; --bg: #f5f6f7; --mut: #6b7680; --tx: #2c3338;
+          --cw: #2e86c1; --hw: #c0392b; --honey: #8a6100; --grey: #f3f4f6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: #8b9096; font: 14px -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tx); }
+  button { font: inherit; color: inherit; }
+  .tabs { display: flex; gap: 8px; max-width: 1060px; margin: 0 auto 12px; }
+  .tabs button { height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,.6); cursor: pointer; }
+  .tabs button.on { background: #fff; font-weight: 600; color: var(--p); }
+  .tabs span { align-self: center; margin-left: 8px; color: #fff; font-size: 13px; }
+
+  .win { display: flex; flex-direction: column; max-width: 1060px; height: 760px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; }
+  .win-head { display: flex; align-items: center; height: 56px; padding: 0 24px; border-bottom: 1px solid var(--bd); font-size: 18px; }
+  .win-head b { color: var(--p); } .win-head span { color: var(--mut); margin-left: 6px; }
+  .win-head .x { margin-left: auto; color: var(--mut); font-size: 20px; }
+  .win-body { flex: 1; display: grid; grid-template-columns: 258px minmax(0, 1fr); min-height: 0; }
+  nav { padding: 20px 16px; border-right: 1px solid var(--bd); display: flex; flex-direction: column; }
+  .nav-cap { margin: 0 0 8px 6px; font-size: 12px; color: var(--mut); }
+  .nav-i { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px; font-size: 14px; }
+  .nav-i svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; color: var(--mut); }
+  .nav-i.on { color: var(--acc); font-weight: 600; } .nav-i.on svg { color: var(--acc); }
+  .nav-i .ck { margin-left: auto; color: var(--acc); }
+  .nav-low { margin-top: auto; border-top: 1px solid var(--bd); padding-top: 14px; }
+
+  .pane { display: flex; flex-direction: column; min-height: 0; }
+  .p-head { display: grid; grid-template-columns: 180px 1fr 1fr; gap: 10px; align-items: center; padding: 10px 32px; border-bottom: 1px solid var(--bd); }
+  .p-head b { display: flex; align-items: center; gap: 8px; color: var(--p); font-size: 15px; }
+  .fld { height: 38px; padding: 0 12px; border: 1px solid var(--bd); border-radius: 8px; display: flex; align-items: center; color: var(--mut); }
+  .fld.v { color: var(--tx); }
+  .p-body { flex: 1; overflow-y: auto; padding: 20px 32px 24px; }
+  .p-foot { display: flex; align-items: center; gap: 10px; height: 68px; padding: 0 32px; border-top: 1px solid var(--bd); }
+  .p-foot .ex { color: var(--acc-t); font-size: 13px; margin-right: auto; }
+  .btn { height: 38px; padding: 0 18px; border-radius: 8px; border: 1px solid var(--bd); background: #fff; font-weight: 600; }
+  .btn.main { border: 2px solid var(--acc); color: var(--acc); }
+
+  .cap { display: flex; align-items: center; gap: 8px; height: 20px; margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mut); }
+  .cap .badge { padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  .b-info { background: #e8f2fa; color: #2e6f9e; } .b-ok { background: var(--acc-soft); color: var(--acc-t); }
+  .cap .r { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 400; }
+  .sec + .sec { margin-top: 24px; }
+
+  /* the palette — 4 equal columns */
+  .pal { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .pal-cap { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--p); margin-bottom: 6px; }
+  .pb { display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 12px; border: 1px dashed #c9cfd5; border-radius: 10px; }
+  .pb svg { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .pb .t2 { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+  .pb .t2 b { font-weight: 600; font-size: 13px; } .pb .t2 small { font-size: 11px; color: var(--mut); }
+  .signs { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 6px; height: 64px; }
+  .sg { display: flex; align-items: center; justify-content: center; border-radius: 6px; background: var(--acc-soft); color: var(--acc); font-weight: 700; border: 1px solid #cfe9e2; }
+
+  /* the formula line */
+  .line { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 60px; padding: 8px 40px 8px 8px; border-radius: 12px; }
+  .line.edit { margin-top: 12px; border: 1px dashed #c9cfd5; }
+  .line.view { background: var(--grey); }
+  .blk { display: flex; align-items: center; gap: 8px; width: 186px; height: 44px; padding: 0 10px; border: 1px solid var(--bd); border-radius: 8px; background: #fff; }
+  .blk svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .blk .t2 { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .blk .t2 b { font-weight: 500; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blk .t2 small { font-size: 11px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .op { display: flex; align-items: center; justify-content: center; width: 24px; height: 44px; border-radius: 6px; background: var(--acc-soft); color: var(--acc); font-weight: 700; border: 1px solid #cfe9e2; }
+  .corner { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 0; border-radius: 13px; background: #fff; color: var(--acc); cursor: pointer; }
+  .line.edit .corner { background: var(--grey); color: var(--mut); }
+  .corner svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .hint { margin: 6px 0 0; font-size: 12px; color: var(--mut); }
+  /* the grey panel (as with every way of charging, 62px): new — a word and the examples, no button (2026-11-24) */
+  .gpanel { display: flex; align-items: center; gap: 8px; height: 62px; margin-bottom: 14px; padding: 0 16px; border-radius: 12px; background: var(--grey); font-size: 13px; color: var(--mut); }
+  .gpanel svg { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--acc); stroke-width: 1.8; }
+  .gpanel .lead { color: var(--tx); margin-right: 4px; }
+  .chip { height: 30px; padding: 0 12px; border: 1px solid var(--bd); border-radius: 15px; display: inline-flex; align-items: center; background: #fff; color: var(--tx); font-size: 13px; cursor: pointer; }
+  .chip:hover { border-color: var(--acc); color: var(--acc-t); }
+
+  /* «Как посчитается» */
+  .gp { border-radius: 12px; background: var(--grey); padding: 4px 16px; }
+  .gr { display: grid; grid-template-columns: 22px 150px minmax(0, 1fr) 90px 34px; align-items: center; gap: 10px; height: 40px; }
+  .gr + .gr { border-top: 1px solid #e4e7ea; }
+  .num { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 10px; background: #fff; font-size: 11px; color: var(--mut); }
+  .gr .f { font-size: 12px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gr .s { text-align: right; font-weight: 600; }
+  .sw { width: 30px; height: 18px; border-radius: 9px; background: var(--acc); position: relative; }
+  .sw::after { content: ''; position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 7px; background: #fff; }
+  .gr.tot .w { font-weight: 600; }
+  .note { margin: 0 0 8px; font-size: 12px; color: var(--mut); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tabs">
+  <button type="button" data-tab="new" class="on">А · новая услуга</button>
+  <button type="button" data-tab="saved">Б · сохранённая услуга</button>
+  <span>Б: нажмите ✎ в углу формулы — откроется палитра</span>
+</div>
+<div class="win">
+  <div class="win-head"><b>Услуги</b><span>· Просвещения 15</span><span class="x">×</span></div>
+  <div class="win-body">
+    <nav>
+      <p class="nav-cap">Начисление</p>
+      <div class="nav-i"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6"/></svg>По квитанции</div>
+      <div class="nav-i"><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></svg>Фиксированная сумма</div>
+      <div class="nav-i"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 4l16 16"/></svg>По тарифу</div>
+      <div class="nav-i"><svg viewBox="0 0 24 24"><path d="M12 14l3.5-3.5M3.3 17a9.5 9.5 0 1 1 17.4 0"/></svg>По счётчикам</div>
+      <div class="nav-i"><svg viewBox="0 0 24 24"><path d="M12 3v8M12 11l-7 10M12 11l7 10"/></svg>По расходу</div>
+      <div class="nav-i on"><svg viewBox="0 0 24 24"><path d="M10 4c-2 0-3 1-3 3v13M4 11h7M14 10l6 8M20 10l-6 8"/></svg>Своя формула<span class="ck">✓</span></div>
+      <div class="nav-low">
+        <p class="nav-cap">Услуги объекта · 5</p>
+        <div class="nav-i">Коммунальные услуги</div><div class="nav-i">Вода горячая</div><div class="nav-i">Электричество</div><div class="nav-i">Вода холодная</div>
+        <div class="nav-i" data-saved-nav>Водоотведение</div>
+      </div>
+    </nav>
+    <div class="pane">
+      <div class="p-head"><b><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4c-2 0-3 1-3 3v13M4 11h7M14 10l6 8M20 10l-6 8"/></svg><span data-title>Новая услуга</span></b>
+        <span class="fld" data-name>Название в счёте *</span><span class="fld" data-prov>Поставщик *</span></div>
+      <div class="p-body">
+        <div class="sec">
+          <p class="cap">Как начисляется · Своя формула</p>
+          <div class="gpanel" data-gpanel><svg viewBox="0 0 24 24"><path d="M10 4c-2 0-3 1-3 3v13M4 11h7M14 10l6 8M20 10l-6 8"/></svg>
+            <span class="lead">Соберите из блоков ниже или начните с примера:</span><span class="chip">Водоотведение</span><span class="chip">Только арендатору 1</span></div>
+          <div data-palette>
+            <div class="pal">
+              <div><p class="pal-cap">Каждый месяц</p><div class="pb"><svg viewBox="0 0 24 24" style="color:var(--honey)"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="t2"><b>Число за месяц</b><small>из квитанции</small></span></div></div>
+              <div><p class="pal-cap">Тариф · норматив</p><div class="pb"><svg viewBox="0 0 24 24" style="color:var(--acc)"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg><span class="t2"><b>Постоянное число</b><small>тариф или коэф.</small></span></div></div>
+              <div><p class="pal-cap">Расход счётчиков</p><div class="pb"><svg viewBox="0 0 24 24" style="color:var(--cw)"><path d="M12 14l3.5-3.5M3.3 17a9.5 9.5 0 1 1 17.4 0"/></svg><span class="t2"><b>Выбрать счётчики</b><small>расход за месяц</small></span></div></div>
+              <div><p class="pal-cap">Знаки</p><div class="signs"><span class="sg">+</span><span class="sg">−</span><span class="sg">×</span><span class="sg">÷</span><span class="sg">(</span><span class="sg">)</span></div></div>
+            </div>
+          </div>
+          <div class="line edit" data-line>
+            <span class="op">(</span>
+            <span class="blk"><svg viewBox="0 0 24 24" fill="var(--cw)"><path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/></svg><span class="t2"><b>Вода хол. № 358479-65</b><small>Салон · м³</small></span></span>
+            <span class="op">+</span>
+            <span class="blk"><svg viewBox="0 0 24 24" fill="var(--cw)"><path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/></svg><span class="t2"><b>Вода хол. № 7896541</b><small>Аптека · м³</small></span></span>
+            <span class="op">+</span>
+            <span class="blk"><svg viewBox="0 0 24 24" fill="var(--hw)"><path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/></svg><span class="t2"><b>Вода гор. № 254125-65</b><small>Салон · м³</small></span></span>
+            <span class="op">+</span>
+            <span class="blk"><svg viewBox="0 0 24 24" fill="var(--hw)"><path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/></svg><span class="t2"><b>Вода гор. № 1147899</b><small>Аптека · м³</small></span></span>
+            <span class="op">)</span>
+            <span class="op">×</span>
+            <span class="blk"><svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2"><path d="M3 12V4h8l9 9-8 8z"/></svg><span class="t2"><b>Тариф водоотведения</b><small>45 ₽/м³</small></span></span>
+            <button type="button" class="corner" data-corner title="Очистить"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+          </div>
+          <div data-edit-notes>
+            <p class="hint">Нажмите на блок или перетащите его в строку · вытащите из строки — уберётся</p>
+          </div>
+        </div>
+        <div class="sec">
+          <p class="cap">Как посчитается <span class="badge b-info">на примерных числах</span><span class="badge b-ok">считается</span></p>
+          <p class="note">Прошлого месяца ещё нет — для примера взяли расход 5 м³ у каждого счётчика.</p>
+          <div class="gp">
+            <div class="gr"><span class="num">1</span><span>Салон «Ногти»</span><span class="f">(5 м³ + 5 м³) × 45 ₽/м³</span><span class="s">450,00 ₽</span><span class="sw"></span></div>
+            <div class="gr"><span class="num">2</span><span>Аптека «Вита»</span><span class="f">(5 м³ + 5 м³) × 45 ₽/м³</span><span class="s">450,00 ₽</span><span class="sw"></span></div>
+            <div class="gr tot"><span></span><span class="w">Всего по услуге</span><span></span><span class="s">900,00 ₽</span><span></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="p-foot"><span class="ex">◉ См. пример на странице объекта</span><button class="btn">Отмена</button><button class="btn main" data-main>Создать услугу</button></div>
+    </div>
+  </div>
+</div>
+<script>
+  var PEN = '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>', X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  var CLOSE = '<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>';
+  var tab = 'new', editing = true;
+  function show() {
+    var saved = tab === 'saved';
+    document.querySelectorAll('[data-tab]').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+    document.querySelector('[data-title]').textContent = saved ? 'Водоотведение' : 'Новая услуга';
+    var n = document.querySelector('[data-name]'), pr = document.querySelector('[data-prov]');
+    n.textContent = saved ? 'Водоотведение' : 'Название в счёте *'; n.classList.toggle('v', saved);
+    pr.textContent = saved ? 'Водоканал СПб' : 'Поставщик *'; pr.classList.toggle('v', saved);
+    document.querySelector('[data-main]').textContent = saved ? 'Сохранить' : 'Создать услугу';
+    document.querySelector('[data-saved-nav]').style.cssText = saved ? 'color:var(--acc);font-weight:600' : '';
+    var line = document.querySelector('[data-line]'), corner = document.querySelector('[data-corner]');
+    line.className = 'line ' + (editing ? 'edit' : 'view');
+    document.querySelector('[data-palette]').classList.toggle('hidden', !editing);
+    document.querySelector('[data-edit-notes]').classList.toggle('hidden', !editing);
+    document.querySelector('[data-gpanel]').classList.toggle('hidden', saved);
+    // new: × clears the line; saved, collapsed: ✎ opens the palette; saved, open: ⌃ folds it again
+    corner.innerHTML = !saved ? X : editing ? CLOSE : PEN;
+    corner.title = !saved ? 'Очистить' : editing ? 'Свернуть' : 'Изменить формулу';
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-tab]');
+    if (t) { tab = t.dataset.tab; editing = tab === 'new'; show(); return; }
+    if (e.target.closest('[data-corner]') && tab === 'saved') { editing = !editing; show(); }
+  });
+  show();
+</script>
+</body>
+</html>

@@ -92,6 +92,10 @@
      close(keep) — the window closed by «Готово» (keep) or «Отмена». */
   function setup(opts) {
     var host = opts.host || document.body;
+    // Inline (2026-11-24, docs/mockups/2026-11-24-formula-in-body.html, вариант А): the editor is drawn right in the service
+    // window's body — no window of its own, no «Готово»: every change goes to the service at once (publish), it is saved
+    // by the service's own «Сохранить». «Как посчитается» goes into opts.checkEl (the service's own section).
+    var inline = !!opts.inline;
     var ctx = withState(opts.ctx, opts.state);
     var TENANTS = ctx.tenants, METERS = ctx.meters, KINDS = ctx.kinds, SYM = ctx.symbol || '₽';
     var uid = 0, nid = 0;
@@ -101,6 +105,8 @@
         value: n.value === null || n.value === undefined ? 0 : n.value,
         sample: n.last === null || n.last === undefined ? sampleFor(n.unit) : n.last, real: n.last !== null && n.last !== undefined };
     });
+    // a new number gets an id after the ones there are (the editor is drawn again from what it published)
+    values.forEach(function (v) { var n = /^n(\d+)$/.exec(v.id); if (n) nid = Math.max(nid, Number(n[1])); });
     var owners = {};
     METERS.forEach(function (m) { owners[m.id] = m.tenant ? String(m.tenant) : (m.vacant ? 'free' : ''); });
     var blocks = (ctx.blocks || []).map(function (b) {
@@ -187,6 +193,29 @@
 
     // ---------- The DOM of the window ----------
     var overlay = document.createElement('div');
+    var PALETTE = '<div class="fx-palette">' +
+      '<div class="fx-group"><h3>Каждый месяц</h3><div data-pal="month"></div></div>' +
+      '<div class="fx-group"><h3>Тариф · норматив</h3><div data-pal="const"></div></div>' +
+      '<div class="fx-group"><h3>Расход счётчиков</h3><div data-pal="meter"></div></div>' +
+      '<div class="fx-group"><h3>Знаки</h3><div class="fx-signs">' +
+      ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + s + '</span>'; }).join('') +
+      '</div></div></div>';
+    if (inline) {
+      // the grey panel (as with every way of charging) — a word and the examples, no button; the palette; the line;
+      // in the line's corner: × clears (a new formula) or ⌃ folds the editor (a saved one, opts.collapse)
+      overlay.className = 'fx-inline fx-preview';
+      overlay.setAttribute('data-fx-inline', '');
+      overlay.innerHTML = (opts.collapse ? '' :  // a saved formula: no examples (they would replace it)
+        '<div class="sv-cp fx-gpanel fx-examples">' + svg('<path d="M10 4c-2 0-2 2-2 4v8c0 2 0 4-2 4M5 10h6M14 10l6 8M20 10l-6 8"/>') +
+        '<span class="fx-lead">Соберите из блоков ниже или начните с примера:</span>' +
+        '<button type="button" data-example="sewage">Водоотведение</button>' +
+        '<button type="button" data-example="one">Только арендатору 1</button></div>') + PALETTE +
+        '<div class="fx-strip-wrap"><div class="fx-strip" data-strip></div>' +
+        (opts.collapse ? '<button class="fx-clear fx-fold" type="button" data-fold title="Свернуть" aria-label="Свернуть">' +
+          svg('<path d="M6 15l6-6 6 6"/>') + '</button>'
+          : '<button class="fx-clear" type="button" data-clear title="Очистить формулу" aria-label="Очистить формулу">×</button>') + '</div>' +
+        '<p class="fx-trash-hint">Нажмите на блок или перетащите его в строку · вытащите из строки — уберётся</p>';
+    } else {
     overlay.className = 'fx-overlay';
     overlay.hidden = true;
     overlay.innerHTML =
@@ -211,7 +240,16 @@
       '<div class="fx-check" data-check></div></div>' +
       '<div class="fx-acts"><button class="fx-btn" type="button" data-cancel>Отмена</button><button class="fx-btn is-primary" type="button" data-done>Готово</button></div>' +
       '</div>';
+    }
     host.appendChild(overlay);
+    // Things drawn «fixed» (small windows, menus, a dragged block) inside the service window's body: that body is a
+    // container (container-type), so «fixed» counts from it, not from the screen — the shift is measured and taken off.
+    function origin(el) {
+      el.style.left = '0px'; el.style.top = '0px';
+      var r = el.getBoundingClientRect();
+      return { x: r.left, y: r.top };
+    }
+    function placeAt(el, x, y) { var o = origin(el); el.style.left = (x - o.x) + 'px'; el.style.top = (y - o.y) + 'px'; }
     var strip = overlay.querySelector('[data-strip]');
 
     // A meter of its own (window v2): «Вода хол. № 545575».
@@ -406,7 +444,9 @@
       ghosts(blocks.length);
       strip.querySelectorAll('.fx-nm, .fx-s2').forEach(function (e) { e.classList.toggle('is-cut', e.scrollWidth > e.clientWidth + 1); });
       renderPalette();
-      renderCheck();
+      if (!inline) { renderCheck(); return; }
+      if (opts.checkEl) { opts.checkEl.hidden = !blocks.length; if (blocks.length) renderCheck(opts.checkEl); }
+      publish();
     }
 
     // ---------- Counting the preview (the server counts the bills itself) ----------
@@ -668,7 +708,7 @@
     function overStrip(x, y) { var r = strip.getBoundingClientRect(); return x >= r.left - 12 && x <= r.right + 12 && y >= r.top - 12 && y <= r.bottom + 12; }
 
     overlay.addEventListener('pointerdown', function (e) {
-      if (e.target === overlay) { closeFormula(false); return; }
+      if (!inline && e.target === overlay) { closeFormula(false); return; }
       var fix = e.target.closest('.fx-ghost');
       if (fix && fix.classList.contains('fx-ghost') && fix.dataset.op === '?') {
         // The blinking plaque: all six signs right at it, as the palette's «Знаки» (3 × 2)
@@ -680,8 +720,7 @@
         }).join('');
         overlay.appendChild(m);
         var r = fix.getBoundingClientRect();
-        m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
-        m.style.top = (r.bottom + 4 + m.offsetHeight > innerHeight ? r.top - 4 - m.offsetHeight : r.bottom + 4) + 'px';
+        placeAt(m, Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)), r.bottom + 4 + m.offsetHeight > innerHeight ? r.top - 4 - m.offsetHeight : r.bottom + 4);
         m.addEventListener('click', function (ev) {
           var b = ev.target.closest('[data-sign]'); if (!b) return;
           closeUnitMenu(); applyFix(id, b.dataset.sign);
@@ -719,6 +758,8 @@
       e.preventDefault();
       closePop();
       drag = { chip: chip, fromStrip: inStrip, startX: e.clientX, startY: e.clientY, moved: false };
+      // in the body the pointer may leave the editor while dragging: it keeps the pointer until it is let go
+      if (inline && overlay.setPointerCapture) { try { overlay.setPointerCapture(e.pointerId); } catch (err) { /* an old browser */ } }
     });
     overlay.addEventListener('pointermove', function (e) {
       if (!drag) return;
@@ -733,8 +774,9 @@
         // A block of the formula keeps its size while dragged: its copy lives in the line, where the blocks' styles are.
         (drag.block.type === 'new' ? overlay : strip).appendChild(drag.ghost);
         if (drag.fromStrip) drag.chip.classList.add('is-dragging');
+        drag.o = origin(drag.ghost);
       }
-      drag.ghost.style.left = (e.clientX - 20) + 'px'; drag.ghost.style.top = (e.clientY - 15) + 'px';
+      drag.ghost.style.left = (e.clientX - 20 - drag.o.x) + 'px'; drag.ghost.style.top = (e.clientY - 15 - drag.o.y) + 'px';
       var over = overStrip(e.clientX, e.clientY);
       strip.classList.toggle('is-over', over);
       caret.remove();
@@ -768,7 +810,10 @@
       if (over) blocks.splice(Math.min(at, blocks.length), 0, d.block);
       render();
     });
-    overlay.querySelector('[data-clear]').addEventListener('click', function () { closePop(); blocks = []; render(); });
+    var clearBtn = overlay.querySelector('[data-clear]');
+    if (clearBtn) clearBtn.addEventListener('click', function () { closePop(); blocks = []; render(); });
+    var foldBtn = overlay.querySelector('[data-fold]');
+    if (foldBtn) foldBtn.addEventListener('click', function () { closePop(); opts.collapse(); });
 
     // ---------- Examples: a ready formula from this object's own meters; its numbers go to the palette ----------
     // A number of an example is taken from the palette when it is already there (by its name) — pressing twice adds nothing.
@@ -795,7 +840,7 @@
         return meterBlocks([meter.id]).concat([op('×'), val(t)]);
       } },
     };
-    overlay.querySelector('.fx-examples').addEventListener('click', function (e) {
+    if (overlay.querySelector('.fx-examples')) overlay.querySelector('.fx-examples').addEventListener('click', function (e) {
       var btn = e.target.closest('[data-example]'); if (!btn) return;
       closePop();
       var example = EXAMPLES[btn.dataset.example];
@@ -809,7 +854,8 @@
       var built = example.build(btn);
       if (built) { blocks = built; render(); }
     });
-    overlay.querySelector('[data-check]').addEventListener('click', function (e) {
+    // inline: the service window handles its own «Как посчитается» (data-pay / data-owner / data-split)
+    if (!inline) overlay.querySelector('[data-check]').addEventListener('click', function (e) {
       if (e.target.closest('[data-owner]') && opts.toggleOwner) { opts.toggleOwner(); render(); return; }
       var how = e.target.closest('[data-split]');
       if (how && opts.setSplit) { opts.setSplit(how.dataset.split); render(); return; }
@@ -824,11 +870,10 @@
     function placePop(anchor) {
       var r = anchor.getBoundingClientRect();
       // A wide one («Расход счётчиков») — in the middle of the formula window, not hanging off its edge.
-      var m = pop.classList.contains('is-wide') ? overlay.querySelector('.fx-modal').getBoundingClientRect() : null;
+      var m = pop.classList.contains('is-wide') ? (overlay.querySelector('.fx-modal') || overlay).getBoundingClientRect() : null;
       var left = m ? m.left + (m.width - pop.offsetWidth) / 2 : r.left;
-      pop.style.left = Math.max(8, Math.min(left, innerWidth - pop.offsetWidth - 8)) + 'px';
       var h = pop.offsetHeight;
-      pop.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
+      placeAt(pop, Math.max(8, Math.min(left, innerWidth - pop.offsetWidth - 8)), r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8);
     }
     // HTML: the word that changes with the units — «тариф / сумма / норматив / …» — in bold (2026-11-23).
     function valueSays(v) {
@@ -1068,8 +1113,7 @@
       overlay.appendChild(m);
       var r = btn.getBoundingClientRect();
       m.style.minWidth = Math.max(r.width, 150) + 'px';
-      m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
-      m.style.top = (r.bottom + 4 + m.offsetHeight > innerHeight ? r.top - 4 - m.offsetHeight : r.bottom + 4) + 'px';
+      placeAt(m, Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)), r.bottom + 4 + m.offsetHeight > innerHeight ? r.top - 4 - m.offsetHeight : r.bottom + 4);
       function done(value) { closeUnitMenu(); btn.focus(); pick(cleanUnit(value)); }
       m.addEventListener('click', function (e) {
         var o = e.target.closest('[data-v]'); if (o) { done(o.dataset.v); return; }
@@ -1090,6 +1134,7 @@
     // ---------- Signs from the keyboard; Escape ----------
     overlay.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
+        if (inline && !overlay.querySelector('.fx-umenu') && !pop) return;  // nothing open — Escape is the service window's
         e.preventDefault(); e.stopPropagation();
         if (overlay.querySelector('.fx-umenu')) closeUnitMenu();
         else if (pop) closePop();
@@ -1142,10 +1187,13 @@
       var words = blocks.map(chipText).join(' ').replace(/\( /g, '(').replace(/ \)/g, ')');
       if (opts.publish) opts.publish(serialize(), words, modeNow() === 'each');
     }
-    overlay.querySelector('[data-cancel]').addEventListener('click', function () { closeFormula(false); });
-    overlay.querySelector('[data-x]').addEventListener('click', function () { closeFormula(false); });
-    overlay.querySelector('[data-done]').addEventListener('click', function () { closeFormula(true); });
-    publish();
+    if (inline) render();  // draws the line, the check and publishes what is there
+    else {
+      overlay.querySelector('[data-cancel]').addEventListener('click', function () { closeFormula(false); });
+      overlay.querySelector('[data-x]').addEventListener('click', function () { closeFormula(false); });
+      overlay.querySelector('[data-done]').addEventListener('click', function () { closeFormula(true); });
+      publish();
+    }
     // The service window shows the same formula and the same «Как посчитается» (2026-11-22): blocks here are read-only,
     // the panel's switches are the service window's own (data-pay / data-owner / data-split are handled there).
     function preview(chipsEl, checkEl) {
@@ -1171,6 +1219,11 @@
     preview: function (opts, chipsEl, checkEl) {
       var fx = setup(Object.assign({}, opts, { host: document.createElement('div') }));
       fx.preview(chipsEl, checkEl);
+    },
+    // The editor right in the service window's body (2026-11-24): opts.host — where, opts.checkEl — «Как посчитается»,
+    // opts.publish — every change, opts.collapse — ⌃ (a saved formula).
+    inline: function (opts) {
+      return setup(Object.assign({}, opts, { inline: true }));
     },
     open: function (opts) {
       var fx = setup(Object.assign({}, opts, {
