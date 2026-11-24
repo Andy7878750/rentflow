@@ -315,22 +315,34 @@
   .lessons .soon { color: var(--muted); font-size: var(--fs-cap); }
 
   /* ---------- who + price ---------- */
-  .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-  .who-i { display: grid; grid-template-columns: 48px 1fr; gap: 16px; }
-  .who-i .wi { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background: #fff; border: 1px solid var(--border); color: var(--accent); }
-  .who-i .wi .ico { width: 24px; height: 24px; }
-  .who-i b { display: block; color: var(--primary); font-size: 18px; }
-  .who-i p { margin-top: 4px; color: var(--muted); font-size: 16px; }
-  .price { display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; margin-top: 64px; padding: 40px; border-radius: 16px; background: #fff; border: 1px solid var(--border); }
-  .price-tag { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 14px; background: var(--honey); color: var(--primary-deep); font-size: var(--fs-cap); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-  .price h3 { margin-top: 16px; font-size: 32px; }
-  .price p { margin-top: 8px; color: var(--muted); }
-  .price ul { margin: 24px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, auto); justify-content: start; gap: 12px 40px; }
-  .price li { display: flex; align-items: center; gap: 10px; }
-  .price li .ico { color: var(--accent); }
-  .price-r { text-align: center; }
-  .price-r .big { font-size: var(--fs-big); font-weight: 700; color: var(--primary); line-height: 1; }
-  .price-r small { display: block; margin: 8px 0 24px; color: var(--muted); font-size: var(--fs-sm); }
+  /* who: a card = a grey picture area (like the app's page background) + text */
+  .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .who-c { overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+  .who-art { display: flex; align-items: center; justify-content: center; height: 220px; padding: 16px; background: var(--bg); }
+  .who-art svg { width: 100%; height: 100%; }
+  .who-t { padding: 24px; }
+  .who-t b { display: block; color: var(--primary); font-size: 18px; }
+  .who-t p { margin-top: 8px; color: var(--muted); font-size: 16px; }
+
+  /* pricing: a period switch + three equal cards; rows line up across cards (subgrid) */
+  .period { display: inline-grid; grid-auto-flow: column; gap: 2px; height: 44px; margin-bottom: 32px; padding: 3px; border-radius: 10px; background: #e9ecef; }
+  .period button { display: inline-flex; align-items: center; gap: 6px; padding: 0 18px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+  .period button.on { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(52,73,94,.12); }
+  .period em { font-style: normal; color: var(--accent-text); }
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .plan { display: grid; grid-row: span 7; grid-template-rows: subgrid; row-gap: 0; padding: 0 32px 32px; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+  .plan.is-main { border: 2px solid var(--accent); padding: 0 31px 31px; box-shadow: 0 20px 50px rgba(52,73,94,.1); }
+  .plan-k { display: flex; align-items: center; height: 40px; color: var(--accent-text); font-size: var(--fs-cap); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .plan h3 { font-size: var(--fs-h3); }
+  .plan-d { margin-top: 8px; color: var(--muted); font-size: 16px; }
+  .plan-p { display: flex; flex-direction: column; justify-content: flex-end; margin-top: 24px; }
+  .plan-p b { color: var(--primary); font-size: var(--fs-big); line-height: 1; letter-spacing: -.02em; }
+  .plan-p small { display: block; min-height: 22px; margin-top: 8px; color: var(--muted); font-size: var(--fs-sm); }
+  .plan-lim { display: grid; gap: 8px; margin: 24px 0 0; padding: 24px 0 0; border-top: 1px solid #eef0f2; list-style: none; color: var(--primary); font-weight: 600; }
+  .plan .btn { width: 100%; margin-top: 24px; }
+  .plan-inc { display: grid; gap: 12px; align-content: start; margin: 24px 0 0; padding: 0; list-style: none; font-size: 16px; }
+  .plan-inc li { display: grid; grid-template-columns: 20px 1fr; gap: 10px; }
+  .plan-inc .ico { color: var(--accent); margin-top: 3px; }
 
   /* ---------- faq ---------- */
   .faq-wrap { display: grid; grid-template-columns: 380px 1fr; gap: 32px; }
@@ -347,10 +359,18 @@
   .final { padding: 88px 0; background: var(--accent-soft); text-align: center; }
   .final p { margin: 16px auto 0; max-width: 560px; color: var(--muted); font-size: var(--fs-lead); }
   .final .acts { justify-content: center; }
-  .foot { padding: 32px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: var(--fs-sm); }
-  .foot .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; }
-  .foot nav { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-left: auto; }
+  /* footer: grey like the app's page background; brand + 3 columns, then one line with © and the legal entity */
+  .foot { background: var(--bg); border-top: 1px solid var(--border); color: var(--muted); font-size: var(--fs-sm); }
+  .foot-top { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.3fr; gap: 32px; padding: 56px 0 40px; }
+  .foot-brand p { margin-top: 16px; line-height: 1.5; }
+  .foot-mail { display: inline-block; margin-top: 8px; color: var(--accent-text); font-weight: 600; }
+  .foot-col { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .foot-col b { margin-bottom: 4px; color: var(--primary); font-size: var(--fs-cap); letter-spacing: .06em; text-transform: uppercase; }
+  .foot-col a { line-height: 1.4; }
   .foot a:hover { color: var(--accent); }
+  .foot-bot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; padding: 20px 0 32px; border-top: 1px solid var(--border); font-size: var(--fs-cap); }
+  .foot-ru { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+  .foot-ru .ico { width: 16px; height: 16px; color: var(--accent); }
 
   /* reveal on scroll */
   .rv { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
@@ -376,8 +396,9 @@
     .feat.flip .feat-text { order: 0; }
     .feat { gap: 32px; }
     .who { grid-template-columns: 1fr; gap: 24px; }
-    .price { grid-template-columns: 1fr; gap: 32px; }
-    .price-r { text-align: left; }
+    .plans { grid-template-columns: 1fr; max-width: 520px; }
+    .plan { grid-row: auto; grid-template-rows: none; }
+    .plan:not(.is-main) .plan-k { height: 24px; }
   }
   /* ---------- phone ---------- */
   @media (max-width: 720px) {
@@ -408,7 +429,10 @@
     .rd .c { padding: 0 6px; }
     .way-btn { height: 56px; }
     .bl .amt { font-size: 18px; }
-    .feat-text h3, .price h3 { font-size: 26px; }
+    .feat-text h3 { font-size: 26px; }
+    .period { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; height: auto; min-height: 44px; }
+    .period button { flex-direction: column; justify-content: center; gap: 0; padding: 6px 4px; line-height: 1.25; }
+    .plan { padding: 0 16px 24px; } .plan.is-main { padding: 0 15px 23px; }
     .crow { grid-template-columns: 1fr 96px; } .crow span:nth-child(2) { display: none; }
     .pay th, .pay td { padding: 0 6px; }
     .pay th:nth-child(3), .pay td:nth-child(3) { display: none; }
@@ -424,11 +448,12 @@
     .pay td:first-child b { font-size: var(--fs-sm); }
     .pay-top { padding: 0 12px; }
     .cmp .x .ico, .cmp .y .ico { display: none; }
-    .price { padding: 24px 16px; }
-    .price ul { grid-template-columns: 1fr; }
-    .price-r .btn { width: 100%; }
     .faq details p { padding-right: 0; }
-    .foot nav { margin-left: 0; }
+    .foot-top { grid-template-columns: 1fr 1fr; gap: 32px 16px; padding: 40px 0 32px; }
+    .foot-brand { grid-column: 1 / -1; }
+    .foot-col:last-child { grid-column: 1 / -1; }
+    .foot-bot { flex-direction: column; align-items: flex-start; }
+    .foot-ru { margin-left: 0; }
   }
 </style>
 </head>
@@ -465,7 +490,7 @@
       <a href="#how">Как работает</a>
       <a href="#ways">Начисления</a>
       <a href="#learn">Обучение</a>
-      <a href="#price">Цена</a>
+      <a href="#price">Тарифы</a>
       <a href="#faq">Вопросы</a>
       <a href="/accounts/login/" class="nav-login">Войти</a>
     </nav>
@@ -793,41 +818,80 @@
     </div>
   </section>
 
-  <!-- 9. who + price -->
-  <section id="price">
+  <!-- 9. who: three cards with our own isometric pictures (inline SVG, generated by docs/mockups/iso_art.py) -->
+  <section>
     <div class="wrap">
       <div class="sec-head rv">
         <div class="kicker">Для кого</div>
         <h2>Для собственников, которые сдают сами</h2>
       </div>
       <div class="who">
-        <div class="who-i"><span class="wi"><svg class="ico"><use href="#w-shop"/></svg></span><span><b>Коммерческие помещения</b><p>Аптека, кафе и салон в одном здании — одна квитанция, разные доли и свои счётчики.</p></span></div>
-        <div class="who-i"><span class="wi"><svg class="ico"><use href="#w-build"/></svg></span><span><b>Несколько объектов</b><p>Все объекты, услуги и оплаты — в одном месте, по месяцам.</p></span></div>
-        <div class="who-i"><span class="wi"><svg class="ico"><use href="#w-home"/></svg></span><span><b>Квартиры и дома</b><p>Сдаёте квартиру или комнаты — счётчики жильцов и счёт каждому.</p></span></div>
+        <div class="who-c"><div class="who-art"><!--ART:shops--><svg viewBox="-110 -57 254 203" role="img" aria-label="Здание с аптекой, кафе и салоном" xmlns="http://www.w3.org/2000/svg"><polygon points="-103.9,60.0 34.6,140.0 34.6,135.0 -103.9,55.0" fill="#e4e8ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="138.6,80.0 34.6,140.0 34.6,135.0 138.6,75.0" fill="#d6dce2" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="0.0,-5.0 138.6,75.0 34.6,135.0 -103.9,55.0" fill="#eaedf0" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-52.0,45.0 52.0,105.0 52.0,39.0 -52.0,-21.0" fill="#f3f5f7" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="103.9,75.0 52.0,105.0 52.0,39.0 103.9,9.0" fill="#e2e7ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="0.0,-51.0 103.9,9.0 52.0,39.0 -52.0,-21.0" fill="#ffffff" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-48.5,44.0 -28.6,55.5 -28.6,34.5 -48.5,23.0" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,59.8 -20.8,63.0 -20.8,41.0 -26.4,37.8" fill="#4a6076"/><polygon points="-13.9,64.0 6.1,75.5 6.1,54.5 -13.9,43.0" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="8.2,79.8 13.9,83.0 13.9,61.0 8.2,57.8" fill="#4a6076"/><polygon points="20.8,84.0 40.7,95.5 40.7,74.5 20.8,63.0" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="42.9,99.8 48.5,103.0 48.5,81.0 42.9,77.8" fill="#4a6076"/><polygon points="-52.0,9.5 52.0,69.5 52.0,68.0 -52.0,8.0" fill="#e2e7ec"/><polygon points="-45.3,6.9 -35.8,12.4 -35.8,-4.6 -45.3,-10.1" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-29.1,16.2 -19.5,21.7 -19.5,4.7 -29.1,-0.8" fill="#f9dc9a" stroke="#d9b15c" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-12.9,25.6 -3.3,31.1 -3.3,14.1 -12.9,8.6" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="3.3,34.9 12.9,40.4 12.9,23.4 3.3,17.9" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="19.5,44.3 29.1,49.8 29.1,32.8 19.5,27.3" fill="#f9dc9a" stroke="#d9b15c" stroke-width="0.5" stroke-linejoin="round"/><polygon points="35.8,53.6 45.3,59.1 45.3,42.1 35.8,36.6" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-52.0,-17.5 52.0,42.5 52.0,39.0 -52.0,-21.0" fill="#148f77"/><polygon points="103.9,12.5 52.0,42.5 52.0,39.0 103.9,9.0" fill="#0f7462"/><polygon points="95.3,76.0 60.6,96.0 60.6,74.0 95.3,54.0" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="103.9,39.5 52.0,69.5 52.0,68.0 103.9,38.0" fill="#d3dae1"/><polygon points="98.1,36.4 88.6,41.9 88.6,24.9 98.1,19.4" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="82.7,45.2 73.2,50.7 73.2,33.7 82.7,28.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="67.3,54.1 57.8,59.6 57.8,42.6 67.3,37.1" fill="#f4cd78" stroke="#d0a54e" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-39.6,24.9 -37.5,26.1 -37.5,19.7 -39.6,18.5" fill="#148f77"/><polygon points="-41.3,21.9 -35.8,25.0 -35.8,22.6 -41.3,19.5" fill="#148f77"/><polygon points="-5.2,-28.0 12.1,-18.0 12.1,-26.0 -5.2,-36.0" fill="#d9dfe5" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="26.0,-26.0 12.1,-18.0 12.1,-26.0 26.0,-34.0" fill="#c9d1d9" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="8.7,-44.0 26.0,-34.0 12.1,-26.0 -5.2,-36.0" fill="#eef1f4" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="47.6,6.5 60.6,14.0 60.6,8.0 47.6,0.5" fill="#d9dfe5" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="72.7,7.0 60.6,14.0 60.6,8.0 72.7,1.0" fill="#c9d1d9" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="59.8,-6.5 72.7,1.0 60.6,8.0 47.6,0.5" fill="#eef1f4" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-57.6,25.8 -27.3,43.2 -27.3,40.2 -57.6,22.8" fill="#148f77"/><polygon points="-19.5,38.8 -27.3,43.2 -27.3,40.2 -19.5,35.8" fill="#0f7462"/><polygon points="-49.8,18.2 -19.5,35.8 -27.3,40.2 -57.6,22.8" fill="#2bb497"/><polygon points="-22.9,45.8 7.4,63.2 7.4,60.2 -22.9,42.8" fill="#f2b544"/><polygon points="15.2,58.8 7.4,63.2 7.4,60.2 15.2,55.8" fill="#d99d2f"/><polygon points="-15.2,38.2 15.2,55.8 7.4,60.2 -22.9,42.8" fill="#f6c869"/><polygon points="11.7,65.8 42.0,83.2 42.0,80.2 11.7,62.8" fill="#9dd3c6"/><polygon points="49.8,78.8 42.0,83.2 42.0,80.2 49.8,75.8" fill="#82c1b2"/><polygon points="19.5,58.2 49.8,75.8 42.0,80.2 11.7,62.8" fill="#b9e2d8"/><ellipse cx="-82.3" cy="53.5" rx="10.4" ry="5.5" fill="#d9dfe4"/><line x1="-82.3" y1="53.5" x2="-82.3" y2="37.5" stroke="#8a9aa8" stroke-width="2" stroke-linecap="round"/><circle cx="-82.3" cy="31.4" r="11.0" fill="#5fb8a3"/><circle cx="-85.6" cy="28.1" r="6.1" fill="#7fc9b6"/><ellipse cx="36.4" cy="126.0" rx="8.5" ry="4.5" fill="#d9dfe4"/><line x1="36.4" y1="126.0" x2="36.4" y2="113.0" stroke="#8a9aa8" stroke-width="2" stroke-linecap="round"/><circle cx="36.4" cy="108.0" r="9.0" fill="#5fb8a3"/><circle cx="33.7" cy="105.3" r="5.0" fill="#7fc9b6"/></svg><!--/ART--></div><div class="who-t"><b>Коммерческие помещения</b><p>Аптека, кафе и салон в одном здании — одна квитанция, разные доли и свои счётчики.</p></div></div>
+        <div class="who-c"><div class="who-art"><!--ART:many--><svg viewBox="-119 -101 280 262" role="img" aria-label="Офис, здание и склад — несколько объектов" xmlns="http://www.w3.org/2000/svg"><polygon points="-112.6,65.0 43.3,155.0 43.3,150.0 -112.6,60.0" fill="#e4e8ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="155.9,90.0 43.3,155.0 43.3,150.0 155.9,85.0" fill="#d6dce2" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="0.0,-5.0 155.9,85.0 43.3,150.0 -112.6,60.0" fill="#eaedf0" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-43.3,40.0 0.0,65.0 0.0,-45.0 -43.3,-70.0" fill="#f3f5f7" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="43.3,40.0 0.0,65.0 0.0,-45.0 43.3,-70.0" fill="#e2e7ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="0.0,-95.0 43.3,-70.0 0.0,-45.0 -43.3,-70.0" fill="#ffffff" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-39.6,32.1 -30.1,37.6 -30.1,28.1 -39.6,22.6" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,39.8 -16.9,45.2 -16.9,35.8 -26.4,30.2" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.2,47.4 -3.7,52.9 -3.7,43.4 -13.2,37.9" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="39.6,32.1 30.1,37.6 30.1,28.1 39.6,22.6" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.4,39.8 16.9,45.2 16.9,35.8 26.4,30.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.2,47.4 3.7,52.9 3.7,43.4 13.2,37.9" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-39.6,18.6 -30.1,24.1 -30.1,14.6 -39.6,9.1" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,26.2 -16.9,31.8 -16.9,22.2 -26.4,16.8" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.2,33.9 -3.7,39.4 -3.7,29.9 -13.2,24.4" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="39.6,18.6 30.1,24.1 30.1,14.6 39.6,9.1" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.4,26.2 16.9,31.8 16.9,22.2 26.4,16.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.2,33.9 3.7,39.4 3.7,29.9 13.2,24.4" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-39.6,5.1 -30.1,10.6 -30.1,1.1 -39.6,-4.4" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,12.8 -16.9,18.2 -16.9,8.8 -26.4,3.2" fill="#f9dc9a" stroke="#d9b15c" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.2,20.4 -3.7,25.9 -3.7,16.4 -13.2,10.9" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="39.6,5.1 30.1,10.6 30.1,1.1 39.6,-4.4" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.4,12.8 16.9,18.2 16.9,8.8 26.4,3.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.2,20.4 3.7,25.9 3.7,16.4 13.2,10.9" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-39.6,-8.4 -30.1,-2.9 -30.1,-12.4 -39.6,-17.9" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,-0.8 -16.9,4.7 -16.9,-4.8 -26.4,-10.3" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.2,6.9 -3.7,12.4 -3.7,2.9 -13.2,-2.6" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="39.6,-8.4 30.1,-2.9 30.1,-12.4 39.6,-17.9" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.4,-0.8 16.9,4.7 16.9,-4.8 26.4,-10.3" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.2,6.9 3.7,12.4 3.7,2.9 13.2,-2.6" fill="#f4cd78" stroke="#d0a54e" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-39.6,-21.9 -30.1,-16.4 -30.1,-25.9 -39.6,-31.4" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,-14.2 -16.9,-8.8 -16.9,-18.2 -26.4,-23.8" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.2,-6.6 -3.7,-1.1 -3.7,-10.6 -13.2,-16.1" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="39.6,-21.9 30.1,-16.4 30.1,-25.9 39.6,-31.4" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.4,-14.2 16.9,-8.8 16.9,-18.2 26.4,-23.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.2,-6.6 3.7,-1.1 3.7,-10.6 13.2,-16.1" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-39.6,-35.4 -30.1,-29.9 -30.1,-39.4 -39.6,-44.9" fill="#f9dc9a" stroke="#d9b15c" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,-27.8 -16.9,-22.2 -16.9,-31.8 -26.4,-37.2" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.2,-20.1 -3.7,-14.6 -3.7,-24.1 -13.2,-29.6" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="39.6,-35.4 30.1,-29.9 30.1,-39.4 39.6,-44.9" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.4,-27.8 16.9,-22.2 16.9,-31.8 26.4,-37.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.2,-20.1 3.7,-14.6 3.7,-24.1 13.2,-29.6" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-39.6,-48.9 -30.1,-43.4 -30.1,-52.9 -39.6,-58.4" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-26.4,-41.3 -16.9,-35.8 -16.9,-45.2 -26.4,-50.8" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.2,-33.6 -3.7,-28.1 -3.7,-37.6 -13.2,-43.1" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="39.6,-48.9 30.1,-43.4 30.1,-52.9 39.6,-58.4" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.4,-41.3 16.9,-35.8 16.9,-45.2 26.4,-50.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.2,-33.6 3.7,-28.1 3.7,-37.6 13.2,-43.1" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-43.3,-66.0 0.0,-41.0 0.0,-45.0 -43.3,-70.0" fill="#148f77"/><polygon points="43.3,-66.0 0.0,-41.0 0.0,-45.0 43.3,-70.0" fill="#0f7462"/><polygon points="-26.0,50.0 -17.3,55.0 -17.3,47.5 -26.0,42.5" fill="#148f77"/><polygon points="26.0,70.0 77.9,100.0 77.9,45.0 26.0,15.0" fill="#f3f5f7" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="116.9,77.5 77.9,100.0 77.9,45.0 116.9,22.5" fill="#e2e7ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="65.0,-7.5 116.9,22.5 77.9,45.0 26.0,15.0" fill="#ffffff" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="30.1,64.4 37.9,68.9 37.9,53.9 30.1,49.4" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="42.1,71.3 49.9,75.8 49.9,60.8 42.1,56.3" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="54.0,78.2 61.8,82.7 61.8,67.7 54.0,63.2" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="66.0,85.1 73.8,89.6 73.8,74.6 66.0,70.1" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="113.0,71.8 105.2,76.2 105.2,61.2 113.0,56.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="101.3,78.5 93.5,83.0 93.5,68.0 101.3,63.5" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="89.6,85.2 81.8,89.8 81.8,74.8 89.6,70.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="30.1,42.4 37.9,46.9 37.9,31.9 30.1,27.4" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="42.1,49.3 49.9,53.8 49.9,38.8 42.1,34.3" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="54.0,56.2 61.8,60.7 61.8,45.7 54.0,41.2" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="66.0,63.1 73.8,67.6 73.8,52.6 66.0,48.1" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="113.0,49.8 105.2,54.2 105.2,39.2 113.0,34.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="101.3,56.5 93.5,61.0 93.5,46.0 101.3,41.5" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="89.6,63.2 81.8,67.8 81.8,52.8 89.6,48.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="26.0,18.5 77.9,48.5 77.9,45.0 26.0,15.0" fill="#f2b544"/><polygon points="116.9,26.0 77.9,48.5 77.9,45.0 116.9,22.5" fill="#d99d2f"/><polygon points="-21.7,97.5 39.0,132.5 39.0,102.5 -21.7,67.5" fill="#f3f5f7" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="73.6,112.5 39.0,132.5 39.0,102.5 73.6,82.5" fill="#e2e7ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="13.0,47.5 73.6,82.5 39.0,102.5 -21.7,67.5" fill="#ffffff" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-13.0,102.5 4.3,112.5 4.3,92.5 -13.0,82.5" fill="#c9d1d9" stroke="#b4bec8" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-13.0,97.5 4.3,107.5 4.3,107.1 -13.0,97.1" fill="#aab5bf"/><polygon points="-13.0,92.5 4.3,102.5 4.3,102.1 -13.0,92.1" fill="#aab5bf"/><polygon points="-13.0,87.5 4.3,97.5 4.3,97.1 -13.0,87.1" fill="#aab5bf"/><polygon points="13.0,117.5 30.3,127.5 30.3,107.5 13.0,97.5" fill="#c9d1d9" stroke="#b4bec8" stroke-width="0.5" stroke-linejoin="round"/><polygon points="13.0,112.5 30.3,122.5 30.3,122.1 13.0,112.1" fill="#aab5bf"/><polygon points="13.0,107.5 30.3,117.5 30.3,117.1 13.0,107.1" fill="#aab5bf"/><polygon points="13.0,102.5 30.3,112.5 30.3,112.1 13.0,102.1" fill="#aab5bf"/><polygon points="66.7,116.5 58.0,121.5 58.0,104.5 66.7,99.5" fill="#d99d2f"/><polygon points="-21.7,71.5 39.0,106.5 39.0,102.5 -21.7,67.5" fill="#148f77"/><polygon points="73.6,86.5 39.0,106.5 39.0,102.5 73.6,82.5" fill="#0f7462"/><ellipse cx="-88.3" cy="58.0" rx="10.4" ry="5.5" fill="#d9dfe4"/><line x1="-88.3" y1="58.0" x2="-88.3" y2="42.0" stroke="#8a9aa8" stroke-width="2" stroke-linecap="round"/><circle cx="-88.3" cy="36.0" r="11.0" fill="#5fb8a3"/><circle cx="-91.6" cy="32.6" r="6.1" fill="#7fc9b6"/><ellipse cx="-38.1" cy="91.0" rx="8.5" ry="4.5" fill="#d9dfe4"/><line x1="-38.1" y1="91.0" x2="-38.1" y2="78.0" stroke="#8a9aa8" stroke-width="2" stroke-linecap="round"/><circle cx="-38.1" cy="73.1" r="9.0" fill="#5fb8a3"/><circle cx="-40.8" cy="70.4" r="5.0" fill="#7fc9b6"/></svg><!--/ART--></div><div class="who-t"><b>Несколько объектов</b><p>Все объекты, услуги и оплаты — в одном месте, по месяцам.</p></div></div>
+        <div class="who-c"><div class="who-art"><!--ART:homes--><svg viewBox="-110 -42 263 193" role="img" aria-label="Дом и многоквартирный дом" xmlns="http://www.w3.org/2000/svg"><polygon points="-103.9,60.0 43.3,145.0 43.3,140.0 -103.9,55.0" fill="#e4e8ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="147.2,85.0 43.3,145.0 43.3,140.0 147.2,80.0" fill="#d6dce2" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="0.0,-5.0 147.2,80.0 43.3,140.0 -103.9,55.0" fill="#eaedf0" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-65.0,52.5 -13.0,82.5 -13.0,50.5 -65.0,20.5" fill="#f3f5f7" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="30.3,57.5 -13.0,82.5 -13.0,50.5 30.3,25.5" fill="#e2e7ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-21.7,-4.5 30.3,25.5 -13.0,50.5 -65.0,20.5" fill="#ffffff" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-21.7,-4.5 30.3,25.5 8.7,14.0 -43.3,-16.0" fill="#3b4f63" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-58.9,46.0 -45.9,53.5 -45.9,38.5 -58.9,31.0" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-30.3,62.5 -18.2,69.5 -18.2,54.5 -30.3,47.5" fill="#f9dc9a" stroke="#d9b15c" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-41.6,66.0 -33.8,70.5 -33.8,47.5 -41.6,43.0" fill="#f2b544"/><polygon points="15.6,56.0 1.7,64.0 1.7,49.0 15.6,41.0" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-24.2,-1.0 -17.3,3.0 -17.3,-19.0 -24.2,-23.0" fill="#d9dfe5" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-10.4,-1.0 -17.3,3.0 -17.3,-19.0 -10.4,-23.0" fill="#c9d1d9" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="-17.3,-27.0 -10.4,-23.0 -17.3,-19.0 -24.2,-23.0" fill="#eef1f4" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="30.3,25.5 -13.0,50.5 8.7,14.0" fill="#e2e7ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="12.6,30.8 4.8,35.2 4.8,28.2 12.6,23.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="-43.3,-16.0 8.7,14.0 -16.5,52.5 -68.4,22.5" fill="#4a6076" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="8.7,14.0 -16.5,52.5 -16.5,55.0 8.7,16.5" fill="#3b4f63" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="34.6,75.0 77.9,100.0 77.9,14.0 34.6,-11.0" fill="#f3f5f7" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="121.2,75.0 77.9,100.0 77.9,14.0 121.2,-11.0" fill="#e2e7ec" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="77.9,-36.0 121.2,-11.0 77.9,14.0 34.6,-11.0" fill="#ffffff" stroke="#c3ccd4" stroke-width="0.6" stroke-linejoin="round"/><polygon points="42.1,72.3 52.5,78.3 52.5,65.3 42.1,59.3" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="60.0,82.7 70.4,88.7 70.4,75.7 60.0,69.7" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="113.7,72.3 103.3,78.3 103.3,65.3 113.7,59.3" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="95.8,82.7 85.4,88.7 85.4,75.7 95.8,69.7" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="42.1,52.8 52.5,58.8 52.5,45.8 42.1,39.8" fill="#f9dc9a" stroke="#d9b15c" stroke-width="0.5" stroke-linejoin="round"/><polygon points="60.0,63.2 70.4,69.2 70.4,56.2 60.0,50.2" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="113.7,52.8 103.3,58.8 103.3,45.8 113.7,39.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="95.8,63.2 85.4,69.2 85.4,56.2 95.8,50.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="42.1,33.3 52.5,39.3 52.5,26.3 42.1,20.3" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="60.0,43.7 70.4,49.7 70.4,36.7 60.0,30.7" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="113.7,33.3 103.3,39.3 103.3,26.3 113.7,20.3" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="95.8,43.7 85.4,49.7 85.4,36.7 95.8,30.7" fill="#f4cd78" stroke="#d0a54e" stroke-width="0.5" stroke-linejoin="round"/><polygon points="42.1,13.8 52.5,19.8 52.5,6.8 42.1,0.8" fill="#c7dbe5" stroke="#a9bfcc" stroke-width="0.5" stroke-linejoin="round"/><polygon points="60.0,24.2 70.4,30.2 70.4,17.2 60.0,11.2" fill="#f9dc9a" stroke="#d9b15c" stroke-width="0.5" stroke-linejoin="round"/><polygon points="113.7,13.8 103.3,19.8 103.3,6.8 113.7,0.8" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="95.8,24.2 85.4,30.2 85.4,17.2 95.8,11.2" fill="#b2c8d4" stroke="#9fb6c4" stroke-width="0.5" stroke-linejoin="round"/><polygon points="34.6,-7.5 77.9,17.5 77.9,14.0 34.6,-11.0" fill="#f2b544"/><polygon points="121.2,-7.5 77.9,17.5 77.9,14.0 121.2,-11.0" fill="#d99d2f"/><polygon points="35.7,57.6 48.6,65.1 48.6,59.6 35.7,52.1" fill="#9dd3c6"/><polygon points="53.8,62.1 48.6,65.1 48.6,59.6 53.8,56.6" fill="#82c1b2"/><polygon points="40.8,49.1 53.8,56.6 48.6,59.6 35.7,52.1" fill="#b9e2d8"/><polygon points="53.5,67.9 66.5,75.4 66.5,69.9 53.5,62.4" fill="#9dd3c6"/><polygon points="71.7,72.4 66.5,75.4 66.5,69.9 71.7,66.9" fill="#82c1b2"/><polygon points="58.7,59.4 71.7,66.9 66.5,69.9 53.5,62.4" fill="#b9e2d8"/><polygon points="35.7,38.1 48.6,45.6 48.6,40.1 35.7,32.6" fill="#9dd3c6"/><polygon points="53.8,42.6 48.6,45.6 48.6,40.1 53.8,37.1" fill="#82c1b2"/><polygon points="40.8,29.6 53.8,37.1 48.6,40.1 35.7,32.6" fill="#b9e2d8"/><polygon points="53.5,48.4 66.5,55.9 66.5,50.4 53.5,42.9" fill="#9dd3c6"/><polygon points="71.7,52.9 66.5,55.9 66.5,50.4 71.7,47.4" fill="#82c1b2"/><polygon points="58.7,39.9 71.7,47.4 66.5,50.4 53.5,42.9" fill="#b9e2d8"/><polygon points="35.7,18.6 48.6,26.1 48.6,20.6 35.7,13.1" fill="#9dd3c6"/><polygon points="53.8,23.1 48.6,26.1 48.6,20.6 53.8,17.6" fill="#82c1b2"/><polygon points="40.8,10.1 53.8,17.6 48.6,20.6 35.7,13.1" fill="#b9e2d8"/><polygon points="53.5,28.9 66.5,36.4 66.5,30.9 53.5,23.4" fill="#9dd3c6"/><polygon points="71.7,33.4 66.5,36.4 66.5,30.9 71.7,27.9" fill="#82c1b2"/><polygon points="58.7,20.4 71.7,27.9 66.5,30.9 53.5,23.4" fill="#b9e2d8"/><ellipse cx="-13.9" cy="93.0" rx="10.4" ry="5.5" fill="#d9dfe4"/><line x1="-13.9" y1="93.0" x2="-13.9" y2="77.0" stroke="#8a9aa8" stroke-width="2" stroke-linecap="round"/><circle cx="-13.9" cy="71.0" r="11.0" fill="#5fb8a3"/><circle cx="-17.2" cy="67.7" r="6.1" fill="#7fc9b6"/><ellipse cx="46.8" cy="124.0" rx="8.5" ry="4.5" fill="#d9dfe4"/><line x1="46.8" y1="124.0" x2="46.8" y2="111.0" stroke="#8a9aa8" stroke-width="2" stroke-linecap="round"/><circle cx="46.8" cy="106.0" r="9.0" fill="#5fb8a3"/><circle cx="44.1" cy="103.3" r="5.0" fill="#7fc9b6"/></svg><!--/ART--></div><div class="who-t"><b>Квартиры и дома</b><p>Сдаёте квартиру или комнаты — счётчики жильцов и счёт каждому.</p></div></div>
       </div>
-      <div class="price rv">
-        <div>
-          <span class="price-tag">Пилот</span>
-          <h3>Сейчас — бесплатно</h3>
-          <p>Пока идёт пилот, RentFlow можно пользоваться полностью. О тарифах предупредим заранее.</p>
-          <ul>
-            <li><svg class="ico"><use href="#i-check"/></svg>Все способы начисления</li>
-            <li><svg class="ico"><use href="#i-check"/></svg>Счета в PDF и мессенджеры</li>
-            <li><svg class="ico"><use href="#i-check"/></svg>Оплаты поставщикам</li>
-            <li><svg class="ico"><use href="#i-check"/></svg>Без карты при регистрации</li>
+    </div>
+  </section>
+
+  <!-- 10. pricing: three plans, a period switch on top. Plans and prices are a DRAFT — we will go through them separately. -->
+  <section class="alt" id="price">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="kicker">Тарифы</div>
+        <h2>Начните бесплатно</h2>
+        <p>Платный тариф понадобится, когда объектов станет больше. Карта при регистрации не нужна.</p>
+      </div>
+      <div class="period" id="period" role="tablist" aria-label="Срок оплаты">
+        <button type="button" class="on" data-m="1" data-off="0">1 месяц</button>
+        <button type="button" data-m="6" data-off="10">6 месяцев <em>−10%</em></button>
+        <button type="button" data-m="12" data-off="20">12 месяцев <em>−20%</em></button>
+      </div>
+      <div class="plans">
+        <div class="plan">
+          <span class="plan-k"></span>
+          <h3>Бесплатный</h3>
+          <p class="plan-d">Один объект — попробовать на деле.</p>
+          <div class="plan-p"><b class="num" data-p="0">0 ₽</b><small data-s>навсегда</small></div>
+          <ul class="plan-lim"><li>1 объект</li><li>До 3 арендаторов</li></ul>
+          <a href="/accounts/signup/" class="btn btn-line">Начать бесплатно</a>
+          <ul class="plan-inc">
+            <li><svg class="ico"><use href="#i-check"/></svg>Все 6 способов начисления</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Счета в PDF</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Отправка в WhatsApp и Telegram</li>
           </ul>
         </div>
-        <div class="price-r">
-          <div class="big num">0 ₽</div>
-          <small>на время пилота</small>
-          <a href="/accounts/signup/" class="btn btn-main">Начать бесплатно</a>
+        <div class="plan is-main">
+          <span class="plan-k">Чаще выбирают</span>
+          <h3>Собственник</h3>
+          <p class="plan-d">Несколько объектов и оплаты поставщикам.</p>
+          <div class="plan-p"><b class="num" data-p="490"></b><small data-s></small></div>
+          <ul class="plan-lim"><li>До 5 объектов</li><li>Арендаторов — сколько нужно</li></ul>
+          <a href="/accounts/signup/" class="btn btn-main">Выбрать</a>
+          <ul class="plan-inc">
+            <li><svg class="ico"><use href="#i-check"/></svg>Всё из бесплатного</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Оплаты поставщикам</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Своя формула</li>
+          </ul>
+        </div>
+        <div class="plan">
+          <span class="plan-k"></span>
+          <h3>Портфель</h3>
+          <p class="plan-d">Для тех, кто сдаёт много.</p>
+          <div class="plan-p"><b class="num" data-p="990"></b><small data-s></small></div>
+          <ul class="plan-lim"><li>До 20 объектов</li><li>Арендаторов — сколько нужно</li></ul>
+          <a href="/accounts/signup/" class="btn btn-line">Выбрать</a>
+          <ul class="plan-inc">
+            <li><svg class="ico"><use href="#i-check"/></svg>Всё из «Собственника»</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Помощь с настройкой объектов</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Ответ поддержки в тот же день</li>
+          </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 10. faq -->
-  <section class="alt" id="faq">
+  <!-- 11. faq -->
+  <section id="faq">
     <div class="wrap faq-wrap">
       <div class="sec-head rv">
         <div class="kicker">Вопросы</div>
@@ -864,17 +928,41 @@
   </section>
 </main>
 
+<!-- footer: brand + 3 columns; the documents are placeholders until we write them (152-ФЗ needs the privacy policy) -->
 <footer class="foot">
   <div class="wrap">
-    <a href="#top" class="brand"><span class="brand-mark">R</span>RentFlow</a>
-    <span>© 2026 RentFlow</span>
-    <nav>
-      <a href="#how">Как работает</a>
-      <a href="#learn">Обучение</a>
-      <a href="#price">Цена</a>
-      <a href="#faq">Вопросы</a>
-      <a href="/accounts/login/">Войти</a>
-    </nav>
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a href="#top" class="brand"><span class="brand-mark">R</span>RentFlow</a>
+        <p>Коммуналка арендаторов — без Excel.</p>
+        <a href="mailto:hello@rentflow.ru" class="foot-mail">hello@rentflow.ru</a>
+      </div>
+      <nav class="foot-col" aria-label="Продукт">
+        <b>Продукт</b>
+        <a href="#how">Как работает</a>
+        <a href="#ways">Начисления</a>
+        <a href="#price">Тарифы</a>
+        <a href="/accounts/signup/">Регистрация</a>
+      </nav>
+      <nav class="foot-col" aria-label="Помощь">
+        <b>Помощь</b>
+        <a href="#learn">Видеоуроки</a>
+        <a href="#faq">Частые вопросы</a>
+        <a href="mailto:hello@rentflow.ru">Написать нам</a>
+        <a href="/accounts/login/">Войти</a>
+      </nav>
+      <nav class="foot-col" aria-label="Документы">
+        <b>Документы</b>
+        <a href="/legal/privacy/">Политика конфиденциальности</a>
+        <a href="/legal/terms/">Пользовательское соглашение</a>
+        <a href="/legal/consent/">Согласие на обработку данных</a>
+      </nav>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 RentFlow</span>
+      <span>ИП Фамилия И. О. · ИНН 000000000000</span>
+      <span class="foot-ru"><svg class="ico"><use href="#i-shield"/></svg>Данные хранятся в России</span>
+    </div>
   </div>
 </footer>
 
@@ -1030,6 +1118,21 @@
   document.getElementById('lessons').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) showLesson(b); });
   document.querySelectorAll('#lessons button').forEach(function (b) { if (b.dataset.video) b.querySelector('.soon').textContent = ''; });
   showLesson(document.querySelector('#lessons button.on'));
+
+  // pricing: the period switch — the price per month with the discount, and the whole sum for the period under it
+  function setPeriod(btn) {
+    var m = +btn.dataset.m, off = +btn.dataset.off;
+    document.querySelectorAll('#period button').forEach(function (x) { x.classList.toggle('on', x === btn); });
+    document.querySelectorAll('.plan-p b[data-p]').forEach(function (b) {
+      var p = +b.dataset.p;
+      if (!p) return;
+      var month = Math.round(p * (100 - off) / 100);
+      b.textContent = fmt(month, 0) + ' ₽';
+      b.nextElementSibling.textContent = m === 1 ? 'в месяц' : 'в месяц · ' + fmt(month * m, 0) + ' ₽ за ' + m + ' мес.';
+    });
+  }
+  document.getElementById('period').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setPeriod(b); });
+  setPeriod(document.querySelector('#period button.on'));
 })();
 </script>
 </body>
