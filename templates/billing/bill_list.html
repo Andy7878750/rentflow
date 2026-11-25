@@ -44,26 +44,51 @@
     {% for row in rows %}
       {% with t=row.payer.tenant %}
       {% url 'bill_print' property.pk t.pk as pdf_url %}
-      <div class="bl-row{% if mode == 'issued' %} is-issued{% endif %}">
+      {% if mode == 'issued' %}
+        {% comment %}2026-11-25: every version — its own row, its own № (ДДММГГ, «/1» again that day), its own PDF as it went.{% endcomment %}
+        {% for v in row.versions %}
+          <div class="bl-row is-issued">
+            <div class="bl-who"><b class="fade" title="{{ t.name }}">{{ t.name }}</b>
+              <span>{% if t.share_percent is not None %}{{ t.share_percent|num }}%{% endif %}{% if t.share_percent is not None and t.area is not None %} · {% endif %}{% if t.area is not None %}{{ t.area|num }} м²{% endif %}</span></div>
+            <div class="bl-state"><span class="bl-done">№ {{ v.number }} · выставлен {{ v.issued_on|date:"d.m.Y" }}</span></div>
+            <div class="bl-sum">{{ v.total|floatformat:"2g" }}&nbsp;₽</div>
+            {% bill_share row.payer t.name month_label as share %}
+            <div class="bl-acts" data-share data-pdf="{{ pdf_url }}?v={{ v.pk }}" data-file="{{ share.file }}" data-text="{{ share.text }}">
+              <a class="bl-ib" href="{{ pdf_url }}?v={{ v.pk }}&amp;inline=1" data-pdf-view
+                 data-title="Счёт № {{ v.number }} · {{ t.name }} · {{ month_label }}" target="_blank" rel="noopener"
+                 title="Посмотреть"><svg class="icon"><use href="#i-eye"/></svg></a>
+              <a class="bl-ib is-txt" href="{{ pdf_url }}?v={{ v.pk }}" download="{{ share.file }}" title="Скачать PDF">PDF</a>
+              {% if forloop.first %}
+                <button type="button" class="bl-ib" data-share-open aria-haspopup="true" title="Поделиться"><svg class="icon"><use href="#i-share"/></svg></button>
+                <div class="share-menu" data-share-menu hidden>
+                  <button type="button" data-share-file><svg class="icon"><use href="#i-file"/></svg>Отправить PDF…</button>
+                  <a href="#" data-share-to="whatsapp" target="_blank" rel="noopener"><span class="share-dot is-wa"></span>WhatsApp</a>
+                  <a href="#" data-share-to="telegram" target="_blank" rel="noopener"><span class="share-dot is-tg"></span>Telegram</a>
+                  <button type="button" data-share-copy><svg class="icon"><use href="#i-copy"/></svg>Скопировать текст счёта</button>
+                </div>
+              {% else %}
+                <span class="bl-ib is-off"><svg class="icon"><use href="#i-share"/></svg></span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+      <div class="bl-row">
         <div class="bl-who"><b class="fade" title="{{ t.name }}">{{ t.name }}</b>
           <span>{% if t.share_percent is not None %}{{ t.share_percent|num }}%{% endif %}{% if t.share_percent is not None and t.area is not None %} · {% endif %}{% if t.area is not None %}{{ t.area|num }} м²{% endif %}</span></div>
         <div class="bl-state">
-          {% if mode == 'issued' %}
-            {% if row.changed %}<span class="badge badge-warn">Изменился</span><small>сейчас {{ row.pay|floatformat:"2g" }}&nbsp;₽</small>
-            {% else %}<span class="bl-done">№ {{ row.issued.number }} · выставлен {{ row.issued.issued_on|date:"d.m.Y" }}</span>{% endif %}
-          {% elif row.ready %}<span class="badge badge-ok">Готов к счёту</span>
+          {% if row.ready %}<span class="badge badge-ok">Готов к счёту</span>
           {% else %}<span class="badge badge-danger">Не всё введено</span><small class="fade" title="{{ row.missing }}">{{ row.missing }}</small>{% endif %}
         </div>
-        <div class="bl-sum{% if mode == 'todo' and not row.ready %} is-muted{% endif %}">{% if mode == 'issued' %}{{ row.issued.total|floatformat:"2g" }}{% else %}{{ row.pay|floatformat:"2g" }}{% endif %}&nbsp;₽</div>
+        <div class="bl-sum{% if not row.ready %} is-muted{% endif %}">{{ row.pay|floatformat:"2g" }}&nbsp;₽</div>
         {% bill_share row.payer t.name month_label as share %}
         <div class="bl-acts" data-share data-pdf="{{ pdf_url }}?month={{ month }}" data-file="{{ share.file }}" data-text="{{ share.text }}">
-          {% if mode == 'issued' or row.ready %}
-            <a class="bl-ib" href="{{ pdf_url }}?month={{ month }}&amp;inline=1{% if mode == 'issued' %}&amp;issued=1{% endif %}" data-pdf-view
+          {% if row.ready %}
+            <a class="bl-ib" href="{{ pdf_url }}?month={{ month }}&amp;inline=1" data-pdf-view
                data-title="Счёт · {{ t.name }} · {{ month_label }}" target="_blank" rel="noopener"
-               title="{% if mode == 'issued' %}Посмотреть — каким счёт ушёл арендатору{% else %}Посмотреть — счёт останется здесь{% endif %}"><svg class="icon"><use href="#i-eye"/></svg></a>
-            <a class="bl-ib is-txt" href="{{ pdf_url }}?month={{ month }}" download="{{ share.file }}"
-               title="{% if row.changed %}Скачать новый PDF — счёт выставится заново{% elif mode == 'issued' %}Скачать PDF{% else %}Скачать PDF — счёт выставится{% endif %}">PDF</a>
-            <button type="button" class="bl-ib" data-share-open aria-haspopup="true" title="{% if mode == 'issued' %}Поделиться{% else %}Поделиться — счёт выставится{% endif %}"><svg class="icon"><use href="#i-share"/></svg></button>
+               title="Посмотреть — счёт останется здесь"><svg class="icon"><use href="#i-eye"/></svg></a>
+            <a class="bl-ib is-txt" href="{{ pdf_url }}?month={{ month }}" download="{{ share.file }}" title="Скачать PDF — счёт выставится">PDF</a>
+            <button type="button" class="bl-ib" data-share-open aria-haspopup="true" title="Поделиться — счёт выставится"><svg class="icon"><use href="#i-share"/></svg></button>
             <div class="share-menu" data-share-menu hidden>
               <button type="button" data-share-file><svg class="icon"><use href="#i-file"/></svg>Отправить PDF…</button>
               <a href="#" data-share-to="whatsapp" target="_blank" rel="noopener"><span class="share-dot is-wa"></span>WhatsApp</a>
@@ -75,16 +100,15 @@
             <span class="bl-ib is-txt is-off">PDF</span>
             <span class="bl-ib is-off"><svg class="icon"><use href="#i-share"/></svg></span>
           {% endif %}
-          {% if mode == 'todo' %}
-            <form method="post" action="{% url 'bill_issue' %}" class="bl-go">
-              {% csrf_token %}
-              <input type="hidden" name="month" value="{{ month }}"><input type="hidden" name="tenant" value="{{ t.pk }}">
-              <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <button type="submit" class="btn btn-primary btn-sm"{% if not row.ready %} disabled{% endif %}>Выставить</button>
-            </form>
-          {% endif %}
+          <form method="post" action="{% url 'bill_issue' %}" class="bl-go">
+            {% csrf_token %}
+            <input type="hidden" name="month" value="{{ month }}"><input type="hidden" name="tenant" value="{{ t.pk }}">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-primary btn-sm"{% if not row.ready %} disabled{% endif %}>Выставить</button>
+          </form>
         </div>
       </div>
+      {% endif %}
       {% endwith %}
     {% endfor %}
   {% empty %}

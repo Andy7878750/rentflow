@@ -376,12 +376,13 @@ class Payment(models.Model):
 
 class IssuedBill(models.Model):
     """A bill given to a tenant (2026-11-25, «Счета», docs/mockups/2026-11-25-bills.html): issued by «PDF», «Поделиться»
-    or «Выставить» («Посмотреть» doesn't issue). Only the last version is kept — one tenant × month, one bill; issued
-    again — the new one takes the place (the number stays). The PDF is kept as it went, so a past month never changes."""
+    or «Выставить» («Посмотреть» doesn't issue). Every version is kept (2026-11-25, the user: «сохранился под номером
+    251126, ещё раз нажали — 251126/1, и всё»): the number is the day it was issued, ДДММГГ, «/1», «/2» — issued again
+    the same day for the same tenant and month; nothing changed since the last one — no new version. No warnings."""
     property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='issued_bills')
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='issued_bills')
     month = models.DateField()
-    number = models.PositiveIntegerField()
+    number = models.CharField(max_length=20)
     issued_on = models.DateField()
     total = models.DecimalField(max_digits=12, decimal_places=2)  # «К оплате» as it was given (with VAT)
     pdf = models.BinaryField()
@@ -389,4 +390,4 @@ class IssuedBill(models.Model):
     lines = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['tenant', 'month'], name='one_bill_per_tenant_month')]
+        ordering = ['-pk']  # the newest version first

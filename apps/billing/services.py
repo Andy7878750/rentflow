@@ -1728,54 +1728,62 @@ def bill_snapshot(payer):
 
 def bill_view(payer, issued=None):
     """What the bill on the object page shows — always the month counted now, changing as you type (2026-11-25, the
-    user: «текущий»). `issued` — the bill given for this month, if any; `changed` — what went differs from now
-    (the lines kept with it, else the sum). {'groups': [{'title', 'lines': [{'name', 'amount', 'rows'}]}], 'vat', 'pay',
-    'issued', 'changed'}."""
-    pay = bill_pay(payer)
-    changed = False
-    if issued is not None:
-        changed = issued.lines != bill_snapshot(payer) if issued.lines else issued.total != pay
+    user: «текущий»). `issued` — the newest version given for this month, only while it is exactly this bill (its №
+    and date in the head); changed since — as if not issued: the next «PDF» makes a new version, no warnings.
+    {'groups': [{'title', 'lines': [{'name', 'amount', 'rows'}]}], 'vat', 'pay', 'issued'}."""
+    if issued is not None and issued.lines != bill_snapshot(payer):
+        issued = None
     return {'groups': [{'title': g['title'], 'lines': [
                 {'name': line.receipt.name, 'amount': line.amount, 'rows': bill_meter_rows(line) or [line.formula]}
                 for line in g['lines']]} for g in bill_groups(payer)],
-            'vat': bill_vat(payer), 'pay': pay, 'issued': issued, 'changed': changed}
+            'vat': bill_vat(payer), 'pay': bill_pay(payer), 'issued': issued}
 
 
-def next_bill_number(user):
-    """The next bill number of the owner — one sequence for all the objects (2026-11-25)."""
-    last = IssuedBill.objects.filter(property__owner=user).aggregate(models.Max('number'))['number__max']
-    return (last or 0) + 1
+def bill_number(tenant, month, day):
+    """The number of a new version (2026-11-25): the day it is issued, «251126»; issued again that day for this tenant
+    and month — «251126/1», «251126/2»."""
+    base = day.strftime('%d%m%y')
+    count = IssuedBill.objects.filter(tenant=tenant, month=month, issued_on=day).count()
+    return base if not count else f'{base}/{count}'
+
+
+def last_issued(tenant, month):
+    """The newest version issued to the tenant for the month, or None."""
+    return IssuedBill.objects.filter(tenant=tenant, month=month).defer('pdf').first()
 
 
 @dataclass
 class BillRow:
-    """A tenant's bill of the month in «Счета»: the sum now, ready or what is missing, and the issued one if any."""
+    """A tenant's bill of the month in «Счета»: the sum now, ready or what is missing, and the issued versions, the
+    newest first (`issued` — the newest)."""
 
     property: object
     payer: object
     pay: Decimal
     ready: bool
     missing: str = ''
-    issued: object = None
+    versions: list = None
 
     @property
-    def changed(self):
-        return self.issued is not None and self.issued.total != self.pay
+    def issued(self):
+        return self.versions[0] if self.versions else None
 
 
 def bill_rows(user, month):
     """Every tenant's bill of the month on the owner's objects, by object: [(property, [BillRow])]. A tenant with
     0 ₽ and «Остаётся на вас» are not here (2026-11-25); an issued one is, even if it is 0 ₽ now."""
-    issued = {(b.tenant_id): b for b in IssuedBill.objects.filter(property__owner=user, month=month).defer('pdf')}
+    versions = {}
+    for b in IssuedBill.objects.filter(property__owner=user, month=month).defer('pdf'):  # newest first
+        versions.setdefault(b.tenant_id, []).append(b)
     out = []
     for property_obj in user.properties.order_by('name'):
         bill = month_bill(property_obj, month)
         missing = ', '.join(receipt.name for receipt in bill.missing)
         rows = []
         for payer in bill.payers:
-            got = issued.get(payer.tenant.pk)
+            got = versions.get(payer.tenant.pk, [])
             pay = bill_pay(payer)
-            if not pay and got is None:
+            if not pay and not got:
                 continue
             rows.append(BillRow(property_obj, payer, pay, not bill.missing, missing and 'не введено: ' + missing, got))
         if rows:

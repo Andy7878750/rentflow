@@ -1,5 +1,5 @@
 """«Счета» (2026-11-25): a bill is issued when it is given to the tenant — «PDF», «Поделиться» (both fetch the PDF) or
-«Выставить»; «Посмотреть» doesn't issue. One tenant × month — one bill, the last version, the number stays."""
+«Выставить»; «Посмотреть» doesn't issue. Every version is kept: № by the day it went, ДДММГГ, «/1» again that day."""
 
 import datetime
 from decimal import Decimal
@@ -37,29 +37,36 @@ class BillsTests(TestCase):
         response = self.pdf(self.viktor)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         bill = IssuedBill.objects.get()
-        self.assertEqual((bill.number, bill.total, bill.month), (1, Decimal('450.00'), NOV))
+        self.assertEqual((bill.number, bill.total, bill.month), (datetime.date.today().strftime('%d%m%y'), Decimal('450.00'), NOV))
         self.assertEqual(bytes(bill.pdf), response.content)
 
-    def test_issued_again_keeps_the_number_and_takes_the_place(self):
+    def test_issued_again_is_a_new_version(self):
+        day = datetime.date.today().strftime('%d%m%y')
         self.pdf(self.viktor)
+        self.pdf(self.viktor)  # nothing changed — the same version
         self.pdf(self.vlad)
+        self.assertEqual(IssuedBill.objects.count(), 2)
         self.cleaning.fixed_amount = Decimal('2000')
         self.cleaning.save()
+        self.pdf(self.viktor)
+        self.assertEqual(list(IssuedBill.objects.filter(tenant=self.viktor).values_list('number', 'total')),
+                         [(f'{day}/1', Decimal('900.00')), (day, Decimal('450.00'))])  # the newest first
+        self.assertEqual(IssuedBill.objects.get(tenant=self.vlad).number, day)  # another tenant — the same day's №
         rows = dict(services.bill_rows(self.user, NOV))[self.prop]
         viktor = next(r for r in rows if r.payer.tenant.pk == self.viktor.pk)
-        self.assertTrue(viktor.changed)  # «Изменился · сейчас 900 ₽»
-        self.assertEqual(viktor.pay, Decimal('900.00'))
-        self.pdf(self.viktor)
-        bill = IssuedBill.objects.get(tenant=self.viktor)
-        self.assertEqual((bill.number, bill.total), (1, Decimal('900.00')))
-        self.assertEqual(IssuedBill.objects.count(), 2)
+        self.assertEqual([v.number for v in viktor.versions], [f'{day}/1', day])
+        page = self.client.get(reverse('bill_list'), {'month': '2026-11'})
+        self.assertContains(page, f'№ {day}/1')
+        self.assertContains(page, f'№ {day} ·')
+        self.assertNotContains(page, 'Изменился')
 
-    def test_the_issued_one_is_shown_as_it_went(self):
+    def test_a_version_is_shown_as_it_went(self):
         self.pdf(self.viktor)
-        sent = bytes(IssuedBill.objects.get().pdf)
+        first = IssuedBill.objects.get()
         self.cleaning.fixed_amount = Decimal('2000')
         self.cleaning.save()
-        self.assertEqual(self.pdf(self.viktor, inline='1', issued='1').content, sent)
+        self.assertEqual(self.pdf(self.viktor, v=first.pk, inline='1').content, bytes(first.pdf))
+        self.assertEqual(IssuedBill.objects.count(), 1, 'a version opened — nothing issued')
 
     def test_issue_ready_ones_and_the_lists(self):
         url = reverse('bill_issue')
@@ -71,7 +78,6 @@ class BillsTests(TestCase):
         self.client.post(url, {'month': '2026-11'})
         self.assertEqual(IssuedBill.objects.count(), 2)
         issued = self.client.get(reverse('bill_list'), {'month': '2026-11'})
-        self.assertContains(issued, '№ 2')
         self.assertContains(issued, 'Выставлено 2')
 
     def test_not_ready_is_not_issued(self):
@@ -83,16 +89,17 @@ class BillsTests(TestCase):
         self.client.post(reverse('bill_issue'), {'month': '2026-11'})
         self.assertEqual(IssuedBill.objects.count(), 2)
 
-    def test_object_page_shows_the_bill_now_and_when_it_went(self):
-        # 2026-11-25 (the user: «текущий»): the bill is always the count now; the issued one — a line under the name.
+    def test_object_page_shows_the_bill_now(self):
+        # 2026-11-25 (the user): the bill is always the count now; its № and date while it is the issued one.
         self.pdf(self.viktor)
+        day = datetime.date.today()
         url = reverse('property_detail', args=[self.prop.pk])
         page = self.client.get(url, {'month': '2026-11', 'tenant': self.viktor.pk})
-        self.assertContains(page, 'Счёт № 1')
-        self.assertNotContains(page, 'изменился')
+        self.assertContains(page, f'Счёт № {day:%d%m%y}')
+        self.assertContains(page, f'выставлен {day:%d.%m.%Y}')
         self.cleaning.fixed_amount = Decimal('2000')
         self.cleaning.save()
         page = self.client.get(url, {'month': '2026-11', 'tenant': self.viktor.pk})
-        self.assertContains(page, 'Девятьсот рублей 00 копеек')  # now
-        self.assertContains(page, 'на 450,00')  # as it went
-        self.assertContains(page, 'изменился — отправьте заново')
+        self.assertContains(page, 'Девятьсот рублей 00 копеек')
+        self.assertNotContains(page, 'Счёт № ')
+        self.assertNotContains(page, 'изменился')

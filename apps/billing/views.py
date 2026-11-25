@@ -146,13 +146,14 @@ def _payment_context(request, month):
 def bill_print(request, property_pk, payer):
     """«Счёт PDF»: one payer's bill for the month as a PDF file. `payer` — the tenant's id, 0 — the owner («Остаётся на
     вас»). Downloaded (also fetched by «Поделиться») — the tenant's bill is ISSUED (2026-11-25, «Счета»): numbered,
-    kept as it went. `?inline=1` — «Посмотреть», doesn't issue; `&issued=1` — the issued one, as it went."""
+    kept as it went. `?inline=1` — «Посмотреть», doesn't issue; `?v=<id>` — that issued version as it went («Счета»)."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
     month = property_services.parse_month(request.GET.get('month'))
     inline = bool(request.GET.get('inline'))
-    if inline and request.GET.get('issued') and payer:
-        issued = get_object_or_404(IssuedBill, property=property_obj, tenant_id=payer, month=month)
-        return _pdf_response(bytes(issued.pdf), issued.tenant.name, property_services.month_label(month), True)
+    version = request.GET.get('v', '')
+    if version.isdigit() and payer:
+        issued = get_object_or_404(IssuedBill, pk=version, property=property_obj, tenant_id=payer)
+        return _pdf_response(bytes(issued.pdf), issued.tenant.name, property_services.month_label(issued.month), inline)
     bill = services.month_bill(property_obj, month)
     found = bill.owner if payer == 0 else bill.payer_for(payer)
     if found is None:
@@ -178,15 +179,17 @@ def _render_bill(request, property_obj, bill, payer, month, number=None):
 
 
 def _issue(request, property_obj, bill, payer, month):
-    """Issue a tenant's bill: the number it had (issued again — the same), else the next one; the PDF as it goes."""
-    issued = IssuedBill.objects.filter(tenant=payer.tenant, month=month).first()
-    number = issued.number if issued else services.next_bill_number(request.user)
+    """Issue a tenant's bill (2026-11-25): nothing changed since the last version — that one; else a new version
+    numbered by today («251126», again today — «251126/1»), the PDF kept as it goes."""
+    snapshot = services.bill_snapshot(payer)
+    last = IssuedBill.objects.filter(tenant=payer.tenant, month=month).first()
+    if last is not None and last.lines == snapshot:
+        return last
+    today = date.today()
+    number = services.bill_number(payer.tenant, month, today)
     data = _render_bill(request, property_obj, bill, payer, month, number)
-    issued, _ = IssuedBill.objects.update_or_create(
-        tenant=payer.tenant, month=month,
-        defaults={'property': property_obj, 'number': number, 'issued_on': date.today(),
-                  'total': services.bill_pay(payer), 'pdf': data, 'lines': services.bill_snapshot(payer)})
-    return issued
+    return IssuedBill.objects.create(property=property_obj, tenant=payer.tenant, month=month, number=number,
+                                     issued_on=today, total=services.bill_pay(payer), pdf=data, lines=snapshot)
 
 
 def _pdf_response(data, title, label, inline):
@@ -208,8 +211,8 @@ def _bills_context(request, month):
 
 @login_required
 def bill_list(request):
-    """«Счета → Выставленные» (2026-11-25): the bills given to the tenants this month — as they went; data changed
-    after — «Изменился · сейчас N ₽»; «PDF» / «Поделиться» again issues the new one instead."""
+    """«Счета → Выставленные» (2026-11-25): the bills given to the tenants this month — every version as it went
+    (№ 251126, 251126/1…), the newest first; the sum at the foot — the newest of each tenant."""
     month = property_services.parse_month(request.GET.get('month'))
     context = _bills_context(request, month)
     groups = [(p, [r for r in rows if r.issued]) for p, rows in context['groups']]
