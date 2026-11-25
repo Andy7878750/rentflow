@@ -86,14 +86,12 @@
     </div>
     {% if bill.entries %}
     <div class="section-actions">
-      {% if bill.entries|length > 1 %}
-        <button type="button" class="btn btn-ghost btn-auto btn-sm order-on" data-order-on title="Поменять услуги местами">
-          <svg class="icon"><use href="#i-sort"/></svg>Порядок
-        </button>
-      {% endif %}
-      <a href="{% url 'service_window' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm order-add">
+      <a href="{% url 'service_window' property.pk %}" data-modal class="btn btn-primary btn-auto btn-sm order-add" title="Добавить услугу">
         <svg class="icon"><use href="#i-plus"/></svg>Добавить услугу
       </a>
+      {% if bill.entries|length > 1 %}
+        <button type="button" class="btn btn-ghost btn-sm order-on" data-order-on title="Порядок услуг" aria-label="Порядок услуг"><svg class="icon"><use href="#i-sort"/></svg></button>
+      {% endif %}
     </div>
     {% endif %}
   </div>

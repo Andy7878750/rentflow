@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Шапки блоков «Ввод за месяц» — 2026-11-25</title>
+<style>
+  :root { --primary:#34495e; --accent:#148f77; --accent-soft:#e6f4f1; --bg:#f5f6f7; --border:#e1e4e8;
+    --text:#2c3338; --muted:#6b7680; --honey:#8a6100; --font:"Segoe UI", system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--font); background:var(--bg); color:var(--text); font-size:14px; }
+  .top { max-width:1180px; margin:0 auto; padding:24px 16px 8px; }
+  h1 { margin:0 0 4px; font-size:20px; color:var(--primary); }
+  .lead { margin:0 0 16px; color:var(--muted); }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .tabs button { height:34px; padding:0 14px; border:1px solid var(--border); border-radius:8px; background:#fff;
+    font:inherit; color:var(--primary); cursor:pointer; }
+  .tabs button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .stage { max-width:1180px; margin:0 auto; padding:16px; display:grid; grid-template-columns:560px 1fr; gap:24px; align-items:start; }
+  .notes { background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 20px; line-height:1.5; }
+  .notes h2 { margin:0 0 8px; font-size:16px; color:var(--primary); }
+  .notes ul { margin:0; padding-left:18px; }
+  .notes .plus { color:#117965; } .notes .minus { color:#a5462e; }
+
+  /* the column as on the object page */
+  .col { background:#fff; border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .ttl { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .ttl-l { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .ttl h3 { margin:0; font-size:18px; color:var(--primary); }
+  .ico-btn { width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; color:var(--muted); border-radius:6px; }
+  .month { display:inline-flex; align-items:center; gap:10px; margin-left:8px; font-weight:600; color:var(--primary); font-size:14px; }
+  .month span { color:var(--muted); font-weight:400; }
+  .btn-add { height:34px; padding:0 12px; border:1px solid var(--accent); border-radius:8px; color:var(--accent); background:#fff;
+    display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:13px; }
+
+  .grid { display:grid; grid-template-columns:minmax(0,1fr) 64px 90px 76px; column-gap:10px; align-items:center; }
+  .row { padding:6px 0; }
+  .name { display:flex; flex-direction:column; min-width:0; }
+  .n1 { display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:var(--primary); white-space:nowrap; }
+  .n2 { font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .who .n1 { font-size:13px; font-weight:600; }
+  .who { padding-left:30px; }
+  .pen { color:var(--muted); width:14px; height:14px; }
+  .kind { width:18px; height:18px; flex:none; }
+  .prev { text-align:right; color:var(--muted); font-size:12px; }
+  .inp { height:34px; border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; justify-content:flex-end;
+    padding:0 10px; font-variant-numeric:tabular-nums; }
+  .inp .plus { color:var(--accent); margin-right:auto; }
+  .inp-sum { grid-column:2/4; justify-self:end; width:120px; }
+  .inp-sum .u { color:var(--honey); margin-left:6px; }
+  .use { justify-self:end; font-size:11px; background:#eef0f2; border-radius:999px; padding:2px 8px; white-space:nowrap; }
+  .tot { grid-column:3/5; text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
+  .grp { padding:10px 0; }
+  .grp + .grp { border-top:1px solid var(--border); }
+  .grp-name { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; color:var(--primary); padding-bottom:4px; }
+  .badge { font-size:11px; font-weight:600; border-radius:999px; padding:2px 8px; letter-spacing:normal; text-transform:none; }
+  .badge-acc { background:var(--accent); color:#fff; }
+  .badge-soft { background:var(--accent-soft); color:#117965; }
+  .colh { font-size:12px; font-weight:600; text-align:right; color:var(--text); text-transform:none; letter-spacing:normal; }
+  .caps { font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; }
+
+  /* А — now */
+  .va .box { border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
+  .va .head { min-height:38px; padding:6px 14px; background:var(--bg); border-bottom:1px solid var(--border); border-radius:12px 12px 0 0;
+    display:flex; align-items:center; gap:8px; color:var(--primary); }
+  .va .head.grid { display:grid; }
+  .va .body { padding:4px 14px 6px; }
+  .va .sep + .sep { border-top:1px solid var(--border); }
+
+  /* Б — the caption over the frame, no grey band (as the object / services / history windows) */
+  .vb .cap { min-height:20px; padding:0 0 8px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+  .vb .cap.grid { display:grid; padding-left:0; padding-right:17px; }
+  .vb .cap.grid .colh { color:var(--muted); font-weight:600; }
+  .vb .box { border:1px solid var(--border); border-radius:12px; padding:4px 14px 6px; margin-bottom:20px; }
+  .vb .sep + .sep { border-top:1px solid var(--border); }
+
+  /* В — one frame, the columns once in a grey head, the blocks parted by a line with a caption */
+  .vc .box { border:1px solid var(--border); border-radius:12px; }
+  .vc .head { min-height:38px; padding:6px 14px; background:var(--bg); border-bottom:1px solid var(--border); border-radius:12px 12px 0 0; }
+  .vc .part { padding:10px 14px 6px; }
+  .vc .part + .part { border-top:1px solid var(--border); }
+  .vc .cap { color:var(--muted); padding-bottom:4px; display:flex; align-items:center; gap:8px; }
+  .vc .sep + .sep { border-top:1px solid var(--border); }
+
+  /* Г — no frames: the blocks are captions and thin lines only */
+  .vd .cap { color:var(--muted); padding:16px 0 6px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .vd .cap.grid { display:grid; }
+  .vd .cap.grid .colh { color:var(--muted); }
+  .vd .cap:first-of-type { padding-top:0; }
+  .vd .sep + .sep { border-top:1px solid #f0f1f3; }
+
+  .v { display:none; } .v.on { display:block; }
+  @media (max-width:900px) { .stage { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l4 4v14H7z"/><path d="M10 12h5M10 16h5"/></symbol>
+  <symbol id="bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+  <symbol id="drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/></symbol>
+  <symbol id="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="sort" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></symbol>
+</svg>
+
+<div class="top">
+  <h1>Шапки блоков «Ввод за месяц»</h1>
+  <p class="lead">Страница объекта, средний столбец. Карандаши уже серые, у групп счётчиков нет цветного фона (правки 2026-11-25).</p>
+  <div class="tabs" id="tabs">
+    <button data-v="a" class="on">А · сейчас</button>
+    <button data-v="b">Б · подпись над рамкой</button>
+    <button data-v="c">В · одна рамка</button>
+    <button data-v="d">Г · без рамок</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div id="views"></div>
+  <div class="notes" id="notes"></div>
+</div>
+
+<template id="t-title">
+  <div class="ttl"><div class="ttl-l"><h3>Ввод за месяц</h3><span class="ico-btn"><svg width="14" height="14"><use href="#sort"/></svg></span>
+    <span class="month"><span>‹</span>Ноябрь 2026<span>›</span></span></div>
+    <span class="btn-add">+ Добавить услугу</span></div>
+</template>
+
+<script>
+  var SUMS = [['doc','Коммунальные услуги','ООО «П-С ЙЕС»','6 350','#148f77'],['bolt','Электричество','АО «ПЕСК»','27 500','#0e9aa7']];
+  var GROUPS = [
+    ['drop','#d9534f','Вода горячая',[['Салон «Ногти»','№ 254125-65 · 80,7 ₽/м³','241','243','2 м³'],['Аптека «Вита»','№ 1147899 · 80,7 ₽/м³','202','210','8 м³']]],
+    ['bolt','#0e9aa7','Электричество',[['Салон «Ногти»','№ 013117','99 127','+520','520 кВт·ч'],['Аптека «Вита»','№ 58008028','343 918','+310','310 кВт·ч']]],
+    ['drop','#2f80d1','Вода холодная',[['Салон «Ногти»','№ 358479-65 · 55,7 ₽/м³','776','780','4 м³'],['Аптека «Вита»','№ 7896541 · 55,7 ₽/м³','302','315','13 м³']]]];
+  var AUTO = [['Водоотведение','АО «Водоканал»','1 215,00 ₽'],['Водоотведение','АО «Водоканал»','1 215,00 ₽']];
+  function ico(id, c, s) { return '<svg class="kind" style="color:' + c + ';width:' + (s||18) + 'px;height:' + (s||18) + 'px"><use href="#' + id + '"/></svg>'; }
+  var PEN = '<svg class="pen"><use href="#pen"/></svg>';
+  function sums() { return SUMS.map(function (s) {
+    return '<div class="grid row sep"><div class="name"><div class="n1">' + ico(s[0], s[4]) + s[1] + PEN + '</div><div class="n2" style="padding-left:24px">' + s[2] +
+      '</div></div><div class="inp inp-sum">' + s[3] + '<span class="u">₽</span></div></div>'; }).join(''); }
+  function meters() { return GROUPS.map(function (g) {
+    return '<div class="grp"><div class="grp-name">' + ico(g[0], g[1]) + g[2] + PEN + '</div>' + g[3].map(function (m) {
+      var plus = m[3][0] === '+';
+      return '<div class="grid row" style="padding:4px 0"><div class="name who"><div class="n1">' + m[0] + '</div><div class="n2">' + m[1] + '</div></div>' +
+        '<div class="prev">' + m[2] + '</div><div class="inp">' + (plus ? '<span class="plus">+</span>' + m[3].slice(1) : m[3]) + '</div><div class="use">' + m[4] + '</div></div>';
+    }).join('') + '</div>'; }).join(''); }
+  function autos() { return AUTO.map(function (a) {
+    return '<div class="grid row sep"><div class="name"><div class="n1">' + ico('doc', '#8a6d4b') + a[0] + PEN + '</div><div class="n2" style="padding-left:24px">' + a[1] +
+      '</div></div><div class="tot">' + a[2] + '</div></div>'; }).join(''); }
+  var COLS = '<span></span><span class="colh">Было</span><span class="colh">Стало</span><span class="colh">Расход</span>';
+  function colsWith(label) { return '<span class="caps">' + label + '</span><span class="colh">Было</span><span class="colh">Стало</span><span class="colh">Расход</span>'; }
+  var title = document.getElementById('t-title').innerHTML;
+
+  var V = {
+    a: '<div class="box"><div class="head caps">Суммы из квитанций <span class="badge badge-acc">за весь объект</span></div><div class="body">' + sums() + '</div></div>' +
+       '<div class="box"><div class="head grid">' + colsWith('Показания счётчиков') + '</div><div class="body" style="padding-top:2px;padding-bottom:2px">' + meters() + '</div></div>' +
+       '<div class="box"><div class="head caps">Считается само</div><div class="body">' + autos() + '</div></div>',
+    b: '<div class="cap caps">Суммы из квитанций <span class="badge badge-acc">за весь объект</span></div><div class="box">' + sums() + '</div>' +
+       '<div class="cap grid">' + colsWith('Показания счётчиков') + '</div><div class="box" style="padding-top:0;padding-bottom:0">' + meters() + '</div>' +
+       '<div class="cap caps">Считается само</div><div class="box">' + autos() + '</div>',
+    c: '<div class="box"><div class="head grid">' + COLS + '</div>' +
+       '<div class="part"><div class="cap caps">Суммы из квитанций <span class="badge badge-acc">за весь объект</span></div>' + sums() + '</div>' +
+       '<div class="part"><div class="cap caps">Показания счётчиков</div>' + meters() + '</div>' +
+       '<div class="part"><div class="cap caps">Считается само</div>' + autos() + '</div></div>',
+    d: '<div class="cap caps">Суммы из квитанций <span class="badge badge-acc">за весь объект</span></div>' + sums() +
+       '<div class="cap grid">' + colsWith('Показания счётчиков') + '</div>' + meters() +
+       '<div class="cap caps">Считается само</div>' + autos()
+  };
+  var NOTES = {
+    a: '<h2>А · сейчас</h2><ul><li class="minus">Три серые полосы капсом: страница делится на «таблицы», глаз цепляется за полосы, а не за числа.</li>' +
+       '<li class="minus">У «Показаний» в полосе ещё и «Было · Стало · Расход» другим шрифтом (не капсом): в одной полосе два стиля.</li>' +
+       '<li class="minus">Рамка блока + серая полоса + рамки полей = три слоя на один блок.</li></ul>',
+    b: '<h2>Б · подпись над рамкой <span class="badge badge-soft">предлагаю</span></h2><ul>' +
+       '<li class="plus">Как в окнах объекта, услуг и «Истории»: подпись капсом серым без полосы, под ней список в рамке. Одно правило на всё приложение.</li>' +
+       '<li class="plus">Серых полос нет совсем; «Было · Стало · Расход» — в строке подписи, над своими столбцами.</li>' +
+       '<li class="plus">Блоки по-прежнему отдельные — видно, где суммы, где показания.</li>' +
+       '<li class="minus">Страница на ~20px выше (воздух между блоками).</li></ul>',
+    c: '<h2>В · одна рамка</h2><ul><li class="plus">Одна серая полоса со столбцами наверху — на всю форму.</li>' +
+       '<li class="plus">Самый плотный вариант.</li>' +
+       '<li class="minus">«Было · Стало» висят и над суммами квитанций, где их нет — путает.</li>' +
+       '<li class="minus">Ввод становится одной длинной таблицей: при прокрутке теряется, в каком блоке вы.</li></ul>',
+    d: '<h2>Г · без рамок</h2><ul><li class="plus">Самый тихий: только подписи и тонкие линии.</li>' +
+       '<li class="minus">Поля ввода «висят в воздухе»; блоки сливаются со счётом справа (у счёта рамки есть).</li>' +
+       '<li class="minus">Расходится со всеми окнами, где список всегда в рамке.</li></ul>'
+  };
+  function show(k) {
+    document.getElementById('views').innerHTML = '<div class="col v on v' + k + '">' + title + V[k] + '</div>';
+    document.getElementById('notes').innerHTML = NOTES[k];
+    document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === k); });
+  }
+  document.getElementById('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) show(b.dataset.v); });
+  show('a');
+</script>
+</body>
+</html>

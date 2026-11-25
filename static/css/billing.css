@@ -323,6 +323,15 @@
   margin-right: 8px;
 }
 
+/* «Ввод за месяц ‹ Ноябрь 2026 ›» on one line; «⇅» — a square icon button after «Добавить услугу» (2026-11-25). */
+.obj-month .section-actions .order-on { width: 39px; height: 39px; padding: 0; justify-content: center; }  /* = «Добавить услугу» */
+/* A narrow column: the month stays on the title's line, «Добавить услугу» becomes «+» (the words — in its tooltip). */
+.obj-month .section-head > div:first-child { flex-wrap: nowrap; }
+.obj-month .section-head h2 { white-space: nowrap; }
+@container month (max-width: 600px) {
+  .obj-month .section-actions .order-add { width: 39px; height: 39px; padding: 0; gap: 0; justify-content: center; font-size: 0; }
+}
+
 .obj-month .section-head > div {
   display: flex;
   align-items: center;
@@ -1641,13 +1650,11 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
    stand apart; the columns stay where the other blocks have them (negative margin = the inner padding).
    Inside a group no lines: the tenants (12px) stand under the service's name, past its icon; even spacing. */
 .mi-meters {
-  margin: 8px -8px 0;
-  padding: 8px;
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--rk, var(--color-text-muted)) 5%, #fff);
+  margin: 0;
+  padding: 10px 0;
 }
-/* Meters under an own name (a group of their own) and mixed ones — plain grey (2026-11-20, the user's wish) */
-.mi-meters.rk-custom { background: #f1f2f4; }
+/* 2026-11-25: no tints any more — the kind's colour only on the icon, the groups parted by a thin line. */
+.mi-meters + .mi-meters { border-top: 1px solid var(--color-border); }
 .mi-meters .mread { padding: 4px 0; border-bottom: 0; }
 .mi-meters .mread-who { padding-left: 30px; font-size: 12px; }
 .mi-meters .mread-meta { font-size: 11px; }
@@ -1687,7 +1694,7 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 }
 .mi-cols > span { color: var(--color-text); font-size: 12px; font-weight: 600; letter-spacing: normal; text-transform: none; text-align: right; }
 /* The meters block: the same 8px white gap above, between and below the coloured groups. */
-.mi-body:has(> .mi-meters) { padding-top: 8px; padding-bottom: 8px; }
+.mi-body:has(> .mi-meters) { padding-top: 2px; padding-bottom: 2px; }
 .mi-body > .mi-meters:first-child { margin-top: 0; }
 
 /* ---------- Whose bill: its own block over the bill (2026-11-18) ----------
@@ -1774,7 +1781,7 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   height: 22px;
   margin: -1px 0;
   border-radius: 6px;
-  color: var(--color-accent);
+  color: var(--color-text-muted);  /* grey, the accent only on hover (2026-11-25: six green ✎ in a column were noise) */
 }
 .head-icon .icon { width: 14px; height: 14px; }
 .head-icon:hover { background: var(--color-accent-soft); color: var(--color-accent-hover); }
