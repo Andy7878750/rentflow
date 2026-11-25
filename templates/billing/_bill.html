@@ -5,7 +5,7 @@
     <div class="bill-head-text">
       {% comment %}2026-11-25: a dot instead of the badge — green: all typed in, red: not (what — in its tooltip).{% endcomment %}
       {% with issued=payer.view.issued %}
-      <span class="bill-cap">Счёт{% if issued %} № {{ issued.number }}{% endif %} · {{ month_name }} {{ month_label|slice:"-4:" }}{% if issued %}{% elif payer.lines %}{% if bill.missing %}<span class="bill-dot is-missing" title="Не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"></span>{% else %}<span class="bill-dot" title="Всё введено — готов к счёту"></span>{% endif %}{% endif %}</span>
+      <span class="bill-cap">Счёт{% if issued %} № {{ issued.number }}{% endif %} · {{ month_name }} {{ month_label|slice:"-4:" }}{% if issued and not payer.changed %}{% elif payer.lines %}{% if bill.missing %}<span class="bill-dot is-missing" title="Не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"></span>{% else %}<span class="bill-dot" title="Всё введено — готов к счёту"></span>{% endif %}{% endif %}</span>
       {% if bill.payers|length > 1 or bill.payers and owner_tab %}
         {% comment %}Whose bill (2026-11-25, variant В of 2026-11-25-whose-bill.html): no block of its own — the name opens the payers.{% endcomment %}
         <div class="bill-who" data-who>
@@ -24,8 +24,8 @@
       {% else %}
         <h2 class="fade">{{ title }}</h2>
       {% endif %}
-      {% comment %}2026-11-25: an issued month shows the bill as it went; the count today differs — a quiet line.{% endcomment %}
-      {% if issued %}<p class="bill-issued">выставлен {{ issued.issued_on|date:"d.m.Y" }}{% if payer.changed %} · <span class="is-changed">изменился, сейчас {{ payer.now|floatformat:"2g" }}&nbsp;₽</span>{% endif %}</p>{% endif %}
+      {% comment %}2026-11-25: the bill is always the count now; the issued one differs — when and for how much it went.{% endcomment %}
+      {% if issued %}<p class="bill-issued">выставлен {{ issued.issued_on|date:"d.m.Y" }}{% if payer.changed %} на {{ issued.total|floatformat:"2g" }}&nbsp;₽ · <span class="is-changed">изменился — отправьте заново</span>{% endif %}</p>{% endif %}
       {% endwith %}
     </div>
     {% if payer.tenant %}
@@ -55,7 +55,7 @@
       <div class="bill-total-row"><span>Итого к оплате</span><b>{{ view.pay|floatformat:"2g" }}&nbsp;₽</b></div>
       {% if vat.mode == 'in' %}<div class="bill-vat-row"><span>в т. ч. НДС {{ vat.rate }}%</span><span>{{ vat.vat|floatformat:"2g" }}&nbsp;₽</span></div>{% endif %}
       {% endwith %}
-      {% if bill.missing and not view.issued %}
+      {% if bill.missing %}
         <p class="bill-words">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %} — сумма неполная.</p>
       {% else %}
         <p class="bill-words">{{ view.pay|money_words }}.</p>
@@ -67,7 +67,7 @@
       <a class="btn btn-primary bill-pdf" href="{{ pdf_url }}?month={{ month }}" download="{{ share.file }}" title="{% if payer.changed %}Скачать новый — счёт выставится заново{% elif view.issued %}Скачать — счёт выставится заново{% else %}Скачать — счёт выставится{% endif %}">
         <svg class="icon"><use href="#i-download"/></svg>PDF
       </a>
-      <a class="btn bill-view" href="{{ pdf_url }}?month={{ month }}&amp;inline=1{% if view.issued %}&amp;issued=1{% endif %}" data-pdf-view data-title="Счёт · {{ title }} · {{ month_name }} {{ month_label|slice:'-4:' }}" target="_blank" rel="noopener">
+      <a class="btn bill-view" href="{{ pdf_url }}?month={{ month }}&amp;inline=1" data-pdf-view data-title="Счёт · {{ title }} · {{ month_name }} {{ month_label|slice:'-4:' }}" target="_blank" rel="noopener">
         <svg class="icon"><use href="#i-eye"/></svg>Посмотреть
       </a>
       <button type="button" class="btn bill-share" data-share-open aria-haspopup="true" title="Поделиться" aria-label="Поделиться">

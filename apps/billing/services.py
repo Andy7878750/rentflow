@@ -1727,19 +1727,18 @@ def bill_snapshot(payer):
 
 
 def bill_view(payer, issued=None):
-    """What the bill on the object page shows: the issued one as it went (when it was issued with its lines), else
-    the month counted now. {'groups': [{'title', 'lines': [{'name', 'amount', 'rows'}]}], 'vat', 'pay', 'issued'}."""
-    if issued is not None and issued.lines:
-        data = issued.lines
-        vat = data.get('vat')
-        if vat:
-            vat = {**vat, 'vat': Decimal(vat['vat']), 'net': Decimal(vat['net']), 'pay': Decimal(vat['pay'])}
-        return {'groups': [{'title': g['title'], 'lines': [{**line, 'amount': Decimal(line['amount'])} for line in g['lines']]}
-                           for g in data['groups']], 'vat': vat, 'pay': Decimal(data['pay']), 'issued': issued}
+    """What the bill on the object page shows — always the month counted now, changing as you type (2026-11-25, the
+    user: «текущий»). `issued` — the bill given for this month, if any; `changed` — what went differs from now
+    (the lines kept with it, else the sum). {'groups': [{'title', 'lines': [{'name', 'amount', 'rows'}]}], 'vat', 'pay',
+    'issued', 'changed'}."""
+    pay = bill_pay(payer)
+    changed = False
+    if issued is not None:
+        changed = issued.lines != bill_snapshot(payer) if issued.lines else issued.total != pay
     return {'groups': [{'title': g['title'], 'lines': [
                 {'name': line.receipt.name, 'amount': line.amount, 'rows': bill_meter_rows(line) or [line.formula]}
                 for line in g['lines']]} for g in bill_groups(payer)],
-            'vat': bill_vat(payer), 'pay': bill_pay(payer), 'issued': None}
+            'vat': bill_vat(payer), 'pay': pay, 'issued': issued, 'changed': changed}
 
 
 def next_bill_number(user):

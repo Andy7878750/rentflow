@@ -193,14 +193,12 @@ def object_page_context(request, property_obj, month):
     owner_shown = bool(bill.owner.lines) or property_obj.is_owner_used or not bill.payers
     if not bill.payer_for(selected) and not (selected == 0 and owner_shown):
         selected = bill.payers[0].tenant.pk if bill.payers else 0
-    # 2026-11-25: an issued month shows the bill as it went to the tenant (it no longer changes with the settings);
-    # «Изменился · сейчас N ₽» when the count today differs
+    # 2026-11-25: the bill is always the count now; an issued one that differs — «выставлен … на N ₽ · изменился»
     from apps.billing.models import IssuedBill
     issued = {b.tenant_id: b for b in IssuedBill.objects.filter(property=property_obj, month=month).defer('pdf')}
     for payer in bill.payers:
         payer.view = billing_services.bill_view(payer, issued.get(payer.tenant.pk))
-        payer.now = billing_services.bill_pay(payer)
-        payer.changed = payer.view['issued'] is not None and payer.view['issued'].total != payer.now
+        payer.changed = payer.view['changed']
     bill.owner.view = billing_services.bill_view(bill.owner)
     occupied = sum((t.share_percent or 0 for t in property_obj.tenants.all()), 0)
     return {

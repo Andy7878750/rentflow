@@ -83,12 +83,16 @@ class BillsTests(TestCase):
         self.client.post(reverse('bill_issue'), {'month': '2026-11'})
         self.assertEqual(IssuedBill.objects.count(), 2)
 
-    def test_object_page_shows_the_issued_bill_as_it_went(self):
+    def test_object_page_shows_the_bill_now_and_when_it_went(self):
+        # 2026-11-25 (the user: «текущий»): the bill is always the count now; the issued one — a line under the name.
         self.pdf(self.viktor)
+        url = reverse('property_detail', args=[self.prop.pk])
+        page = self.client.get(url, {'month': '2026-11', 'tenant': self.viktor.pk})
+        self.assertContains(page, 'Счёт № 1')
+        self.assertNotContains(page, 'изменился')
         self.cleaning.fixed_amount = Decimal('2000')
         self.cleaning.save()
-        page = self.client.get(reverse('property_detail', args=[self.prop.pk]), {'month': '2026-11', 'tenant': self.viktor.pk})
-        self.assertContains(page, 'Счёт № 1')
-        self.assertContains(page, '450,00')  # as it went
-        self.assertContains(page, 'изменился, сейчас 900,00')
-        self.assertContains(page, 'Четыреста пятьдесят рублей 00 копеек')
+        page = self.client.get(url, {'month': '2026-11', 'tenant': self.viktor.pk})
+        self.assertContains(page, 'Девятьсот рублей 00 копеек')  # now
+        self.assertContains(page, 'на 450,00')  # as it went
+        self.assertContains(page, 'изменился — отправьте заново')
