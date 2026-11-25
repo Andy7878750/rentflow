@@ -90,3 +90,34 @@ class BillSettingsTests(TestCase):
         other = User.objects.create_user(username='o@example.ru', email='o@example.ru', password='secret1')
         self.client.force_login(other)
         self.assertEqual(self.client.get(reverse('bill_settings', args=[self.viktor.pk])).status_code, 404)
+
+
+class BillTableTests(TestCase):
+    """The PDF's table (2026-11-25): Кол-во × Тариф = Сумма — day / night in one row through «/», a formula's tariff."""
+
+    def test_formula_tariff_is_a_factor_of_the_whole_formula(self):
+        from .formula import rate_block
+        units = {1: {'Гкал': 1}, 2: {'₽': 1, 'Гкал': -1}, 3: {'₽': 1}}.get
+
+        def num(i):
+            return {'t': 'num', 'id': i}
+
+        def op(o):
+            return {'t': 'op', 'op': o}
+
+        def look(block):
+            return units(block['id'], {})
+        # (Гкал − Гкал) × Тариф → the tariff
+        self.assertEqual(rate_block([op('('), num(1), op('−'), num(1), op(')'), op('×'), num(2)], look), num(2))
+        # Абонплата + Гкал × Тариф → none: no single «кол-во × тариф»
+        self.assertIsNone(rate_block([num(3), op('+'), num(1), op('×'), num(2)], look))
+        # divided by the tariff — not a tariff of the result
+        self.assertIsNone(rate_block([num(3), op('÷'), num(2)], look))
+
+    def test_day_night_in_one_row(self):
+        from .pdf import line_cols
+        receipt = Receipt(name='Электричество')
+        line = services.tenant_line(receipt, None, '', None,
+                                    ('кВт·ч', Decimal('520'), Decimal('6.1'), Decimal('1'), Decimal('310'), Decimal('2.4')))
+        self.assertEqual(line.amount, Decimal('3916.00'))  # 520 × 6,10 + 310 × 2,40
+        self.assertEqual(line_cols(line), ('кВт·ч', '520 / 310', '6,10 / 2,40'))

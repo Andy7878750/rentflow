@@ -24,7 +24,7 @@ HEAD_BG = (243, 243, 243)
 MARGIN = 22   # mm — «при печати взять более толстые поля»
 PAD = 2.5     # mm, the text inside the lines and the grey heads
 # the table's columns (mm), the name takes the rest
-COL_UNIT, COL_QTY, COL_PRICE, COL_SUM = 14, 20, 26, 28
+COL_UNIT, COL_QTY, COL_PRICE, COL_SUM = 14, 24, 28, 28  # wide enough for «520 / 310»
 TEXT, SMALL, CAPS, TITLE = 6.5, 5.4, 4.9, 12  # pt
 MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября',
               'ноября', 'декабря']
@@ -59,7 +59,11 @@ def line_cols(line):
     if line.qty is None:
         return '', '', ''
     qty = services.fmt_number(line.qty.normalize() if line.per == 1 else line.qty.quantize(services.CENT).normalize())
-    return line.unit, qty, _money(line.price)
+    price = _money(line.price)
+    if line.qty_night is not None:  # day / night in one row: «520 / 310» · «6,10 / 2,40»
+        qty += ' / ' + services.fmt_number(line.qty_night.normalize())
+        price += ' / ' + _money(line.price_night)
+    return line.unit, qty, price
 
 
 class _Bill(FPDF):

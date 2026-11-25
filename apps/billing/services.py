@@ -1532,6 +1532,8 @@ class Line:
     qty: Decimal = None
     price: Decimal = None
     per: Decimal = Decimal('1')  # 100 — the qty is a percent
+    qty_night: Decimal = None    # a day / night meter: «520 / 310» and «6,10 / 2,40» in one row (2026-11-25)
+    price_night: Decimal = None
 
     def __post_init__(self):
         if self.base is None:
@@ -1563,11 +1565,18 @@ def tenant_line(receipt, exact, formula, tenant=None, cols=None):
         if coefficient == 1:
             return Line(receipt, money(exact), formula)
         return Line(receipt, money(exact * coefficient), text, base=money(exact), k=coefficient)
-    unit, qty, price, per = cols
+    unit, qty, price, per, *night = cols
     price = money(price)
     priced = price if coefficient == 1 else money(price * coefficient)
-    return Line(receipt, money(qty * priced / per), text, base=money(qty * price / per), k=coefficient,
-                unit=unit, qty=qty, price=priced, per=per)
+    amount, base = money(qty * priced / per), money(qty * price / per)
+    qty_night = price_night = None
+    if night:  # day / night: each zone qty × its tariff, the sum of both
+        qty_night, price_night = night[0], money(night[1])
+        price_night = price_night if coefficient == 1 else money(price_night * coefficient)
+        amount += money(qty_night * price_night)
+        base += money(qty_night * money(night[1]))
+    return Line(receipt, amount, text, base=base, k=coefficient, unit=unit, qty=qty, price=priced, per=per,
+                qty_night=qty_night, price_night=price_night)
 
 
 _SPLIT_GROUP = {'shares': 'по долям', 'equal': 'поровну', 'area': 'по м²', 'usage': 'по расходу'}
@@ -2230,10 +2239,11 @@ def month_bill(property_obj, month):
                         common = (common or Decimal('0')) + exact
                     elif payer:
                         reading = month_of.get(meter.pk)
-                        cols = None
-                        if not two_zones(receipt, meter):
-                            tariff = meter_price(receipt, entry, meter)[0]
-                            cols = (meter_unit(meter) or receipt.unit, used(receipt, reading)[0], tariff, Decimal('1'))
+                        tariff, tariff_night = meter_price(receipt, entry, meter)
+                        day, night = used(receipt, reading)
+                        cols = (meter_unit(meter) or receipt.unit, day, tariff, Decimal('1'))
+                        if two_zones(receipt, meter):
+                            cols += (night, tariff_night)
                         line = tenant_line(receipt, exact, formula, payer.tenant, cols)
                         line.meter, line.reading = meter, reading
                         payer.lines.append(line)
@@ -2832,27 +2842,37 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
             return fx.Value(value, fx.units_of(unit, ''), [part])
 
         result, _ = fx.evaluate(blocks, resolve)
-        return result.value, _parts_text(fx.drop_foreign(result.parts))
+        # «рубли за что-то — это кол-во и тариф» (2026-11-25): the formula's tariff (₽ per unit, a factor of the whole
+        # formula) → the bill's «Тариф»; the result ÷ it → «Кол-во» in that unit (to 0,001). None — no such tariff.
+        cols = None
+        rate = fx.rate_block(blocks, lambda block: fx.units_of(numbers[block['id']].unit, numbers[block['id']].per)
+                             if block.get('id') in numbers else {})
+        if rate is not None:
+            number = numbers[rate['id']]
+            tariff = number_at(number, month)
+            if tariff:
+                cols = ((number.per or '').strip(), (result.value / tariff).quantize(Decimal('0.001')), tariff, Decimal('1'))
+        return result.value, _parts_text(fx.drop_foreign(result.parts)), cols
 
     try:
         if tenants:
             fx.check_mixed(blocks, owner_of)
         each = bool(tenants) and fx.mode(blocks, owner_of) == 'each'
         if not each:
-            value, entry.formula_text = count(None)
+            value, entry.formula_text, _ = count(None)
             entry.total = money(value)
             return False
         payer_ids = fx.payers(blocks, owner_of, [tenant.pk for tenant in tenants])
         excluded = excluded_ids(receipt)
         counted = [(tenant_id, *count(tenant_id)) for tenant_id in payer_ids]
-        paying = [(tenant_id, value) for tenant_id, value, _ in counted if tenant_id not in excluded]
-        off_sum = sum((value for tenant_id, value, _ in counted if tenant_id in excluded), Decimal('0'))
+        paying = [(tenant_id, value) for tenant_id, value, _, _ in counted if tenant_id not in excluded]
+        off_sum = sum((value for tenant_id, value, _, _ in counted if tenant_id in excluded), Decimal('0'))
         # «Остаётся на вас» off (2026-11-22, as everywhere): the part of those who don't pay goes to those who do,
         # in proportion to their own sums (equally when theirs are all 0).
         pass_on = not receipt.owner_takes and bool(paying) and off_sum > 0
         base = sum((value for _, value in paying), Decimal('0'))
         total = Decimal('0')
-        for tenant_id, value, text in counted:
+        for tenant_id, value, text, cols in counted:
             if tenant_id in excluded:
                 if pass_on:
                     continue
@@ -2863,7 +2883,8 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
                     extra = off_sum * value / base if base else off_sum / len(paying)
                     value += extra
                     text = f'{text} + {fmt_number(money(extra))}{NBSP}{receipt.currency_symbol} за неплатящих'
-                line = tenant_line(receipt, value, text, payers[tenant_id].tenant)
+                    cols = None  # a part of others' sums — no «кол-во × тариф» of his own
+                line = tenant_line(receipt, value, text, payers[tenant_id].tenant, cols)
                 payers[tenant_id].lines.append(line)
             total += line.base
         entry.total = total

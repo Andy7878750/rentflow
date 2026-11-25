@@ -132,6 +132,25 @@ def evaluate(blocks, resolve):
     return result, state['bare']
 
 
+def rate_block(blocks, units_of_number):
+    """The formula's tariff (2026-11-25): a number in ₽ per one unit that multiplies the whole formula — no «+» / «−»
+    outside the brackets, and it is not divided by. «(Гкал − Гкал на воду) × Тариф» → Тариф; «Абонплата + Расход ×
+    Тариф» → None (no single «кол-во × тариф»). Two such numbers — None too."""
+    depth, found, prev = 0, [], None
+    for block in blocks:
+        if block.get('t') == 'op':
+            op = block.get('op')
+            depth += 1 if op == '(' else -1 if op == ')' else 0
+            if depth == 0 and op in ('+', '−'):
+                return None
+        elif depth == 0 and block.get('t') == 'num' and not (prev and prev.get('op') == '÷'):
+            units = units_of_number(block)
+            if units.get('₽') == 1 and len(units) == 2 and sorted(units.values()) == [-1, 1]:
+                found.append(block)
+        prev = block
+    return found[0] if len(found) == 1 else None
+
+
 # ---------- Who pays: follows from the meter blocks ----------
 
 def meter_blocks(blocks):
