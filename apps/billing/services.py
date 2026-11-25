@@ -8,10 +8,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal, InvalidOperation
 
-from django.db import transaction
+from django.db import models, transaction
 
 from .models import (FormulaValue, Meter, MonthlyAmount, PayBundle, Payment, Reading, Receipt, ReceiptTariff,
-                     ServiceTemplate, TenantCoefficient)
+                     IssuedBill, ServiceTemplate, TenantCoefficient)
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
 _BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
@@ -1705,6 +1705,54 @@ def save_bill_settings(tenant, data):
             TenantCoefficient.objects.update_or_create(tenant=tenant, receipt_id=receipt_id, defaults={'value': value})
     tenant.__dict__.pop('_coefficients', None)
     return {}
+
+
+def bill_pay(payer):
+    """«К оплате» of a payer's bill: with VAT on top when the tenant's bill has it."""
+    vat = bill_vat(payer)
+    return vat['pay'] if vat else payer.total
+
+
+def next_bill_number(user):
+    """The next bill number of the owner — one sequence for all the objects (2026-11-25)."""
+    last = IssuedBill.objects.filter(property__owner=user).aggregate(models.Max('number'))['number__max']
+    return (last or 0) + 1
+
+
+@dataclass
+class BillRow:
+    """A tenant's bill of the month in «Счета»: the sum now, ready or what is missing, and the issued one if any."""
+
+    property: object
+    payer: object
+    pay: Decimal
+    ready: bool
+    missing: str = ''
+    issued: object = None
+
+    @property
+    def changed(self):
+        return self.issued is not None and self.issued.total != self.pay
+
+
+def bill_rows(user, month):
+    """Every tenant's bill of the month on the owner's objects, by object: [(property, [BillRow])]. A tenant with
+    0 ₽ and «Остаётся на вас» are not here (2026-11-25); an issued one is, even if it is 0 ₽ now."""
+    issued = {(b.tenant_id): b for b in IssuedBill.objects.filter(property__owner=user, month=month).defer('pdf')}
+    out = []
+    for property_obj in user.properties.order_by('name'):
+        bill = month_bill(property_obj, month)
+        missing = ', '.join(receipt.name for receipt in bill.missing)
+        rows = []
+        for payer in bill.payers:
+            got = issued.get(payer.tenant.pk)
+            pay = bill_pay(payer)
+            if not pay and got is None:
+                continue
+            rows.append(BillRow(property_obj, payer, pay, not bill.missing, missing and 'не введено: ' + missing, got))
+        if rows:
+            out.append((property_obj, rows))
+    return out
 
 
 def bill_file_name(title, month_label):

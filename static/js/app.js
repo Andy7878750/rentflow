@@ -2265,6 +2265,8 @@
       return;
     }
     var to = event.target.closest('[data-share-to]');
+    // «Поделиться» issues the bill (2026-11-25, «Счета»): the text alone doesn't fetch the PDF — fetching it issues.
+    if (to || event.target.closest('[data-share-copy]')) fetch(box.dataset.pdf, { credentials: 'same-origin' }).catch(function () {});
     if (to) {
       var text = encodeURIComponent(box.dataset.text);
       to.href = to.dataset.shareTo === 'whatsapp'

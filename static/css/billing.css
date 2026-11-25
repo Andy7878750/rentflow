@@ -2203,3 +2203,51 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .bill-vat-row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; color: var(--color-text-muted); font-size: 13px;
   font-variant-numeric: tabular-nums; }
 .bs-hint a { color: var(--color-accent-hover); }
+
+/* ---------- «Счета» (2026-11-25, docs/mockups/2026-11-25-bills.html): an object — a grey head; a bill — a row 56px:
+   tenant · state · sum · actions in fixed slots (eye · PDF · share · «Выставить»), the icons in one column everywhere. */
+.bl-list { overflow: visible; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); }
+.bl-ohead { display: flex; align-items: baseline; gap: 10px; height: 38px; padding: 0 16px; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg); }
+.bl-list > .bl-ohead:first-child { border-radius: 12px 12px 0 0; }
+.bl-ohead b { flex: none; color: var(--color-primary); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.bl-ohead span { min-width: 0; color: var(--color-text-muted); font-size: 12px; white-space: nowrap; }
+.bl-row { display: grid; grid-template-columns: minmax(0, 1fr) 200px 130px 274px; align-items: center; column-gap: 16px; height: 56px;
+  padding: 0 16px; border-bottom: 1px solid var(--color-border); }
+.bl-list > .bl-row:last-child { border-bottom: 0; }
+.bl-row.is-issued { grid-template-columns: minmax(0, 1fr) 200px 130px 120px; }
+.bl-who { display: flex; flex-direction: column; min-width: 0; }
+.bl-who b { min-width: 0; color: var(--color-text); font-weight: 600; white-space: nowrap; overflow: hidden; }
+.bl-who span, .bl-state small, .bl-done { color: var(--color-text-muted); font-size: 12px; }
+.bl-state { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.bl-state small { max-width: 100%; white-space: nowrap; overflow: hidden; }
+.bl-sum { font-weight: 700; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bl-sum.is-muted { color: var(--color-text-muted); font-weight: 400; }
+.bl-acts { position: relative; display: grid; grid-template-columns: 32px 44px 32px 142px; align-items: center; justify-content: end; gap: 6px; }
+.bl-row.is-issued .bl-acts { grid-template-columns: 32px 44px 32px; }
+.bl-ib { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--color-border);
+  border-radius: 9px; background: var(--color-surface); color: var(--color-primary); cursor: pointer; text-decoration: none; }
+.bl-ib .icon { width: 16px; height: 16px; }
+.bl-ib:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.bl-ib.is-txt { width: 44px; font-size: 12.5px; font-weight: 700; }
+.bl-ib.is-off { opacity: .4; cursor: default; pointer-events: none; }
+.bl-go { margin: 0; }
+.bl-go .btn { width: 100%; justify-content: center; }
+.bl-acts .share-menu { top: calc(100% + 6px); bottom: auto; }
+.bl-empty { padding: 28px 16px; color: var(--color-text-muted); text-align: center; }
+.bl-foot { margin: 10px 0 0; color: var(--color-text-muted); font-size: 13px; }
+/* last month's not issued — a grey strip, as on «Оплаты» */
+.bl-prev { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; padding: 7px 10px;
+  border: 1px solid var(--color-border); border-radius: 12px; background: #f4f6f7; font-size: 12.5px; }
+.bl-red { color: var(--color-danger, #c0392b); }
+.bl-chip { display: inline-flex; align-items: center; gap: 8px; height: 28px; margin: 0; padding: 0 4px 0 10px; border: 1px solid var(--color-border);
+  border-radius: 999px; background: var(--color-surface); color: var(--color-text-muted); font-size: 12px; }
+.bl-chip b { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.bl-chip button { height: 22px; padding: 0 9px; border: 0; border-radius: 999px; background: var(--color-accent); color: #fff; font: inherit;
+  font-size: 11.5px; font-weight: 600; cursor: pointer; }
+@media (max-width: 820px) {
+  .bl-row, .bl-row.is-issued { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; height: auto; row-gap: 8px; padding: 10px 16px; }
+  .bl-state { grid-column: 1; grid-row: 2; }
+  .bl-sum { grid-column: 2; grid-row: 1; }
+  .bl-acts { grid-column: 2; grid-row: 2; }
+}

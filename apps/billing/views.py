@@ -1,5 +1,6 @@
 import json
 from datetime import date
+from decimal import Decimal
 from urllib.parse import quote
 
 from django.contrib import messages
@@ -17,7 +18,7 @@ from apps.properties.views import modal_back_url, object_page_context
 from apps.tenants.models import Tenant
 
 from . import services, window
-from .models import Meter, PayBundle, Receipt
+from .models import IssuedBill, Meter, PayBundle, Receipt
 
 
 def _done(request, property_obj, message):
@@ -143,30 +144,125 @@ def _payment_context(request, month):
 @login_required
 @xframe_options_sameorigin  # «Посмотреть» shows it in a modal window (an iframe of our own page)
 def bill_print(request, property_pk, payer):
-    """«Счёт PDF»: one payer's bill for the month as a PDF file, downloaded (2026-11-17: «просто в pdf, не печать»).
-    `payer` — the tenant's id, 0 — the owner («Остаётся на вас»). `?inline=1` — shown in the browser (for «Поделиться»
-    it is fetched as a file anyway)."""
-    from .pdf import bill_pdf
-
+    """«Счёт PDF»: one payer's bill for the month as a PDF file. `payer` — the tenant's id, 0 — the owner («Остаётся на
+    вас»). Downloaded (also fetched by «Поделиться») — the tenant's bill is ISSUED (2026-11-25, «Счета»): numbered,
+    kept as it went. `?inline=1` — «Посмотреть», doesn't issue; `&issued=1` — the issued one, as it went."""
     property_obj = get_object_or_404(Property, pk=property_pk, owner=request.user)
     month = property_services.parse_month(request.GET.get('month'))
+    inline = bool(request.GET.get('inline'))
+    if inline and request.GET.get('issued') and payer:
+        issued = get_object_or_404(IssuedBill, property=property_obj, tenant_id=payer, month=month)
+        return _pdf_response(bytes(issued.pdf), issued.tenant.name, property_services.month_label(month), True)
     bill = services.month_bill(property_obj, month)
     found = bill.owner if payer == 0 else bill.payer_for(payer)
     if found is None:
         return HttpResponse(status=404)
+    if found.tenant is not None and not inline:
+        issued = _issue(request, property_obj, bill, found, month)
+        return _pdf_response(bytes(issued.pdf), found.tenant.name, property_services.month_label(month), False)
     title = found.tenant.name if found.tenant else 'Остаётся на вас'
-    label = property_services.month_label(month)
+    data = _render_bill(request, property_obj, bill, found, month)
+    return _pdf_response(data, title, property_services.month_label(month), inline)
+
+
+def _render_bill(request, property_obj, bill, payer, month, number=None):
+    from apps.accounts.models import Requisites
+
+    from .pdf import bill_pdf
     profile = getattr(request.user, 'profile', None)
     landlord = (profile.full_name if profile else '') or request.user.get_full_name() or request.user.email
-    from apps.accounts.models import Requisites
     owner_req = Requisites.objects.filter(user=request.user).first()
-    data = bill_pdf(property_obj, bill, found, title, label, date.today(), month=month, landlord=landlord,
-                    owner_req=owner_req)
-    name = services.bill_file_name(title, label)
+    title = payer.tenant.name if payer.tenant else 'Остаётся на вас'
+    return bill_pdf(property_obj, bill, payer, title, property_services.month_label(month), date.today(), month=month,
+                    landlord=landlord, owner_req=owner_req, number=number)
+
+
+def _issue(request, property_obj, bill, payer, month):
+    """Issue a tenant's bill: the number it had (issued again — the same), else the next one; the PDF as it goes."""
+    issued = IssuedBill.objects.filter(tenant=payer.tenant, month=month).first()
+    number = issued.number if issued else services.next_bill_number(request.user)
+    data = _render_bill(request, property_obj, bill, payer, month, number)
+    issued, _ = IssuedBill.objects.update_or_create(
+        tenant=payer.tenant, month=month,
+        defaults={'property': property_obj, 'number': number, 'issued_on': date.today(),
+                  'total': services.bill_pay(payer), 'pdf': data})
+    return issued
+
+
+def _pdf_response(data, title, label, inline):
     response = HttpResponse(data, content_type='application/pdf')
-    disposition = 'inline' if request.GET.get('inline') else 'attachment'
-    response['Content-Disposition'] = f"{disposition}; filename*=UTF-8''{quote(name)}"
+    disposition = 'inline' if inline else 'attachment'
+    response['Content-Disposition'] = f"{disposition}; filename*=UTF-8''{quote(services.bill_file_name(title, label))}"
     return response
+
+
+def _bills_context(request, month):
+    return {
+        'groups': services.bill_rows(request.user, month),
+        'month': property_services.month_param(month),
+        'month_label': property_services.month_label(month),
+        'prev_month': property_services.month_param(property_services.shift_month(month, -1)),
+        'next_month': property_services.month_param(property_services.shift_month(month, 1)),
+    }
+
+
+@login_required
+def bill_list(request):
+    """«Счета → Выставленные» (2026-11-25): the bills given to the tenants this month — as they went; data changed
+    after — «Изменился · сейчас N ₽»; «PDF» / «Поделиться» again issues the new one instead."""
+    month = property_services.parse_month(request.GET.get('month'))
+    context = _bills_context(request, month)
+    groups = [(p, [r for r in rows if r.issued]) for p, rows in context['groups']]
+    context['groups'] = [(p, rows) for p, rows in groups if rows]
+    context['count'] = sum(len(rows) for _, rows in context['groups'])
+    context['total'] = sum((r.issued.total for _, rows in context['groups'] for r in rows), Decimal('0'))
+    return render(request, 'billing/bill_list.html', {**context, 'mode': 'issued'})
+
+
+@login_required
+def bill_todo(request):
+    """«Счета → К выставлению» (2026-11-25): this month's drafts — «Готов к счёту» / «Не всё введено» (what is
+    missing), «Выставить»; last month's not issued and ready — the grey strip on top."""
+    month = property_services.parse_month(request.GET.get('month'))
+    context = _bills_context(request, month)
+    groups = [(p, [r for r in rows if not r.issued]) for p, rows in context['groups']]
+    context['groups'] = [(p, rows) for p, rows in groups if rows]
+    context['ready'] = sum(1 for _, rows in context['groups'] for r in rows if r.ready)
+    prev = property_services.shift_month(month, -1)
+    context['prev_rows'] = [r for _, rows in services.bill_rows(request.user, prev) for r in rows if not r.issued and r.ready]
+    context['prev_param'] = property_services.month_param(prev)
+    context['prev_name'] = property_services.month_label(prev).split()[0]
+    return render(request, 'billing/bill_list.html', {**context, 'mode': 'todo'})
+
+
+@login_required
+@require_POST
+def bill_issue(request):
+    """«Выставить» (one: `tenant`) or «Выставить готовые» (all ready, not issued, of the month) — back to the page."""
+    month = property_services.parse_month(request.POST.get('month'))
+    tenant_id = request.POST.get('tenant')
+    count = 0
+    for property_obj in request.user.properties.all():
+        bill = services.month_bill(property_obj, month)
+        if bill.missing:
+            continue
+        for payer in bill.payers:
+            if tenant_id and str(payer.tenant.pk) != tenant_id:
+                continue
+            if not services.bill_pay(payer):
+                continue
+            if not tenant_id and IssuedBill.objects.filter(tenant=payer.tenant, month=month).exists():
+                continue
+            _issue(request, property_obj, bill, payer, month)
+            count += 1
+    if count == 1 and tenant_id:
+        messages.success(request, 'Счёт выставлен — он в «Выставленных».')
+    elif count:
+        messages.success(request, f'Выставлено счетов: {count}.')
+    else:
+        messages.info(request, 'Выставлять нечего.')
+    next_url = request.POST.get('next', '')
+    return redirect(next_url if next_url.startswith('/') else reverse('bill_todo'))
 
 
 @login_required

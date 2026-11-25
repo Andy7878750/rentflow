@@ -372,3 +372,19 @@ class Payment(models.Model):
 
     def __str__(self):
         return f'{self.receipt} — {self.month:%m.%Y}'
+
+
+class IssuedBill(models.Model):
+    """A bill given to a tenant (2026-11-25, «Счета», docs/mockups/2026-11-25-bills.html): issued by «PDF», «Поделиться»
+    or «Выставить» («Посмотреть» doesn't issue). Only the last version is kept — one tenant × month, one bill; issued
+    again — the new one takes the place (the number stays). The PDF is kept as it went, so a past month never changes."""
+    property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='issued_bills')
+    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='issued_bills')
+    month = models.DateField()
+    number = models.PositiveIntegerField()
+    issued_on = models.DateField()
+    total = models.DecimalField(max_digits=12, decimal_places=2)  # «К оплате» as it was given (with VAT)
+    pdf = models.BinaryField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['tenant', 'month'], name='one_bill_per_tenant_month')]

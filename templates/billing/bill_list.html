@@ -1,0 +1,95 @@
+{% extends "app/base.html" %}
+{% load billing %}
+{% block title %}{% if mode == 'issued' %}Выставленные{% else %}К выставлению{% endif %} — RentFlow{% endblock %}
+{% block app_content %}
+{% comment %}«Счета» (2026-11-25, docs/mockups/2026-11-25-bills.html): a bill is issued when it is given to the tenant —
+  «PDF», «Поделиться» or «Выставить»; «Посмотреть» doesn't issue. «Выставленные» — as they went (the PDF is kept);
+  «К выставлению» — this month's drafts. Rows: tenant · state · sum · actions in fixed slots.{% endcomment %}
+<div class="page-head">
+  <div class="page-title">
+    <h1>{% if mode == 'issued' %}Выставленные{% else %}К выставлению{% endif %}</h1>
+    <div class="month-switch">
+      <a href="?month={{ prev_month }}" class="icon-button" aria-label="Предыдущий месяц"><svg class="icon"><use href="#i-chevron-left"/></svg></a>
+      <span class="month-label">{{ month_label }}</span>
+      <a href="?month={{ next_month }}" class="icon-button" aria-label="Следующий месяц"><svg class="icon"><use href="#i-chevron-right"/></svg></a>
+    </div>
+  </div>
+  {% if mode == 'todo' %}
+    <form method="post" action="{% url 'bill_issue' %}">
+      {% csrf_token %}
+      <input type="hidden" name="month" value="{{ month }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button type="submit" class="btn btn-primary btn-auto"{% if not ready %} disabled{% endif %}>Выставить готовые{% if ready %} · {{ ready }}{% endif %}</button>
+    </form>
+  {% endif %}
+</div>
+
+{% if mode == 'todo' and prev_rows %}
+  <div class="bl-prev">
+    <b>{{ prev_name }}: не выставлено <span class="bl-red">{{ prev_rows|length }}</span></b>
+    {% for row in prev_rows %}
+      <form method="post" action="{% url 'bill_issue' %}" class="bl-chip">
+        {% csrf_token %}
+        <input type="hidden" name="month" value="{{ prev_param }}"><input type="hidden" name="tenant" value="{{ row.payer.tenant.pk }}">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <span>{{ row.property.name }} · {{ row.payer.tenant.name }}</span><b>{{ row.pay|floatformat:"2g" }}&nbsp;₽</b>
+        <button type="submit">Выставить</button>
+      </form>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div class="bl-list">
+  {% for property, rows in groups %}
+    <div class="bl-ohead"><b>{{ property.name }}</b>{% if property.address %}<span class="fade">{{ property.address }}</span>{% endif %}</div>
+    {% for row in rows %}
+      {% with t=row.payer.tenant %}
+      {% url 'bill_print' property.pk t.pk as pdf_url %}
+      <div class="bl-row{% if mode == 'issued' %} is-issued{% endif %}">
+        <div class="bl-who"><b class="fade" title="{{ t.name }}">{{ t.name }}</b>
+          <span>{% if t.share_percent is not None %}{{ t.share_percent|num }}%{% endif %}{% if t.share_percent is not None and t.area is not None %} · {% endif %}{% if t.area is not None %}{{ t.area|num }} м²{% endif %}</span></div>
+        <div class="bl-state">
+          {% if mode == 'issued' %}
+            {% if row.changed %}<span class="badge badge-warn">Изменился</span><small>сейчас {{ row.pay|floatformat:"2g" }}&nbsp;₽</small>
+            {% else %}<span class="bl-done">№ {{ row.issued.number }} · выставлен {{ row.issued.issued_on|date:"d.m.Y" }}</span>{% endif %}
+          {% elif row.ready %}<span class="badge badge-ok">Готов к счёту</span>
+          {% else %}<span class="badge badge-danger">Не всё введено</span><small class="fade" title="{{ row.missing }}">{{ row.missing }}</small>{% endif %}
+        </div>
+        <div class="bl-sum{% if mode == 'todo' and not row.ready %} is-muted{% endif %}">{% if mode == 'issued' %}{{ row.issued.total|floatformat:"2g" }}{% else %}{{ row.pay|floatformat:"2g" }}{% endif %}&nbsp;₽</div>
+        {% bill_share row.payer t.name month_label as share %}
+        <div class="bl-acts" data-share data-pdf="{{ pdf_url }}?month={{ month }}" data-file="{{ share.file }}" data-text="{{ share.text }}">
+          {% if mode == 'issued' or row.ready %}
+            <a class="bl-ib" href="{{ pdf_url }}?month={{ month }}&amp;inline=1{% if mode == 'issued' %}&amp;issued=1{% endif %}" data-pdf-view
+               data-title="Счёт · {{ t.name }} · {{ month_label }}" target="_blank" rel="noopener"
+               title="{% if mode == 'issued' %}Посмотреть — каким счёт ушёл арендатору{% else %}Посмотреть — счёт останется здесь{% endif %}"><svg class="icon"><use href="#i-eye"/></svg></a>
+            <a class="bl-ib is-txt" href="{{ pdf_url }}?month={{ month }}" download="{{ share.file }}"
+               title="{% if row.changed %}Скачать новый PDF — счёт выставится заново{% elif mode == 'issued' %}Скачать PDF{% else %}Скачать PDF — счёт выставится{% endif %}">PDF</a>
+            <button type="button" class="bl-ib" data-share-open aria-haspopup="true" title="{% if mode == 'issued' %}Поделиться{% else %}Поделиться — счёт выставится{% endif %}"><svg class="icon"><use href="#i-share"/></svg></button>
+            <div class="share-menu" data-share-menu hidden>
+              <button type="button" data-share-file><svg class="icon"><use href="#i-file"/></svg>Отправить PDF…</button>
+              <a href="#" data-share-to="whatsapp" target="_blank" rel="noopener"><span class="share-dot is-wa"></span>WhatsApp</a>
+              <a href="#" data-share-to="telegram" target="_blank" rel="noopener"><span class="share-dot is-tg"></span>Telegram</a>
+              <button type="button" data-share-copy><svg class="icon"><use href="#i-copy"/></svg>Скопировать текст счёта</button>
+            </div>
+          {% else %}
+            <span class="bl-ib is-off"><svg class="icon"><use href="#i-eye"/></svg></span>
+            <span class="bl-ib is-txt is-off">PDF</span>
+            <span class="bl-ib is-off"><svg class="icon"><use href="#i-share"/></svg></span>
+          {% endif %}
+          {% if mode == 'todo' %}
+            <form method="post" action="{% url 'bill_issue' %}" class="bl-go">
+              {% csrf_token %}
+              <input type="hidden" name="month" value="{{ month }}"><input type="hidden" name="tenant" value="{{ t.pk }}">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-primary btn-sm"{% if not row.ready %} disabled{% endif %}>Выставить</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endwith %}
+    {% endfor %}
+  {% empty %}
+    <div class="bl-empty">{% if mode == 'issued' %}За {{ month_label|lower }} счетов ещё не выставляли.{% else %}Все счета за {{ month_label|lower }} выставлены.{% endif %}</div>
+  {% endfor %}
+</div>
+{% if mode == 'issued' and count %}<p class="bl-foot">Выставлено {{ count }} на {{ total|floatformat:"2g" }}&nbsp;₽</p>{% endif %}
+{% endblock %}

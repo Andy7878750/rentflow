@@ -16,7 +16,9 @@
       <a href="{% url 'payment_list' %}" class="rail-link{% if url_name == 'payment_list' %} is-active{% endif %}" title="Оплаты">
         <svg class="icon"><use href="#i-wallet"/></svg>
       </a>
-      <span class="rail-link is-soon" title="Счета — скоро"><svg class="icon"><use href="#i-file"/></svg></span>
+      <a href="{% url 'bill_todo' %}" class="rail-link{% if url_name == 'bill_list' or url_name == 'bill_todo' %} is-active{% endif %}" title="Счета">
+        <svg class="icon"><use href="#i-file"/></svg>
+      </a>
       <span class="rail-link is-soon" title="Справочники — скоро"><svg class="icon"><use href="#i-library"/></svg></span>
       <span class="rail-link is-soon" title="Отчёты — скоро"><svg class="icon"><use href="#i-chart"/></svg></span>
     </nav>
@@ -92,15 +94,15 @@
         </a>
       </div>
 
-      <details class="nav-group">
+      <details class="nav-group"{% if url_name == 'bill_list' or url_name == 'bill_todo' %} open{% endif %}>
         <summary>
           <svg class="icon"><use href="#i-file"/></svg>
           <span>Счета</span>
           <svg class="icon nav-chevron"><use href="#i-chevron-down"/></svg>
         </summary>
         <ul class="nav-items">
-          <li><span class="nav-item is-soon" title="Скоро">Выставленные</span></li>
-          <li><span class="nav-item is-soon" title="Скоро">К выставлению</span></li>
+          <li><a href="{% url 'bill_list' %}" class="nav-item{% if url_name == 'bill_list' %} is-active{% endif %}">Выставленные</a></li>
+          <li><a href="{% url 'bill_todo' %}" class="nav-item{% if url_name == 'bill_todo' %} is-active{% endif %}">К выставлению</a></li>
         </ul>
       </details>
 
