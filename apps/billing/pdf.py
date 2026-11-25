@@ -48,6 +48,9 @@ def line_sub(line):
         text = f'счётчик № {meter.serial}' if meter.serial else 'счётчик'
         if reading is not None and getattr(reading, 'previous', None) is not None and reading.current is not None:
             text += f' · {services.fmt_number(reading.previous)} → {services.fmt_number(reading.current)}'
+            if line.qty_night is not None and getattr(reading, 'previous_night', None) is not None \
+                    and reading.current_night is not None:  # day / night — like the columns: «500 → 700 / 700 → 790»
+                text += f' / {services.fmt_number(reading.previous_night)} → {services.fmt_number(reading.current_night)}'
         return text
     if line.qty is not None or line.k != 1:
         return ''

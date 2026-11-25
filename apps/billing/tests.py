@@ -680,6 +680,42 @@ class MonthPageTests(TestCase):
             User.objects.create_user(username='e@example.ru', password='secret1')), kind='custom', name='Чужой')
         self.assertEqual(self.client.get(reverse('meter_history', args=[stranger.pk])).status_code, 404)
 
+    def test_usage_split_day_night_columns(self):
+        # 2026-11-25: «По расходу» with a day / night meter — the bill and the PDF show «200 / 90» · «21,73 / 21,73».
+        from apps.billing.pdf import line_cols
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     tenant=self.viktor, serial='12345', day_night=True,
+                                     initial=Decimal('500'), initial_night=Decimal('700'))
+        other = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     tenant=self.vlad, serial='34580', initial=Decimal('500'))
+        split = Receipt.objects.create(property=self.prop, kind='electricity', name='Электричество',
+                                       split=Receipt.Split.USAGE)
+        split.meters.add(light, other)
+        month = date(2026, 11, 1)
+        Reading.objects.create(meter=light, month=month, current=Decimal('700'), current_night=Decimal('790'))
+        Reading.objects.create(meter=other, month=month, current=Decimal('900'))
+        MonthlyAmount.objects.create(receipt=split, month=month, amount=Decimal('15000'))
+
+        def viktor_line():
+            bill = services.month_bill(self.prop, month)
+            payer = next(p for p in bill.payers if p.tenant == self.viktor)
+            return next(line for line in payer.lines if line.receipt == split)
+
+        line = viktor_line()  # 15 000 ÷ 690 = 21,739… → 21,73
+        self.assertEqual(line_cols(line), ('кВт·ч', '200 / 90', '21,73 / 21,73'))
+        self.assertEqual(line.amount, Decimal('6301.70'))
+        from apps.billing.pdf import line_sub
+        self.assertEqual(line_sub(line), 'счётчик № 12345 · 500 → 700 / 700 → 790')
+        self.assertEqual([r.replace('\xa0', ' ') for r in services.bill_meter_rows(line)],
+                         ['счётчик № 12345', 'день 500 → 700 = 200 кВт·ч × 21,73 ₽ = 4 346,00 ₽',
+                          'ночь 700 → 790 = 90 кВт·ч × 21,73 ₽ = 1 955,70 ₽'])
+
+        split.night_weight = Decimal('0.6')  # night lighter: 15 000 ÷ (200 + 54 + 400) = 22,935… → 22,93; night 13,75
+        split.save()
+        line = viktor_line()
+        self.assertEqual(line_cols(line), ('кВт·ч', '200 / 90', '22,93 / 13,75'))
+        self.assertEqual(line.amount, Decimal('4586.00') + Decimal('1237.50'))
+
     def test_payment_receipts(self):
         # 2026-11-25: several services of one paper receipt — one tile on «Оплаты», made by dragging a tile onto
         # another (as apps into a folder on a phone). One sum, one check, one date: the tile dropped ONTO decides.

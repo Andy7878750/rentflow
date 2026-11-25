@@ -1997,13 +1997,11 @@ def _usage_split(receipt, entry, payers, owner):
         if day is None or (meter.two_zones and night is None):
             return False
         if not meter.two_zones:
-            uses.append((meter, day, fmt_number(day)))
-        elif weight == 1:
-            uses.append((meter, day + night, f'({fmt_number(day)} + {fmt_number(night)})'))
+            uses.append((meter, reading, day, None, day))
         else:
-            uses.append((meter, day + night * weight, f'({fmt_number(day)} + {fmt_number(night)} × {fmt_number(weight)})'))
+            uses.append((meter, reading, day, night, day + night * weight))
     total = entry.total
-    whole = sum((use for _, use, _ in uses), Decimal('0'))
+    whole = sum((use for *_, use in uses), Decimal('0'))
     currency = receipt.currency_symbol
     if not whole:
         owner.lines.append(Line(receipt, total, 'по счётчикам нет расхода'))
@@ -2011,18 +2009,32 @@ def _usage_split(receipt, entry, payers, owner):
     unit = meter_unit(uses[0][0]) or 'ед.'
     billed = Decimal('0')
     price = price_down(total / whole)  # the price of a unit, to kopecks (2026-11-25, «простое округление»)
-    # The line shows the price the bill uses (2026-11-25): «25 кВт·ч × 82,08 ₽» — it checks on a calculator.
-    price_text = f'{fmt_number(price, 2)}{NBSP}{currency}'
-    for meter, use, use_text in uses:
+    # The price the bill uses (2026-11-25): «25 кВт·ч × 82,08 ₽» — it checks on a calculator. Day / night — each zone
+    # its own qty × price, the same rows as «По счётчикам» («день 500 → 700 = 200 кВт·ч × 21,73 ₽ = …», «ночь …»);
+    # PDF «200 / 90» · «21,73 / 21,73». A lighter night costs price × night_weight (down to kopecks).
+    night_price = price_down(price * weight)
+    for meter, reading, day, night, use in uses:
         exact = total * use / whole
-        formula = f'{use_text}{NBSP}{unit} × {price_text}'
+        if night is None:
+            formula = f'{fmt_number(day)}{NBSP}{unit} × {fmt_number(price)}{NBSP}{currency}'
+            cols = (unit, day, price, Decimal('1'))
+            own = money(day * price)
+            reading.bill_rows = [_bill_row(receipt, meter, reading.previous, reading.current, day, price)]
+        else:
+            formula = (f'день {fmt_number(day)} {unit} × {fmt_number(price)}{NBSP}{currency} + '
+                       f'ночь {fmt_number(night)} {unit} × {fmt_number(night_price)}{NBSP}{currency}')
+            cols = (unit, day, price, Decimal('1'), night, night_price)
+            own = money(day * price) + money(night * night_price)
+            reading.bill_rows = [
+                'день ' + _bill_row(receipt, meter, reading.previous, reading.current, day, price),
+                'ночь ' + _bill_row(receipt, meter, reading.previous_night, reading.current_night, night, night_price)]
         payer = payers.get(meter.tenant_id) if meter.tenant_id else None
         if payer:
-            line = tenant_line(receipt, exact, formula, payer.tenant, (unit, use, price, Decimal('1')))
-            line.meter = meter
+            line = tenant_line(receipt, exact, formula, payer.tenant, cols)
+            line.meter, line.reading = meter, reading
             payer.lines.append(line)
         else:
-            line = Line(receipt, money(use * price), formula + (' · свободный счётчик' if meter.vacant else ' · общий счётчик'))
+            line = Line(receipt, own, formula + (' · свободный счётчик' if meter.vacant else ' · общий счётчик'))
             owner.lines.append(line)
         billed += line.base
     if total != billed:
@@ -2078,6 +2090,16 @@ def two_zones(receipt, meter):
     return receipt.zones == 2 and not any(m.day_night for m in receipt.meters.all())
 
 
+def _bill_row(receipt, meter, previous, current, use, price):
+    """The bill's row under a meter (2026-11-17): «251 → 255 = 4 кВт·ч × 9,5 ₽ = 38,00 ₽» — no «было / стало», no
+    tariff apart; a meter typed as «Расход» — without the arrow. One for «По счётчикам» and «По расходу» (2026-11-25)."""
+    unit, currency = meter_unit(meter) or receipt.unit, receipt.currency_symbol
+    typed_usage = meter_mode(receipt, meter) == Receipt.InputMode.USAGE
+    counted = '' if typed_usage else f'{fmt_number(previous)} → {fmt_number(current)} = '
+    return (f'{counted}{fmt_number(use)}{NBSP}{unit} × {fmt_number(price)}{NBSP}{currency} = '
+            f'{fmt_number(money(use * price), 2)}{NBSP}{currency}')
+
+
 def _meter_cost(receipt, entry, reading):
     """(exact cost, formula) of one meter's month, or None while something is missing."""
     meter = reading.meter
@@ -2086,13 +2108,8 @@ def _meter_cost(receipt, entry, reading):
     day, night = used(receipt, reading)
     if tariff is None or day is None:
         return None
-    by_usage_typed = meter_mode(receipt, meter) == Receipt.InputMode.USAGE
-
     def bill_row(previous, current, use, price):
-        # The bill's row (2026-11-17): «251 → 255 = 4 кВт·ч × 9,5 ₽ = 38,00 ₽» — no «было / стало», no tariff apart.
-        counted = '' if by_usage_typed else f'{fmt_number(previous)} → {fmt_number(current)} = '
-        return (f'{counted}{fmt_number(use)}{NBSP}{unit} × {fmt_number(price)}{NBSP}{currency} = '
-                f'{fmt_number(money(use * price), 2)}{NBSP}{currency}')
+        return _bill_row(receipt, meter, previous, current, use, price)
 
     if not two_zones(receipt, meter):
         reading.bill_rows = [bill_row(reading.previous, reading.current, day, tariff)]
