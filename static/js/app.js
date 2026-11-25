@@ -314,47 +314,8 @@
     }
   });
 
-  // ---------- E-mail: checked when leaving the field (2026-11-23), the same rule as the server ----------
-  var EMAIL_LOCAL = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*";
-  var EMAIL_HOST = '([A-Za-z0-9\\u00a1-\\uffff]([A-Za-z0-9\\u00a1-\\uffff-]{0,61}[A-Za-z0-9\\u00a1-\\uffff])?\\.)+[A-Za-z\\u00a1-\\uffff]{2,63}';
-  var EMAIL_RE = new RegExp('^' + EMAIL_LOCAL + '@' + EMAIL_HOST + '$');
-
-  function emailProblem(value) {
-    if (!value || EMAIL_RE.test(value)) return '';
-    var at = value.indexOf('@');
-    if (at > 0 && /[^\x00-\x7f]/.test(value.slice(0, at))) return 'До «@» — только латинские буквы и цифры.';
-    return 'Введите правильный адрес электронной почты.';
-  }
-
-  function dropEmailError(field) {
-    field.querySelectorAll('[data-email-error]').forEach(function (node) { node.parentNode.removeChild(node); });
-  }
-
-  document.addEventListener('focusout', function (event) {
-    var input = event.target;
-    if (!input.matches || !input.matches('input[type=email]')) return;
-    var field = input.closest('.field');
-    if (!field) return;
-    input.value = input.value.trim();
-    dropEmailError(field);
-    var problem = emailProblem(input.value);
-    if (!problem || field.querySelector('.errorlist')) return;
-    var list = document.createElement('ul');
-    list.className = 'errorlist';
-    list.dataset.emailError = '';
-    list.dataset.clientError = '';
-    var line = document.createElement('li');
-    line.textContent = problem;
-    list.appendChild(line);
-    field.appendChild(list);
-  });
-
-  document.addEventListener('input', function (event) {
-    var input = event.target;
-    if (input.matches && input.matches('input[type=email]') && input.closest('.field')) {
-      dropEmailError(input.closest('.field'));
-    }
-  });
+  // E-mail: one check for the whole site — static/js/fields.js (2026-11-25).
+  var emailProblem = window.rentflowFields.emailProblem;
 
   // ---------- Date picker ----------
   // A card under the field: month with arrows, a click on the title switches to months

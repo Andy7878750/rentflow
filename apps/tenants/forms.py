@@ -5,6 +5,7 @@ from django.forms import BaseInlineFormSet, inlineformset_factory
 
 from apps.properties.forms import PHONE_PLACEHOLDER, add_blank_placeholders
 from apps.properties.models import Property
+from config.validators import use_email_rule
 
 from . import services
 from .models import Tenant
@@ -40,6 +41,7 @@ class TenantForm(forms.ModelForm):
     def __init__(self, *args, share_unit=Property.ShareUnit.PERCENT, **kwargs):
         super().__init__(*args, **kwargs)
         add_blank_placeholders(self)
+        use_email_rule(self, 'email')
         self.fields['contract_until'].input_formats = DATE_INPUT_FORMATS
         self.fields['contract_until'].error_messages['invalid'] = 'Введите дату в виде дд.мм.гггг.'
         self.share_unit = share_unit

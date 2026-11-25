@@ -4,6 +4,7 @@ from django import forms
 from django.core.validators import MinValueValidator
 
 from apps.tenants.services import plain
+from config.validators import use_email_rule
 
 from .models import Property
 from .services import clean_kind_name
@@ -57,6 +58,7 @@ class PropertyForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         add_blank_placeholders(self)
+        use_email_rule(self, 'management_email')
         # Accept "45,5" as well as "45.5".
         self.fields['area'].localize = True
         self.fields['area'].widget.is_localized = True

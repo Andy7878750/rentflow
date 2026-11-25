@@ -4,6 +4,8 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+from config.validators import email_problem
+
 from .models import Requisites
 
 
@@ -45,8 +47,8 @@ def requisites(request):
             if value and len(value) not in lengths:
                 errors[name] = message
             setattr(obj, name, value)
-        if obj.email and '@' not in obj.email:
-            errors['email'] = 'Почта — с «@».'
+        if email_problem(obj.email):
+            errors['email'] = email_problem(obj.email)
         if not errors:
             obj.save()
             messages.success(request, 'Реквизиты сохранены.')
