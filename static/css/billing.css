@@ -468,14 +468,14 @@
 .bill h2 { margin: 2px 0 0; overflow: hidden; color: var(--color-primary); font-size: 18px; white-space: nowrap; }
 .bill-head .badge { flex-shrink: 0; margin-top: 2px; }
 
-.bill-group { margin-top: 12px; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius); }
+.bill-group { margin-top: 12px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; }  /* = the input blocks (2026-11-25) */
 .bill-group-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   height: 34px;
-  padding: 0 12px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg);
   color: var(--color-text-muted);
@@ -485,7 +485,7 @@
   text-transform: uppercase;
 }
 
-.bill-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; padding: 9px 12px; }
+.bill-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; padding: 9px 16px; }
 .bill-line + .bill-line { border-top: 1px solid var(--color-border); }
 .bill-name { font-size: 14px; }
 .bill-amount { font-size: 14px; font-weight: 600; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -1681,9 +1681,14 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 }
 .mi .num-wrap.is-long .num-input { padding-right: 46px; }  /* «Гкал», «кВт·ч» — not over the number */
 /* A receipt's sum needs «16 854,97 ₽» — wider than a reading: it grows to the left, the right edge stays common. */
-.mi .mread .mi-field { grid-column: 2 / 4; justify-self: end; width: 120px; }
-/* «Считается само»: the sums at the block's right edge (under «Расход»), 2026-11-18. */
-.mi .mread .mi-total { grid-column: 3 / 5; }
+/* 2026-11-25: such rows have columns of their own, so the name takes all the room up to the field / sum and doesn't
+   fade while there is space; the field's right edge = «Стало»'s (76px + the gap from the row's end). */
+.mi .mread:has(> .mi-field) { grid-template-columns: minmax(0, 1fr) 120px 76px; }
+.mi .mread .mi-field { grid-column: 2; width: 120px; }
+/* «Считается само»: the sums at the block's right edge (under «Расход»), 2026-11-18; the name up to the sum. */
+.mi .mread:has(> .mi-total) { grid-template-columns: minmax(0, 1fr) auto; }
+.mi .mread:has(> .mi-total) > span:empty { display: none; }
+.mi .mread .mi-total { grid-column: 2; }
 /* «Было / Стало / Расход» in the grey head of the meters block, over the same columns as the rows. */
 .mi .form-section-head.mi-cols {
   display: grid;
@@ -1692,7 +1697,24 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   padding-left: 16px;
   padding-right: 16px;
 }
-.mi-cols > span { color: var(--color-text); font-size: 12px; font-weight: 600; letter-spacing: normal; text-transform: none; text-align: right; }
+.mi-cols > span { text-align: right; }
+@container month (max-width: 560px) { .mi .form-section-head.mi-cols { column-gap: 8px; } }  /* = the rows' gap there */
+/* 2026-11-25: the input's heads = the bill's group heads (.bill-group-head): 34px, 11px bold caps, grey; one line.
+   The text starts at the rows' edge (16px), «Было · Стало · Расход» in the same type. */
+.mi .form-section-head {
+  height: 34px;
+  min-height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 /* The meters block: the same 8px white gap above, between and below the coloured groups. */
 .mi-body:has(> .mi-meters) { padding-top: 2px; padding-bottom: 2px; }
 .mi-body > .mi-meters:first-child { margin-top: 0; }
@@ -1712,24 +1734,24 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 /* The column never runs off the screen: the switch always stays in sight, a long bill scrolls inside its card. */
 .obj-side { max-height: calc(100vh - 60px); }  /* 20px on top + the page's bottom padding */
 .obj-side .obj-bill { position: static; flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
-.obj-side .bill-switch { flex-shrink: 0; }
-.bill-switch {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-}
-.bill-switch-cap {
-  padding: 2px 10px 6px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-}
+/* Whose bill (2026-11-25, variant В): the payer's name with ▾ in the bill's head, a click — the payers with their sums
+   (the separate «Чей счёт» block is gone: many tenants don't fit a switch, and the name was said twice). */
+.bill-head:has(.bill-who) { position: relative; }  /* the menu as wide as the bill's groups — the same left and right edges */
+.bill-who { min-width: 0; }
+/* «Can be chosen» — quietly (2026-11-25): ▾ in a small pale-accent square, as the menu's green «+»; on hover — the name too. */
+.bill-who-open { display: flex; align-items: center; gap: 8px; max-width: 100%; margin: 0; padding: 0; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bill-who-open h2 { min-width: 0; margin: 0; }
+.bill-who-open .icon { flex: none; width: 22px; height: 22px; padding: 3px; border-radius: 6px; background: var(--color-accent-soft);
+  color: var(--color-accent); transition: transform .15s, background-color .15s; }
+.bill-who-open:hover h2 { color: var(--color-accent-hover); }
+.bill-who-open:hover .icon { background: #d3ece6; }
+.bill-who-open[aria-expanded="true"] .icon { transform: rotate(180deg); }
+.bill-who { margin-top: 2px; }
+.bill-who-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; display: flex; flex-direction: column; gap: 2px;
+  max-height: 320px; overflow-y: auto; padding: 6px; border: 1px solid var(--color-border); border-radius: 10px;
+  background: var(--color-surface); box-shadow: 0 8px 24px rgba(30, 40, 48, .14); }  /* = .share-menu */
+.bill-who-menu[hidden] { display: none; }
 .bill-tab {
   display: flex;
   align-items: center;
@@ -1746,7 +1768,7 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   white-space: nowrap;
 }
 .bill-tab:hover { background: var(--color-bg); }
-.bill-tab.is-active { background: var(--color-accent); color: #fff; }
+.bill-tab.is-active { background: var(--color-accent-soft); color: var(--color-accent-hover); }  /* as the menu (2026-11-25), not a solid fill */
 .bill-tab .fade { min-width: 0; overflow: hidden; }
 .bill-tab-sum { flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 400; }
 
@@ -2021,6 +2043,22 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .mread-in.is-add::before { color: var(--color-accent); font-size: 13px; font-weight: 600; }
 .mread-in.is-add .num-input { padding-left: 22px; }
 .mread-in.is-add[data-zone*=" "] .num-input { padding-left: 30px; }
+/* «расход» on the field's top border (2026-11-25, the user's sketch): the «+» alone wasn't always clear. Drawn over the
+   border, so nothing moves; the upper half white (the row), the lower — the field's own colour (warm while empty). */
+.mread-in.is-add::after,
+.sv-pr-in.is-add::after {
+  content: "расход";
+  position: absolute;
+  top: -6px;
+  left: 6px;
+  z-index: 1;
+  padding: 0 4px;
+  background: linear-gradient(var(--color-surface) calc(50% + 1px), transparent 0);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  line-height: 12px;
+  pointer-events: none;
+}
 
 /* «Суммы из квитанций» / «Считается само» (2026-11-23): the service's icon before the name, as at the meters' groups —
    22px in its colour, the name starts where the meters' rows start (30px). */

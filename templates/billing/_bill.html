@@ -4,7 +4,24 @@
   <div class="bill-head">
     <div class="bill-head-text">
       <span class="bill-cap">Счёт · {{ month_name }} {{ month_label|slice:"-4:" }}</span>
-      <h2 class="fade">{{ title }}</h2>
+      {% if bill.payers|length > 1 or bill.payers and owner_tab %}
+        {% comment %}Whose bill (2026-11-25, variant В of 2026-11-25-whose-bill.html): no block of its own — the name opens the payers.{% endcomment %}
+        <div class="bill-who" data-who>
+          <button type="button" class="bill-who-open" data-who-open aria-haspopup="true" aria-expanded="false" title="Чей счёт показать">
+            <h2 class="fade">{{ title }}</h2><svg class="icon"><use href="#i-chevron-down"/></svg>
+          </button>
+          <nav class="bill-who-menu" data-who-menu hidden aria-label="Чей счёт показать">
+            {% for p in bill.payers %}
+              <a href="?month={{ month }}&tenant={{ p.tenant.pk }}" class="bill-tab{% if p.tenant.pk|stringformat:'s' == active %} is-active{% endif %}" data-payer="{{ p.tenant.pk }}" title="{{ p.tenant.name }}"><span class="fade">{{ p.tenant.name }}</span><span class="bill-tab-sum">{{ p.total|floatformat:"2g" }}&nbsp;₽</span></a>
+            {% endfor %}
+            {% if owner_tab %}
+              <a href="?month={{ month }}&tenant=0" class="bill-tab{% if active == '0' %} is-active{% endif %}" data-payer="0"><span class="fade">Остаётся на вас</span><span class="bill-tab-sum">{{ bill.owner.total|floatformat:"2g" }}&nbsp;₽</span></a>
+            {% endif %}
+          </nav>
+        </div>
+      {% else %}
+        <h2 class="fade">{{ title }}</h2>
+      {% endif %}
     </div>
     {% if payer.lines %}
       {% if bill.missing %}<span class="badge badge-warn">Не всё введено</span>{% else %}<span class="badge badge-ok">Готов к счёту</span>{% endif %}

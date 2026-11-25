@@ -229,19 +229,8 @@
   {% endblock %}
  </div>
 
-  {# ---------- 3. Whose bill (its own block) and the bill of the selected payer; the column stays on screen ---------- #}
+  {# ---------- 3. The bill of the selected payer (whose — the menu under its name); the column stays on screen ---------- #}
   <div class="obj-side">
-    {% if bill.payers|length > 1 or bill.payers and owner_tab %}
-      <nav class="bill-switch" id="bill-switch" data-live aria-label="Чей счёт показать">
-        <span class="bill-switch-cap">Чей счёт</span>
-        {% for payer in bill.payers %}
-          <a href="?month={{ month }}&tenant={{ payer.tenant.pk }}" class="bill-tab{% if payer.tenant.pk == selected_tenant %} is-active{% endif %}" data-payer="{{ payer.tenant.pk }}" title="{{ payer.tenant.name }}"><span class="fade">{{ payer.tenant.name }}</span><span class="bill-tab-sum">{{ payer.total|floatformat:"2g" }}&nbsp;₽</span></a>
-        {% endfor %}
-        {% if owner_tab %}
-          <a href="?month={{ month }}&tenant=0" class="bill-tab{% if selected_tenant == 0 %} is-active{% endif %}" data-payer="0"><span class="fade">Остаётся на вас</span><span class="bill-tab-sum">{{ bill.owner.total|floatformat:"2g" }}&nbsp;₽</span></a>
-        {% endif %}
-      </nav>
-    {% endif %}
     <aside class="obj-bill" id="obj-bill" data-live>
       {% for payer in bill.payers %}
         {% include "billing/_bill.html" with title=payer.tenant.name active=payer.tenant.pk|stringformat:'s' %}

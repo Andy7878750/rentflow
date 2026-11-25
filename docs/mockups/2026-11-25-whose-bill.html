@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>«Чей счёт» — варианты, 2026-11-25</title>
+<style>
+  :root { --primary:#34495e; --accent:#148f77; --accent-text:#117965; --accent-soft:#e6f4f1; --bg:#f5f6f7; --border:#e1e4e8;
+    --text:#2c3338; --muted:#6b7680; --font:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--font); background:var(--bg); color:var(--text); font-size:14px; }
+  .top { max-width:1240px; margin:0 auto; padding:24px 16px 8px; }
+  h1 { margin:0 0 4px; font-size:20px; color:var(--primary); }
+  .lead { margin:0; color:var(--muted); }
+  .grid { max-width:1240px; margin:0 auto; padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:24px; }
+  .var > h2 { margin:0 0 4px; font-size:15px; color:var(--primary); display:flex; align-items:center; gap:8px; }
+  .var > p { margin:0 0 12px; color:var(--muted); font-size:13px; line-height:1.45; min-height:56px; }
+  .rec { font-size:11px; font-weight:600; border-radius:999px; padding:2px 8px; background:var(--accent-soft); color:var(--accent-text); }
+
+  /* the right column of the object page, 330px */
+  .side { width:330px; display:flex; flex-direction:column; gap:12px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; }
+  .cap { color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+  .bill { padding:16px; }
+  .bill-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .bill-name { margin:4px 0 0; font-size:20px; font-weight:700; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ok { font-size:11px; font-weight:600; border-radius:999px; padding:2px 8px; background:var(--accent-soft); color:var(--accent-text); white-space:nowrap; }
+  .warn { font-size:11px; font-weight:600; border-radius:999px; padding:2px 8px; background:#fdf0e1; color:#9a5b0b; white-space:nowrap; }
+  .grp { margin-top:12px; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .grp-h { height:34px; padding:0 16px; display:flex; align-items:center; background:var(--bg); border-bottom:1px solid var(--border); }
+  .ln { display:flex; justify-content:space-between; padding:9px 16px; font-size:14px; }
+  .ln b { font-variant-numeric:tabular-nums; }
+  .ln + .ln { border-top:1px solid var(--border); }
+  .sum { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .dot { width:6px; height:6px; border-radius:50%; background:#e05a4f; flex:none; }
+
+  /* А — now */
+  .a { padding:16px 8px 8px; }
+  .a .cap { padding:0 10px 6px; }
+  .a .tab { display:flex; justify-content:space-between; height:34px; align-items:center; padding:0 10px; border-radius:6px; font-size:13px; font-weight:600; }
+  .a .tab .sum { font-weight:400; }
+  .a .tab.on { background:var(--accent-soft); color:var(--accent-text); }
+
+  /* Б — the switch inside the bill: one card, the payers as a segmented track over the bill */
+  .b .seg { display:flex; padding:3px; gap:3px; background:var(--bg); border-radius:10px; margin-bottom:16px; }
+  .b .seg span { flex:1 1 0; min-width:0; height:32px; display:flex; align-items:center; justify-content:center; gap:6px; padding:0 8px; border-radius:8px;
+    font-size:13px; font-weight:600; color:var(--muted); white-space:nowrap; overflow:hidden; }
+  .b .seg span.on { background:#fff; color:var(--primary); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .b .seg .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .b .seg span.vy { flex:0 0 auto; padding:0 14px; }
+
+  /* В — the name in the bill's head opens a list */
+  .c .pick { display:flex; align-items:center; gap:6px; margin-top:4px; cursor:pointer; }
+  .c .pick .bill-name { margin:0; }
+  .c .pick svg { flex:none; color:var(--muted); }
+  .c .menu { margin-top:8px; border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.08); padding:6px; background:#fff; }
+  .c .menu .it { display:flex; justify-content:space-between; align-items:center; gap:10px; height:36px; padding:0 10px; border-radius:6px; font-size:13px; font-weight:600; }
+  .c .menu .it .sum { font-weight:400; color:var(--muted); }
+  .c .menu .it.on { background:var(--accent-soft); color:var(--accent-text); }
+  .c .menu .it.on .sum { color:inherit; }
+  .c .hint { margin:6px 0 0; font-size:12px; color:var(--muted); }
+
+  /* Г — the list framed as the bill's groups: grey head + rows, the chosen — a bar on the left, the status at the sum */
+  .d { padding:0; overflow:hidden; }
+  .d .grp-h { border-radius:12px 12px 0 0; }
+  .d .row { position:relative; display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; font-size:14px; }
+  .d .row + .row { border-top:1px solid var(--border); }
+  .d .row .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .d .row.on { font-weight:600; color:var(--primary); }
+  .d .row.on::before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--accent); }
+  .d .row.on .sum { color:var(--accent-text); }
+  .d .row.owner { color:var(--muted); }
+
+  /* Д — tabs on top of the bill card (as folder tabs), no block of its own */
+  .e .tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin:-16px -16px 16px; padding:0 8px; }
+  .e .tabs span { min-width:0; padding:12px 8px 10px; font-size:13px; font-weight:600; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    border-bottom:2px solid transparent; margin-bottom:-1px; display:flex; flex-direction:column; gap:2px; }
+  .e .tabs span small { font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; }
+  .e .tabs span.on { color:var(--accent-text); border-bottom-color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>«Чей счёт» — варианты</h1>
+  <p class="lead">Правый столбец страницы объекта (330px). Арендаторы: Салон «Ногти», Аптека «Вита» и «Остаётся на вас» (когда не 0 ₽). Ниже — начало счёта.</p>
+</div>
+
+<div class="grid">
+
+  <section class="var">
+    <h2>А · сейчас</h2>
+    <p>Отдельный блок-список над счётом. Два блока подряд с одним и тем же: имя выбранного повторяется ниже крупно.</p>
+    <div class="side">
+      <div class="card a"><div class="cap">Чей счёт</div>
+        <div class="tab"><span>Салон «Ногти»</span><span class="sum">21 010,62 ₽</span></div>
+        <div class="tab on"><span>Аптека «Вита»</span><span class="sum">17 023,28 ₽</span></div>
+        <div class="tab"><span>Остаётся на вас</span><span class="sum">0,00 ₽</span></div>
+      </div>
+      <div class="card bill"><div class="bill-top"><div><div class="cap">Счёт · ноябрь 2026</div><div class="bill-name">Аптека «Вита»</div></div><span class="ok">Готов к счёту</span></div>
+        <div class="grp"><div class="grp-h cap">Общие · по долям 55%</div><div class="ln"><span>Коммунальные услуги</span><b>3 492,50</b></div></div></div>
+    </div>
+  </section>
+
+  <section class="var">
+    <h2>Б · переключатель в счёте <span class="rec">предлагаю</span></h2>
+    <p>Один блок вместо двух. Плательщики — серая дорожка над счётом (как «Было / стало | Расход»), выбранный — белый. Суммы — в самом счёте, ниже. 4+ плательщика — дорожка прокручивается.</p>
+    <div class="side">
+      <div class="card bill b">
+        <div class="seg"><span><span class="nm">Салон «Ногти»</span></span><span class="on"><span class="nm">Аптека «Вита»</span></span><span class="vy"><span class="nm">Вы</span></span></div>
+        <div class="bill-top"><div><div class="cap">Счёт · ноябрь 2026</div><div class="bill-name">Аптека «Вита»</div></div><span class="ok">Готов к счёту</span></div>
+        <div class="grp"><div class="grp-h cap">Общие · по долям 55%</div><div class="ln"><span>Коммунальные услуги</span><b>3 492,50</b></div></div></div>
+    </div>
+  </section>
+
+  <section class="var">
+    <h2>В · имя в счёте — меню</h2>
+    <p>Самый тихий: блока нет, имя в шапке счёта со стрелкой ▾, клик — список плательщиков с суммами (на картинке открыт). Минус: что есть другие счета, видно только по стрелке.</p>
+    <div class="side">
+      <div class="card bill c">
+        <div class="bill-top"><div style="min-width:0"><div class="cap">Счёт · ноябрь 2026</div>
+          <div class="pick"><div class="bill-name">Аптека «Вита»</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div></div><span class="ok">Готов к счёту</span></div>
+        <div class="menu">
+          <div class="it"><span>Салон «Ногти»</span><span class="sum">21 010,62 ₽</span></div>
+          <div class="it on"><span>Аптека «Вита»</span><span class="sum">17 023,28 ₽</span></div>
+          <div class="it"><span>Остаётся на вас</span><span class="sum">0,00 ₽</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="var">
+    <h2>Г · список как группа счёта</h2>
+    <p>Блок остаётся, но выглядит как группы счёта: серая шапка 34px, строки 40px через линию. Выбранный — полоска акцентом слева и жирное имя, без заливки. Красная точка — «не всё введено».</p>
+    <div class="side">
+      <div class="card d"><div class="grp-h cap">Чей счёт</div>
+        <div class="row"><span class="nm">Салон «Ногти»</span><span class="sum">21 010,62 ₽</span></div>
+        <div class="row on"><span class="nm">Аптека «Вита»</span><span class="dot"></span><span class="sum">17 023,28 ₽</span></div>
+        <div class="row owner"><span class="nm">Остаётся на вас</span><span class="sum">0,00 ₽</span></div>
+      </div>
+      <div class="card bill"><div class="bill-top"><div><div class="cap">Счёт · ноябрь 2026</div><div class="bill-name">Аптека «Вита»</div></div><span class="warn">Не всё введено</span></div>
+        <div class="grp"><div class="grp-h cap">Общие · по долям 55%</div><div class="ln"><span>Коммунальные услуги</span><b>3 492,50</b></div></div></div>
+    </div>
+  </section>
+
+  <section class="var">
+    <h2>Д · вкладки сверху счёта</h2>
+    <p>Как вкладки папки: плательщики с суммой в одну строку над счётом, выбранный подчёркнут акцентом. Один блок, суммы всех видны сразу. Минус: длинные имена затухают уже при трёх вкладках.</p>
+    <div class="side">
+      <div class="card bill e">
+        <div class="tabs"><span>Салон «Ногти»<small>21 010,62 ₽</small></span><span class="on">Аптека «Вита»<small>17 023,28 ₽</small></span><span>Вы<small>0,00 ₽</small></span></div>
+        <div class="bill-top"><div><div class="cap">Счёт · ноябрь 2026</div><div class="bill-name">Аптека «Вита»</div></div><span class="ok">Готов к счёту</span></div>
+        <div class="grp"><div class="grp-h cap">Общие · по долям 55%</div><div class="ln"><span>Коммунальные услуги</span><b>3 492,50</b></div></div></div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

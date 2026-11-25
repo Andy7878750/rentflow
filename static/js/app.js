@@ -2332,9 +2332,32 @@
     });
   }
 
+  // Whose bill (2026-11-25, variant В): the payer's name in the bill's head opens the list of payers with their sums.
+  function closeWho() {
+    document.querySelectorAll('[data-who-menu]').forEach(function (menu) {
+      menu.hidden = true;
+      var opener = menu.parentNode.querySelector('[data-who-open]');
+      if (opener) opener.setAttribute('aria-expanded', 'false');
+    });
+  }
+  document.addEventListener('click', function (event) {
+    var opener = event.target.closest && event.target.closest('[data-who-open]');
+    if (opener) {
+      var menu = opener.parentNode.querySelector('[data-who-menu]');
+      var open = menu.hidden;
+      closeWho();
+      menu.hidden = !open;
+      opener.setAttribute('aria-expanded', open ? 'true' : 'false');
+      return;
+    }
+    if (!(event.target.closest && event.target.closest('[data-who-menu]'))) closeWho();
+  });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeWho(); });
+
   document.addEventListener('click', function (event) {
     var link = event.target.closest && event.target.closest('a[data-payer]');
     if (!link || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    closeWho();
     event.preventDefault();
     showPayer(link.getAttribute('data-payer'));
     history.replaceState(null, '', link.href);

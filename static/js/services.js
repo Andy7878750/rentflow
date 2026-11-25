@@ -390,7 +390,7 @@
           '<span class="sv-mt-pick"><button type="button" class="sv-pick' + (empty ? ' is-empty' : '') + '" data-pick="' + m.id + '" aria-haspopup="true" aria-expanded="' + (pickOpen === m.id) + '"' +
           (parts ? ' title="' + esc(parts.full) + '"' : '') + '>' + label + '<svg class="icon sv-chev"><use href="#i-chevron-down"/></svg></button>' +
           (pickOpen === m.id ? payerMenu(m, usage) : '') + '</span>' +
-          '<div class="sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Было / стало</button>' +
+          '<div class="sv-mt-seg"><button type="button" data-input="' + m.id + ':readings"' + (m.input !== 'usage' ? ' class="is-on"' : '') + '>Текущие</button>' +  // not «Было / стало»: only the current reading is typed (2026-11-25)
           '<button type="button" data-input="' + m.id + ':usage"' + (m.input === 'usage' ? ' class="is-on"' : '') + '>Расход</button></div></div>';
       }).join('');
       // no head row (В1, 2026-11-24): the rows speak for themselves — as the meter list above
