@@ -302,6 +302,17 @@ def meter_remove(request, pk):
 
 
 @login_required
+def meter_history(request, pk):
+    """«Счётчики → История» (2026-11-25): the meter's readings by month and its tariffs — read-only, a small window."""
+    meter = get_object_or_404(Meter.objects.select_related('property', 'tenant'), pk=pk, property__owner=request.user)
+    template = 'billing/_meter_history.html' if request.headers.get('X-Modal') else 'billing/meter_history.html'
+    return render(request, template, {
+        'meter': meter, 'history': services.meter_history(meter),
+        'kind': meter.kind if meter.kind in services.READY_METER_KINDS else 'custom',
+    })
+
+
+@login_required
 def meter_add(request):
     """«+ Добавить счётчик» in the menu: meters are added in the object window — «К какому объекту?» first."""
     properties = list(

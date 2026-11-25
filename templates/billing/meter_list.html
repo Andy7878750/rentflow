@@ -10,6 +10,7 @@
 
 {% comment %}All meters by object (2026-11-16). Nothing is edited here: a row (and «…» → «Изменить») opens its service window —
    or, for a meter in no service, «Новая услуга» with the tiles, the matching tile picked and this meter switched on.
+   «…» → «История» and the last reading cell: the meter's readings by month and tariffs (meter_history).
    «…» → «Удалить»: a confirmation, or «привязан к услуге» (meter_remove). data-row-modal in app.js.{% endcomment %}
 {% if has_meters %}
   <div class="svc-wrap">
@@ -42,8 +43,11 @@
             {% else %}<span class="tag tag-muted">не в услуге</span>{% endif %}
           </td>
           <td class="svc-num" data-label="Показание">
-            {% if row.last %}{{ row.last }}{% if row.unit %} {{ row.unit }}{% endif %}<span class="svc-meta">{{ row.last_when }}</span>
-            {% else %}<span class="svc-muted">—</span>{% endif %}
+            {% comment %}The cell opens the meter's history (2026-11-25): «ноябрь 2026 · история» under the reading.{% endcomment %}
+            <a href="{% url 'meter_history' meter.pk %}" data-modal class="meter-last" title="История показаний и тарифов">
+              {% if row.last %}{{ row.last }}{% if row.unit %} {{ row.unit }}{% endif %}{% else %}<span class="svc-muted">—</span>{% endif %}
+              <span class="svc-meta">{% if row.last_when %}{{ row.last_when }} · {% endif %}история</span>
+            </a>
           </td>
           <td class="svc-actions">
             <details class="dropdown" data-dropdown>
@@ -53,6 +57,9 @@
               <div class="dropdown-menu" role="menu">
                 <a href="{% if row.service %}{{ open_url }}?svc={{ row.service.pk }}{% else %}{{ create_url }}?meter={{ meter.pk }}{% endif %}" data-modal class="dropdown-item" role="menuitem">
                   <svg class="icon"><use href="#i-edit"/></svg>{% if row.service %}Изменить{% else %}Создать услугу{% endif %}
+                </a>
+                <a href="{% url 'meter_history' meter.pk %}" data-modal class="dropdown-item" role="menuitem">
+                  <svg class="icon"><use href="#i-calendar"/></svg>История
                 </a>
                 <a href="{% url 'meter_remove' meter.pk %}" data-modal class="dropdown-item dropdown-item-danger" role="menuitem">
                   <svg class="icon"><use href="#i-trash"/></svg>Удалить

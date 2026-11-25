@@ -2807,3 +2807,128 @@ def formula_context(receipt, data=None, today=None):
         'units': FORMULA_UNITS,
         'symbol': receipt.currency_symbol,
     }
+
+
+# ---------- «Счётчики → История» (2026-11-25, макет docs/mockups/2026-11-25-meter-history.html) ----------
+
+@dataclass
+class HistoryRow:
+    """One month of a meter's history. Numbers are Decimals (None — nothing); `price_from_receipt` — «По расходу»:
+    the price is the receipt's sum ÷ the usage of all its meters, not a tariff."""
+
+    month: object
+    label: str
+    missing: bool = False
+    was: object = None
+    now: object = None
+    use: object = None
+    was_night: object = None
+    now_night: object = None
+    use_night: object = None
+    price: object = None
+    price_night: object = None
+    price_from_receipt: bool = False
+    price_changed: bool = False
+    total: object = None
+
+
+def _meter_entry(bill, meter):
+    """(receipt, entry, reading) of the service that counts by the meter this month; a formula only reads meters."""
+    for entry in bill.entries:
+        if entry.receipt.amount_mode == Receipt.AmountMode.FORMULA:
+            continue
+        for one, reading in entry.readings:
+            if one.pk == meter.pk:
+                return entry.receipt, entry, reading
+    return None, None, None
+
+
+def _receipt_price(receipt, entry, meter):
+    """«По расходу»: (price per unit, this meter's part of the receipt) — the same sums as the bill; None — not yet."""
+    weight = receipt.night_weight or Decimal('1')
+    whole, mine = Decimal('0'), None
+    for one, reading in entry.readings:
+        day, night = used(receipt, reading)
+        if day is None or (two_zones(receipt, one) and night is None):
+            return None, None
+        use = day + (night * weight if two_zones(receipt, one) else Decimal('0'))
+        whole += use
+        if one.pk == meter.pk:
+            mine = use
+    if entry.total is None or not whole or mine is None:
+        return None, None
+    return entry.total / whole, money(entry.total * mine / whole)
+
+
+def meter_history(meter, today=None):
+    """The meter's months, old to new: from its first month with readings to this month (this one «не введено» while
+    empty). «Было» / «стало» as on the object page — for «Расход» meters counted: the start reading plus every usage
+    before («было»), + the month's usage («стало»). The price and the sum are the bill's: the meter's tariff of that
+    month, or for «По расходу» the receipt's sum ÷ the usage of all its meters. Returns {'rows', 'start', 'start_from',
+    'tariffs', 'receipt', 'unit', 'two_zones'}."""
+    from apps.properties.services import month_label, shift_month
+
+    this_month = first_of_month(today or date.today())
+    months = sorted({reading.month for reading in meter.readings.all()})
+    first = months[0] if months else this_month
+    rows, month, last_price = [], min(first, this_month), None
+    receipt_seen, zones = None, meter.day_night
+    while month <= max(this_month, months[-1] if months else this_month):
+        bill = month_bill(meter.property, month)
+        receipt, entry, reading = _meter_entry(bill, meter)
+        if reading is None:
+            reading = _readings_for([meter], month)[0][1]
+        row = HistoryRow(month=month, label=month_label(month))
+        if receipt is not None:
+            receipt_seen = receipt
+            zones = two_zones(receipt, meter)
+            day, night = used(receipt, reading)
+        else:
+            day, night = reading.consumption, reading.consumption_night
+            if reading.current is None and reading.usage is not None:
+                day, night = reading.usage, reading.usage_night
+        if reading.current is not None:
+            row.was, row.now = reading.previous, reading.current
+            row.was_night, row.now_night = reading.previous_night, reading.current_night
+        else:
+            # Not typed as «стало»: what the meter shows before the month is the last «стало» plus every usage typed
+            # after it (`counter`, as the object page), so a «Расход» meter's months follow one another.
+            counter, counter_night = getattr(reading, 'counter', None), getattr(reading, 'counter_night', None)
+            row.was = counter if counter is not None else reading.previous
+            row.was_night = counter_night if counter_night is not None else reading.previous_night
+            if reading.usage is not None and row.was is not None:
+                row.now = row.was + reading.usage
+            if zones and reading.usage_night is not None and row.was_night is not None:
+                row.now_night = row.was_night + reading.usage_night
+        row.use, row.use_night = day, (night if zones else None)
+        row.missing = day is None or (zones and night is None)
+        if not row.missing and receipt is not None:
+            if receipt.metered:
+                row.price, row.price_night = meter_price(receipt, entry, meter)
+                if row.price is not None:
+                    row.total = money(day * row.price + ((night or Decimal('0')) * (row.price_night or Decimal('0'))
+                                                         if zones else Decimal('0')))
+            elif by_usage(receipt):
+                row.price, row.total = _receipt_price(receipt, entry, meter)
+                row.price_from_receipt = True
+        elif receipt is not None and receipt.metered:
+            row.price, row.price_night = meter_price(receipt, entry, meter)
+        if row.price is not None and not row.price_from_receipt:
+            row.price_changed = last_price is not None and (row.price, row.price_night) != last_price
+            last_price = (row.price, row.price_night)
+        rows.append(row)
+        month = shift_month(month, 1)
+    def since(day):  # «с октября 2026»
+        return f'с {_MONTHS_GEN[day.month - 1]} {day.year}'
+
+    # «По расходу»: the meter's own tariff isn't used — the price comes from the receipt each month.
+    tariffs = [] if receipt_seen is not None and by_usage(receipt_seen) else sorted(
+        meter.tariff_history.all(), key=lambda row: row.valid_from)
+    return {
+        'rows': rows, 'start': meter.initial, 'start_night': meter.initial_night if zones else None,
+        'start_from': since(first), 'tariffs': [
+            {'from': since(max(row.valid_from, first)), 'tariff': row.tariff,
+             'night': row.tariff_night if zones else None, 'now': row is tariffs[-1]} for row in tariffs],
+        'receipt': receipt_seen, 'by_usage': receipt_seen is not None and by_usage(receipt_seen),
+        'unit': meter_unit(meter), 'two_zones': zones,
+    }

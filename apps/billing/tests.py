@@ -612,6 +612,60 @@ class MonthPageTests(TestCase):
         self.assertEqual(self.client.post(reverse('payment_edit', args=[stranger.pk, '2026-10']), {'paid': '1'}).status_code, 404)
         self.assertEqual(self.client.get(url).status_code, 405)
 
+    def test_meter_history(self):
+        # 2026-11-25: «Счётчики → История» — readings by month, old to new, with the price and the sum of the bill;
+        # a «Расход» meter's «было / стало» are counted; «По расходу» — the price comes from the receipt.
+        water = Meter.objects.create(property=self.prop, kind='hot_water', name='Вода горячая', unit='м³',
+                                     tenant=self.viktor, serial='333', initial=Decimal('221'))
+        hot = Receipt.objects.create(property=self.prop, kind='hot_water', name='Вода горячая', metered=True,
+                                     split=Receipt.Split.METERS, unit='м³')
+        hot.meters.add(water)
+        MeterTariff.objects.create(meter=water, valid_from=date(2000, 1, 1), tariff=Decimal('76.4'))
+        MeterTariff.objects.create(meter=water, valid_from=date(2026, 10, 1), tariff=Decimal('80.7'))
+        Reading.objects.create(meter=water, month=date(2026, 9, 1), current=Decimal('226'))
+        Reading.objects.create(meter=water, month=date(2026, 10, 1), current=Decimal('231'))
+        h = services.meter_history(water, date(2026, 11, 20))
+        self.assertEqual([row.label for row in h['rows']], ['Сентябрь 2026', 'Октябрь 2026', 'Ноябрь 2026'])
+        sept, octo, nov = h['rows']
+        self.assertEqual((sept.was, sept.now, sept.use, sept.price, sept.total), (221, 226, 5, Decimal('76.4'), Decimal('382.00')))
+        self.assertEqual((octo.price, octo.total, octo.price_changed), (Decimal('80.7'), Decimal('403.50'), True))
+        self.assertTrue(nov.missing, 'this month without readings — «не введено»')
+        self.assertEqual(nov.was, 231)
+        self.assertEqual((h['start'], h['start_from'], h['unit']), (221, 'с сентября 2026', 'м³'))
+        self.assertEqual([(t['from'], t['tariff'], t['now']) for t in h['tariffs']],
+                         [('с сентября 2026', Decimal('76.4'), False), ('с октября 2026', Decimal('80.7'), True)])
+
+        # «Расход» meters in a «По расходу» service: was = start + every usage before, the price = receipt ÷ all usage.
+        light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     tenant=self.viktor, serial='1', initial=Decimal('12400'), input_mode='usage')
+        other = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     serial='2', initial=Decimal('500'), input_mode='usage')
+        split = Receipt.objects.create(property=self.prop, kind='electricity', name='Электричество',
+                                       split=Receipt.Split.USAGE)
+        split.meters.add(light, other)
+        for month, mine, theirs, total in ((date(2026, 9, 1), 341, 59, 3600), (date(2026, 10, 1), 352, 48, 4000)):
+            Reading.objects.create(meter=light, month=month, usage=Decimal(mine))
+            Reading.objects.create(meter=other, month=month, usage=Decimal(theirs))
+            MonthlyAmount.objects.create(receipt=split, month=month, amount=Decimal(total))
+        h = services.meter_history(light, date(2026, 10, 5))
+        sept, octo = h['rows']
+        self.assertEqual((sept.was, sept.now, octo.was, octo.now), (12400, 12741, 12741, 13093))
+        self.assertTrue(octo.price_from_receipt)
+        self.assertEqual((sept.price, sept.total), (Decimal('9'), Decimal('3069.00')))
+        self.assertEqual(octo.total, Decimal('3520.00'))
+        self.assertTrue(h['by_usage'])
+
+        # The window: from «Счётчики» (the cell and «…»), someone else's meter — 404.
+        page = self.client.get(reverse('meter_list'))
+        self.assertContains(page, reverse('meter_history', args=[water.pk]))
+        window = self.client.get(reverse('meter_history', args=[water.pk]), HTTP_X_MODAL='1')
+        self.assertContains(window, 'начальное 221')
+        self.assertContains(window, '382,00')
+        self.assertContains(window, 'не введено')
+        stranger = Meter.objects.create(property=make_property(
+            User.objects.create_user(username='e@example.ru', password='secret1')), kind='custom', name='Чужой')
+        self.assertEqual(self.client.get(reverse('meter_history', args=[stranger.pk])).status_code, 404)
+
     def test_payment_receipts(self):
         # 2026-11-25: several services of one paper receipt — one tile on «Оплаты», made by dragging a tile onto
         # another (as apps into a folder on a phone). One sum, one check, one date: the tile dropped ONTO decides.

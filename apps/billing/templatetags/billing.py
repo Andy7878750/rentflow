@@ -53,3 +53,11 @@ def num(value):
     if value is None or value == '':
         return ''
     return fmt_number(value)
+
+
+@register.filter
+def price(value):
+    """A price with kopecks: 80.7 → '80,70', 33.1325… → '33,13'."""
+    if value is None or value == '':
+        return ''
+    return fmt_number(value, 2)
