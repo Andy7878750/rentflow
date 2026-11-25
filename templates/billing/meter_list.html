@@ -10,13 +10,13 @@
 
 {% comment %}All meters by object (2026-11-16). Nothing is edited here: a row (and «…» → «Изменить») opens its service window —
    or, for a meter in no service, «Новая услуга» with the tiles, the matching tile picked and this meter switched on.
-   «…» → «История» and the last reading cell: the meter's readings by month and tariffs (meter_history).
+   «История» (a column) and «…» → «История»: the meter's readings by month and tariffs (meter_history).
    «…» → «Удалить»: a confirmation, or «привязан к услуге» (meter_remove). data-row-modal in app.js.{% endcomment %}
 {% if has_meters %}
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
-      <tr><th data-filter="list">Счётчик</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">Кто платит</th><th data-filter="list">Услуга</th><th class="svc-num">Последнее показание</th><th><span class="visually-hidden">Действия</span></th></tr>
+      <tr><th data-filter="list">Счётчик</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">Кто платит</th><th data-filter="list">Услуга</th><th class="svc-num">Последнее показание</th><th class="svc-history">История</th><th><span class="visually-hidden">Действия</span></th></tr>
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
@@ -43,12 +43,11 @@
             {% else %}<span class="tag tag-muted">не в услуге</span>{% endif %}
           </td>
           <td class="svc-num" data-label="Показание">
-            {% comment %}The cell opens the meter's history (2026-11-25): «ноябрь 2026 · история» under the reading.{% endcomment %}
-            <a href="{% url 'meter_history' meter.pk %}" data-modal class="meter-last" title="История показаний и тарифов">
-              {% if row.last %}{{ row.last }}{% if row.unit %} {{ row.unit }}{% endif %}{% else %}<span class="svc-muted">—</span>{% endif %}
-              <span class="svc-meta">{% if row.last_when %}{{ row.last_when }} · {% endif %}история</span>
-            </a>
+            {% if row.last %}{{ row.last }}{% if row.unit %} {{ row.unit }}{% endif %}<span class="svc-meta">{{ row.last_when }}</span>
+            {% else %}<span class="svc-muted">—</span>{% endif %}
           </td>
+          {% comment %}«История» — a column of its own (2026-11-25, the user: there is room, don't squeeze it in).{% endcomment %}
+          <td class="svc-history" data-label="История"><a href="{% url 'meter_history' meter.pk %}" data-modal class="history-link" title="Показания по месяцам и тарифы">{{ row.months_label }}</a></td>
           <td class="svc-actions">
             <details class="dropdown" data-dropdown>
               <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия со счётчиком № {{ meter.serial }}">

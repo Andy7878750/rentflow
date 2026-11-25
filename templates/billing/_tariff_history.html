@@ -1,0 +1,25 @@
+{% comment %}«Тарифы → История» (2026-11-25): every price of one tariff of a service (за м², a formula's «Тариф / норматив»),
+  old to new; the one in force — only the badge «сейчас». A meter's tariff too — only its prices (readings are in
+  «Счётчики → История»). Read-only, as the meter history window (mh-* styles).{% endcomment %}
+<div class="modal-panel mh-panel mh-narrow">
+  <header class="mh-head">
+    <span class="receipt-icon"><svg class="icon"><use href="#i-r-{{ row.receipt.kind }}"/></svg></span>
+    <div class="mh-title">
+      <h1 class="fade">{{ row.what }}</h1>
+      <p class="fade">{{ row.receipt.property.name }} · услуга «{{ row.receipt.name }}»{% if row.note %} · {{ row.note }}{% endif %}</p>
+    </div>
+    <a href="{% url 'tariff_list' %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></a>
+  </header>
+  <div class="mh-body">
+    <section class="mh-part">
+      <div class="mh-sh">История тарифа</div>
+      <div class="mh-list">
+      {% for t in row.history %}
+        <div class="mh-tt"><span>{{ t.from }}{% if t.now %} <span class="badge badge-ok">сейчас</span>{% endif %}</span><span class="mh-price">{{ t.price }}</span></div>
+      {% endfor %}
+      </div>
+    </section>
+    <p class="mh-note">Новый тариф задают в окне {% if row.meter %}счётчика{% else %}услуги{% endif %} — с текущего месяца; прошлые месяцы остаются по старому.</p>
+  </div>
+  <div class="mh-foot"><a href="{% url 'tariff_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Закрыть</a></div>
+</div>

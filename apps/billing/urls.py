@@ -7,6 +7,7 @@ urlpatterns = [
     path('services/add/', views.receipt_add, name='receipt_add'),
     path('meters/', views.meter_list, name='meter_list'),
     path('tariffs/', views.tariff_list, name='tariff_list'),
+    path('tariffs/<int:pk>/history/', views.tariff_history, name='tariff_history'),
     path('payments/', views.payment_list, name='payment_list'),
     path('payments/<int:pk>/<str:month>/', views.payment_edit, name='payment_edit'),
     path('payments/receipt/<int:pk>/<str:month>/', views.payment_bundle_edit, name='payment_bundle_edit'),

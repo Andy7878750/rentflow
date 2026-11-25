@@ -12,7 +12,7 @@
   <div class="svc-wrap">
   <table class="svc-table">
     <thead>
-      <tr><th data-filter="list">Услуга</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">За что</th><th>Действует</th><th class="svc-num">Тариф</th><th><span class="visually-hidden">Действия</span></th></tr>
+      <tr><th data-filter="list">Услуга</th><th data-filter="list" data-filter-key="obj">Объект</th><th data-filter="list">За что</th><th>Действует</th><th class="svc-num">Тариф</th><th class="svc-history">История</th><th><span class="visually-hidden">Действия</span></th></tr>
     </thead>
     <tbody>
       {% for group in groups %}{% for row in group.rows %}
@@ -35,6 +35,10 @@
             {% else %}<span class="tag tag-muted">с начала</span>{% endif %}
           </td>
           <td class="svc-num svc-strong" data-label="Тариф">{{ row.price }}</td>
+          {% comment %}«История» — a column of its own (2026-11-25): the tariff's prices one after another — only the
+             tariff, a meter's too (readings are in «Счётчики → История»).{% endcomment %}
+          {% url 'tariff_history' row.receipt.pk as tariff_url %}
+          <td class="svc-history" data-label="История"><a href="{{ tariff_url }}?key={{ row.key|urlencode }}" data-modal class="history-link" title="Все цены этого тарифа">{{ row.history_label }}</a></td>
           <td class="svc-actions">
             <details class="dropdown" data-dropdown>
               <summary class="icon-button icon-button-boxed" title="Действия" aria-label="Действия с услугой «{{ row.receipt.name }}»">
@@ -43,6 +47,9 @@
               <div class="dropdown-menu" role="menu">
                 <a href="{% if row.meter %}{{ edit_url }}?meter={{ row.meter.pk }}{% else %}{{ window_url }}?svc={{ row.receipt.pk }}{% endif %}" data-modal class="dropdown-item" role="menuitem">
                   <svg class="icon"><use href="#i-edit"/></svg>Изменить
+                </a>
+                <a href="{{ tariff_url }}?key={{ row.key|urlencode }}" data-modal class="dropdown-item" role="menuitem">
+                  <svg class="icon"><use href="#i-calendar"/></svg>История
                 </a>
               </div>
             </details>

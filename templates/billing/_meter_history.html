@@ -15,10 +15,11 @@
   </header>
 
   <div class="mh-body">
-    <section class="mh-sec">
+    <section class="mh-part">
       <div class="mh-sh">Показания
         {% if h.start is not None %}<span class="mh-start">начальное{% if h.two_zones %}: день {{ h.start|num }}{% if h.start_night is not None %} · ночь {{ h.start_night|num }}{% endif %}{% else %} {{ h.start|num }}{% endif %} · {{ h.start_from }}</span>{% endif %}
       </div>
+      <div class="mh-list">
       <div class="mh-row is-head{% if h.two_zones %} is-dn{% endif %}">
         <span>Месяц</span>{% if h.two_zones %}<span></span>{% endif %}<span>Было</span><span>Стало</span><span>Расход{% if h.unit %}, {{ h.unit }}{% endif %}</span><span>{% if h.by_usage %}Цена, ₽{% else %}Тариф, ₽{% endif %}</span><span>Сумма</span>
       </div>
@@ -43,10 +44,12 @@
           {% endif %}
         </div>
       {% endfor %}
+      </div>
     </section>
 
-    <section class="mh-sec">
+    <section class="mh-part">
       <div class="mh-sh">Тарифы счётчика</div>
+      <div class="mh-list">
       {% if h.by_usage %}
         <div class="mh-tt"><span class="mh-muted">Своего тарифа нет — цена каждый месяц из квитанции</span></div>
       {% else %}
@@ -57,6 +60,7 @@
           <div class="mh-tt"><span class="mh-muted">Тарифа нет — задайте его в окне счётчика</span></div>
         {% endfor %}
       {% endif %}
+      </div>
     </section>
     {% if h.tariffs %}<p class="mh-note">Новый тариф задают в окне счётчика — с текущего месяца; прошлые месяцы остаются по старому.</p>{% endif %}
   </div>

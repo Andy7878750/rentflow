@@ -302,6 +302,20 @@ class ReceiptViewTests(TestCase):
         earlier = services.tariff_table(self.user, today=date(2026, 10, 5))[0]['rows']
         self.assertEqual(next(r for r in earlier if r['receipt'] == receipt)['since'], 'с января 2026')
 
+        # «История» (2026-11-25): every price old to new, the one in force «сейчас» — a meter's too, only the prices.
+        self.assertEqual(row['history'], [{'from': 'с января 2026', 'price': '5,5 ₽/кВт·ч', 'now': False},
+                                          {'from': 'с ноября 2026', 'price': '6 ₽/кВт·ч', 'now': True}])
+        self.assertNotContains(self.client.get(reverse('tariff_list')), reverse('meter_history', args=[light.pk]))
+        meter_window = self.client.get(reverse('tariff_history', args=[receipt.pk]) + '?key=' + row['key'], HTTP_X_MODAL='1')
+        self.assertContains(meter_window, 'окне счётчика')
+        self.assertNotContains(meter_window, 'Показания')
+        area_row = next(r for r in rows if r['receipt'] == area)
+        url = reverse('tariff_history', args=[area.pk]) + '?key=' + area_row['key']
+        window = self.client.get(url, HTTP_X_MODAL='1')
+        self.assertContains(window, area_row['history'][-1]['price'])
+        self.assertContains(window, 'сейчас')
+        self.assertEqual(self.client.get(reverse('tariff_history', args=[area.pk]) + '?key=nope').status_code, 404)
+
     def test_all_meters_page(self):
         tenant = self.prop.tenants.get()
         light = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',

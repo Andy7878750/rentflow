@@ -1834,6 +1834,8 @@ input.masked {
 }
 
 .subwin-sub {
+  position: relative;
+  top: 1.5px;  /* 2026-11-25, measured: the 20px title's capitals sit 1.5px below its box's middle — the badge on their middle */
   flex: 0 0 auto;
   white-space: nowrap;
 }

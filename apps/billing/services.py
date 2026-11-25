@@ -679,7 +679,11 @@ def meter_table(owner):
                 'who': who, 'who_cls': who_cls, 'service': service,
                 'tariff': busy_tariff_text(service, meter) if service else '',
                 'last': value, 'last_when': when, 'unit': meter_unit(meter),
+                # «История» column (2026-11-25): how many months the meter has readings for
+                'months': len({reading.month for reading in meter.readings.all()}),
             })
+            months = rows[-1]['months']
+            rows[-1]['months_label'] = f"{months} {_plural(months, ('месяц', 'месяца', 'месяцев'))}" if months else 'нет показаний'
         groups.append({'property': property_obj, 'rows': rows})
     return groups
 
@@ -971,12 +975,21 @@ def tariff_table(owner, today=None):
             for row in receipt.tariffs.all():
                 history.setdefault(row.key, []).append(row)
 
-            def add(what, price, key_rows, kind='', note='', before_text=None, meter=None):
+            def add(what, price, key_rows, kind='', note='', before_text=None, meter=None, key=''):
                 since, before = _tariff_since(key_rows, month)
+                ordered = sorted(key_rows, key=lambda row: row.valid_from)
+                now = tariff_at(ordered, month)
                 rows.append({
                     'receipt': receipt, 'meter': meter, 'what': what, 'kind': kind, 'note': note, 'price': price, 'since': since,
-                    'before': before_text(before) if before is not None and before_text else '',
+                    'before': before_text(before) if before is not None and before_text else '', 'key': key,
+                    # «История» (2026-11-25): every price of this tariff, old to new; the one in force — «сейчас».
+                    'history': [{'from': _tariff_since([row], row.valid_from)[0] or 'с начала', 'price': before_text(row),
+                                 'now': row is now} for row in ordered if row.valid_from <= month] if before_text else [],
                 })
+                if not rows[-1]['history']:  # no rows of history yet — the price as it is, from the start
+                    rows[-1]['history'] = [{'from': 'с начала', 'price': price, 'now': True}]
+                count = len(rows[-1]['history'])
+                rows[-1]['history_label'] = f"{count} {_plural(count, ('цена', 'цены', 'цен'))}"
 
             if receipt.amount_mode == Receipt.AmountMode.FORMULA:
                 for number in receipt.numbers.all():
@@ -987,14 +1000,15 @@ def tariff_table(owner, today=None):
                     key_rows = history.get(_number_key(number), [])
                     now = tariff_at(sorted(key_rows, key=lambda row: row.valid_from), month)
                     add(number.label, text(now.tariff if now else number.value), key_rows, note='в формуле',
-                        before_text=lambda row, text=text: text(row.tariff))
+                        before_text=lambda row, text=text: text(row.tariff), key=_number_key(number))
             elif receipt.amount_mode == Receipt.AmountMode.RATE:
                 rate = rate_at(receipt, month)[0]
                 if rate is not None:
                     per = rate_unit(receipt)
                     text = lambda value, per=per: f'{fmt_number(value)}{NBSP}{symbol}/{per}'  # noqa: E731
                     add(f'За {per}' if receipt.rate_unit else 'За человека' if per == 'чел.' else 'За м²', text(rate),
-                        history.get(rate_key(receipt), []), before_text=lambda row, text=text: text(row.tariff))
+                        history.get(rate_key(receipt), []), before_text=lambda row, text=text: text(row.tariff),
+                        key=rate_key(receipt))
             elif receipt.metered:
                 seen = set()
                 for meter in receipt.meters.all():
@@ -1019,7 +1033,7 @@ def tariff_table(owner, today=None):
                     what = 'Все счётчики' if key == '*' else meter.name + (f' № {meter.serial}' if meter.serial else '')
                     add(what, price, key_rows, kind=meter.kind if meter.kind in READY_METER_KINDS else 'custom',
                         note='день / ночь' if meter.day_night and key != '*' else '', before_text=before_text,
-                        meter=None if key == '*' else meter)
+                        meter=None if key == '*' else meter, key=key)
         groups.append({'property': property_obj, 'rows': rows})
     return groups
 

@@ -313,6 +313,20 @@ def meter_history(request, pk):
 
 
 @login_required
+def tariff_history(request, pk):
+    """«Тарифы → История» (2026-11-25): every price of one tariff (`key` — as in tariff_table: a meter's, «за м²», a
+    formula's number) — a small window, only the prices."""
+    receipt = _own_receipt(request, pk)
+    key = request.GET.get('key', '')
+    row = next((row for group in services.tariff_table(request.user) for row in group['rows']
+                if row['receipt'].pk == receipt.pk and row['key'] == key), None)
+    if row is None:
+        raise Http404
+    template = 'billing/_tariff_history.html' if request.headers.get('X-Modal') else 'billing/tariff_history.html'
+    return render(request, template, {'row': row})
+
+
+@login_required
 def meter_add(request):
     """«+ Добавить счётчик» in the menu: meters are added in the object window — «К какому объекту?» first."""
     properties = list(
