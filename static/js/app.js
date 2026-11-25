@@ -2043,6 +2043,7 @@
         return response.text().then(function (html) {
           closeDate();
           payBody.innerHTML = html;
+          initFades(payBody);  // the new names fade out too, not only the ones the page came with
           return response;
         });
       });
@@ -2058,6 +2059,8 @@
       bundleBack.querySelector('[data-pay-bundle-sub]').textContent = tile.dataset.sub + ' · одна квитанция, один платёж';
       var list = bundleBack.querySelector('[data-pay-bundle-list]');
       list.innerHTML = tile.querySelector('[data-pay-parts]').innerHTML;
+      bundleBack.hidden = false;  // measured visible, or nothing is «clipped»
+      initFades(list);
       list.querySelectorAll('.pay-part').forEach(function (row) {
         var out = document.createElement('button');
         out.type = 'button'; out.className = 'pay-out'; out.textContent = '×';

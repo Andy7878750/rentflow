@@ -803,7 +803,8 @@ def payment_table(owner, month):
                 row['paid'] += tile['amount']
             else:
                 row['left'] += tile['amount']
-                totals['unpaid'] += 1
+                if tile['state'] == 'due':  # a receipt waiting for a sum is not «не оплачено» yet
+                    totals['unpaid'] += 1
         for key in ('due', 'paid', 'left'):
             totals[key] += row[key]
     prev_month = shift_month(month, -1)

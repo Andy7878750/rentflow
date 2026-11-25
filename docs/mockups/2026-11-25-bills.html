@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счета · выставленные и к выставлению</title>
+<style>
+  /* Mockup (2026-11-25): «Счета» — two pages of the menu, «Выставленные» (top) and «К выставлению» (below).
+     A bill is ISSUED when it is given to the tenant: «Поделиться», «PDF» or «Выставить»; «Посмотреть» doesn't issue.
+     Only the last version is kept; data changed after issuing — a quiet «Изменился» and «Выставить заново». */
+  :root { --primary: #34495e; --accent: #148f77; --accent-text: #117965; --accent-soft: #e3f3ef; --text: #2c3338;
+    --muted: #6b7680; --border: #e3e7ea; --bg: #f4f6f8; --surface: #fff; --red: #c0392b; --warn: #b9770e;
+    --warn-soft: #fdf2e3; --r: 12px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 20px 60px; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 22px; color: var(--primary); }
+  .lead { max-width: 900px; margin: 0 0 18px; color: var(--muted); }
+  .tabs { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 -20px 18px;
+    padding: 10px 20px; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .tab { padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--text);
+    font: inherit; font-weight: 600; cursor: pointer; }
+  .tab.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .tab .n { margin-left: 4px; opacity: .8; font-weight: 400; }
+  .page { display: none; max-width: 1080px; }
+  .page.on { display: block; }
+  .about { margin: 0 0 14px; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: var(--r); font-size: 13.5px; }
+  .about b { color: var(--primary); }
+
+  .head { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; min-height: 38px; margin-bottom: 14px; }
+  .head h2 { margin: 0; font-size: 22px; color: var(--primary); }
+  .month { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 16px; }
+  .month button { width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .head .sp { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border: 1px solid var(--border);
+    border-radius: 10px; background: #fff; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+
+  /* Last month's not issued — a grey strip, as on «Оплаты» */
+  .prev { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: var(--r); background: #f4f6f7; font-size: 12.5px; }
+  .prev .red { color: var(--red); font-weight: 700; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 4px 0 10px; border: 1px solid var(--border);
+    border-radius: 999px; background: #fff; color: var(--muted); font-size: 12px; }
+  .chip b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .chip button { height: 22px; padding: 0 9px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+
+  /* The list: an object — a grey head; a bill — a row 56px: tenant · state · sum · actions. Same columns everywhere. */
+  .list { overflow: hidden; background: #fff; border: 1px solid var(--border); border-radius: var(--r); }
+  .ohead { display: flex; align-items: baseline; gap: 10px; height: 38px; padding: 0 16px; background: #f4f6f7;
+    border-bottom: 1px solid var(--border); }
+  .ohead b { color: var(--primary); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+  .ohead span { overflow: hidden; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) 190px 130px 274px; align-items: center; column-gap: 16px;
+    height: 56px; padding: 0 16px; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .who { min-width: 0; }
+  .who b { display: block; overflow: hidden; color: var(--text); font-weight: 600; white-space: nowrap;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+  .who span { color: var(--muted); font-size: 12px; }
+  .sum { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sum.muted { color: var(--muted); font-weight: 400; }
+  .sum small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
+  /* Actions in fixed slots: eye · PDF · share · the main button (its slot stays when there is none) — the icons stand in one column on every row */
+  .acts { display: grid; grid-template-columns: 32px 44px 32px 142px; align-items: center; justify-content: end; gap: 6px; }
+  .acts .btn { justify-content: center; width: 100%; padding: 0 8px; }
+  /* «Выставленные»: no main button — three icons, the actions column narrower */
+  .row.is-issued { grid-template-columns: minmax(0, 1fr) 190px 130px 120px; }
+  .row.is-issued .acts { grid-template-columns: 32px 44px 32px; }
+  .ib { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0;
+    border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--primary); cursor: pointer; }
+  .ib svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ib:hover { border-color: var(--accent); color: var(--accent); }
+  .ib:disabled { opacity: .4; cursor: default; border-color: var(--border); color: var(--primary); }
+  .ib.txt { width: 44px; padding: 0; font: inherit; font-size: 12.5px; font-weight: 700; }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .badge.ok { background: var(--accent-soft); color: var(--accent-text); }
+  .badge.no { background: #fdf1ef; color: var(--red); }
+  .badge.no::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.done { background: #f1f3f5; color: var(--muted); font-weight: 400; }
+  .state small { display: block; margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 11.5px; white-space: nowrap; text-overflow: clip;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+  .state small.fit { -webkit-mask-image: none; mask-image: none; }
+
+  .empty { padding: 28px 16px; color: var(--muted); text-align: center; }
+  .foot { margin-top: 10px; color: var(--muted); font-size: 13px; }
+
+  .toast { position: fixed; top: 16px; left: 50%; z-index: 60; padding: 10px 16px; border-radius: 10px; background: var(--primary);
+    color: #fff; font-size: 13.5px; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+  .toast[hidden] { display: none; }
+
+  @media (max-width: 820px) {
+    .row { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; height: auto; row-gap: 8px; padding: 10px 16px; }
+    .state { grid-column: 1; grid-row: 2; }
+    .sum { grid-column: 2; grid-row: 1; }
+    .acts { grid-column: 2; grid-row: 2; }
+  }
+</style>
+</head>
+<body>
+<h1>«Счета» — выставленные и к выставлению</h1>
+<p class="lead">Счёт выставлен, когда вы отдали его арендатору: «Поделиться», «PDF» или «Выставить». «Посмотреть» не
+  выставляет. Хранится только последняя версия. Кнопки работают: выставьте счёт — он уйдёт в «Выставленные».</p>
+
+<div class="tabs">
+  <button class="tab on" data-tab="issued">Выставленные<span class="n" data-n-issued></span></button>
+  <button class="tab" data-tab="todo">К выставлению<span class="n" data-n-todo></span></button>
+</div>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="eye" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></symbol>
+</svg>
+
+<section class="page on" data-page="issued">
+  <div class="about"><b>Выставленные.</b> Счета, отданные арендаторам, — ровно такими, какими их получили: суммы
+    больше не пересчитываются. Поменялись данные после выставления — тихая метка «Изменился» и сколько сейчас.
+    Отдельной кнопки нет: «PDF» или «Поделиться» ещё раз — и выставлен новый счёт вместо старого (старый не хранится).
+    «Посмотреть» показывает, каким счёт ушёл арендатору.</div>
+  <div class="head"><h2>Выставленные</h2><div class="month"><button>‹</button>Ноябрь 2026<button>›</button></div></div>
+  <div class="list" data-list-issued></div>
+  <p class="foot" data-foot-issued></p>
+</section>
+
+<section class="page" data-page="todo">
+  <div class="about"><b>К выставлению.</b> С первого дня месяца у каждого арендатора есть счёт-черновик: сумма
+    считается сама по мере ввода. «Не всё введено» — чего не хватает, кнопки серые. «Готов к счёту» — можно выставить.
+    Не выставленное за прошлый месяц — в серой полосе сверху. Арендатор с 0 ₽ и «Остаётся на вас» сюда не попадают.</div>
+  <div class="head"><h2>К выставлению</h2><div class="month"><button>‹</button>Ноябрь 2026<button>›</button></div>
+    <span class="sp"></span><button class="btn primary" data-all>Выставить готовые</button></div>
+  <div class="prev" data-prev></div>
+  <div class="list" data-list-todo></div>
+</section>
+
+<div class="toast" data-toast hidden></div>
+
+<script>
+  // Bills of November: object · tenant · share · sum now · state. issued: {on, sum} — what was given.
+  var OBJECTS = [
+    { name: 'Просвещения 15', addr: 'Просвещения пр-кт, д. 15 лит. А, пом. 82-Н' },
+    { name: 'Просвет 81', addr: 'пр. Просвещения, 81' }
+  ];
+  var BILLS = [
+    { o: 0, who: 'Салон «Ногти»', share: '45% · 49,5 м²', sum: 18412.35, ready: true, issued: { on: '24.11.2026', sum: 18412.35 } },
+    { o: 0, who: 'Аптека «Вита»', share: '55% · 60,5 м²', sum: 21233.40, ready: true, issued: { on: '24.11.2026', sum: 20987.10 } },
+    { o: 1, who: 'Кафе «Утро»', share: '40% · 32 м²', sum: 3120.80, ready: true, issued: null },
+    { o: 1, who: 'ИП Смирнова, ногтевая студия «Ласка»', share: '35% · 28 м²', sum: 2730.70, ready: true, issued: null },
+    { o: 1, who: 'Цветы «Лилия»', share: '25% · 20 м²', sum: 1950.50, ready: false, miss: 'нет показаний: Электричество № 778', issued: null }
+  ];
+  var PREV = [{ who: 'Кафе «Утро»', o: 1, sum: 4120.00, done: false }];
+  var TODAY = '25.11.2026';
+
+  function fmt(n) { return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽'; }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+  function icon(id) { return '<svg><use href="#' + id + '"/></svg>'; }
+  function toast(text) {
+    var t = document.querySelector('[data-toast]');
+    t.textContent = text; t.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 2200);
+  }
+
+  function groups(filter) {
+    var out = '';
+    OBJECTS.forEach(function (obj, oi) {
+      var rows = BILLS.map(function (b, i) { return [b, i]; }).filter(function (x) { return x[0].o === oi && filter(x[0]); });
+      if (!rows.length) return;
+      out += '<div class="ohead"><b>' + esc(obj.name) + '</b><span>' + esc(obj.addr) + '</span></div>';
+      rows.forEach(function (x) { out += filter.row(x[0], x[1]); });
+    });
+    return out;
+  }
+
+  function renderIssued() {
+    var filter = function (b) { return b.issued; };
+    filter.row = function (b, i) {
+      var changed = Math.abs(b.issued.sum - b.sum) > 0.004;
+      return '<div class="row is-issued" data-i="' + i + '"><div class="who"><b title="' + esc(b.who) + '">' + esc(b.who) + '</b><span>' + esc(b.share) + '</span></div>' +
+        '<div class="state">' + (changed ? '<span class="badge warn">Изменился</span><small class="fit">сейчас ' + fmt(b.sum) + '</small>'
+          : '<span class="badge done">выставлен ' + b.issued.on + '</span>') + '</div>' +
+        '<div class="sum">' + fmt(b.issued.sum) + '</div>' +
+        '<div class="acts"><button class="ib" title="Посмотреть — каким счёт ушёл арендатору">' + icon('eye') + '</button>' +
+        '<button class="ib txt"' + (changed ? ' data-reissue title="Скачать новый PDF — счёт выставится заново"' : ' title="Скачать PDF"') + '>PDF</button>' +
+        '<button class="ib"' + (changed ? ' data-reissue title="Поделиться новым — счёт выставится заново"' : ' title="Поделиться"') + '>' + icon('share') + '</button></div></div>';
+    };
+    var html = groups(filter);
+    document.querySelector('[data-list-issued]').innerHTML = html || '<div class="empty">За ноябрь счетов ещё не выставляли</div>';
+    var list = BILLS.filter(filter);
+    document.querySelector('[data-foot-issued]').textContent = list.length ? 'Выставлено ' + list.length + ' на ' +
+      fmt(list.reduce(function (a, b) { return a + b.issued.sum; }, 0)) : '';
+  }
+
+  function renderTodo() {
+    var filter = function (b) { return !b.issued; };
+    filter.row = function (b, i) {
+      return '<div class="row" data-i="' + i + '"><div class="who"><b title="' + esc(b.who) + '">' + esc(b.who) + '</b><span>' + esc(b.share) + '</span></div>' +
+        '<div class="state">' + (b.ready ? '<span class="badge ok">Готов к счёту</span>' : '<span class="badge no">Не всё введено</span><small title="' + esc(b.miss) + '">' + esc(b.miss) + '</small>') + '</div>' +
+        '<div class="sum' + (b.ready ? '' : ' muted') + '">' + fmt(b.sum) + '</div>' +
+        '<div class="acts"><button class="ib" title="Посмотреть PDF — счёт останется здесь"' + (b.ready ? '' : ' disabled') + '>' + icon('eye') + '</button>' +
+        '<button class="ib txt" data-issue title="Скачать PDF — счёт выставится"' + (b.ready ? '' : ' disabled') + '>PDF</button>' +
+        '<button class="ib" data-issue title="Поделиться — счёт выставится"' + (b.ready ? '' : ' disabled') + '>' + icon('share') + '</button>' +
+        '<button class="btn sm primary" data-issue' + (b.ready ? '' : ' disabled') + '>Выставить</button></div></div>';
+    };
+    var html = groups(filter);
+    document.querySelector('[data-list-todo]').innerHTML = html || '<div class="empty">Все счета за ноябрь выставлены</div>';
+    var ready = BILLS.filter(function (b) { return !b.issued && b.ready; }).length;
+    var all = document.querySelector('[data-all]');
+    all.textContent = ready ? 'Выставить готовые · ' + ready : 'Выставить готовые';
+    all.disabled = !ready;
+    var left = PREV.filter(function (p) { return !p.done; });
+    var bar = document.querySelector('[data-prev]');
+    bar.hidden = !left.length;
+    bar.innerHTML = '<b>Октябрь: не выставлено <span class="red">' + left.length + '</span></b>' + left.map(function (p) {
+      return '<span class="chip">' + esc(OBJECTS[p.o].name) + ' · ' + esc(p.who) + ' <b>' + fmt(p.sum) + '</b><button data-prev-issue>Выставить</button></span>';
+    }).join('');
+  }
+
+  function render() {
+    renderIssued(); renderTodo();
+    document.querySelector('[data-n-issued]').textContent = BILLS.filter(function (b) { return b.issued; }).length;
+    document.querySelector('[data-n-todo]').textContent = BILLS.filter(function (b) { return !b.issued; }).length;
+  }
+
+  document.addEventListener('click', function (e) {
+    var tab = e.target.closest('[data-tab]');
+    if (tab) {
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('on', t === tab); });
+      document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('on', p.dataset.page === tab.dataset.tab); });
+      return;
+    }
+    var row = e.target.closest('[data-i]');
+    if (e.target.closest('[data-issue]') && row) {
+      var b = BILLS[+row.dataset.i];
+      b.issued = { on: TODAY, sum: b.sum };
+      render(); toast('Счёт «' + b.who + '» выставлен — он в «Выставленных»'); return;
+    }
+    if (e.target.closest('[data-reissue]') && row) {
+      var c = BILLS[+row.dataset.i];
+      c.issued = { on: TODAY, sum: c.sum };
+      render(); toast('Счёт «' + c.who + '» выставлен заново'); return;
+    }
+    if (e.target.closest('[data-all]')) {
+      var n = 0;
+      BILLS.forEach(function (x) { if (!x.issued && x.ready) { x.issued = { on: TODAY, sum: x.sum }; n++; } });
+      render(); toast('Выставлено счетов: ' + n); return;
+    }
+    if (e.target.closest('[data-prev-issue]')) { PREV[0].done = true; render(); toast('Счёт за октябрь выставлен'); }
+  });
+  render();
+</script>
+</body>
+</html>

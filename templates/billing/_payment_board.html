@@ -49,10 +49,11 @@
               {% endif %}
               <button type="button" class="pay-q{% if tile.note %} is-on{% endif %}" data-pay-note
                       title="{% if tile.note %}{{ tile.note }}{% if tile.carry %} · переносится{% endif %}{% else %}Пометка{% endif %}" aria-label="Пометка: {{ tile.name }}">?</button>
-              <span class="pay-sum">{% if tile.missing %}не введено: {{ tile.missing }}{% elif tile.amount is not None %}{{ tile.amount|floatformat:"2g" }} ₽{% if tile.partial %}<span class="pay-partial" title="Введены не все суммы этой услуги">…</span>{% endif %}{% else %}не введена{% endif %}</span>
+              {% comment %}«не введена» / «не введено: N» stand where «не оплачено» stands (2026-11-25); the sum row keeps what is typed.{% endcomment %}
+              <span class="pay-sum">{% if tile.missing %}{% if tile.amount %}{{ tile.amount|floatformat:"2g" }} ₽{% endif %}{% elif tile.amount is not None %}{{ tile.amount|floatformat:"2g" }} ₽{% if tile.partial %}<span class="pay-partial" title="Введены не все суммы этой услуги">…</span>{% endif %}{% endif %}</span>
               <span class="pay-date">
                 {% if tile.state == 'paid' %}<input type="text" class="pay-date-input" data-date data-pay-date value="{{ tile.paid_on|date:'d.m.Y' }}" inputmode="numeric" autocomplete="off" aria-label="Дата оплаты: {{ tile.name }}">
-                {% elif tile.state == 'due' %}не оплачено{% endif %}
+                {% elif tile.state == 'due' %}не оплачено{% elif tile.missing %}не введено: {{ tile.missing }}{% else %}не введена{% endif %}
               </span>
               <button type="button" class="pay-check" data-pay-toggle
                       title="{% if tile.state == 'paid' %}Снять отметку об оплате{% else %}Отметить: оплачено сегодня{% endif %}"

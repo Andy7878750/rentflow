@@ -260,9 +260,11 @@
 .svcwin .sv-mli.is-on .sv-mli-ck .sv-i { visibility: visible; }
 /* in another service: «в услуге» / «Электричество» in two lines, right-aligned (2026-11-24) */
 .sv-mli-svc { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 1; min-width: 0; max-width: 50%; margin-left: auto;
-  font-size: 12px; line-height: 1.3; color: var(--color-accent-hover); }
+  font-size: 12px; line-height: 1.3; color: var(--color-text-muted); }
 .sv-mli-svc .fade { max-width: 100%; }
-.sv-mli.is-busy { background: #fafbfc; }
+/* not a link (2026-11-25): grey, no hover, no pointer — services are switched from the menu on the left */
+.sv-mli.is-busy, .sv-mli.is-busy:hover { background: #fafbfc; cursor: default; }
+.sv-mli.is-busy > * { opacity: .45; filter: grayscale(1); }  /* fully grey: icon, badge, text (2026-11-25) */
 .sv-mli.is-busy b { color: var(--color-text-muted); }
 .sv-mli.is-other { background: #fafbfc; cursor: default; }
 .sv-mli.is-other > * { opacity: .45; }

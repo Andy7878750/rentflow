@@ -350,7 +350,9 @@
         var m = byId(S.meters, id), g = groupOf(m.group), on = s.meters.indexOf(id) >= 0;
         var svc = takenBy(m) && byId(S.services, takenBy(m));
         var other = !on && !svc && s.meters.length && m.group !== s.group;
-        var attr = svc ? ' data-svc="' + svc.id + '" title="Открыть «' + esc(svc.name) + '»"' : other ? ' disabled' : ' data-mtile="' + id + '" aria-pressed="' + on + '"';
+        // A meter of another service — not active at all (2026-11-25, the user: clicking it opened that service and
+        // confused): services are switched only from the menu on the left.
+        var attr = svc || other ? ' disabled' : ' data-mtile="' + id + '" aria-pressed="' + on + '"';
         return '<button type="button" class="sv-mli' + (on ? ' is-on' : '') + (svc ? ' is-busy' : '') + (other ? ' is-other' : '') + '"' + attr + '>' +
           meterIcon(m.kind) + '<span class="sv-mli-t"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mli-no fade">№ ' + esc(m.serial || '—') + '</span>' +
           whoBadge(m) + '</span>' +
