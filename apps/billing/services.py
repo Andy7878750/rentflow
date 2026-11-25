@@ -2009,12 +2009,13 @@ def _usage_split(receipt, entry, payers, owner):
         owner.lines.append(Line(receipt, total, 'по счётчикам нет расхода'))
         return True
     unit = meter_unit(uses[0][0]) or 'ед.'
-    head = f'{fmt_number(total, 2)}{NBSP}{currency} ÷ {fmt_number(whole.normalize())}{NBSP}{unit}'
     billed = Decimal('0')
     price = price_down(total / whole)  # the price of a unit, to kopecks (2026-11-25, «простое округление»)
+    # The line shows the price the bill uses (2026-11-25): «25 кВт·ч × 82,08 ₽» — it checks on a calculator.
+    price_text = f'{fmt_number(price, 2)}{NBSP}{currency}'
     for meter, use, use_text in uses:
         exact = total * use / whole
-        formula = f'{head} × {use_text}{NBSP}{unit}'
+        formula = f'{use_text}{NBSP}{unit} × {price_text}'
         payer = payers.get(meter.tenant_id) if meter.tenant_id else None
         if payer:
             line = tenant_line(receipt, exact, formula, payer.tenant, (unit, use, price, Decimal('1')))
