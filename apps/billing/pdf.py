@@ -91,7 +91,8 @@ class _Bill(FPDF):
         self.line(self.l_margin, y, self.w - self.r_margin, y)
 
 
-def bill_pdf(property_obj, bill, payer, title, month_label, today, month=None, landlord=''):
+def bill_pdf(property_obj, bill, payer, title, month_label, today, month=None, landlord='', owner_req=None, number=None):
+    """owner_req — the landlord's Requisites (accounts) or None; number — the issued bill's №, None — not issued yet."""
     pdf = _Bill()
     full = pdf.w - 2 * MARGIN
     x0, inner = MARGIN + PAD, full - 2 * PAD
@@ -107,17 +108,30 @@ def bill_pdf(property_obj, bill, payer, title, month_label, today, month=None, l
         kv.append(('Оплатить до', f'{due_date(month, tenant.due_day):%d.%m.%Y}'))
     pdf.set_xy(x0, top)
     pdf.text_at(CAPS, GREY, 'АРЕНДОДАТЕЛЬ', width=half, height=2.6)
+    use_req = bool(requisites and owner_req)
     pdf.set_xy(x0, top + 3)
-    pdf.text_at(TEXT + 1, BLACK, landlord or '—', bold=True, width=half, height=3.6)
+    pdf.text_at(TEXT + 1, BLACK, (owner_req.legal_name if use_req and owner_req.legal_name else landlord) or '—',
+                bold=True, width=half, height=3.6)
+    if use_req:  # 2026-11-25: «Ваши реквизиты» under the name
+        ogrn = owner_req.ogrn and (f'ОГРНИП {owner_req.ogrn}' if len(owner_req.ogrn) == 15 else f'ОГРН {owner_req.ogrn}')
+        rows = [' · '.join(x for x in (owner_req.inn and f'ИНН {owner_req.inn}', owner_req.kpp and f'КПП {owner_req.kpp}', ogrn) if x),
+                owner_req.address, ' · '.join(x for x in (owner_req.phone, owner_req.email) if x)]
+        pdf.set_font('Main', '', TEXT)
+        pdf.set_text_color(*GREY)
+        pdf.set_xy(x0, top + 7)
+        for text in [r for r in rows if r]:
+            pdf.set_x(x0)
+            pdf.multi_cell(half - 4, 2.9, text)
+    landlord_bottom = pdf.get_y()
     pdf.set_xy(x0 + half, top)
-    pdf.text_at(TITLE, BLACK, 'Счёт', bold=True, width=half, align='R', height=5)
+    pdf.text_at(TITLE, BLACK, f'Счёт № {number}' if number else 'Счёт', bold=True, width=half, align='R', height=5)
     y = top + 6.5
     for label, value in kv:
         pdf.set_xy(x0 + half, y)
         pdf.text_at(TEXT, GREY, label, width=half - 30, align='R', height=3.2)
         pdf.text_at(TEXT, BLACK, value, bold=label == 'Оплатить до', width=30, align='R', height=3.2)
         y += 3.4
-    pdf.set_y(max(y, top + 8) + 3)
+    pdf.set_y(max(y, top + 8, landlord_bottom) + 3)
     pdf.rule(BLACK, 0.3)
     pdf.ln(3.5)
 
@@ -229,6 +243,34 @@ def bill_pdf(property_obj, bill, payer, title, month_label, today, month=None, l
         pdf.set_fill_color(*HEAD_BG)
         pdf.set_x(MARGIN)
         pdf.multi_cell(full, 4, f'  Ещё не введено: {names} — счёт неполный.', fill=True)
+    if use_req and owner_req.has_bank:
+        # «Реквизиты для оплаты» (2026-11-25): a grey head over the full width, label · value rows, the purpose
+        pdf.ln(6)
+        pdf.set_fill_color(*HEAD_BG)
+        pdf.rect(MARGIN, pdf.get_y(), full, 5, style='F')
+        pdf.set_x(x0)
+        pdf.text_at(CAPS, GREY, 'РЕКВИЗИТЫ ДЛЯ ОПЛАТЫ', width=inner, height=5)
+        pdf.ln(6.5)
+        receiver = ', '.join(x for x in (owner_req.legal_name or landlord, owner_req.inn and f'ИНН {owner_req.inn}',
+                                         owner_req.kpp and f'КПП {owner_req.kpp}') if x)
+        vat_word = ('НДС не облагается' if not vat else
+                    f'{"в т. ч. " if vat["mode"] == "in" else ""}НДС {vat["rate"]}% — {_money(vat["vat"])} ₽')
+        purpose = (f'Оплата по счёту {"№ " + str(number) + " " if number else ""}от {today:%d.%m.%Y} '
+                   f'за коммунальные услуги, {month_label.lower()}, {vat_word}')
+        label_col = 34
+        for label, value in (('Получатель', receiver), ('Расчётный счёт', owner_req.account), ('Банк', owner_req.bank),
+                             ('БИК · Корр. счёт', ' · '.join(x for x in (owner_req.bik, owner_req.corr_account) if x)),
+                             ('Назначение платежа', purpose)):
+            y = pdf.get_y()
+            pdf.set_x(x0)
+            pdf.text_at(TEXT, GREY, label, width=label_col, height=3.1)
+            pdf.set_xy(x0 + label_col, y)
+            pdf.set_font('Main', '', TEXT)
+            pdf.set_text_color(*BLACK)
+            pdf.multi_cell(inner - label_col, 3.1, value)
+            pdf.ln(0.6)
+        pdf.ln(1)
+        pdf.rule()
     if requisites:
         pdf.ln(14)
         y = pdf.get_y()

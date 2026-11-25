@@ -146,3 +146,30 @@ class AccountPagesTests(TestCase):
         self.assertEqual(response.status_code, 302)
         user.refresh_from_db()
         self.assertTrue(user.check_password('newsecret'))
+
+
+class RequisitesTests(TestCase):
+    """«Ваши реквизиты» (2026-11-25): typed once, checked by length, saved back to the page."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user(username='r@example.ru', email='r@example.ru', password='secret1')
+        self.client.force_login(self.user)
+
+    def test_saved_with_digits_only(self):
+        from django.urls import reverse
+
+        from .models import Requisites
+        url = reverse('requisites')
+        self.assertContains(self.client.get(url, HTTP_X_MODAL='1'), 'Ваши реквизиты')
+        response = self.client.post(url, {'legal_name': 'ИП Иванов', 'inn': '7812 3456 7890', 'account': '40802 810 9550 0001 2345',
+                                          'bank': 'Сбербанк', 'bik': '044030653'}, HTTP_X_MODAL='1')
+        self.assertEqual(response.status_code, 204)
+        req = Requisites.objects.get(user=self.user)
+        self.assertEqual((req.inn, req.account, req.has_bank), ('781234567890', '40802810955000012345', True))
+
+    def test_wrong_lengths_are_said(self):
+        from django.urls import reverse
+        response = self.client.post(reverse('requisites'), {'inn': '123', 'bik': '1'}, HTTP_X_MODAL='1')
+        self.assertContains(response, 'ИНН — 10 цифр')
+        self.assertContains(response, 'БИК — 9 цифр')

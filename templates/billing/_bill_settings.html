@@ -18,7 +18,7 @@
             <label><input type="radio" name="requisites" value="1"{% if tenant.bill_requisites and not data or data.requisites == '1' %} checked{% endif %}><span>С реквизитами</span></label>
           </div>
           <div class="bs-hints"><p class="bs-hint bs-if-plain">В счёте — ваше имя и телефон, без НДС.</p>
-            <p class="bs-hint bs-if-req">Ваши реквизиты и арендатора, «Реквизиты для оплаты».</p></div>
+            <p class="bs-hint bs-if-req"><a href="{% url 'requisites' %}" data-modal>Ваши реквизиты</a> и арендатора, «Реквизиты для оплаты».</p></div>
         </section>
 
         <section class="bs-part bs-vat">

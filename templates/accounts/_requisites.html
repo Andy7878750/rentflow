@@ -1,0 +1,50 @@
+{% comment %}«Ваши реквизиты» (2026-11-25): who issues the bills and where to pay — typed once, they go to every bill
+  «с реквизитами». The same small window as «Настроить счёт»: two columns, the grey 56px head.{% endcomment %}
+<div class="modal-panel bs-panel">
+  <header class="bs-head">
+    <h1 class="fade">Ваши реквизиты</h1>
+    <a href="{% url 'property_list' %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></a>
+  </header>
+  <form method="post" action="{% url 'requisites' %}" data-modal-form class="pform bs-form" novalidate>
+    {% csrf_token %}
+    <div class="bs-body">
+      <div class="bs-col">
+        <section class="bs-part">
+          <h2 class="bs-cap">Арендодатель</h2>
+          <div class="bs-fields">
+            {% include "accounts/_req_field.html" with name="legal_name" label="Полное название" value=req.legal_name max=200 %}
+            <div class="bs-two">
+              {% include "accounts/_req_field.html" with name="inn" label="ИНН" value=req.inn max=12 num=1 %}
+              {% include "accounts/_req_field.html" with name="ogrn" label="ОГРН / ОГРНИП" value=req.ogrn max=15 num=1 %}
+            </div>
+            {% include "accounts/_req_field.html" with name="kpp" label="КПП" value=req.kpp max=9 num=1 %}
+            {% include "accounts/_req_field.html" with name="address" label="Адрес" value=req.address max=250 %}
+            <div class="bs-two">
+              {% include "accounts/_req_field.html" with name="phone" label="Телефон" value=req.phone max=30 %}
+              {% include "accounts/_req_field.html" with name="email" label="Почта" value=req.email max=254 %}
+            </div>
+            <p class="bs-hint">КПП — только у организации, у ИП не нужен.</p>
+          </div>
+        </section>
+      </div>
+      <div class="bs-col">
+        <section class="bs-part">
+          <h2 class="bs-cap">Куда платить</h2>
+          <div class="bs-fields">
+            {% include "accounts/_req_field.html" with name="account" label="Расчётный счёт" value=req.account max=20 num=1 %}
+            {% include "accounts/_req_field.html" with name="bank" label="Банк" value=req.bank max=200 %}
+            <div class="bs-two">
+              {% include "accounts/_req_field.html" with name="bik" label="БИК" value=req.bik max=9 num=1 %}
+              {% include "accounts/_req_field.html" with name="corr_account" label="Корр. счёт" value=req.corr_account max=20 num=1 %}
+            </div>
+            <p class="bs-hint">Попадают в счета «с реквизитами»: в шапку и в «Реквизиты для оплаты».</p>
+          </div>
+        </section>
+      </div>
+    </div>
+    <div class="form-actions bs-actions">
+      <a href="{% url 'property_list' %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+      <button type="submit" class="btn btn-primary btn-auto">Сохранить</button>
+    </div>
+  </form>
+</div>

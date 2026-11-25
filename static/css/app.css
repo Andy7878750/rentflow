@@ -912,3 +912,7 @@
 a.nav-group-link { text-decoration: none; }
 a.nav-group-link:hover { background: var(--color-bg); }
 a.nav-group-link.is-active { background: var(--color-accent-soft); color: var(--color-accent-hover); }
+
+/* The name in the top bar opens «Ваши реквизиты» (2026-11-25): the same look, a link. */
+.user-link { display: flex; align-items: center; gap: inherit; color: inherit; text-decoration: none; border-radius: 10px; }
+.user-link:hover .user-name { color: var(--color-accent-hover); }

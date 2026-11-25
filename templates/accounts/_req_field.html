@@ -1,0 +1,4 @@
+<div class="field fl"><label for="rq-{{ name }}">{{ label }}</label>
+  <input id="rq-{{ name }}" type="{% if name == 'email' %}email{% else %}text{% endif %}" name="{{ name }}" maxlength="{{ max }}"{% if num %} inputmode="numeric"{% endif %} placeholder=" " value="{{ value }}" autocomplete="off">
+  {% for key, message in errors.items %}{% if key == name %}<ul class="errorlist"><li>{{ message }}</li></ul>{% endif %}{% endfor %}
+</div>

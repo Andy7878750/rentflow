@@ -2202,3 +2202,4 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 /* VAT under / over «Итого к оплате»: quiet rows, the sums on the total's right edge */
 .bill-vat-row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; color: var(--color-text-muted); font-size: 13px;
   font-variant-numeric: tabular-nums; }
+.bs-hint a { color: var(--color-accent-hover); }

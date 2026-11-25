@@ -158,7 +158,10 @@ def bill_print(request, property_pk, payer):
     label = property_services.month_label(month)
     profile = getattr(request.user, 'profile', None)
     landlord = (profile.full_name if profile else '') or request.user.get_full_name() or request.user.email
-    data = bill_pdf(property_obj, bill, found, title, label, date.today(), month=month, landlord=landlord)
+    from apps.accounts.models import Requisites
+    owner_req = Requisites.objects.filter(user=request.user).first()
+    data = bill_pdf(property_obj, bill, found, title, label, date.today(), month=month, landlord=landlord,
+                    owner_req=owner_req)
     name = services.bill_file_name(title, label)
     response = HttpResponse(data, content_type='application/pdf')
     disposition = 'inline' if request.GET.get('inline') else 'attachment'

@@ -155,11 +155,14 @@
       </button>
       <div class="topbar-user">
         {% user_display user as display_name %}
-        <span class="avatar">{{ display_name|first|upper }}</span>
-        <span class="user-meta">
-          <span class="user-name">{{ display_name }}</span>
-          <span class="user-role">арендодатель</span>
-        </span>
+        {% comment %}2026-11-25: the name opens «Ваши реквизиты» — who issues the bills.{% endcomment %}
+        <a href="{% url 'requisites' %}" data-modal class="user-link" title="Ваши реквизиты для счетов">
+          <span class="avatar">{{ display_name|first|upper }}</span>
+          <span class="user-meta">
+            <span class="user-name">{{ display_name }}</span>
+            <span class="user-role">арендодатель · реквизиты</span>
+          </span>
+        </a>
         <form method="post" action="{% url 'account_logout' %}">
           {% csrf_token %}
           <button type="submit" class="icon-button" title="Выйти" aria-label="Выйти">
