@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Окно «Счёт · арендатор» — расположение, 2026-11-25</title>
+<style>
+  :root { --primary:#34495e; --accent:#148f77; --accent-text:#117965; --accent-soft:#e6f4f1; --bg:#f5f6f7; --border:#e1e4e8;
+    --text:#2c3338; --muted:#6b7680; --font:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--font); background:var(--bg); color:var(--text); font-size:14px; }
+  .top { max-width:1500px; margin:0 auto; padding:24px 16px 0; }
+  h1 { margin:0 0 4px; font-size:20px; color:var(--primary); }
+  .lead { margin:0; color:var(--muted); line-height:1.5; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .tabs button { height:34px; padding:0 14px; border:1px solid var(--border); border-radius:8px; background:#fff; font:inherit; color:var(--primary); cursor:pointer; }
+  .tabs button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .stage { max-width:1500px; margin:0 auto; padding:16px; }
+  .about { max-width:900px; margin:0 0 14px; color:var(--muted); font-size:13px; line-height:1.5; }
+  .about b { color:var(--text); }
+  .back { background:rgba(30,40,48,.35); border-radius:14px; padding:32px; display:flex; justify-content:center; align-items:flex-start; }
+
+  .mw { background:#fff; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.2); overflow:hidden; }
+  .mw-head { height:56px; display:flex; align-items:center; gap:12px; padding:0 14px 0 24px; background:var(--bg); border-bottom:1px solid var(--border); }
+  .mw-head h3 { margin:0; font-size:20px; color:var(--primary); white-space:nowrap; }
+  .mw-head .x { margin-left:auto; width:32px; height:32px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:20px; }
+  .mw-foot { display:flex; justify-content:flex-end; gap:8px; padding:12px 24px 20px; }
+  .btn { height:38px; padding:0 16px; border:1px solid var(--border); border-radius:8px; display:inline-flex; align-items:center; font-weight:600; font-size:14px; color:var(--primary); background:#fff; }
+  .btn.pri { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .cap { margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
+  .fl { display:flex; flex-direction:column; gap:4px; }
+  .fl label { font-size:12px; color:var(--muted); }
+  .in { height:38px; border:1px solid var(--border); border-radius:8px; display:block; line-height:36px; padding:0 12px; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .in.sm { display:flex; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .gap { display:flex; flex-direction:column; gap:12px; }
+  .seg { display:flex; padding:3px; gap:3px; background:#eef0f2; border-radius:8px; }
+  .seg span { flex:1; height:32px; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:13px; color:var(--muted); white-space:nowrap; padding:0 8px; }
+  .seg span.on { background:var(--accent); color:#fff; font-weight:600; }
+  .hint { margin:6px 0 0; font-size:12px; color:var(--muted); }
+  .ck { width:18px; height:18px; border-radius:4px; flex:none; position:relative; background:var(--accent); }
+  .ck::after { content:""; position:absolute; left:5px; top:1px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+  .opt { display:flex; align-items:center; gap:10px; height:40px; font-size:14px; white-space:nowrap; }
+  .opt-r { margin-left:auto; display:flex; align-items:center; gap:8px; color:var(--muted); }
+  .in.sm { width:56px; height:32px; justify-content:flex-end; color:var(--text); }
+  .klist { border:1px solid var(--border); border-radius:12px; }
+  .kr { display:flex; align-items:center; justify-content:space-between; height:40px; padding:0 8px 0 14px; font-size:14px; gap:10px; }
+  .kr + .kr { border-top:1px solid var(--border); }
+  .kr > span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .k { display:flex; align-items:center; gap:4px; color:var(--muted); font-size:13px; flex:none; }
+  .kin { width:58px; height:30px; border:1px solid var(--border); border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; color:var(--text); font-size:14px; }
+  .kin.is-set { border-color:var(--accent); color:var(--accent-text); font-weight:600; }
+
+  /* А — one column (now) */
+  .va { width:460px; } .va .body { padding:16px 24px 8px; display:flex; flex-direction:column; gap:20px; }
+  /* Б — two columns: «Счёт» | «Арендатор» */
+  .vb { width:760px; } .vb .body { padding:16px 24px 8px; display:grid; grid-template-columns:1fr 1fr; gap:0 32px; }
+  .vb .col { display:flex; flex-direction:column; gap:20px; }
+  .vb .col + .col { border-left:1px solid var(--border); padding-left:32px; margin-left:-1px; }
+  /* В — rows «label · control» (a settings list) */
+  .vc { width:560px; } .vc .body { padding:8px 24px 8px; }
+  .row { display:grid; grid-template-columns:150px minmax(0,1fr); column-gap:16px; align-items:center; min-height:56px; border-bottom:1px solid var(--border); padding:9px 0; }
+  .row:last-child { border-bottom:0; }
+  .row > .rl { font-size:14px; color:var(--primary); font-weight:600; }
+  .row > .rl small { display:block; font-weight:400; font-size:12px; color:var(--muted); }
+  .row.top { align-items:start; } .row.top > .rl { padding-top:9px; }
+  /* Г — the menu on the left, as the service and object windows */
+  .vd { width:720px; } .vd .wrap { display:grid; grid-template-columns:190px minmax(0,1fr); min-height:430px; }
+  .vd .menu { border-right:1px solid var(--border); padding:14px 10px; display:flex; flex-direction:column; gap:2px; }
+  .vd .menu span { height:36px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-radius:6px; font-size:14px; }
+  .vd .menu span.on { background:var(--accent-soft); color:var(--accent-hover, #0f7562); font-weight:600; }
+  .vd .menu small { color:var(--muted); font-weight:400; font-size:12px; }
+  .vd .pane { padding:16px 24px 8px; display:flex; flex-direction:column; gap:20px; }
+  .vd .mw-foot { border-top:1px solid var(--border); }
+  /* Д — a summary on top (what the bill will be) and parts that open */
+  .ve { width:500px; } .ve .body { padding:16px 24px 8px; display:flex; flex-direction:column; gap:12px; }
+  .sum { background:#f1f3f5; border-radius:8px; padding:12px 14px; font-size:13px; line-height:1.55; }
+  .sum b { color:var(--primary); }
+  .acc { border:1px solid var(--border); border-radius:12px; }
+  .acc-h { height:48px; display:flex; align-items:center; gap:10px; padding:0 14px; font-size:14px; font-weight:600; color:var(--primary); }
+  .acc-h small { margin-left:auto; font-weight:400; color:var(--muted); font-size:13px; }
+  .acc-h i { font-style:normal; color:var(--muted); }
+  .acc-b { border-top:1px solid var(--border); padding:12px 14px 14px; display:flex; flex-direction:column; gap:12px; }
+  .v { display:none; } .v.on { display:block; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Окно «Счёт · Салон «Ногти»» — расположение</h1>
+  <p class="lead">Содержание одно и то же: вид счёта, реквизиты арендатора, НДС и ставка, «Оплатить до», коэффициенты по услугам. Меняется только расположение.</p>
+  <div class="tabs" id="tabs">
+    <button data-v="a" class="on">А · одна колонка</button>
+    <button data-v="b">Б · две колонки</button>
+    <button data-v="c">В · подпись слева</button>
+    <button data-v="d">Г · меню слева</button>
+    <button data-v="e">Д · итог сверху</button>
+  </div>
+</div>
+<div class="stage" id="stage"></div>
+
+<script>
+  var X = {
+    head: function () { return '<div class="mw-head"><h3>Счёт · Салон «Ногти»</h3><span class="x">×</span></div>'; },
+    foot: '<div class="mw-foot"><span class="btn">Отмена</span><span class="btn pri">Сохранить</span></div>',
+    kind: '<div class="seg"><span>Простой</span><span class="on">С реквизитами</span></div>',
+    vat: '<div class="seg"><span>Без НДС</span><span class="on">В т. ч.</span><span>Сверху</span></div>',
+    rate: '<div class="seg"><span class="on">22%</span><span>7%</span><span>5%</span></div>',
+    name: '<div class="fl"><label>Полное название</label><div class="in">ООО «Салон Ногти»</div></div>',
+    innKpp: '<div class="two"><div class="fl"><label>ИНН</label><div class="in">7802123456</div></div><div class="fl"><label>КПП</label><div class="in">780201001</div></div></div>',
+    addr: '<div class="fl"><label>Адрес</label><div class="in">Санкт-Петербург, пр-кт Просвещения, д. 15, пом. 82-Н</div></div>',
+    due: '<div class="opt"><span class="ck"></span><span>Оплатить до</span><span class="opt-r"><span class="in sm">10</span><span>числа</span></span></div>',
+    coefOpt: '<div class="opt"><span class="ck"></span><span>Коэффициент к услугам</span></div>',
+    klist: '<div class="klist">' + [['Коммунальные услуги', '1'], ['Электричество', '1,2'], ['Вода горячая', '1'], ['Вода холодная', '1'], ['Водоотведение', '1']].map(function (r) {
+      return '<div class="kr"><span>' + r[0] + '</span><span class="k">×<span class="kin' + (r[1] !== '1' ? ' is-set' : '') + '">' + r[1] + '</span></span></div>'; }).join('') + '</div>'
+  };
+  function sec(cap, inner) { return '<div><p class="cap">' + cap + '</p>' + inner + '</div>'; }
+  function gap(inner) { return '<div class="gap">' + inner + '</div>'; }
+
+  var V = {
+    a: { about:'<b>А · одна колонка</b> (как сейчас, 460px). Всё друг под другом: просто, но окно высокое — с коэффициентами больше экрана ноутбука, надо прокручивать.',
+      html: function () { return '<div class="mw va">' + X.head() + '<div class="body">' +
+        sec('Вид счёта', X.kind) + sec('Арендатор в счёте', gap(X.name + X.innKpp + X.addr)) + sec('НДС', gap(X.vat + X.rate)) +
+        sec('Ещё в счёте', X.due + X.coefOpt + X.klist) + '</div>' + X.foot + '</div>'; } },
+    b: { about:'<b>Б · две колонки</b> (760px). Слева — <b>что за счёт</b>: вид, НДС, срок, коэффициенты; справа — <b>кому</b>: реквизиты арендатора. Окно ниже в 2 раза, всё на одном экране; «Простой» — правая колонка бледнеет (реквизиты не нужны).',
+      html: function () { return '<div class="mw vb">' + X.head() + '<div class="body"><div class="col">' +
+        sec('Вид счёта', X.kind) + sec('НДС', gap(X.vat + X.rate)) + sec('Ещё в счёте', X.due + X.coefOpt + X.klist) + '</div><div class="col">' +
+        sec('Арендатор в счёте', gap(X.name + X.innKpp + X.addr)) + '</div></div>' + X.foot + '</div>'; } },
+    c: { about:'<b>В · подпись слева</b> (560px), как список настроек: слева что настраиваем, справа — как. Читается сверху вниз «Вид счёта — С реквизитами, НДС — в т. ч. 22%…». Строки разделены линией, высота строки одна.',
+      html: function () { return '<div class="mw vc">' + X.head() + '<div class="body">' +
+        '<div class="row"><span class="rl">Вид счёта</span>' + X.kind + '</div>' +
+        '<div class="row top"><span class="rl">Арендатор<small>в счёте</small></span>' + gap(X.name + X.innKpp + X.addr) + '</div>' +
+        '<div class="row"><span class="rl">НДС</span>' + X.vat + '</div>' +
+        '<div class="row"><span class="rl">Ставка</span>' + X.rate + '</div>' +
+        '<div class="row"><span class="rl">Срок оплаты</span>' + X.due.replace('<span>Оплатить до</span>', '<span>до</span>') + '</div>' +
+        '<div class="row top"><span class="rl">Коэффициенты<small>к услугам</small></span>' + gap(X.coefOpt.replace('Коэффициент к услугам', 'Использовать') + X.klist) + '</div>' +
+        '</div>' + X.foot + '</div>'; } },
+    d: { about:'<b>Г · меню слева</b> (720px), как в окнах объекта и услуг: «Вид и НДС · Реквизиты · Срок · Коэффициенты»; справа — одна часть. Окно невысокое и одинаковое, но всё сразу не видно — надо щёлкать.',
+      html: function () { return '<div class="mw vd">' + X.head() + '<div class="wrap"><div class="menu">' +
+        '<span class="on">Вид и НДС</span><span>Реквизиты <small>ИНН</small></span><span>Срок оплаты <small>10</small></span><span>Коэффициенты <small>1</small></span></div>' +
+        '<div class="pane">' + sec('Вид счёта', X.kind) + sec('НДС', gap(X.vat + X.rate)) + '</div></div>' + X.foot + '</div>'; } },
+    e: { about:'<b>Д · итог сверху</b> (500px): серая панель словами — каким выйдет счёт; ниже части раскрываются по клику (открыта одна). Самое понятное «ленивому арендодателю», но лишний клик, чтобы поменять.',
+      html: function () { return '<div class="mw ve">' + X.head() + '<div class="body">' +
+        '<div class="sum">Счёт <b>с реквизитами</b> на <b>ООО «Салон Ногти»</b>, ИНН 7802123456 · <b>НДС 22% в т. ч.</b> · оплатить до <b>10 числа</b> · коэффициент у <b>1 услуги</b>.</div>' +
+        '<div class="acc"><div class="acc-h">Вид счёта и НДС<small>С реквизитами · 22% в т. ч.</small><i>▴</i></div><div class="acc-b">' + X.kind + X.vat + X.rate + '</div></div>' +
+        '<div class="acc"><div class="acc-h">Арендатор в счёте<small>ООО «Салон Ногти»</small><i>▾</i></div></div>' +
+        '<div class="acc"><div class="acc-h">Срок оплаты<small>до 10 числа</small><i>▾</i></div></div>' +
+        '<div class="acc"><div class="acc-h">Коэффициенты<small>Электричество × 1,2</small><i>▾</i></div></div>' +
+        '</div>' + X.foot + '</div>'; } }
+  };
+  function show(k) {
+    document.getElementById('stage').innerHTML = '<p class="about">' + V[k].about + '</p><div class="back">' + V[k].html() + '</div>';
+    document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === k); });
+  }
+  document.getElementById('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) show(b.dataset.v); });
+  show('a');
+</script>
+</body>
+</html>

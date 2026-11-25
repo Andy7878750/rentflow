@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Коэффициент и настройки счёта, 2026-11-25</title>
+<style>
+  :root { --primary:#34495e; --accent:#148f77; --accent-text:#117965; --accent-soft:#e6f4f1; --bg:#f5f6f7; --border:#e1e4e8; --gp:#f1f3f5;
+    --text:#2c3338; --muted:#6b7680; --danger:#c0392b; --font:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--font); background:var(--bg); color:var(--text); font-size:14px; }
+  .top { max-width:1400px; margin:0 auto; padding:24px 16px 0; }
+  h1 { margin:0 0 4px; font-size:20px; color:var(--primary); }
+  .lead { margin:0; color:var(--muted); line-height:1.5; }
+  .stage { max-width:1400px; margin:0 auto; padding:20px 16px 40px; display:grid; grid-template-columns:minmax(0, 760px) 330px; gap:32px; align-items:start; }
+  .part-h { margin:0 0 4px; font-size:15px; color:var(--primary); }
+  .part-p { margin:0 0 12px; font-size:13px; color:var(--muted); line-height:1.45; }
+  .sp { height:32px; }
+
+  /* ---------- the service window's «Делим и кто платит» ---------- */
+  .win { background:#fff; border:1px solid var(--border); border-radius:14px; padding:20px 32px 24px; }
+  .sec-h { margin:0 0 8px; height:20px; font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
+  .gp { background:var(--gp); border-radius:8px; padding:6px 14px; }
+  .split { display:flex; align-items:center; gap:14px; height:36px; font-size:14px; color:var(--muted); }
+  .split b { color:var(--accent-text); font-weight:600; border-bottom:2px solid var(--accent); padding-bottom:2px; }
+  .gp-row { display:grid; grid-template-columns:22px minmax(0,1fr) 64px 92px 110px 40px; column-gap:12px; align-items:center; height:40px; }
+  .gp-row + .gp-row { border-top:1px solid #e3e6ea; }
+  .gp-head { height:26px; font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+  .gp-head span { text-align:right; }
+  .no { width:20px; height:20px; border-radius:50%; background:#fff; border:1px solid #d6dade; font-size:11px; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+  .who { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .meta { text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .sum { text-align:right; color:#9aa3ab; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .sum.on { color:var(--text); }
+  .k { justify-self:end; display:flex; align-items:center; gap:4px; }
+  .k span { color:var(--muted); font-size:13px; }
+  .k input { width:58px; height:30px; border:1px solid var(--border); border-radius:6px; text-align:right; padding:0 8px; font:inherit; font-size:14px; background:#fff; }
+  .k input.is-set { border-color:var(--accent); color:var(--accent-text); font-weight:600; }
+  .sw { justify-self:end; width:34px; height:20px; border-radius:10px; background:var(--accent); position:relative; }
+  .sw::after { content:""; position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:#fff; }
+  .owner .who { color:var(--muted); }
+  .mrow { display:grid; grid-template-columns:26px minmax(0,1fr) 190px 92px 150px; column-gap:12px; align-items:center; height:52px; padding:0 14px; }
+  .mrow + .mrow { border-top:1px solid var(--border); }
+  .mlist { border:1px solid var(--border); border-radius:12px; }
+  .mname b { display:block; font-size:14px; font-weight:600; color:var(--primary); }
+  .mname small { font-size:12px; color:var(--muted); }
+  .pick { height:32px; border:1px solid var(--border); border-radius:6px; display:flex; align-items:center; padding:0 10px; font-size:13px; }
+  .track { height:28px; display:flex; background:#eef0f2; border-radius:6px; padding:2px; font-size:12px; }
+  .track span { flex:1; display:flex; align-items:center; justify-content:center; border-radius:5px; color:var(--muted); }
+  .track span.on { background:#fff; color:var(--primary); font-weight:600; }
+  .ic { width:20px; height:20px; color:#0e9aa7; }
+
+  /* ---------- the bill's head on the object page ---------- */
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px; }
+  .b-cap { color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
+  .b-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .b-who { display:flex; align-items:center; gap:8px; margin-top:2px; }
+  .b-who h2 { margin:0; font-size:18px; color:var(--primary); white-space:nowrap; }
+  .chev { width:22px; height:22px; padding:3px; border-radius:6px; background:var(--accent-soft); color:var(--accent); flex:none; }
+  .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .dot.ok { background:#22a06b; } .dot.no { background:#e05a4f; }
+  .set { display:inline-flex; align-items:center; gap:5px; height:16.5px; padding:0; border:0; background:none; color:var(--accent-text); font:inherit;
+    font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .set svg { width:14px; height:14px; }
+  .set:hover { text-decoration:underline; }
+  .grp { margin-top:12px; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .grp-h { height:34px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:var(--bg); border-bottom:1px solid var(--border);
+    color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+  .ln { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1px 10px; padding:9px 16px; }
+  .ln-n { font-size:14px; } .ln-s { font-size:14px; font-weight:600; text-align:right; }
+  .ln-f { grid-column:1/-1; font-size:12px; color:var(--muted); }
+  .tip { margin-top:6px; font-size:12px; color:var(--muted); }
+
+  /* ---------- the small window «Счёт · Салон «Ногти»» (as the tenant's / meter's small windows) ---------- */
+  .back { background:rgba(30,40,48,.35); border-radius:14px; padding:28px; display:flex; justify-content:center; }
+  .mw { width:460px; background:#fff; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.2); overflow:hidden; }
+  .mw-head { height:56px; display:flex; align-items:center; gap:12px; padding:0 14px 0 24px; background:var(--bg); border-bottom:1px solid var(--border); }
+  .mw-head h3 { margin:0; font-size:20px; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mw-head .x { margin-left:auto; width:32px; height:32px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:20px; }
+  .mw-body { padding:16px 24px 8px; display:flex; flex-direction:column; gap:16px; }
+  .cap { font-size:12px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .fl { display:flex; flex-direction:column; gap:4px; }
+  .fl label { font-size:12px; color:var(--muted); }
+  .in { height:38px; border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; padding:0 12px; font-size:14px; }
+  .in.warm { background:#fffbe6; color:#9aa3ab; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .seg { display:flex; padding:3px; gap:3px; background:#eef0f2; border-radius:8px; }
+  .seg button { flex:1; height:32px; border:0; border-radius:6px; background:none; font:inherit; font-size:13px; color:var(--muted); cursor:pointer; }
+  .seg button.on { background:var(--accent); color:#fff; font-weight:600; }
+  .hint { font-size:12px; color:var(--muted); margin-top:6px; }
+  .mw-foot { display:flex; justify-content:flex-end; gap:8px; padding:12px 24px 20px; }
+  .btn { height:38px; padding:0 16px; border:1px solid var(--border); border-radius:8px; display:inline-flex; align-items:center; font-weight:600; font-size:14px; color:var(--primary); background:#fff; }
+  .btn.pri { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .hide { display:none !important; }
+  .opt { display:flex; align-items:center; gap:10px; height:40px; cursor:pointer; }
+  .opt + .opt { border-top:1px solid var(--border); }
+  .ck { width:18px; height:18px; border:1.5px solid #b8bfc6; border-radius:4px; flex:none; position:relative; background:#fff; }
+  .ck.on { background:var(--accent); border-color:var(--accent); }
+  .ck.on::after { content:""; position:absolute; left:5px; top:1px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+  .opt-l { font-size:14px; }
+  .opt-r { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); }
+  .opt.off .opt-r { opacity:.4; }
+  .in.sm { width:56px; height:32px; justify-content:flex-end; color:var(--text); }
+  .klist { margin:4px 0 0 28px; border:1px solid var(--border); border-radius:12px; }
+  .kr { display:flex; align-items:center; justify-content:space-between; height:40px; padding:0 8px 0 14px; font-size:14px; }
+  .kr + .kr { border-top:1px solid var(--border); }
+  .kin { width:58px; height:30px; border:1px solid var(--border); border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; }
+  .kin.is-set { border-color:var(--accent); color:var(--accent-text); font-weight:600; }
+  .klist + .hint { margin-left:28px; }
+  .inline-num { display:flex; align-items:center; gap:8px; font-size:14px; }
+  .inline-num .in { width:64px; justify-content:flex-end; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+</svg>
+
+<div class="top">
+  <h1>Настройки счёта арендатора</h1>
+  <p class="lead">Шапка счёта: точка вместо бейджа и «Настроить счёт». По ссылке — маленькое окно: вид счёта, реквизиты арендатора, НДС, срок оплаты и коэффициенты по услугам (в окне услуги коэффициента нет).</p>
+</div>
+
+<div class="stage">
+  <div>
+    <h2 class="part-h">Маленькое окно «Счёт · Салон «Ногти»»</h2>
+    <p class="part-p">Открывается из счёта («Настроить счёт») и из окна арендатора. Ваши реквизиты (ИП, ИНН, р/с) — один раз в профиле; здесь — только то, что у арендатора своё.</p>
+    <div class="back">
+      <div class="mw">
+        <div class="mw-head"><h3>Счёт · Салон «Ногти»</h3><span class="x">×</span></div>
+        <div class="mw-body">
+          <div><p class="cap">Вид счёта</p>
+            <div class="seg" data-k="req"><button data-v="0">Простой</button><button data-v="1" class="on">С реквизитами</button></div>
+            <p class="hint" data-show="req0">В счёте — ваше имя и телефон. Без НДС.</p>
+            <p class="hint" data-show="req1">В счёте — ваши реквизиты и реквизиты арендатора, блок «Реквизиты для оплаты».</p>
+          </div>
+          <div data-show="req1"><p class="cap">Арендатор в счёте</p>
+            <div class="fl"><label>Полное название</label><div class="in">ООО «Салон Ногти»</div></div>
+            <div class="two" style="margin-top:12px"><div class="fl"><label>ИНН</label><div class="in">7802123456</div></div><div class="fl"><label>КПП</label><div class="in">780201001</div></div></div>
+            <div class="fl" style="margin-top:12px"><label>Адрес</label><div class="in">Санкт-Петербург, пр-кт Просвещения, д. 15, пом. 82-Н</div></div>
+            <p class="hint">КПП — только у ООО; у ИП — не нужен.</p>
+          </div>
+          <div data-show="req1"><p class="cap">НДС</p>
+            <div class="seg" data-k="vat"><button data-v="none" class="on">Без НДС</button><button data-v="in">В т. ч.</button><button data-v="top">Сверху</button></div>
+            <div data-show="vat" style="margin-top:12px"><div class="seg" data-k="rate"><button data-v="22" class="on">22%</button><button data-v="7">7%</button><button data-v="5">5%</button></div></div>
+            <p class="hint" data-hint="vat">«НДС не облагается» — в итоге и в назначении платежа.</p>
+          </div>
+          <div><p class="cap">Ещё в счёте</p>
+            <div class="opt" data-opt="due"><span class="ck on"></span><span class="opt-l">Оплатить до</span>
+              <span class="opt-r"><span class="in sm">10</span><span>числа следующего месяца</span></span></div>
+            <div class="opt" data-opt="coef"><span class="ck on"></span><span class="opt-l">Коэффициент к услугам</span></div>
+            <div class="klist" data-show="coef">
+              <div class="kr"><span>Коммунальные услуги</span><span class="k"><span>×</span><span class="kin">1</span></span></div>
+              <div class="kr"><span>Электричество</span><span class="k"><span>×</span><span class="kin is-set">1,2</span></span></div>
+              <div class="kr"><span>Вода горячая</span><span class="k"><span>×</span><span class="kin">1</span></span></div>
+              <div class="kr"><span>Вода холодная</span><span class="k"><span>×</span><span class="kin">1</span></span></div>
+              <div class="kr"><span>Водоотведение</span><span class="k"><span>×</span><span class="kin">1</span></span></div>
+            </div>
+            <p class="hint" data-show="coef">Умножает строку услуги в счёте этого арендатора; в счёте коэффициент не виден — он внутри тарифа.</p>
+          </div>
+        </div>
+        <div class="mw-foot"><span class="btn">Отмена</span><span class="btn pri">Сохранить</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h2 class="part-h">Шапка счёта</h2>
+    <p class="part-p">Бейджа нет. Точка сразу после «СЧЁТ · НОЯБРЬ 2026»: зелёная — всё введено, красная — нет (при наведении — что не введено). Справа, где был бейдж, — «⚙ Настроить счёт».</p>
+    <div class="card">
+      <div class="b-head"><div><div class="b-cap">Счёт · ноябрь 2026<span class="dot ok" title="Всё введено — готов к счёту"></span></div>
+        <div class="b-who"><h2>Салон «Ногти»</h2><svg class="chev"><use href="#chev"/></svg></div></div>
+        <button class="set"><svg><use href="#gear"/></svg>Настроить счёт</button></div>
+      <div class="grp"><div class="grp-h"><span>Общие · по долям 45%</span><span>Сумма, ₽</span></div>
+        <div class="ln"><span class="ln-n">Коммунальные услуги</span><span class="ln-s">2 857,50</span><span class="ln-f">6 350,00 ₽ × 45%</span></div></div>
+    </div>
+    <div style="height:16px"></div>
+    <div class="card">
+      <div class="b-head"><div><div class="b-cap">Счёт · ноябрь 2026<span class="dot no" title="Не введено: Электричество"></span></div>
+        <div class="b-who"><h2>Аптека «Вита»</h2><svg class="chev"><use href="#chev"/></svg></div></div>
+        <button class="set"><svg><use href="#gear"/></svg>Настроить счёт</button></div>
+      <div class="grp"><div class="grp-h"><span>Общие · по долям 55%</span><span>Сумма, ₽</span></div>
+        <div class="ln"><span class="ln-n">Коммунальные услуги</span><span class="ln-s">3 492,50</span><span class="ln-f">6 350,00 ₽ × 55%</span></div></div>
+    </div>
+    <p class="tip">Название ссылки — «Настроить счёт»: по ней — вид счёта, реквизиты арендатора, НДС, срок оплаты и коэффициенты. Другие варианты: «Вид счёта», «Реквизиты и НДС».</p>
+  </div>
+</div>
+
+<script>
+  var S = { req:'1', vat:'none', rate:'22', due:true, coef:true };
+  function paint() {
+    document.querySelectorAll('.mw .seg').forEach(function (seg) {
+      seg.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', S[seg.dataset.k] === b.dataset.v); });
+    });
+    document.querySelectorAll('[data-show]').forEach(function (el) {
+      var k = el.dataset.show;
+      el.classList.toggle('hide', k === 'req0' ? S.req !== '0' : k === 'req1' ? S.req !== '1' : k === 'vat' ? S.vat === 'none' : k === 'coef' ? !S.coef : false);
+    });
+    document.querySelector('[data-hint="vat"]').textContent = S.vat === 'none' ? '«НДС не облагается» — в итоге и в назначении платежа.' :
+      S.vat === 'in' ? 'Сумма та же, в итоге строка «в т. ч. НДС ' + S.rate + '%».' : 'К сумме прибавится НДС ' + S.rate + '%.';
+  }
+  function ticks() {
+    document.querySelectorAll('[data-opt]').forEach(function (o) {
+      var on = S[o.dataset.opt]; o.classList.toggle('off', !on); o.querySelector('.ck').classList.toggle('on', on);
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var o = e.target.closest('[data-opt]'); if (o) { S[o.dataset.opt] = !S[o.dataset.opt]; ticks(); paint(); return; }
+    var b = e.target.closest('.mw .seg button'); if (!b) return;
+    S[b.parentNode.dataset.k] = b.dataset.v; if (S.req === '0') S.vat = 'none'; paint();
+  });
+  ticks(); paint();
+</script>
+</body>
+</html>

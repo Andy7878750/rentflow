@@ -2137,3 +2137,68 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .mh-foot { display: flex; flex-shrink: 0; justify-content: flex-end; padding: 12px 20px; border-top: 1px solid var(--color-border); }
 /* «Тарифы → История» — the same window, narrower (only the list of prices) */
 .modal-panel.mh-panel.mh-narrow { width: 460px; }
+
+/* ---------- «Настроить счёт» (2026-11-25, variant Б of docs/mockups/2026-11-25-bill-settings-layout.html) ----------
+   A small window: the grey 56px head as the tenant's / meter's windows; two columns — what the bill is | whom it is
+   for. The choices dim what doesn't apply (never hide it — nothing jumps). */
+.modal-panel.bs-panel { width: 760px; max-width: 100%; padding: 0; overflow: hidden; }
+.bs-head { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 14px 0 24px; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg); }
+.bs-head h1 { min-width: 0; margin: 0; color: var(--color-primary); font-size: 20px; white-space: nowrap; }
+.bs-head .modal-close { margin-left: auto; }
+.bs-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 16px 24px 4px; }
+.bs-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.bs-col + .bs-col { margin-left: 32px; padding-left: 32px; border-left: 1px solid var(--color-border); }
+.bs-cap { margin: 0 0 8px; color: var(--color-text-muted); font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.bs-seg { display: flex; }
+.bs-seg label { flex: 1 1 0; min-width: 0; }
+.bs-seg span { padding: 0 8px; text-align: center; }
+.bs-rate { margin-top: 4px; }
+.bs-opt-l { font-size: 14px; }
+.bs-hints { display: grid; margin-top: 6px; }
+.bs-hints > * { grid-area: 1 / 1; }
+.bs-hint { margin: 0; color: var(--color-text-muted); font-size: 12px; }
+.bs-klist + .bs-hint { margin-top: 6px; }
+.bs-opt { display: flex; align-items: center; gap: 10px; height: 40px; }
+.bs-opt + .bs-opt { border-top: 1px solid var(--color-border); }
+.bs-check { display: flex; align-items: center; gap: 10px; font-size: 14px; white-space: nowrap; cursor: pointer; }
+.bs-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--color-accent); cursor: pointer; }
+.bs-due, .bs-inline { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--color-text-muted); font-size: 14px; }
+.pform.bs-form input.bs-num { width: 58px; min-width: 0; height: 32px; padding: 0 8px; text-align: right; background: var(--color-surface); flex: none; }  /* white, as a coefficient */
+.pform.bs-form input.bs-num.is-set { border-color: var(--color-accent); color: var(--color-accent-hover); font-weight: 600; }
+.pform.bs-form input.bs-num.is-bad { border-color: var(--color-danger, #c0392b); }
+.bs-err { margin: 2px 0 0; color: var(--color-danger, #c0392b); font-size: 12px; text-align: right; }
+.bs-klist { margin-top: 4px; border: 1px solid var(--color-border); border-radius: 12px; }
+.bs-kr { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 40px; padding: 0 4px 0 14px; font-size: 14px; }
+.bs-kr + .bs-kr { border-top: 1px solid var(--color-border); }
+.bs-kr > .fade { min-width: 0; }
+.bs-k { display: flex; flex: none; align-items: center; gap: 4px; color: var(--color-text-muted); font-size: 13px; }
+.bs-fields { display: flex; flex-direction: column; gap: 12px; }
+.bs-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bs-actions { padding: 12px 24px 20px; margin: 0; }
+/* what the choices make not apply — pale and not clickable, in its place */
+.bs-form:has(input[name="requisites"][value="1"]:checked) .bs-if-plain,
+.bs-form:has(input[name="requisites"][value="0"]:checked) .bs-if-req { visibility: hidden; }
+/* a plain bill: the full name stays (it is the bill's «Кому»); ИНН, КПП, адрес and VAT — pale */
+.bs-form:has(input[name="requisites"][value="0"]:checked) :is(.bs-vat, .bs-req-only),
+.bs-form:has(input[name="vat"][value="none"]:checked) .bs-rate,
+.bs-form:has(input[name="due_on"]:not(:checked)) .bs-due { opacity: .4; pointer-events: none; }
+/* the coefficients — hidden until «Коэффициент к услугам» is ticked (2026-11-25, the user: hidden by default) */
+.bs-form:has(input[name="coef_on"]:not(:checked)) :is(.bs-klist, .bs-if-coef) { display: none; }
+@media (max-width: 760px) {
+  .bs-body { grid-template-columns: minmax(0, 1fr); }
+  .bs-col + .bs-col { margin: 20px 0 0; padding: 20px 0 0; border-left: 0; border-top: 1px solid var(--color-border); }
+}
+
+/* The bill's head (2026-11-25): a dot after «СЧЁТ · НОЯБРЬ 2026» instead of the badge — green: all typed in, red: not;
+   «⚙ Настроить счёт» where the badge was, its text on the caption's line. */
+.bill-cap { display: inline-flex; align-items: center; gap: 6px; }
+.bill-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #22a06b; }
+.bill-dot.is-missing { background: #e05a4f; }
+.bill-set { display: inline-flex; flex: none; align-items: center; gap: 5px; height: 16.5px; margin-top: 6px; color: var(--color-accent-hover);
+  font-size: 12px; font-weight: 600; white-space: nowrap; text-decoration: none; }
+.bill-set .icon { width: 14px; height: 14px; }
+.bill-set:hover { text-decoration: underline; }
+/* VAT under / over «Итого к оплате»: quiet rows, the sums on the total's right edge */
+.bill-vat-row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; color: var(--color-text-muted); font-size: 13px;
+  font-variant-numeric: tabular-nums; }

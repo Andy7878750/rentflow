@@ -281,6 +281,17 @@ class FormulaValue(models.Model):
         constraints = [models.UniqueConstraint(fields=['number', 'month'], name='unique_formula_value_per_month')]
 
 
+class TenantCoefficient(models.Model):
+    """A tenant's coefficient for one service (2026-11-25, «Настроить счёт»): × that service's line in their bill;
+    counted only while the tenant's «Коэффициент к услугам» is on. Never named in the bill — it is inside the tariff."""
+    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='coefficients')
+    receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, related_name='tenant_coefficients')
+    value = models.DecimalField(max_digits=6, decimal_places=4, default=1)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['tenant', 'receipt'], name='one_coefficient_per_tenant_service')]
+
+
 class MonthlyAmount(models.Model):
     """What a receipt says for one month: the sum to pay, or (for metered ones) the tariff."""
 

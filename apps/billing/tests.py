@@ -508,7 +508,7 @@ class MonthPageTests(TestCase):
         self.assertContains(self.client.get(url), 'Пока нечего начислять')
         MonthlyAmount.objects.create(receipt=self.receipt, month=date(2026, 11, 1), amount=Decimal('5200'))
         page = self.client.get(url)
-        self.assertContains(page, 'Готов к счёту')
+        self.assertContains(page, 'Всё введено — готов к счёту')  # the green dot's tooltip (2026-11-25)
         self.assertContains(page, 'Общие · по долям 45%')
         self.assertContains(page, 'Две тысячи триста сорок рублей 00 копеек')
 

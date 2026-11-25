@@ -10,7 +10,8 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
-from .models import FormulaValue, Meter, MonthlyAmount, PayBundle, Payment, Reading, Receipt, ReceiptTariff, ServiceTemplate
+from .models import (FormulaValue, Meter, MonthlyAmount, PayBundle, Payment, Reading, Receipt, ReceiptTariff,
+                     ServiceTemplate, TenantCoefficient)
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
 _BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
@@ -1518,18 +1519,33 @@ class Line:
     base: Decimal = None     # the payer's part of the receipt itself, before the coefficient
     meter: object = None     # the meter the line is counted by, if any (shown under it in the bill)
     reading: object = None   # that meter's month: «было → стало» in the bill
+    k: Decimal = Decimal('1')  # the coefficient the line was multiplied by (the service's × the tenant's)
 
     def __post_init__(self):
         if self.base is None:
             self.base = self.amount
 
 
-def tenant_line(receipt, exact, formula):
-    """A tenant's line: their exact part of the receipt, times the receipt's coefficient."""
-    coefficient = receipt.coefficient
+def tenant_coefficient(tenant, receipt):
+    """The tenant's own coefficient for this service (2026-11-25, «Настроить счёт»): 1 unless «Коэффициент к услугам»
+    is on. Read once per tenant object."""
+    if tenant is None or not getattr(tenant, 'coef_on', False):
+        return Decimal('1')
+    cache = tenant.__dict__.get('_coefficients')
+    if cache is None:
+        cache = {c.receipt_id: c.value for c in TenantCoefficient.objects.filter(tenant=tenant)}
+        tenant.__dict__['_coefficients'] = cache
+    return cache.get(receipt.pk, Decimal('1'))
+
+
+def tenant_line(receipt, exact, formula, tenant=None):
+    """A tenant's line: their exact part of the receipt, times the coefficient — the service's (old data, 1 now)
+    and the tenant's own for this service."""
+    coefficient = receipt.coefficient * tenant_coefficient(tenant, receipt)
     if coefficient == 1:
         return Line(receipt, money(exact), formula)
-    return Line(receipt, money(exact * coefficient), f'{formula} × {fmt_number(coefficient)}', base=money(exact))
+    return Line(receipt, money(exact * coefficient), f'{formula} × {fmt_number(coefficient)}', base=money(exact),
+                k=coefficient)
 
 
 _SPLIT_GROUP = {'shares': 'по долям', 'equal': 'поровну', 'area': 'по м²', 'usage': 'по расходу'}
@@ -1572,9 +1588,92 @@ def bill_meter_rows(line):
         return []
     rows = [f'счётчик №{NBSP}{meter.serial}' if meter.serial else 'счётчик']
     rows += getattr(reading, 'bill_rows', None) or [line.formula]
-    if receipt.coefficient != 1:
-        rows.append(f'× {fmt_number(receipt.coefficient)} = {fmt_number(line.amount, 2)}{NBSP}{receipt.currency_symbol}')
+    if line.k != 1:
+        rows.append(f'× {fmt_number(line.k)} = {fmt_number(line.amount, 2)}{NBSP}{receipt.currency_symbol}')
     return rows
+
+
+def bill_vat(payer):
+    """The VAT of a tenant's bill (2026-11-25, «Настроить счёт»): None — no VAT line (a plain bill, or «Без НДС»);
+    else {'mode', 'rate' (as typed: «22», «8,1»), 'vat', 'net', 'pay'}: «в т. ч.» — the sum stays, the VAT is the part of it;
+    «сверху» — the VAT is added to the sum. Kopecks ROUND_HALF_UP."""
+    tenant = payer.tenant
+    if tenant is None or not tenant.bill_requisites or tenant.vat == 'none':
+        return None
+    total, rate = payer.total, Decimal(tenant.vat_rate)
+    if tenant.vat == 'in':
+        vat = money(total * rate / (HUNDRED + rate))
+        return {'mode': 'in', 'rate': fmt_number(rate.normalize()), 'vat': vat, 'net': total - vat, 'pay': total}
+    vat = money(total * rate / HUNDRED)
+    return {'mode': 'top', 'rate': fmt_number(rate.normalize()), 'vat': vat, 'net': total, 'pay': total + vat}
+
+
+def bill_settings_state(tenant):
+    """What the window «Счёт · арендатор» shows: the tenant's settings and a coefficient for every service of the
+    object (the saved one, else 1)."""
+    saved = {c.receipt_id: c.value for c in TenantCoefficient.objects.filter(tenant=tenant)}
+    receipts = tenant.property.receipts.order_by('position', 'id')
+    return {
+        'coefficients': [{'receipt': r, 'value': saved.get(r.pk, Decimal('1'))} for r in receipts],
+    }
+
+
+def save_bill_settings(tenant, data):
+    """Saves «Счёт · арендатор» (a POST QueryDict). Returns {field: message} — empty when saved.
+    A plain bill keeps the typed requisites (switching back brings them back) but has no VAT."""
+    errors = {}
+    requisites = data.get('requisites') == '1'
+    inn = ''.join(ch for ch in data.get('inn', '') if ch.isdigit())
+    kpp = ''.join(ch for ch in data.get('kpp', '') if ch.isdigit())
+    if requisites:
+        if not data.get('legal_name', '').strip():
+            errors['legal_name'] = 'Введите полное название.'
+        if len(inn) not in (10, 12):
+            errors['inn'] = 'ИНН — 10 цифр у организации, 12 — у ИП.'
+        if kpp and len(kpp) != 9:
+            errors['kpp'] = 'КПП — 9 цифр.'
+    vat = data.get('vat') if requisites and data.get('vat') in ('none', 'in', 'top') else 'none'
+    rate = parse_decimal(data.get('vat_rate') or '')
+    if vat != 'none' and (rate is None or not Decimal('0') < rate < HUNDRED):
+        errors['vat_rate'] = 'Ставка от 0 до 100 %.'
+    due_on = data.get('due_on') == '1'
+    try:
+        due_day = int(data.get('due_day') or 0)
+    except ValueError:
+        due_day = 0
+    if due_on and not 1 <= due_day <= 31:
+        errors['due_day'] = 'Число от 1 до 31.'
+    values = {}
+    for key, raw in data.items():
+        if key.startswith('k-') and key[2:].isdigit():
+            value = parse_decimal(raw) if raw.strip() else Decimal('1')
+            if value is None or not Decimal('0') < value < HUNDRED:
+                errors[key] = 'От 0 до 100.'
+            values[int(key[2:])] = value
+    if errors:
+        return errors
+    tenant.bill_requisites = requisites
+    tenant.legal_name = data.get('legal_name', '').strip()[:200]
+    tenant.inn, tenant.kpp = inn[:12], kpp[:9]
+    tenant.legal_address = data.get('legal_address', '').strip()[:250]
+    tenant.vat = vat
+    if rate is not None and Decimal('0') < rate < HUNDRED:
+        tenant.vat_rate = rate
+    tenant.due_on = due_on
+    if due_on:
+        tenant.due_day = due_day
+    tenant.coef_on = data.get('coef_on') == '1'
+    tenant.save()
+    own = set(tenant.property.receipts.values_list('pk', flat=True))
+    for receipt_id, value in values.items():
+        if receipt_id not in own:
+            continue
+        if value == 1:
+            TenantCoefficient.objects.filter(tenant=tenant, receipt_id=receipt_id).delete()
+        else:
+            TenantCoefficient.objects.update_or_create(tenant=tenant, receipt_id=receipt_id, defaults={'value': value})
+    tenant.__dict__.pop('_coefficients', None)
+    return {}
 
 
 def bill_file_name(title, month_label):
@@ -1809,7 +1908,7 @@ def _usage_split(receipt, entry, payers, owner):
         formula = f'{head} × {use_text}{NBSP}{unit}'
         payer = payers.get(meter.tenant_id) if meter.tenant_id else None
         if payer:
-            line = tenant_line(receipt, exact, formula)
+            line = tenant_line(receipt, exact, formula, payer.tenant)
             payer.lines.append(line)
         else:
             line = Line(receipt, money(exact), formula + (' · свободный счётчик' if meter.vacant else ' · общий счётчик'))
@@ -1917,18 +2016,18 @@ def _split(total, receipt, tenants, property_obj, all_tenants=None, how=None, ow
         for tenant in tenants if base else []:
             share = tenant.share_percent or Decimal('0')
             of = f' из {fmt_number(base)}%' if pass_on else ''
-            lines[tenant.pk] = tenant_line(receipt, total * share / base, f'{total_text} × {fmt_number(share)}%{of}{tail}')
+            lines[tenant.pk] = tenant_line(receipt, total * share / base, f'{total_text} × {fmt_number(share)}%{of}{tail}', tenant)
     elif how == Receipt.Split.EQUAL and tenants:
         count = len(all_tenants) if someone_off and owner_takes else len(tenants)
         for tenant in tenants:
-            lines[tenant.pk] = tenant_line(receipt, total / count, f'{total_text} ÷ {count}{tail}')
+            lines[tenant.pk] = tenant_line(receipt, total / count, f'{total_text} ÷ {count}{tail}', tenant)
     elif how == Receipt.Split.AREA and property_obj.area:
         base = sum((t.area or Decimal('0') for t in tenants), Decimal('0')) if pass_on else property_obj.area
         for tenant in tenants if base else []:
             area = tenant.area or Decimal('0')
             lines[tenant.pk] = tenant_line(
                 receipt, total * area / base,
-                f'{total_text} × {fmt_number(area)} из {fmt_number(base)}{NBSP}м²{tail}',
+                f'{total_text} × {fmt_number(area)} из {fmt_number(base)}{NBSP}м²{tail}', tenant,
             )
     return lines
 
@@ -2102,7 +2201,7 @@ def month_bill(property_obj, month):
                     elif meter.tenant_id is None and receipt.layout == Receipt.Layout.BOTH:
                         common = (common or Decimal('0')) + exact
                     elif payer:
-                        line = tenant_line(receipt, exact, formula)
+                        line = tenant_line(receipt, exact, formula, payer.tenant)
                         line.meter, line.reading = meter, month_of.get(meter.pk)
                         payer.lines.append(line)
                         billed += line.base
@@ -2319,8 +2418,9 @@ def formula_example(receipt, chosen=None):
         return ('op', sign)
 
     def coefficient(items):
-        if tenant and receipt.coefficient != 1:
-            items += [op('×'), term('Коэффициент', fmt_number(receipt.coefficient))]
+        k = receipt.coefficient * tenant_coefficient(tenant, receipt) if tenant else Decimal('1')
+        if k != 1:
+            items += [op('×'), term('Коэффициент', fmt_number(k))]
 
     if receipt.metered:
         tariff = receipt.tariff if receipt.tariff is not None else SAMPLE_TARIFF
@@ -2337,7 +2437,7 @@ def formula_example(receipt, chosen=None):
         if receipt.split == Receipt.Split.METERS and tenant:
             # The tenant's own meter is their whole part.
             coefficient(items)
-            amount = tenant_line(receipt, exact, '').amount
+            amount = tenant_line(receipt, exact, '', tenant).amount
             steps.append(FormulaStep(items, _rub(amount, currency)))
             return FormulaExample(choices, str(tenant.pk), tenant.name, amount, _rub(amount, currency), steps)
         total = money(exact)
@@ -2367,7 +2467,7 @@ def formula_example(receipt, chosen=None):
         items = [total_term, op('×'), term('Доля', f'{fmt_number(share)}%')]
         exact = total * share / HUNDRED
     coefficient(items)
-    amount = tenant_line(receipt, exact, '').amount
+    amount = tenant_line(receipt, exact, '', tenant).amount
     steps.append(FormulaStep(items, _rub(amount, currency)))
     return FormulaExample(choices, str(tenant.pk), tenant.name, amount, _rub(amount, currency), steps)
 
@@ -2730,7 +2830,7 @@ def _formula_month(receipt, entry, month, tenants, payers, owner):
                     extra = off_sum * value / base if base else off_sum / len(paying)
                     value += extra
                     text = f'{text} + {fmt_number(money(extra))}{NBSP}{receipt.currency_symbol} за неплатящих'
-                line = tenant_line(receipt, value, text)
+                line = tenant_line(receipt, value, text, payers[tenant_id].tenant)
                 payers[tenant_id].lines.append(line)
             total += line.base
         entry.total = total

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счёт — блок на сайте и PDF, 2026-11-25</title>
+<style>
+  :root { --primary:#34495e; --accent:#148f77; --accent-text:#117965; --accent-soft:#e6f4f1; --bg:#f5f6f7; --border:#e1e4e8;
+    --text:#2c3338; --muted:#6b7680; --font:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --mm:5px; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--font); background:var(--bg); color:var(--text); font-size:14px; }
+  .top { max-width:1400px; margin:0 auto; padding:24px 16px 0; }
+  h1 { margin:0 0 4px; font-size:20px; color:var(--primary); }
+  .lead { margin:0 0 14px; color:var(--muted); line-height:1.5; }
+  .ctl { display:flex; flex-wrap:wrap; gap:16px 28px; align-items:center; }
+  .ctl label { font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; margin-right:8px; }
+  .seg { display:inline-flex; padding:3px; gap:3px; background:#e9ecef; border-radius:8px; vertical-align:middle; }
+  .seg button { height:28px; padding:0 12px; border:0; border-radius:6px; background:none; font:inherit; font-size:13px; color:var(--muted); cursor:pointer; }
+  .seg button.on { background:#fff; color:var(--primary); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .stage { max-width:1400px; margin:0 auto; padding:20px 16px 40px; display:grid; grid-template-columns:330px 1fr; gap:32px; align-items:start; }
+  .cap-h { margin:0 0 8px; font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; }
+
+  /* ---------- the bill on the site (the right column of the object page) ---------- */
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px; }
+  .b-cap { color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+  .b-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .b-who { display:flex; align-items:center; gap:8px; margin-top:2px; }
+  .b-who h2 { margin:0; font-size:18px; color:var(--primary); white-space:nowrap; }
+  .chev { width:22px; height:22px; padding:3px; border-radius:6px; background:var(--accent-soft); color:var(--accent); flex:none; }
+  .badge-ok { font-size:11px; font-weight:600; border-radius:999px; padding:2px 8px; background:var(--accent-soft); color:var(--accent-text); white-space:nowrap; }
+  .b-meta { margin-top:4px; font-size:12px; color:var(--muted); }
+  .grp { margin-top:12px; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .grp-h { height:34px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; background:var(--bg); border-bottom:1px solid var(--border);
+    color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+  .ln { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1px 10px; padding:9px 16px; }
+  .ln + .ln { border-top:1px solid var(--border); }
+  .ln-n { font-size:14px; }
+  .ln-s { font-size:14px; font-weight:600; text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .ln-f { grid-column:1/-1; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .ln-f b { font-weight:600; color:var(--accent-text); }
+  .tot { margin-top:14px; padding-top:10px; border-top:2px solid var(--primary); }
+  .tr { display:flex; justify-content:space-between; gap:10px; font-size:13px; color:var(--muted); padding:2px 0; font-variant-numeric:tabular-nums; }
+  .tr.big { margin-top:4px; color:var(--primary); font-size:15px; font-weight:700; align-items:baseline; }
+  .tr.big b { font-size:22px; }
+  .words { margin:4px 0 0; font-size:12px; color:var(--muted); }
+  .acts { display:flex; gap:8px; margin-top:14px; }
+  .btn { height:38px; padding:0 14px; border:1px solid var(--border); border-radius:8px; display:inline-flex; align-items:center; font-size:13px; font-weight:600; color:var(--primary); background:#fff; }
+  .btn.pri { border-color:var(--accent); color:var(--accent); }
+  .note-site { margin-top:12px; font-size:12px; color:var(--muted); line-height:1.45; }
+
+  /* ---------- the PDF page: A4, black and grey only ---------- */
+  .zoom { margin-bottom:8px; }
+  .page { width:calc(210 * var(--mm)); min-height:calc(297 * var(--mm)); background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.12);
+    padding:calc(22 * var(--mm)); color:#141414; font-family:Roboto, var(--font); font-size:calc(2.3 * var(--mm)); line-height:1.4; }
+  .page .g { color:#7d7d7d; }
+  .p-top { display:grid; grid-template-columns:1fr auto; gap:calc(6 * var(--mm)); align-items:start; padding:0 calc(2.5 * var(--mm)); }
+  .p-from b { display:block; font-size:calc(2.7 * var(--mm)); }
+  .p-no { text-align:right; }
+  .p-no .t { font-size:calc(4.2 * var(--mm)); font-weight:700; line-height:1.15; }
+  .p-kv { display:grid; grid-template-columns:auto auto; justify-content:end; column-gap:calc(3 * var(--mm)); margin-top:calc(1.2 * var(--mm)); }
+  .p-kv span:nth-child(odd) { color:#7d7d7d; text-align:right; }
+  .p-kv span:nth-child(even) { text-align:right; font-variant-numeric:tabular-nums; }
+  .rule { height:0; border-top:calc(.3 * var(--mm)) solid #141414; margin:calc(4 * var(--mm)) 0 calc(3.5 * var(--mm)); }
+  .rule.thin { border-top:calc(.2 * var(--mm)) solid #e1e1e1; margin:0; }
+  .p-parties { display:grid; grid-template-columns:1fr 1fr; gap:calc(6 * var(--mm)); padding:0 calc(2.5 * var(--mm)); }
+  .p-small { font-size:calc(1.75 * var(--mm)); letter-spacing:.05em; text-transform:uppercase; color:#7d7d7d; }
+  .p-parties b { display:block; font-size:calc(2.6 * var(--mm)); margin-top:calc(.5 * var(--mm)); }
+  table.p-t { width:100%; border-collapse:collapse; margin-top:calc(6 * var(--mm)); font-variant-numeric:tabular-nums; }
+  .p-t th { background:#f3f3f3; font-weight:400; font-size:calc(1.75 * var(--mm)); letter-spacing:.05em; text-transform:uppercase; color:#7d7d7d;
+    height:calc(5 * var(--mm)); text-align:right; padding:0 0 0 calc(2 * var(--mm)); white-space:nowrap; }
+  .p-t th:first-child { text-align:left; padding-left:calc(2.5 * var(--mm)); }
+  .p-t th:last-child, .p-t td:last-child { padding-right:calc(2.5 * var(--mm)); }
+  .p-t td { padding:calc(1.6 * var(--mm)) 0 calc(1.6 * var(--mm)) calc(2 * var(--mm)); text-align:right; vertical-align:top; border-bottom:calc(.2 * var(--mm)) solid #e1e1e1; white-space:nowrap; }
+  .p-t td:first-child { text-align:left; padding-left:calc(2.5 * var(--mm)); white-space:normal; }
+  .p-t td small { display:block; color:#7d7d7d; font-size:calc(1.9 * var(--mm)); }
+  .p-sum { display:grid; grid-template-columns:auto calc(30 * var(--mm)); justify-content:end; column-gap:calc(4 * var(--mm)); row-gap:calc(.8 * var(--mm));
+    margin-top:calc(3 * var(--mm)); padding-right:calc(2.5 * var(--mm)); font-variant-numeric:tabular-nums; }
+  .p-sum span { text-align:right; }
+  .p-sum .pay { font-weight:700; font-size:calc(2.9 * var(--mm)); padding-top:calc(1.2 * var(--mm)); border-top:calc(.3 * var(--mm)) solid #141414; margin-top:calc(.8 * var(--mm)); }
+  .p-words { margin-top:calc(2 * var(--mm)); padding:0 calc(2.5 * var(--mm)); }
+  .p-req { margin-top:calc(7 * var(--mm)); }
+  .p-req-h { background:#f3f3f3; height:calc(5 * var(--mm)); display:flex; align-items:center; padding:0 calc(2.5 * var(--mm)); }
+  .p-req-b { display:grid; grid-template-columns:calc(34 * var(--mm)) 1fr; row-gap:calc(.6 * var(--mm)); padding:calc(2 * var(--mm)) calc(2.5 * var(--mm)); }
+  .p-req-b span:nth-child(odd) { color:#7d7d7d; }
+  .p-sign { margin-top:calc(10 * var(--mm)); display:grid; grid-template-columns:1fr 1fr; gap:calc(6 * var(--mm)); padding:0 calc(2.5 * var(--mm)); }
+  .p-sign div { border-top:calc(.2 * var(--mm)) solid #7d7d7d; padding-top:calc(1 * var(--mm)); }
+  .p-pad { padding:0 calc(2.5 * var(--mm)); }
+  .hide { display:none !important; }
+  .notes { margin-top:16px; max-width:calc(210 * var(--mm)); background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px 18px; line-height:1.5; font-size:13px; }
+  .notes h3 { margin:0 0 6px; font-size:14px; color:var(--primary); }
+  .notes ul { margin:0; padding-left:18px; }
+  .tw { padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .tw-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .tw-l { font-size:13px; font-weight:600; color:var(--primary); }
+  .tw-f { display:flex; flex-direction:column; gap:4px; }
+  .tw-cap { font-size:12px; color:var(--muted); }
+  .tw-in { height:38px; display:flex; align-items:center; padding:0 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+  .tw-note { margin:0; font-size:12px; color:var(--muted); }
+  .tw .seg button { padding:0 10px; }
+  @media (max-width:1100px) { .stage { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></symbol></svg>
+
+<div class="top">
+  <h1>Счёт — блок на сайте и PDF</h1>
+  <p class="lead">По примеру эстонского счёта «примерно»: таблица «Услуга · Ед. · Кол-во · Тариф · Сумма», номер, период, срок оплаты, реквизиты.
+    Переключатели ниже меняют оба вида сразу. Плательщик — Салон «Ногти» (45%), ноябрь 2026.</p>
+  <div class="ctl">
+    <div><label>Счёт арендатору</label><span class="seg" data-k="req"><button data-v="1" class="on">С реквизитами</button><button data-v="0">Простой</button></span></div>
+    <div><label>НДС</label><span class="seg" data-k="vat"><button data-v="none" class="on">Без НДС</button><button data-v="in">в т. ч.</button><button data-v="top">сверху</button></span></div>
+    <div><label>Ставка</label><span class="seg" data-k="rate"><button data-v="22" class="on">22%</button><button data-v="7">7%</button><button data-v="5">5%</button></span></div>
+    <div><label>Коэф.</label><span class="seg" data-k="coef"><button data-v="1" class="on">Нет</button><button data-v="1.2">× 1,2 у «Электричества»</button></span></div>
+    <div><label>PDF</label><span class="seg" data-k="zoom"><button data-v="5" class="on">Крупно</button><button data-v="3.78">Как на бумаге</button></span></div>
+  </div>
+</div>
+
+<div class="stage">
+  <div><p class="cap-h">На сайте · страница объекта, справа</p><div id="site"></div>
+    <p class="cap-h" style="margin-top:24px">Окно арендатора · новая часть «Счёт»</p><div id="tenant"></div></div>
+  <div><p class="cap-h">PDF · A4, поля 22 мм</p><div id="pdf"></div><div id="notes"></div></div>
+</div>
+
+<script>
+  // base = the tenant's part before the coefficient (kopecks); grp — the site's group
+  var LINES = [
+    { name:'Коммунальные услуги', grp:'shares', unit:'%', price:6350.00, qty:'45', base:285750, sub:'6 350,00 ₽ × 45%' },
+    { name:'Электричество', grp:'meters', unit:'кВт·ч', price:33.1325, qty:'520', base:1722892, sub:'сч. № 013117 · 99 102 + 520', coefKey:true,
+      site:'27 500,00 ₽ ÷ 830 кВт·ч × 520 кВт·ч' },
+    { name:'Вода горячая', grp:'meters', unit:'м³', price:80.70, qty:'2', base:16140, sub:'сч. № 254125-65 · 241 → 243' },
+    { name:'Вода холодная', grp:'meters', unit:'м³', price:55.70, qty:'4', base:22280, sub:'сч. № 358479-65 · 776 → 780' },
+    { name:'Водоотведение', grp:'meters', unit:'м³', price:45.00, qty:'6', base:27000, sub:'(4 м³ + 2 м³) × 45 ₽/м³' }
+  ];
+  var S = { req:'1', vat:'none', rate:'22', coef:'1', zoom:'5' };
+
+  function fmt(k) { // kopecks → «1 234,56»
+    var neg = k < 0; k = Math.abs(k); var r = Math.floor(k / 100), c = String(k % 100).padStart(2, '0');
+    return (neg ? '−' : '') + String(r).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + c;
+  }
+  function fprice(p) { var s = p.toFixed(p % 1 && String(p).split('.')[1].length > 2 ? 4 : 2).replace('.', ','); var parts = s.split(','); return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + parts[1]; }
+  function words(k) {
+    var r = Math.floor(k / 100), c = k % 100;
+    var ones = ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'], onesF = ['', 'одна', 'две'];
+    var teens = ['десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать'];
+    var tens = ['', '', 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто'];
+    var hund = ['', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот'];
+    function plural(n, f) { n = n % 100; if (n > 10 && n < 20) return f[2]; n = n % 10; return n === 1 ? f[0] : (n > 1 && n < 5 ? f[1] : f[2]); }
+    function tri(n, fem) { var w = [hund[Math.floor(n / 100)]]; var t = n % 100;
+      if (t >= 10 && t < 20) w.push(teens[t - 10]); else { w.push(tens[Math.floor(t / 10)]); var o = t % 10; w.push(fem && o < 3 ? onesF[o] : ones[o]); }
+      return w.filter(Boolean).join(' '); }
+    var th = Math.floor(r / 1000), u = r % 1000, out = [];
+    if (th) out.push(tri(th, true), plural(th, ['тысяча', 'тысячи', 'тысяч']));
+    if (u || !r) out.push(u ? tri(u) : 'ноль');
+    var s = out.join(' ') + ' ' + plural(r, ['рубль', 'рубля', 'рублей']) + ' ' + String(c).padStart(2, '0') + ' ' + plural(c, ['копейка', 'копейки', 'копеек']);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // «Простое округление» (2026-11-25): the tariff to kopecks (with the coefficient inside), the sum = qty × tariff —
+  // what the tenant can check on a calculator; the kopecks left over stay with the owner.
+  function calc() {
+    var k = parseFloat(S.coef), rate = parseFloat(S.rate);
+    var rows = LINES.map(function (l) {
+      var kk = l.coefKey ? k : 1, tariff = Math.round(l.price * kk * 100);  // kopecks
+      var q = parseFloat(l.qty), amount = l.unit === '%' ? Math.round(tariff * q / 100) : Math.round(tariff * q);
+      return Object.assign({}, l, { k:kk, tariff:tariff, amount:amount });
+    });
+    var total = rows.reduce(function (a, r) { return a + r.amount; }, 0), vat = 0, pay = total;
+    if (S.vat === 'in') vat = Math.round(total * rate / (100 + rate));
+    if (S.vat === 'top') { vat = Math.round(total * rate / 100); pay = total + vat; }
+    return { rows:rows, total:total, vat:vat, pay:pay, anyK: rows.some(function (r) { return r.k !== 1; }) };
+  }
+
+  function site(c) {
+    function group(key, title) {
+      var rs = c.rows.filter(function (r) { return r.grp === key; });
+      return '<section class="grp"><div class="grp-h"><span>' + title + '</span><span>Сумма, ₽</span></div>' + rs.map(function (r) {
+        return '<div class="ln"><span class="ln-n">' + r.name + '</span><span class="ln-s">' + fmt(r.amount) + '</span><span class="ln-f">' +
+          (r.site || r.sub) + (r.k !== 1 ? ' <b>× ' + String(r.k).replace('.', ',') + '</b>' : '') + '</span></div>';
+      }).join('') + '</section>';
+    }
+    var t = '<div class="tot">';
+    if (S.vat === 'top') t += '<div class="tr"><span>Без НДС</span><span>' + fmt(c.total) + ' ₽</span></div><div class="tr"><span>НДС ' + S.rate + '%</span><span>' + fmt(c.vat) + ' ₽</span></div>';
+    t += '<div class="tr big"><span>Итого к оплате</span><b>' + fmt(c.pay) + '&nbsp;₽</b></div>';
+    if (S.vat === 'in') t += '<div class="tr"><span>в т. ч. НДС ' + S.rate + '%</span><span>' + fmt(c.vat) + ' ₽</span></div>';
+    if (S.vat === 'none') t += '<div class="tr"><span>Без НДС</span><span></span></div>';
+    t += '<p class="words">' + words(c.pay) + '.</p></div>';
+    return '<div class="card"><div class="b-head"><div><div class="b-cap">Счёт № 14 · ноябрь 2026</div><div class="b-who"><h2>Салон «Ногти»</h2><svg class="chev"><use href="#chev"/></svg></div>' +
+      '<div class="b-meta">Оплатить до 10.12.2026</div></div><span class="badge-ok">Готов к счёту</span></div>' +
+      group('shares', 'Общие · по долям 45%') + group('meters', 'По счётчикам') + t +
+      '<div class="acts"><span class="btn pri">PDF</span><span class="btn">Посмотреть</span><span class="btn">⤴</span></div></div>' +
+      '<p class="note-site">Сайт видите только вы: здесь коэффициент виден («× 1,2» акцентом). В PDF и в тексте «Поделиться» его нет — он внутри тарифа.</p>';
+  }
+
+  function pdf(c) {
+    var req = S.req === '1';
+    var from = req
+      ? '<div class="p-from"><span class="p-small">Арендодатель</span><b>ИП Иванов Андрей Петрович</b><span>ИНН 781234567890 · ОГРНИП 321784700012345</span><br><span class="g">198332, Санкт-Петербург, пр-кт Просвещения, д. 15</span><br><span class="g">+7 (921) 555-12-34 · ivanov@mail.ru</span></div>'
+      : '<div class="p-from"><span class="p-small">Арендодатель</span><b>Андрей Иванов</b><span class="g">+7 (921) 555-12-34</span></div>';
+    var no = '<div class="p-no"><div class="t">Счёт № 14</div><div class="p-kv"><span>Дата</span><span>01.12.2026</span><span>Период</span><span>Ноябрь 2026</span>' +
+      '<span>Оплатить до</span><span><b>10.12.2026</b></span></div></div>';
+    var parties = '<div class="p-parties"><div><span class="p-small">Плательщик</span><b>ООО «Салон Ногти»</b>' + (req ? '<span class="g">ИНН 7802123456</span><br>' : '') +
+      '<span class="g">Доля 45% · 45,77 м²</span></div><div><span class="p-small">Объект</span><b>Просвещения 15</b><span class="g">Санкт-Петербург, пр-кт Просвещения, д. 15 лит. А, пом. 82-Н</span></div></div>';
+    var head = '<tr><th>Услуга</th><th>Ед.</th><th>Кол-во</th><th>Тариф, ₽</th><th>Сумма, ₽</th></tr>';
+    var body = c.rows.map(function (r) {
+      // the coefficient is never named in the tenant's bill (2026-11-25): it is inside the tariff, qty × tariff = sum
+      var price = fmt(r.tariff);
+      var sub = r.unit === '%' ? '' : r.sub;
+      return '<tr><td>' + r.name + (sub ? '<small>' + sub + '</small>' : '') + '</td><td>' + r.unit + '</td><td>' + r.qty + '</td><td>' + price + '</td>' +
+        '<td>' + fmt(r.amount) + '</td></tr>';
+    }).join('');
+    var sum = '<div class="p-sum">';
+    if (S.vat === 'top') sum += '<span class="g">Итого без НДС</span><span>' + fmt(c.total) + '</span><span class="g">НДС ' + S.rate + '%</span><span>' + fmt(c.vat) + '</span>';
+    else sum += '<span class="g">Итого</span><span>' + fmt(c.total) + '</span>';
+    if (S.vat === 'in') sum += '<span class="g">в т. ч. НДС ' + S.rate + '%</span><span>' + fmt(c.vat) + '</span>';
+    if (S.vat === 'none') sum += '<span class="g">НДС</span><span class="g">не облагается</span>';
+    sum += '<span class="pay">К оплате, ₽</span><span class="pay">' + fmt(c.pay) + '</span></div>';
+    var vatWord = S.vat === 'none' ? 'НДС не облагается' : (S.vat === 'in' ? 'в т. ч. ' : '') + 'НДС ' + S.rate + '% — ' + fmt(c.vat) + ' ₽';
+    var reqBlock = req
+      ? '<div class="p-req"><div class="p-req-h p-small">Реквизиты для оплаты</div><div class="p-req-b">' +
+        '<span>Получатель</span><span>ИП Иванов Андрей Петрович, ИНН 781234567890</span>' +
+        '<span>Расчётный счёт</span><span>40802810955000012345</span>' +
+        '<span>Банк</span><span>Северо-Западный банк ПАО Сбербанк, г. Санкт-Петербург</span>' +
+        '<span>БИК · Корр. счёт</span><span>044030653 · 30101810500000000653</span>' +
+        '<span>Назначение платежа</span><span>Оплата по счёту № 14 от 01.12.2026 за коммунальные услуги, ноябрь 2026, ' + vatWord + '</span></div><div class="rule thin"></div></div>'
+      : '<p class="p-pad g" style="margin-top:calc(6 * var(--mm))">Оплата — по договорённости с арендодателем.</p>';
+    return '<div class="page">' + '<div class="p-top">' + from + no + '</div><div class="rule"></div>' + parties +
+      '<table class="p-t">' + head + body + '</table>' + sum + '<div class="p-words g">' + words(c.pay) + (S.vat === 'none' ? '. НДС не облагается.' : '.') + '</div>' + reqBlock +
+      (req ? '<div class="p-sign"><div class="g">Арендодатель</div><div class="g">Подпись</div></div>' : '') + '</div>';
+  }
+
+  var NOTES = '<div class="notes"><h3>Что решено в макете (проверь)</h3><ul>' +
+    '<li><b>Счёт арендатору — у каждого свой</b> (окно арендатора, слева внизу). «С реквизитами» — сверху ИП / ИНН / адрес, внизу блок «Реквизиты для оплаты» с назначением платежа и строка подписи; «Простой» — только имя и телефон, внизу «Оплата — по договорённости». Номер, дата, период и срок оплаты есть всегда.</li>' +
+    '<li><b>НДС — тоже у каждого арендатора</b>, только при «С реквизитами» (простой счёт — всегда без НДС): «Без НДС» (ИП на УСН — «НДС не облагается»), «в т. ч.» (сумма та же, НДС выделен), «сверху» (к оплате больше); ставка 22% (с 2026), 7% или 5% (УСН с НДС).</li>' +
+    '<li><b>Простое округление:</b> тариф до копеек, Сумма = Кол-во × Тариф (проверяется калькулятором); лишние копейки — на вас.</li><li><b>Коэффициент в счёте не упоминается</b>: он внутри тарифа (33,13 × 1,2 = 39,76). У «по долям» строки-пояснения нет — тариф уже не равен сумме квитанции. Ваши реквизиты (ИП, ИНН, р/с) — один раз, в профиле.</li>' +
+    '<li><b>Таблица:</b> по долям — Ед. «%», Тариф = сумма квитанции, Кол-во = доля; по счётчикам — расход и тариф; серой строкой под названием — № счётчика и показания.</li>' +
+    '<li>Не взято из примера: сальдо, поступления, пени (оплат арендаторов пока нет), логотип.</li></ul></div>';
+
+  function tenantPart() {
+    var req = S.req === '1';
+    function seg(k, opts) { return '<span class="seg" data-k="' + k + '">' + opts.map(function (o) {
+      return '<button data-v="' + o[0] + '"' + (S[k] === o[0] ? ' class="on"' : '') + '>' + o[1] + '</button>'; }).join('') + '</span>'; }
+    return '<div class="card tw"><div class="tw-row"><span class="tw-l">Счёт</span>' + seg('req', [['0', 'Простой'], ['1', 'С реквизитами']]) + '</div>' +
+      (req ? '<div class="tw-f"><span class="tw-cap">Полное название</span><span class="tw-in">ООО «Салон Ногти»</span></div>' +
+        '<div class="tw-f"><span class="tw-cap">ИНН</span><span class="tw-in">7802123456</span></div>' +
+        '<div class="tw-row"><span class="tw-l">НДС</span>' + seg('vat', [['none', 'Без НДС'], ['in', 'В т. ч.'], ['top', 'Сверху']]) + '</div>' +
+        (S.vat !== 'none' ? '<div class="tw-row"><span class="tw-l">Ставка</span>' + seg('rate', [['22', '22%'], ['7', '7%'], ['5', '5%']]) + '</div>' : '')
+        : '<p class="tw-note">В счёте — имя и телефон, без НДС.</p>') + '</div>';
+  }
+
+  function render() {
+    var c = calc();
+    document.documentElement.style.setProperty('--mm', S.zoom + 'px');
+    document.getElementById('site').innerHTML = site(c);
+    document.getElementById('tenant').innerHTML = tenantPart();
+    document.getElementById('pdf').innerHTML = pdf(c);
+    document.getElementById('notes').innerHTML = NOTES;
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.seg button'); if (!b) return;
+    var k = b.parentNode.dataset.k; S[k] = b.dataset.v;
+    if (k === 'req' && S.req === '0') S.vat = 'none';  // a plain bill — no VAT
+    document.querySelectorAll('.seg').forEach(function (seg) {
+      seg.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', S[seg.dataset.k] === x.dataset.v); });
+    });
+    render();
+  });
+  render();
+</script>
+</body>
+</html>

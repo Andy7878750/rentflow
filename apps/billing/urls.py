@@ -24,5 +24,6 @@ urlpatterns = [
     path('receipts/<int:pk>/delete/', views.receipt_delete, name='receipt_delete'),
     path('properties/<int:property_pk>/receipts/order/', views.receipt_order, name='receipt_order'),
     path('properties/<int:property_pk>/bill/<int:payer>/', views.bill_print, name='bill_print'),
+    path('tenants/<int:pk>/bill-settings/', views.bill_settings, name='bill_settings'),
     path('receipts/<int:pk>/night-weight/', views.receipt_night_weight, name='receipt_night_weight'),
 ]

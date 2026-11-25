@@ -1,0 +1,90 @@
+{% load billing %}
+{% comment %}«Настроить счёт» (2026-11-25, variant Б of docs/mockups/2026-11-25-bill-settings-layout.html): two columns —
+  left what the bill is (plain / with requisites, VAT and its rate, «Оплатить до», coefficients by service), right whom
+  it is for (the tenant's requisites). What shows and fades follows the choices by CSS (:has), no script needed.{% endcomment %}
+<div class="modal-panel bs-panel">
+  <header class="bs-head">
+    <h1 class="fade">Счёт · {{ tenant.name }}</h1>
+    <a href="{% url 'property_detail' tenant.property_id %}" class="icon-button modal-close" data-modal-close aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></a>
+  </header>
+  <form method="post" action="{% url 'bill_settings' tenant.pk %}" data-modal-form class="pform bs-form" novalidate>
+    {% csrf_token %}
+    <div class="bs-body">
+      <div class="bs-col">
+        <section class="bs-part">
+          <h2 class="bs-cap">Вид счёта</h2>
+          <div class="seg-track bs-seg">
+            <label><input type="radio" name="requisites" value="0"{% if not tenant.bill_requisites and not data or data.requisites == '0' %} checked{% endif %}><span>Простой</span></label>
+            <label><input type="radio" name="requisites" value="1"{% if tenant.bill_requisites and not data or data.requisites == '1' %} checked{% endif %}><span>С реквизитами</span></label>
+          </div>
+          <div class="bs-hints"><p class="bs-hint bs-if-plain">В счёте — ваше имя и телефон, без НДС.</p>
+            <p class="bs-hint bs-if-req">Ваши реквизиты и арендатора, «Реквизиты для оплаты».</p></div>
+        </section>
+
+        <section class="bs-part bs-vat">
+          <h2 class="bs-cap">НДС</h2>
+          {% with vat=data.vat|default:tenant.vat %}
+          <div class="seg-track bs-seg">
+            <label><input type="radio" name="vat" value="none"{% if vat == 'none' %} checked{% endif %}><span>Без НДС</span></label>
+            <label><input type="radio" name="vat" value="in"{% if vat == 'in' %} checked{% endif %}><span>В т. ч. НДС</span></label>
+            <label><input type="radio" name="vat" value="top"{% if vat == 'top' %} checked{% endif %}><span>Сверху НДС</span></label>
+          </div>
+          {% endwith %}
+          <div class="bs-opt bs-rate">
+            <span class="bs-opt-l">Ставка</span>
+            <span class="bs-inline"><input type="text" inputmode="decimal" name="vat_rate" value="{% if data %}{{ data.vat_rate }}{% else %}{{ tenant.vat_rate|num }}{% endif %}" maxlength="6" aria-label="Ставка НДС" class="bs-num{% if errors.vat_rate %} is-bad{% endif %}"><span>%</span></span>
+          </div>
+          {% if errors.vat_rate %}<p class="bs-err">{{ errors.vat_rate }}</p>{% endif %}
+        </section>
+
+        <section class="bs-part">
+          <h2 class="bs-cap">Ещё в счёте</h2>
+          <div class="bs-opt">
+            <label class="bs-check"><input type="checkbox" name="due_on" value="1"{% if data %}{% if data.due_on %} checked{% endif %}{% elif tenant.due_on %} checked{% endif %}><span>Оплатить до</span></label>
+            <span class="bs-due"><input type="text" inputmode="numeric" name="due_day" value="{{ data.due_day|default:tenant.due_day }}" maxlength="2" aria-label="Число месяца" class="bs-num{% if errors.due_day %} is-bad{% endif %}"><span>числа</span></span>
+          </div>
+          {% if errors.due_day %}<p class="bs-err">{{ errors.due_day }}</p>{% endif %}
+          <div class="bs-opt">
+            <label class="bs-check"><input type="checkbox" name="coef_on" value="1"{% if data %}{% if data.coef_on %} checked{% endif %}{% elif tenant.coef_on %} checked{% endif %}><span>Коэффициент к услугам</span></label>
+          </div>
+          {% if state.coefficients %}
+            <div class="bs-klist">
+              {% for row in state.coefficients %}
+                <label class="bs-kr"><span class="fade">{{ row.receipt.name }}</span>
+                  <span class="bs-k">×<input type="text" inputmode="decimal" name="k-{{ row.receipt.pk }}" value="{% if row.typed is not None %}{{ row.typed }}{% else %}{{ row.value|num }}{% endif %}" placeholder="1"
+                         class="bs-num{% if row.value != 1 %} is-set{% endif %}" aria-label="Коэффициент: {{ row.receipt.name }}"></span></label>
+              {% endfor %}
+            </div>
+            <p class="bs-hint bs-if-coef">Умножает строку услуги в счёте этого арендатора. В счёте не виден — он внутри тарифа.</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <div class="bs-col">
+        <section class="bs-part">
+          <h2 class="bs-cap">Арендатор в счёте</h2>
+          <div class="bs-fields">
+            <div class="field fl bs-name"><label for="bs-name">Полное название</label>
+              <input id="bs-name" type="text" name="legal_name" maxlength="200" placeholder=" " value="{{ data.legal_name|default:tenant.legal_name|default:tenant.name }}">
+              {% if errors.legal_name %}<ul class="errorlist"><li>{{ errors.legal_name }}</li></ul>{% endif %}</div>
+            <div class="bs-two bs-req-only">
+              <div class="field fl"><label for="bs-inn">ИНН</label>
+                <input id="bs-inn" type="text" inputmode="numeric" name="inn" maxlength="12" placeholder=" " value="{{ data.inn|default:tenant.inn }}">
+                {% if errors.inn %}<ul class="errorlist"><li>{{ errors.inn }}</li></ul>{% endif %}</div>
+              <div class="field fl"><label for="bs-kpp">КПП</label>
+                <input id="bs-kpp" type="text" inputmode="numeric" name="kpp" maxlength="9" placeholder=" " value="{{ data.kpp|default:tenant.kpp }}">
+                {% if errors.kpp %}<ul class="errorlist"><li>{{ errors.kpp }}</li></ul>{% endif %}</div>
+            </div>
+            <div class="field fl bs-req-only"><label for="bs-addr">Адрес</label>
+              <input id="bs-addr" type="text" name="legal_address" maxlength="250" placeholder=" " value="{{ data.legal_address|default:tenant.legal_address }}"></div>
+            <p class="bs-hint bs-req-only">КПП — только у организации, у ИП не нужен.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+    <div class="form-actions bs-actions">
+      <a href="{% url 'property_detail' tenant.property_id %}" class="btn btn-ghost btn-auto" data-modal-close>Отмена</a>
+      <button type="submit" class="btn btn-primary btn-auto">Сохранить</button>
+    </div>
+  </form>
+</div>

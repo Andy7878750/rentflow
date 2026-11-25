@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from apps.properties import services as property_services
 from apps.properties.models import Property
 from apps.properties.views import modal_back_url, object_page_context
+from apps.tenants.models import Tenant
 
 from . import services, window
 from .models import Meter, PayBundle, Receipt
@@ -368,3 +369,27 @@ def month_save(request, property_pk):
     messages.success(request, 'Сохранено.')
     url = reverse('property_detail', args=[property_obj.pk]) + f'?month={property_services.month_param(month)}'
     return redirect(url)
+
+
+@login_required
+def bill_settings(request, pk):
+    """«Настроить счёт» (2026-11-25, variant Б of docs/mockups/2026-11-25-bill-settings-layout.html): a small window,
+    left — what the bill is (plain / with requisites, VAT, «Оплатить до», coefficients by service), right — whom it
+    is for (the tenant's requisites). Saved — back to the page it was opened on."""
+    tenant = get_object_or_404(Tenant.objects.select_related('property'), pk=pk, property__owner=request.user)
+    errors = {}
+    data = None
+    if request.method == 'POST':
+        data = request.POST
+        errors = services.save_bill_settings(tenant, data)
+        if not errors:
+            messages.success(request, f'Счёт для «{tenant.name}» настроен.')
+            url = modal_back_url(request) or reverse('property_detail', args=[tenant.property_id])
+            if request.headers.get('X-Modal'):
+                return HttpResponse(status=204, headers={'X-Modal-Redirect': url})
+            return redirect(url)
+    state = services.bill_settings_state(tenant)
+    if data is not None:  # an error: show what was typed
+        for row in state['coefficients']:
+            row['typed'] = data.get(f"k-{row['receipt'].pk}")
+    return render(request, 'billing/_bill_settings.html', {'tenant': tenant, 'state': state, 'errors': errors, 'data': data})

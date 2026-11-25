@@ -14,6 +14,24 @@ class Tenant(models.Model):
     contract = models.CharField('Договор', max_length=100, blank=True)
     contract_until = models.DateField('Договор до', null=True, blank=True)
 
+    # «Настроить счёт» (2026-11-25, docs/mockups/2026-11-25-bill-settings-layout.html, variant Б): each tenant's bill
+    # is its own — a plain one (the owner's name and phone) or with requisites (both sides', VAT, «Реквизиты для оплаты»).
+    class Vat(models.TextChoices):
+        NONE = 'none', 'Без НДС'
+        INCLUDED = 'in', 'В т. ч. НДС'
+        ON_TOP = 'top', 'Сверху НДС'
+
+    bill_requisites = models.BooleanField('Счёт с реквизитами', default=False)
+    legal_name = models.CharField('Полное название', max_length=200, blank=True)
+    inn = models.CharField('ИНН', max_length=12, blank=True)
+    kpp = models.CharField('КПП', max_length=9, blank=True)
+    legal_address = models.CharField('Адрес', max_length=250, blank=True)
+    vat = models.CharField('НДС', max_length=4, choices=Vat.choices, default=Vat.NONE)
+    vat_rate = models.DecimalField('Ставка НДС, %', max_digits=5, decimal_places=2, default=22)  # typed: regions differ
+    due_on = models.BooleanField('Оплатить до', default=True)
+    due_day = models.PositiveSmallIntegerField('Оплатить до числа', default=10)
+    coef_on = models.BooleanField('Коэффициент к услугам', default=False)
+
     class Meta:
         ordering = ['id']
 

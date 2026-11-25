@@ -20,6 +20,12 @@ def meter_rows(line):
 
 
 @register.simple_tag
+def bill_vat(payer):
+    """The VAT lines of a tenant's bill (2026-11-25, «Настроить счёт»); None — none."""
+    return services.bill_vat(payer)
+
+
+@register.simple_tag
 def bill_share(payer, title, month_label):
     """The bill as a message (WhatsApp / Telegram) and the PDF file's name, for «Поделиться»."""
     return {'text': services.bill_text(payer, title, month_label), 'file': services.bill_file_name(title, month_label)}
