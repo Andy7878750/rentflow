@@ -6,7 +6,7 @@ Two parts: the one-time setup of an object's receipts, and the monthly input
 
 from dataclasses import dataclass, field
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
@@ -1489,6 +1489,12 @@ def money(value):
     return value.quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def price_down(value):
+    """A price counted from a receipt (sum ÷ usage, ÷ м², ÷ tenants) to kopecks, down (2026-11-25): qty × price never
+    bills the tenants more than the receipt; the kopecks left over are the owner's."""
+    return value.quantize(CENT, rounding=ROUND_DOWN)
+
+
 def fmt_number(value, places=None):
     """Decimal('4200') → '4 200'; with places=2 → '4 200,00'. Russian separators."""
     if places is not None:
@@ -1520,6 +1526,12 @@ class Line:
     meter: object = None     # the meter the line is counted by, if any (shown under it in the bill)
     reading: object = None   # that meter's month: «было → стало» in the bill
     k: Decimal = Decimal('1')  # the coefficient the line was multiplied by (the service's × the tenant's)
+    # The bill's table (2026-11-25, PDF «Услуга · Ед. · Кол-во · Тариф · Сумма»): amount = qty × price ÷ per,
+    # the price in kopecks with the coefficient inside. None — no such columns (a formula, day / night).
+    unit: str = ''
+    qty: Decimal = None
+    price: Decimal = None
+    per: Decimal = Decimal('1')  # 100 — the qty is a percent
 
     def __post_init__(self):
         if self.base is None:
@@ -1538,14 +1550,24 @@ def tenant_coefficient(tenant, receipt):
     return cache.get(receipt.pk, Decimal('1'))
 
 
-def tenant_line(receipt, exact, formula, tenant=None):
+def tenant_line(receipt, exact, formula, tenant=None, cols=None):
     """A tenant's line: their exact part of the receipt, times the coefficient — the service's (old data, 1 now)
-    and the tenant's own for this service."""
+    and the tenant's own for this service.
+
+    cols = (unit, qty, price, per) — «простое округление» (2026-11-25): the price to kopecks (× the coefficient, then
+    to kopecks again), amount = qty × price ÷ per — what the tenant checks on a calculator; the exact part is not used
+    and the kopecks left over stay with the owner (his rest is counted from `base`, the line without the coefficient)."""
     coefficient = receipt.coefficient * tenant_coefficient(tenant, receipt)
-    if coefficient == 1:
-        return Line(receipt, money(exact), formula)
-    return Line(receipt, money(exact * coefficient), f'{formula} × {fmt_number(coefficient)}', base=money(exact),
-                k=coefficient)
+    text = formula if coefficient == 1 else f'{formula} × {fmt_number(coefficient)}'
+    if cols is None:
+        if coefficient == 1:
+            return Line(receipt, money(exact), formula)
+        return Line(receipt, money(exact * coefficient), text, base=money(exact), k=coefficient)
+    unit, qty, price, per = cols
+    price = money(price)
+    priced = price if coefficient == 1 else money(price * coefficient)
+    return Line(receipt, money(qty * priced / per), text, base=money(qty * price / per), k=coefficient,
+                unit=unit, qty=qty, price=priced, per=per)
 
 
 _SPLIT_GROUP = {'shares': 'по долям', 'equal': 'поровну', 'area': 'по м²', 'usage': 'по расходу'}
@@ -1903,15 +1925,17 @@ def _usage_split(receipt, entry, payers, owner):
     unit = meter_unit(uses[0][0]) or 'ед.'
     head = f'{fmt_number(total, 2)}{NBSP}{currency} ÷ {fmt_number(whole.normalize())}{NBSP}{unit}'
     billed = Decimal('0')
+    price = price_down(total / whole)  # the price of a unit, to kopecks (2026-11-25, «простое округление»)
     for meter, use, use_text in uses:
         exact = total * use / whole
         formula = f'{head} × {use_text}{NBSP}{unit}'
         payer = payers.get(meter.tenant_id) if meter.tenant_id else None
         if payer:
-            line = tenant_line(receipt, exact, formula, payer.tenant)
+            line = tenant_line(receipt, exact, formula, payer.tenant, (unit, use, price, Decimal('1')))
+            line.meter = meter
             payer.lines.append(line)
         else:
-            line = Line(receipt, money(exact), formula + (' · свободный счётчик' if meter.vacant else ' · общий счётчик'))
+            line = Line(receipt, money(use * price), formula + (' · свободный счётчик' if meter.vacant else ' · общий счётчик'))
             owner.lines.append(line)
         billed += line.base
     if total != billed:
@@ -2016,11 +2040,14 @@ def _split(total, receipt, tenants, property_obj, all_tenants=None, how=None, ow
         for tenant in tenants if base else []:
             share = tenant.share_percent or Decimal('0')
             of = f' из {fmt_number(base)}%' if pass_on else ''
-            lines[tenant.pk] = tenant_line(receipt, total * share / base, f'{total_text} × {fmt_number(share)}%{of}{tail}', tenant)
+            cols = ('%', share, total, base) if not pass_on else ('%', share * HUNDRED / base, total, HUNDRED)
+            lines[tenant.pk] = tenant_line(receipt, total * share / base, f'{total_text} × {fmt_number(share)}%{of}{tail}',
+                                           tenant, cols)
     elif how == Receipt.Split.EQUAL and tenants:
         count = len(all_tenants) if someone_off and owner_takes else len(tenants)
         for tenant in tenants:
-            lines[tenant.pk] = tenant_line(receipt, total / count, f'{total_text} ÷ {count}{tail}', tenant)
+            lines[tenant.pk] = tenant_line(receipt, total / count, f'{total_text} ÷ {count}{tail}', tenant,
+                                           ('доля', Decimal('1'), price_down(total / count), Decimal('1')))
     elif how == Receipt.Split.AREA and property_obj.area:
         base = sum((t.area or Decimal('0') for t in tenants), Decimal('0')) if pass_on else property_obj.area
         for tenant in tenants if base else []:
@@ -2028,6 +2055,7 @@ def _split(total, receipt, tenants, property_obj, all_tenants=None, how=None, ow
             lines[tenant.pk] = tenant_line(
                 receipt, total * area / base,
                 f'{total_text} × {fmt_number(area)} из {fmt_number(base)}{NBSP}м²{tail}', tenant,
+                ('м²', area, price_down(total / base), Decimal('1')),
             )
     return lines
 
@@ -2201,8 +2229,13 @@ def month_bill(property_obj, month):
                     elif meter.tenant_id is None and receipt.layout == Receipt.Layout.BOTH:
                         common = (common or Decimal('0')) + exact
                     elif payer:
-                        line = tenant_line(receipt, exact, formula, payer.tenant)
-                        line.meter, line.reading = meter, month_of.get(meter.pk)
+                        reading = month_of.get(meter.pk)
+                        cols = None
+                        if not two_zones(receipt, meter):
+                            tariff = meter_price(receipt, entry, meter)[0]
+                            cols = (meter_unit(meter) or receipt.unit, used(receipt, reading)[0], tariff, Decimal('1'))
+                        line = tenant_line(receipt, exact, formula, payer.tenant, cols)
+                        line.meter, line.reading = meter, reading
                         payer.lines.append(line)
                         billed += line.base
                     else:

@@ -195,8 +195,10 @@ class ServiceWindowViewTests(TestCase):
             f'use-{second.pk}': '577,728'})
         bill = services.month_bill(self.prop, OCT)
         self.assertEqual({p.tenant.name: sum(line.amount for line in p.lines) for p in bill.payers},
-                         {'Виктор': Decimal('10375.39'), 'Владислав': Decimal('7492.69')})
-        self.assertEqual(sum((line.amount for line in bill.owner.lines), Decimal('0')), 0)
+                         {'Виктор': Decimal('10368.00'), 'Владислав': Decimal('7487.35')})
+        # 2026-11-25, «простое округление»: the price 17 868,08 ÷ 1 377,728 = 12,969… → 12,96 ₽ (down), qty × price;
+        # the kopecks left over — the owner's
+        self.assertEqual(sum((line.amount for line in bill.owner.lines), Decimal('0')), Decimal('12.73'))
         payer = bill.payer_for(self.viktor.pk)
         self.assertEqual([g['title'] for g in services.bill_groups(payer)], ['По счётчикам'])
         # «Общий» is not offered here: a common meter has to get a payer

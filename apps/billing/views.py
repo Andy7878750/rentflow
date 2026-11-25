@@ -156,7 +156,9 @@ def bill_print(request, property_pk, payer):
         return HttpResponse(status=404)
     title = found.tenant.name if found.tenant else 'Остаётся на вас'
     label = property_services.month_label(month)
-    data = bill_pdf(property_obj, bill, found, title, label, date.today())
+    profile = getattr(request.user, 'profile', None)
+    landlord = (profile.full_name if profile else '') or request.user.get_full_name() or request.user.email
+    data = bill_pdf(property_obj, bill, found, title, label, date.today(), month=month, landlord=landlord)
     name = services.bill_file_name(title, label)
     response = HttpResponse(data, content_type='application/pdf')
     disposition = 'inline' if request.GET.get('inline') else 'attachment'
