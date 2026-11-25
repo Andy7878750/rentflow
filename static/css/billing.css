@@ -1324,82 +1324,162 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 .pay-chip .fade { min-width: 0; overflow: hidden; white-space: nowrap; }
 .pay-chip-sum { color: #c0392b; font-weight: 700; white-space: nowrap; }
 
-.pay-wrap {
-  overflow-x: auto;
+/* The list (2026-11-25, «плашки», макет 2026-11-25-payments-tiles.html А): object · its tiles · «Итого». Objects have
+   different services — no columns; every tile is the same size, so the tiles of all objects stand in even columns. */
+.pay-rows {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
 
-.pay-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-.pay-table th,
-.pay-table td { padding: 6px; border-bottom: 1px solid var(--color-border); text-align: center; white-space: nowrap; }
-.pay-table thead th { height: 32px; padding: 0 6px; color: var(--color-text-muted); font-size: 10.5px; font-weight: 700;
-  letter-spacing: .03em; text-transform: uppercase; }
-.pay-table thead th .fade { display: block; max-width: 100px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; }
-.pay-table tbody tr:hover th,
-.pay-table tbody tr:hover td { background: #fafbfc; }
-.pay-table tbody tr:last-child th,
-.pay-table tbody tr:last-child td { border-bottom: 0; }
-
-/* The object stays in place while the services scroll sideways; «Итого» stays at the right edge. */
-.pay-table .pay-obj {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  height: 54px;
-  max-width: 190px;
-  padding: 0 10px;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  font-weight: 600;
-  text-align: left;
+.pay-orow {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 128px;
+  min-height: 80px;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.pay-table thead .pay-obj { height: 32px; font-weight: 700; }
-.pay-table .pay-obj a { display: block; overflow: hidden; color: var(--color-primary); text-decoration: none; text-overflow: ellipsis; }
-.pay-table .pay-obj a:hover { color: var(--color-accent); }
-.pay-table .pay-total {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  width: 128px;
-  min-width: 128px;
-  padding: 0 10px;
-  background: var(--color-surface);
+.pay-orow:last-child { border-bottom: 0; }
+.pay-obj {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 12px;
+  border-right: 1px solid var(--color-border);
+}
+
+.pay-obj a { overflow: hidden; color: var(--color-primary); font-weight: 600; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.pay-obj a:hover { color: var(--color-accent); }
+.pay-obj span { overflow: hidden; color: var(--color-text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.pay-tiles {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 8px;
+  padding: 9px 16px 9px 12px;
+}
+
+/* «Итого»: a fixed width — «всё оплачено» and «осталось …» differ, and everything shifted at each check (2026-11-17). */
+.pay-total {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
   border-left: 1px solid var(--color-border);
   text-align: right;
 }
 
-/* A fixed width: «всё оплачено» and «осталось …» differ, and the whole table shifted at each check (2026-11-17). */
-
 .pay-total-sum { display: block; font-weight: 700; font-variant-numeric: tabular-nums; }
 .pay-rest { display: block; color: #c0392b; font-size: 11px; font-weight: 600; }
 .pay-rest.is-ok { color: var(--color-accent); }
-.pay-none { display: inline-block; width: 100px; color: #d5dbdf; }
 
-/* A cell: [sum | check] over [date | ?]. */
+/* A tile: [name | ?] / [sum] / [date | check]. The sum is always dark (2026-11-25): paid or not — the fill, the date
+   and the check say it. */
 .pay-sq {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 15px;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 16px 20px 16px;
   align-items: center;
-  width: 100px;
-  height: 46px;
-  margin: 0 auto;
-  padding: 4px 5px 4px 7px;
+  column-gap: 4px;
+  width: 132px;
+  height: 62px;
+  padding: 4px 6px 4px 9px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 9px;
   background: var(--color-bg);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   text-align: left;
 }
 
-.pay-sq.is-due { background: #fdf1ef; border-color: #f6dcd7; }
+.pay-name { min-width: 0; overflow: hidden; color: var(--color-primary); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.pay-sq .pay-sum { grid-column: 1 / -1; overflow: hidden; color: var(--color-text); font-size: 13px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pay-sq.is-due { background: #fdf6f5; border-color: #f6e1dd; }
 .pay-sq.is-paid { background: #eaf6f2; border-color: #cfe9e0; }
-.pay-sq .pay-sum { overflow: hidden; font-size: 12.5px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.pay-sq.is-due .pay-sum { color: #c0392b; }
-.pay-sq.is-paid .pay-sum { color: var(--color-accent); }
-.pay-sq.is-empty .pay-sum { color: var(--color-text-muted); font-size: 11px; font-weight: 400; }
+.pay-sq.is-empty .pay-sum { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
+
+/* A receipt of several services — a «folder» (2026-11-25): a honey folder icon, the count, two honey sheets behind;
+   all edges grey. The sheets go into the 8px gap, so the next tile keeps its column. */
+.pay-sq.is-folder { border-color: #c9d3da; }
+.pay-sq.is-folder::before,
+.pay-sq.is-folder::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -1px;
+  border: 1px solid #c9d3da;
+  border-radius: 9px;
+  background: var(--color-honey-soft);
+}
+
+.pay-sq.is-folder::before { transform: translate(5px, -5px); background: #fbe9c0; }
+.pay-sq.is-folder::after { transform: translate(2.5px, -2.5px); }
+.pay-folder-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.pay-folder-name:hover .fade { color: var(--color-accent); }
+.pay-folder-icon { flex-shrink: 0; width: 14px; height: 14px; fill: var(--color-honey); stroke: #c9901f; stroke-width: 1.6; }
+.pay-count {
+  flex-shrink: 0;
+  min-width: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 10.5px;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* Dragging a tile onto another — a receipt, as apps into a folder on a phone (app.js). */
+.pay-sq.is-src { opacity: .3; }
+.pay-sq.is-drop { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); transform: scale(1.06); transition: transform .12s; }
+.pay-sq.is-off { opacity: .45; }
+.pay-ghost { position: fixed; z-index: 120; margin: 0; pointer-events: none; box-shadow: 0 10px 28px rgba(0, 0, 0, .18); transform: rotate(-2deg); }
+.pay-sq.is-just { animation: pay-just 1.2s ease-out; }
+@keyframes pay-just { 0%, 40% { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); } 100% { box-shadow: none; } }
+
+/* The receipt window: the name, the parts with «×», «Разъединить». */
+.pay-bundle-win { width: 400px; }
+.pay-part { display: flex; align-items: center; gap: 8px; height: 36px; border-bottom: 1px solid #f0f2f4; font-size: 14px; }
+.pay-part .fade { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pay-part-sum { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pay-part.is-total { border-bottom: 0; font-weight: 700; }
+.pay-part.is-total::after { content: ''; width: 22px; }
+.pay-out {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pay-out:hover { background: #fdf1ef; color: #c0392b; }
+
+@media (max-width: 760px) {
+  .pay-orow { grid-template-columns: minmax(0, 1fr) 120px; }
+  .pay-obj { grid-column: 1; min-height: 52px; border-right: 0; }
+  .pay-total { grid-column: 2; grid-row: 1; border-left: 0; }
+  .pay-tiles { grid-column: 1 / -1; padding-top: 0; }
+}
 .pay-partial { color: var(--color-text-muted); }
 .pay-date { min-width: 0; overflow: hidden; color: var(--color-text-muted); font-size: 10.5px; white-space: nowrap; }
 .pay-sq.is-due .pay-date { color: #d37a6c; }
@@ -1426,8 +1506,8 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   align-items: center;
   justify-content: center;
   justify-self: end;
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   padding: 0;
   border: 1.5px solid #c9d3da;
   border-radius: 50%;
@@ -1436,7 +1516,7 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   cursor: pointer;
 }
 
-.pay-check .icon { width: 8px; height: 8px; stroke-width: 4; }
+.pay-check .icon { width: 9px; height: 9px; stroke-width: 4; }
 .pay-check:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .pay-sq.is-paid .pay-check { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
 .pay-sq.is-empty .pay-check { visibility: hidden; }
@@ -1449,14 +1529,14 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   align-items: center;
   justify-content: center;
   justify-self: end;
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: #cfd6db;
   color: #fff;
-  font: 700 9px/1 var(--font, system-ui), sans-serif;
+  font: 700 9.5px/1 var(--font, system-ui), sans-serif;
   cursor: pointer;
 }
 
@@ -1941,3 +2021,20 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   background: none; color: var(--rk, var(--color-text-muted)); }
 .mread-who.has-icon > .mi-icon svg { width: 18px; height: 18px; }
 
+
+/* «Оплаты», the receipt window (2026-11-25): the name field as every field — label above, 38px, accent focus. */
+.pay-bundle-label { display: block; margin: 0 0 4px; color: var(--color-text-muted); font-size: 12.5px; }
+.pay-bundle-name {
+  box-sizing: border-box;
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.pay-bundle-name:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.pay-bundle-list { margin: 8px 0 14px; }

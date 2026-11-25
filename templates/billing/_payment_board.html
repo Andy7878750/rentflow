@@ -1,8 +1,9 @@
-{% comment %}The board of «Оплаты» (2026-11-17, variant А «компактно» of the user): one table — objects down, services across.
-   A cell: top left the sum with kopecks, under it the date paid or «не оплачено»; top right a small round check (paid
-   today / not paid), bottom right «?» — the note (grey: none, red: there is one; it opens the note window). Over the
-   table — last month's bills still not paid, marked right there. app.js posts to payment_edit and puts the answer
-   (this file) back in place.{% endcomment %}
+{% comment %}The board of «Оплаты» (2026-11-25, макет docs/mockups/2026-11-25-payments-tiles.html, вариант А): objects down,
+   each with tiles of ITS services only. A tile: the service's name (bold) and «?» — the note (grey: none, red: there
+   is one); the sum (always dark); the date paid or «не оплачено» and a small round check (paid today / not paid).
+   Several services of one paper receipt are one tile — a «folder» (honey icon, two sheets behind, the count): made by
+   dragging a tile onto another, its window — the name, the parts with «×», «Разъединить». Over the list — last
+   month's bills still not paid, marked right there. app.js posts and puts the answer (this file) back in place.{% endcomment %}
 {% if table.rows %}
   <section class="kpi-row pay-kpis">
     <div class="kpi"><span class="kpi-label">К оплате за месяц</span><span class="kpi-value">{{ table.totals.due|floatformat:"2g" }} ₽</span></div>
@@ -15,7 +16,7 @@
     <div class="pay-prev">
       <b>{{ prev_name }}: не оплачено <span class="pay-red">{{ table.prev|length }}</span></b><span class="pay-prev-sum">· <span class="pay-red">{{ table.prev_left|floatformat:"2g" }} ₽</span></span>
       {% for tile in table.prev %}
-        <span class="pay-chip" data-pay-tile data-url="{% url 'payment_edit' tile.key prev_param %}">
+        <span class="pay-chip" data-pay-tile data-url="{% if tile.parts %}{% url 'payment_bundle_edit' tile.key prev_param %}{% else %}{% url 'payment_edit' tile.key prev_param %}{% endif %}">
           <span class="fade">{{ tile.property.name }} · {{ tile.name }}</span>
           <span class="pay-chip-sum">{{ tile.amount|floatformat:"2g" }} ₽</span>
           <button type="button" class="pay-check" data-pay-toggle title="Отметить: оплачено сегодня" aria-label="Оплачено: {{ tile.property.name }}, {{ tile.name }} за {{ prev_name|lower }}"><svg class="icon"><use href="#i-check"/></svg></button>
@@ -24,50 +25,50 @@
     </div>
   {% endif %}
 
-  <div class="pay-wrap">
-  <table class="pay-table">
-    <thead>
-      <tr>
-        <th class="pay-obj">Объект</th>
-        {% for name in table.columns %}<th><span class="fade" title="{{ name }}">{{ name }}</span></th>{% endfor %}
-        <th class="pay-total">Итого</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in table.rows %}
-        <tr>
-          <th class="pay-obj" scope="row"><a href="{% url 'property_detail' row.property.pk %}?month={{ month }}" class="fade" title="{{ row.property.name }} — открыть объект, там вводятся суммы">{{ row.property.name }}</a></th>
-          {% for tile in row.cells %}
-            <td>
-              {% if tile %}
-                <div class="pay-sq is-{{ tile.state }}" data-pay-tile data-url="{% url 'payment_edit' tile.key month %}"
-                     data-note="{{ tile.note }}" data-carry="{{ tile.carry|yesno:'1,0' }}" data-title="{{ tile.name }}"
-                     data-sub="{{ row.property.name }} · {{ month_label|lower }}">
-                  <span class="pay-sum">{% if tile.amount is not None %}{{ tile.amount|floatformat:"2g" }} ₽{% if tile.partial %}<span class="pay-partial" title="Введены не все суммы этой услуги">…</span>{% endif %}{% else %}не введена{% endif %}</span>
-                  <button type="button" class="pay-check" data-pay-toggle
-                          title="{% if tile.state == 'paid' %}Снять отметку об оплате{% else %}Отметить: оплачено сегодня{% endif %}"
-                          aria-label="{% if tile.state == 'paid' %}Снять отметку{% else %}Оплачено{% endif %}: {{ row.property.name }}, {{ tile.name }}"><svg class="icon"><use href="#i-check"/></svg></button>
-                  <span class="pay-date">
-                    {% if tile.state == 'paid' %}<input type="text" class="pay-date-input" data-date data-pay-date value="{{ tile.paid_on|date:'d.m.Y' }}" inputmode="numeric" autocomplete="off" aria-label="Дата оплаты: {{ tile.name }}">
-                    {% elif tile.state == 'due' %}не оплачено{% endif %}
-                  </span>
-                  <button type="button" class="pay-q{% if tile.note %} is-on{% endif %}" data-pay-note
-                          title="{% if tile.note %}{{ tile.note }}{% if tile.carry %} · переносится{% endif %}{% else %}Пометка{% endif %}" aria-label="Пометка: {{ tile.name }}">?</button>
-                </div>
-              {% else %}<span class="pay-none" aria-label="нет такой услуги">—</span>{% endif %}
-            </td>
+  <div class="pay-rows">
+    {% for row in table.rows %}
+      <div class="pay-orow" data-pay-row="{{ row.property.pk }}">
+        <div class="pay-obj">
+          <a href="{% url 'property_detail' row.property.pk %}?month={{ month }}" class="fade" title="{{ row.property.name }} — открыть объект, там вводятся суммы">{{ row.property.name }}</a>
+          {% if row.property.address %}<span class="fade">{{ row.property.address }}</span>{% endif %}
+        </div>
+        <div class="pay-tiles">
+          {% for tile in row.tiles %}
+            <div class="pay-sq is-{{ tile.state }}{% if tile.parts %} is-folder{% endif %}" data-pay-tile
+                 data-code="{% if tile.parts %}b{% else %}r{% endif %}{{ tile.key }}"
+                 data-url="{% if tile.parts %}{% url 'payment_bundle_edit' tile.key month %}{% else %}{% url 'payment_edit' tile.key month %}{% endif %}"
+                 {% if tile.parts %}data-bundle-url="{% url 'payment_bundle' tile.key %}"{% endif %}
+                 data-note="{{ tile.note }}" data-carry="{{ tile.carry|yesno:'1,0' }}" data-title="{{ tile.name }}"
+                 data-sub="{{ row.property.name }} · {{ month_label|lower }}"
+                 title="{% if tile.parts %}Перетащите сюда ещё услугу — добавится в квитанцию{% else %}Перетащите на другую услугу — получится одна квитанция{% endif %}">
+              {% if tile.parts %}
+                <button type="button" class="pay-name pay-folder-name" data-pay-open title="{% for part in tile.parts %}{{ part.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"><svg class="pay-folder-icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="fade">{{ tile.name }}</span><span class="pay-count">{{ tile.parts|length }}</span></button>
+                <template data-pay-parts>{% for part in tile.parts %}<div class="pay-part" data-id="{{ part.key }}"><span class="fade">{{ part.name }}</span><span class="pay-part-sum">{% if part.amount is not None %}{{ part.amount|floatformat:"2g" }} ₽{% else %}не введена{% endif %}</span></div>{% endfor %}</template>
+              {% else %}
+                <span class="pay-name fade">{{ tile.name }}</span>
+              {% endif %}
+              <button type="button" class="pay-q{% if tile.note %} is-on{% endif %}" data-pay-note
+                      title="{% if tile.note %}{{ tile.note }}{% if tile.carry %} · переносится{% endif %}{% else %}Пометка{% endif %}" aria-label="Пометка: {{ tile.name }}">?</button>
+              <span class="pay-sum">{% if tile.missing %}не введено: {{ tile.missing }}{% elif tile.amount is not None %}{{ tile.amount|floatformat:"2g" }} ₽{% if tile.partial %}<span class="pay-partial" title="Введены не все суммы этой услуги">…</span>{% endif %}{% else %}не введена{% endif %}</span>
+              <span class="pay-date">
+                {% if tile.state == 'paid' %}<input type="text" class="pay-date-input" data-date data-pay-date value="{{ tile.paid_on|date:'d.m.Y' }}" inputmode="numeric" autocomplete="off" aria-label="Дата оплаты: {{ tile.name }}">
+                {% elif tile.state == 'due' %}не оплачено{% endif %}
+              </span>
+              <button type="button" class="pay-check" data-pay-toggle
+                      title="{% if tile.state == 'paid' %}Снять отметку об оплате{% else %}Отметить: оплачено сегодня{% endif %}"
+                      aria-label="{% if tile.state == 'paid' %}Снять отметку{% else %}Оплачено{% endif %}: {{ row.property.name }}, {{ tile.name }}"><svg class="icon"><use href="#i-check"/></svg></button>
+            </div>
           {% endfor %}
-          <td class="pay-total">
-            <span class="pay-total-sum">{{ row.due|floatformat:"2g" }} ₽</span>
-            {% if row.left %}<span class="pay-rest">осталось {{ row.left|floatformat:"0g" }}</span>
-            {% elif row.paid %}<span class="pay-rest is-ok">всё оплачено</span>{% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        </div>
+        <div class="pay-total">
+          <span class="pay-total-sum">{{ row.due|floatformat:"2g" }} ₽</span>
+          {% if row.left %}<span class="pay-rest">осталось {{ row.left|floatformat:"0g" }}</span>
+          {% elif row.paid %}<span class="pay-rest is-ok">всё оплачено</span>{% endif %}
+        </div>
+      </div>
+    {% endfor %}
   </div>
-  <p class="month-hint pay-hint">Суммы берутся сами — из ввода за месяц на странице объекта. Галочка — оплачено сегодня (дату можно поправить), «?» — пометка.</p>
+  <p class="month-hint pay-hint">Суммы берутся сами — из ввода за месяц на странице объекта. Галочка — оплачено сегодня (дату можно поправить), «?» — пометка. Одна квитанция на несколько услуг — перетащите плашку на другую.</p>
 {% else %}
   <section class="empty-state">
     <h2>Пока нечего оплачивать</h2>

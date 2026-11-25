@@ -107,6 +107,9 @@ class Receipt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     # The order of the service cards on the object page (the owner drags them); a new one goes last.
     position = models.PositiveIntegerField(default=0)
+    # «Оплаты»: the receipt (a «folder») this service is paid with together with others — one sum, one check, one date
+    # (2026-11-25). Only the payments page; the tenants' bills keep the services apart.
+    pay_bundle = models.ForeignKey('PayBundle', on_delete=models.SET_NULL, null=True, blank=True, related_name='parts')
 
     class Meta:
         ordering = ['position', 'created_at', 'id']
@@ -321,6 +324,22 @@ class Reading(models.Model):
         if self.previous_night is None or self.current_night is None:
             return None
         return self.current_night - self.previous_night
+
+
+class PayBundle(models.Model):
+    """Several services of an object that come in ONE paper receipt and are paid with one payment (ЕИРЦ: hot water,
+    heating, sewage) — on «Оплаты» one tile, a «folder» made by dragging a tile onto another (2026-11-25). The
+    services are `parts` (Receipt.pay_bundle); the payment marks stay per service (`Payment`), the folder marks them
+    all at once with one date."""
+
+    property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='pay_bundles')
+    name = models.CharField(max_length=40)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return self.name
 
 
 class Payment(models.Model):

@@ -5,7 +5,7 @@ from urllib.parse import quote
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -16,7 +16,7 @@ from apps.properties.models import Property
 from apps.properties.views import modal_back_url, object_page_context
 
 from . import services, window
-from .models import Meter, Receipt
+from .models import Meter, PayBundle, Receipt
 
 
 def _done(request, property_obj, message):
@@ -187,6 +187,74 @@ def payment_edit(request, pk, month):
         services.save_payment_note(receipt, month_date, request.POST['note'], request.POST.get('carry') == '1')
     view = property_services.parse_month(request.POST.get('view') or month)
     return render(request, 'billing/_payment_board.html', _payment_context(request, view))
+
+
+def _board(request, view, **headers):
+    response = render(request, 'billing/_payment_board.html', _payment_context(request, view))
+    for key, value in headers.items():
+        response[key] = value
+    return response
+
+
+def _own_bundle(request, pk):
+    return get_object_or_404(PayBundle.objects.select_related('property'), pk=pk, property__owner=request.user)
+
+
+def _tile(request, code):
+    """«r12» — a service tile, «b3» — a receipt tile; someone else's — 404."""
+    kind, pk = (code or ' ')[0], (code or '')[1:]
+    if not pk.isdigit():
+        raise Http404
+    return _own_bundle(request, int(pk)) if kind == 'b' else _own_receipt(request, int(pk))
+
+
+@login_required
+@require_POST
+def payment_bundle_edit(request, pk, month):
+    """The check, the date or the note of a receipt tile (several services, one payment): goes to all its services."""
+    bundle = _own_bundle(request, pk)
+    month_date = property_services.parse_month(month)
+    if 'paid' in request.POST:
+        paid_on = None
+        if request.POST['paid'] == '1':
+            paid_on = services.parse_day(request.POST.get('paid_on')) or date.today()
+        services.save_bundle_payment(bundle, month_date, paid_on)
+    elif 'note' in request.POST:
+        services.save_bundle_note(bundle, month_date, request.POST['note'], request.POST.get('carry') == '1')
+    return _board(request, property_services.parse_month(request.POST.get('view') or month))
+
+
+@login_required
+@require_POST
+def payment_merge(request, month):
+    """A tile dropped onto another tile of the same object (`src`, `dst`: «r<id>» / «b<id>»): one receipt. A new one
+    is named in the answer's X-Pay-Bundle header — the page opens its window to type the name."""
+    source, target = _tile(request, request.POST.get('src')), _tile(request, request.POST.get('dst'))
+    if source.property_id != target.property_id:
+        return HttpResponse(status=400)
+    month_date = property_services.parse_month(month)
+    try:
+        bundle, made = services.merge_tiles(target.property, month_date, source, target)
+    except ValueError:
+        return HttpResponse(status=400)
+    return _board(request, month_date, **({'X-Pay-Bundle': str(bundle.pk)} if made else {}))
+
+
+@login_required
+@require_POST
+def payment_bundle(request, pk):
+    """The receipt window: `name` — renamed, `out` — a service taken out (its id), `split` — «Разъединить»."""
+    bundle = _own_bundle(request, pk)
+    if request.POST.get('split'):
+        services.split_bundle(bundle)
+    elif request.POST.get('out'):
+        receipt = _own_receipt(request, int(request.POST['out'])) if request.POST['out'].isdigit() else None
+        if receipt is None or receipt.pay_bundle_id != bundle.pk:
+            raise Http404
+        services.take_out(bundle, receipt)
+    elif 'name' in request.POST:
+        services.rename_bundle(bundle, request.POST['name'])
+    return _board(request, property_services.parse_month(request.POST.get('view')))
 
 
 @login_required

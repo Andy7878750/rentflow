@@ -10,7 +10,7 @@ from apps.properties.services import free_meters, setup_steps
 from apps.tenants.models import Tenant
 
 from . import services
-from .models import Meter, MeterTariff, MonthlyAmount, Reading, Receipt
+from .models import Meter, MeterTariff, MonthlyAmount, PayBundle, Payment, Reading, Receipt
 
 User = get_user_model()
 
@@ -547,13 +547,13 @@ class MonthPageTests(TestCase):
         Receipt.objects.create(property=other, kind='management', name=self.receipt.name)  # no sum yet
 
         table = services.payment_table(self.user, octo)
-        self.assertEqual(table['columns'], [self.receipt.name, internet.name])
         mine = next(row for row in table['rows'] if row['property'] == self.prop)
-        self.assertEqual([cell['state'] for cell in mine['cells']], ['due', 'due'])
-        self.assertEqual(mine['cells'][1]['amount'], Decimal('1000.00'), 'one cell per name, the sums add up')
+        self.assertEqual([tile['name'] for tile in mine['tiles']], [self.receipt.name, internet.name])
+        self.assertEqual([tile['state'] for tile in mine['tiles']], ['due', 'due'])
+        self.assertEqual(mine['tiles'][1]['amount'], Decimal('1000.00'), 'one tile per name, the sums add up')
         theirs = next(row for row in table['rows'] if row['property'] == other)
-        self.assertEqual(theirs['cells'][0]['state'], 'empty')
-        self.assertIsNone(theirs['cells'][1], 'no such service — an empty «—» cell')
+        self.assertEqual([(tile['name'], tile['state']) for tile in theirs['tiles']], [(self.receipt.name, 'empty')],
+                         'only its own services — no empty «—» for the others')
         self.assertEqual((table['totals']['due'], table['totals']['left'], table['totals']['unpaid'], table['totals']['empty']),
                          (Decimal('5200.00'), Decimal('5200.00'), 2, 1))
 
@@ -571,7 +571,7 @@ class MonthPageTests(TestCase):
         self.assertEqual((table['totals']['paid'], table['totals']['left'], table['totals']['unpaid']),
                          (Decimal('1000.00'), Decimal('4200.00'), 1))
         self.client.post(url, {'paid': '1', 'paid_on': '12.10.2026'})
-        cell = next(row for row in services.payment_table(self.user, octo)['rows'] if row['property'] == self.prop)['cells'][1]
+        cell = next(row for row in services.payment_table(self.user, octo)['rows'] if row['property'] == self.prop)['tiles'][1]
         self.assertEqual(cell['paid_on'], date(2026, 10, 12))
 
         # November: October's unpaid bills are over the table, marked from there (the board stays on November).
@@ -587,7 +587,7 @@ class MonthPageTests(TestCase):
         # a month that takes it off stops it.
         note_url = reverse('payment_edit', args=[internet.pk, '2026-09'])
         self.client.post(note_url, {'note': 'переплата 300 ₽', 'carry': '1'})
-        cell_of = lambda month: next(r for r in services.payment_table(self.user, month)['rows'] if r['property'] == self.prop)['cells'][1]  # noqa: E731
+        cell_of = lambda month: next(r for r in services.payment_table(self.user, month)['rows'] if r['property'] == self.prop)['tiles'][1]  # noqa: E731
         self.assertEqual((cell_of(sept)['note'], cell_of(sept)['carry']), ('переплата 300 ₽', True))
         # October already had its own row (marked paid before the note was written): it decides for itself.
         self.assertEqual(cell_of(octo)['note'], '')
@@ -602,7 +602,7 @@ class MonthPageTests(TestCase):
         self.assertEqual(cell_of(date(2027, 2, 1))['note'], '', 'taken off in January — not in February')
         self.assertEqual(cell_of(dec)['note'], 'учесть в декабре', 'earlier months keep theirs')
         self.client.post(reverse('payment_edit', args=[self.receipt.pk, '2026-09']), {'note': 'без переноса', 'carry': '0'})
-        self.assertEqual(next(r for r in services.payment_table(self.user, octo)['rows'] if r['property'] == self.prop)['cells'][0]['note'], '')
+        self.assertEqual(next(r for r in services.payment_table(self.user, octo)['rows'] if r['property'] == self.prop)['tiles'][0]['note'], '')
 
         # Not paid again; someone else's service can't be marked; the mark is POST only.
         self.client.post(url, {'paid': '0'})
@@ -611,6 +611,79 @@ class MonthPageTests(TestCase):
             User.objects.create_user(username='c@example.ru', password='secret1')), kind='custom', name='Чужая')
         self.assertEqual(self.client.post(reverse('payment_edit', args=[stranger.pk, '2026-10']), {'paid': '1'}).status_code, 404)
         self.assertEqual(self.client.get(url).status_code, 405)
+
+    def test_payment_receipts(self):
+        # 2026-11-25: several services of one paper receipt — one tile on «Оплаты», made by dragging a tile onto
+        # another (as apps into a folder on a phone). One sum, one check, one date: the tile dropped ONTO decides.
+        octo = date(2026, 10, 1)
+        MonthlyAmount.objects.create(receipt=self.receipt, month=octo, amount=Decimal('4200'))
+        water = Receipt.objects.create(property=self.prop, kind='custom', name='Вода', amount_mode='fixed',
+                                       fixed_amount=Decimal('540'))
+        heat = Receipt.objects.create(property=self.prop, kind='custom', name='Подогрев', amount_mode='fixed',
+                                      fixed_amount=Decimal('312'))
+        sewage = Receipt.objects.create(property=self.prop, kind='custom', name='Водоотведение', amount_mode='fixed',
+                                        fixed_amount=Decimal('855'))
+        twin = Receipt.objects.create(property=self.prop, kind='custom', name='Водоотведение', amount_mode='fixed',
+                                      fixed_amount=Decimal('5'))
+        tiles = lambda: next(r for r in services.payment_table(self.user, octo)['rows'] if r['property'] == self.prop)['tiles']  # noqa: E731
+        merge = reverse('payment_merge', args=['2026-10'])
+
+        # Heating was paid on the 12th; water dropped onto it — the receipt is paid on the 12th, named «Квитанция».
+        services.save_payment(heat, octo, date(2026, 10, 12))
+        response = self.client.post(merge, {'src': f'r{water.pk}', 'dst': f'r{heat.pk}'})
+        bundle = PayBundle.objects.get()
+        self.assertEqual(response['X-Pay-Bundle'], str(bundle.pk))
+        self.assertEqual(bundle.name, 'Квитанция')
+        folder = tiles()[1]
+        self.assertEqual([part['name'] for part in folder['parts']], ['Вода', 'Подогрев'])
+        self.assertEqual((folder['amount'], folder['state'], folder['paid_on']), (Decimal('852.00'), 'paid', date(2026, 10, 12)))
+        self.assertEqual(len(tiles()), 3, 'the folder stands where its first part stood')
+
+        # Sewage (with its same-name twin) dropped onto the receipt: it joins, and takes the receipt's date.
+        response = self.client.post(merge, {'src': f'r{sewage.pk}', 'dst': f'b{bundle.pk}'})
+        self.assertFalse(response.has_header('X-Pay-Bundle'), 'nothing new made')
+        self.assertEqual(twin.payments.get(month=octo).paid_on, date(2026, 10, 12))
+        folder = tiles()[1]
+        self.assertEqual((len(folder['parts']), folder['amount']), (3, Decimal('1712.00')))
+
+        # The receipt dropped onto an unpaid service: all of it not paid; its parts pour into the new receipt.
+        self.client.post(merge, {'src': f'b{bundle.pk}', 'dst': f'r{self.receipt.pk}'})
+        self.assertFalse(PayBundle.objects.filter(pk=bundle.pk).exists())
+        [folder] = tiles()
+        self.assertEqual((len(folder['parts']), folder['state'], folder['name']), (4, 'due', 'Квитанция'))
+        bundle = folder['bundle']
+
+        # The check marks all; the name; «×» takes a service out; one left — the receipt is gone.
+        self.client.post(reverse('payment_bundle_edit', args=[bundle.pk, '2026-10']), {'paid': '1', 'paid_on': '20.10.2026'})
+        self.assertEqual(set(Payment.objects.filter(month=octo).values_list('paid_on', flat=True)), {date(2026, 10, 20)})
+        url = reverse('payment_bundle', args=[bundle.pk])
+        self.client.post(url, {'name': '  ЕИРЦ ', 'view': '2026-10'})
+        self.assertEqual(tiles()[0]['name'], 'ЕИРЦ')
+        self.client.post(url, {'out': sewage.pk, 'view': '2026-10'})
+        self.assertEqual([tile['name'] for tile in tiles()], ['ЕИРЦ', 'Водоотведение'])
+        self.assertIsNone(Receipt.objects.get(pk=twin.pk).pay_bundle_id, 'the twin comes out too')
+        self.client.post(url, {'out': water.pk, 'view': '2026-10'})
+        self.client.post(url, {'out': heat.pk, 'view': '2026-10'})
+        self.assertFalse(PayBundle.objects.exists())
+        self.assertEqual(len(tiles()), 4)
+
+        # Two receipts never share a name; «Разъединить»; another object's tile can't be dropped here; POST only.
+        services.merge_tiles(self.prop, octo, water, heat)
+        services.merge_tiles(self.prop, octo, sewage, self.receipt)
+        self.assertEqual(sorted(PayBundle.objects.values_list('name', flat=True)), ['Квитанция', 'Квитанция 2'])
+        second = PayBundle.objects.get(name='Квитанция 2')
+        self.client.post(reverse('payment_bundle', args=[second.pk]), {'split': '1'})
+        self.assertEqual(PayBundle.objects.count(), 1)
+        other = Property.objects.create(owner=self.user, name='Яблочная 2', kind='commercial')
+        theirs = Receipt.objects.create(property=other, kind='custom', name='Свет')
+        self.assertEqual(self.client.post(merge, {'src': f'r{theirs.pk}', 'dst': f'r{sewage.pk}'}).status_code, 400)
+        stranger = Receipt.objects.create(property=make_property(
+            User.objects.create_user(username='d@example.ru', password='secret1')), kind='custom', name='Чужая')
+        self.assertEqual(self.client.post(merge, {'src': f'r{stranger.pk}', 'dst': f'r{sewage.pk}'}).status_code, 404)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        page = self.client.get(reverse('payment_list') + '?month=2026-10')
+        self.assertContains(page, 'is-folder')
+        self.assertContains(page, 'data-pay-bundle-back')
 
     def test_live_save_returns_recalculated_page(self):
         response = self.client.post(

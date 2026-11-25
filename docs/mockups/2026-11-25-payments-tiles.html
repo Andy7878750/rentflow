@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Оплаты · плашки услуг</title>
+<style>
+  /* Mockup (2026-11-25): «Оплаты» — objects on the left as now, each object has tiles of ITS services (objects differ);
+     several services paid with one receipt (ЕИРЦ) are one tile. Two looks of that tile: А stack · Б parts inside. */
+  :root { --primary: #34495e; --accent: #148f77; --accent-soft: #e3f3ef; --text: #2c3338; --muted: #6b7680;
+    --border: #e3e7ea; --bg: #f4f6f8; --surface: #fff; --red: #c0392b; --green-soft: #eaf6f2; --r: 12px;
+    --tw: 132px; --th: 62px; --gap: 8px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 20px 60px; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 22px; color: var(--primary); }
+  .lead { max-width: 900px; margin: 0 0 18px; color: var(--muted); }
+  .tabs { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 -20px 18px;
+    padding: 10px 20px; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .tab { padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--text);
+    font: inherit; font-weight: 600; cursor: pointer; }
+  .tab.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .variant { display: none; max-width: 1180px; }
+  .variant.on { display: block; }
+  .about { margin: 0 0 14px; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: var(--r); }
+  .about b { color: var(--primary); }
+  .about ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .about li.minus { list-style: '− '; }
+  .about li.plus { list-style: '+ '; }
+
+  .head { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-bottom: 14px; }
+  .head h2 { margin: 0; font-size: 22px; color: var(--primary); }
+  .month { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 16px; }
+  .month button { width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .sums { display: flex; flex-wrap: wrap; gap: 20px; margin-left: auto; font-size: 13px; color: var(--muted); }
+  .sums b { display: block; color: var(--text); font-size: 18px; }
+  .sums .left b { color: var(--red); }
+  .sums .ok b { color: var(--accent); }
+  .money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .prev { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: var(--r); background: #f4f6f7; font-size: 12.5px; }
+  .prev .red { color: var(--red); font-weight: 700; }
+  .pchip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 5px 0 10px; border: 1px solid var(--border);
+    border-radius: 999px; background: #fff; color: var(--muted); font-size: 12px; }
+  .pchip .money { color: var(--red); font-weight: 700; }
+
+  /* The list: object · its tiles · total */
+  .rows { background: #fff; border: 1px solid var(--border); border-radius: var(--r); }
+  .orow { display: grid; grid-template-columns: 200px minmax(0, 1fr) 128px; align-items: center; min-height: calc(var(--th) + 16px);
+    border-bottom: 1px solid var(--border); }
+  .orow:last-child { border-bottom: 0; }
+  .orow > * { padding: 8px 12px; }
+  .oname { align-self: stretch; display: flex; flex-direction: column; justify-content: center; min-width: 0;
+    border-right: 1px solid var(--border); }
+  .oname a { overflow: hidden; color: var(--primary); font-weight: 600; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+  .oname span { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .tiles { display: flex; flex-wrap: wrap; gap: var(--gap); }
+  .tot { align-self: stretch; display: flex; flex-direction: column; justify-content: center; border-left: 1px solid var(--border); text-align: right; }
+  .tot .money { font-weight: 700; }
+  .tot .rest { color: var(--red); font-size: 11px; font-weight: 600; }
+  .tot .rest.ok { color: var(--accent); }
+
+  /* A tile: [name | ?] / [sum] / [date | check] */
+  .t { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 15px; grid-template-rows: 16px 20px 16px;
+    align-items: center; column-gap: 4px; width: var(--tw); height: var(--th); padding: 4px 6px 4px 9px;
+    border: 1px solid transparent; border-radius: 9px; background: var(--bg); }
+  .t .nm { overflow: hidden; color: var(--primary); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  .t .sum { grid-column: 1 / -1; overflow: hidden; font-size: 13px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .t .date { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+  .t .sum { color: var(--text); } /* sums always dark (2026-11-25); paid or not — the tile's fill, date and check say */
+  .t.due .date { color: #d37a6c; }
+  .t.paid { background: var(--green-soft); border-color: #cfe9e0; }
+  .t.empty .sum { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .t.due { background: #fdf6f5; border-color: #f6e1dd; }
+
+  .chk { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; padding: 0;
+    border: 1.5px solid #c9d3da; border-radius: 50%; background: #fff; color: transparent; cursor: pointer; }
+  .chk svg { width: 9px; height: 9px; }
+  .chk:hover { border-color: var(--accent); color: var(--accent); }
+  .paid .chk { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .q { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; padding: 0; border: 0;
+    border-radius: 50%; background: #cfd6db; color: #fff; font: 700 9.5px/1 system-ui, sans-serif; cursor: pointer; }
+  .q.on { background: var(--red); }
+
+  /* The receipt, А: a stack — the same tile, two sheets behind it, «3» after the name */
+  /* A folder: two sheets of its own colour behind (3 and 6px up-right), a folder icon before the name, the count in a pill */
+  .t.rc-a { margin-right: 0; } /* no extra room: the next tile stays in its column, the sheets go into the 8px gap */
+  .t.rc-a::before, .t.rc-a::after { content: ''; position: absolute; z-index: -1; inset: -1px; border: 1px solid #c9d3da;
+    border-radius: 9px; background: #e9edf0; }
+  .t.rc-a::before { transform: translate(5px, -5px); background: #dfe5e9; }
+  .t.rc-a::after { transform: translate(2.5px, -2.5px); }
+  /* Honey (2026-11-25, the user): the folder icon and the sheets behind are honey whatever the state; the front tile
+     keeps its state colour (red — not paid, green — paid). Honey = «то, что вы сделали сами» — you grouped them. */
+  .t.rc-a::before, .t.rc-a::after { border-color: #c9d3da; background: #fdf3dc; } /* all edges grey, the sheets honey */
+  .t.rc-a::before { background: #fbe9c0; }
+  .t.rc-a.due, .t.rc-a.paid, .t.rc-a.empty { border-color: #c9d3da; } /* the folder's own edge — grey (2026-11-25) */
+  .nm .fold { width: 14px; height: 14px; margin: -2px 4px 0 0; vertical-align: middle; color: #c9901f; fill: #f2b544; }
+  .orow > .tiles { position: relative; z-index: 0; padding: 9px 16px 9px 12px; }
+  .nm .n { display: inline-block; min-width: 16px; margin-left: 3px; padding: 0 4px; border-radius: 999px; background: #fff;
+    border: 1px solid var(--border); color: var(--primary); font-size: 10.5px; font-weight: 700; line-height: 14px; text-align: center; cursor: pointer; }
+  .nm .n:hover { border-color: var(--accent); color: var(--accent); }
+  .t .nm.rc-name { color: var(--primary); font-weight: 700; cursor: pointer; }
+
+  /* The receipt, Б: two tiles wide, the parts listed on the right half */
+  .t.rc-b { grid-template-columns: calc(var(--tw) - 32px) 15px minmax(0, 1fr); width: calc(var(--tw) * 2 + var(--gap)); }
+  .t.rc-b .sum { grid-column: 1 / 3; }
+  .parts { grid-column: 3; grid-row: 1 / -1; align-self: stretch; display: flex; flex-direction: column; justify-content: center;
+    min-width: 0; margin-left: 6px; padding-left: 9px; border-left: 1px solid rgba(0, 0, 0, .07); font-size: 10.5px; line-height: 13px; cursor: pointer; }
+  .parts div { display: flex; gap: 4px; color: var(--muted); }
+  .parts div span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .parts .more { color: var(--primary); font-weight: 600; }
+
+  .combine { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid var(--border);
+    border-radius: 9px; background: #fff; color: var(--primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .combine:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Small windows */
+  .back { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 12vh; background: rgba(30, 40, 48, .35); }
+  .back[hidden] { display: none; }
+  .win { width: 400px; max-width: calc(100vw - 32px); border-radius: 14px; background: #fff; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); overflow: hidden; }
+  .win-h { display: flex; align-items: center; height: 56px; padding: 0 18px; background: #f4f6f7; border-bottom: 1px solid var(--border); }
+  .win-h h3 { flex: 1; margin: 0; font-size: 16px; color: var(--primary); }
+  .win-h small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+  .win-h .x { border: 0; background: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+  .win-b { padding: 14px 18px; }
+  .pl { display: flex; align-items: center; height: 36px; border-bottom: 1px solid #f0f2f4; }
+  .pl span:first-child { flex: 1; }
+  .pl.total { border-bottom: 0; font-weight: 700; }
+  .lbl { display: block; margin: 0 0 4px; color: var(--muted); font-size: 12.5px; }
+  .inp { width: 100%; height: 38px; padding: 0 11px; border: 1px solid var(--border); border-radius: 10px; font: inherit; outline: none; }
+  .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .ck { display: flex; align-items: center; gap: 10px; height: 36px; border-bottom: 1px solid #f0f2f4; cursor: pointer; }
+  .ck input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .ck span:nth-child(2) { flex: 1; }
+  .ck.off { color: #b7c0c6; cursor: default; }
+  .ck .sub { color: var(--muted); font-size: 12px; }
+  .win-f { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); }
+  .btn { height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .btn.primary:disabled { opacity: .45; cursor: default; }
+  .btn.ghost { padding: 0; border: 0; color: var(--red); font-weight: 400; font-size: 13px; }
+
+  /* Drag one tile onto another — a receipt, as apps into a folder on a phone */
+  .t[data-o] { cursor: grab; touch-action: none; user-select: none; }
+  .t.is-src { opacity: .3; }
+  .t.drop-on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); transform: scale(1.06); transition: transform .12s; }
+  .t.drop-no { opacity: .45; }
+  .ghost { position: fixed; z-index: 60; margin: 0; pointer-events: none; cursor: grabbing;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .18); transform: rotate(-2deg); }
+  .t.just { animation: just 1.2s ease-out; }
+  @keyframes just { 0%, 40% { box-shadow: 0 0 0 3px var(--accent-soft); border-color: var(--accent); } 100% { box-shadow: none; } }
+  .pl .out { width: 22px; height: 22px; margin-left: 8px; padding: 0; border: 0; border-radius: 50%; background: none;
+    color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; }
+  .pl .out:hover { background: #fdf1ef; color: var(--red); }
+  .pl.total .out-sp { width: 30px; }
+
+  @media (max-width: 760px) {
+    .orow { grid-template-columns: minmax(0, 1fr) 120px; }
+    .oname { grid-column: 1; border-right: 0; }
+    .tot { grid-column: 2; grid-row: 1; border-left: 0; }
+    .tiles { grid-column: 1 / -1; padding-top: 0; }
+  }
+</style>
+</head>
+<body>
+<h1>«Оплаты» — плашки услуг у каждого объекта</h1>
+<p class="lead">Объекты слева, как сейчас. Справа у каждого объекта — плашки только ЕГО услуг (название · сумма · дата ·
+  галочка · «?»), все одного размера. Несколько услуг одной квитанцией (ЕИРЦ у «Просвет 81») — одна плашка: одна сумма,
+  одна галочка, одна дата. Галочки работают. Ниже — два вида такой плашки.</p>
+
+<div class="tabs">
+  <button class="tab on" data-tab="a">А · Стопка</button>
+  <button class="tab" data-tab="b">Б · Части внутри</button>
+</div>
+
+<svg width="0" height="0" style="position:absolute"><symbol id="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol><symbol id="fold" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2.2h8.4A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol></svg>
+
+<section class="variant on" data-variant="a">
+  <div class="about"><b>А · Квитанция — плашка «стопкой», собирается перетаскиванием, как папка на телефоне.</b>
+    Перетащите плашку на соседнюю (того же объекта) — получится квитанция «Квитанция», сразу откроется её окно: название
+    можно переписать. Перетащите ещё одну плашку на квитанцию — она добавится. <b>Дата у квитанции одна:</b> её берём у
+    плашки, НА которую бросили (оплачена 12.11 — вся квитанция оплачена 12.11; не оплачена — вся не оплачена). В окне квитанции у каждой услуги «×» — вынуть
+    обратно; осталась одна — квитанция исчезает. Чужой объект не подсвечивается — туда не бросить. Попробуйте: «Коммунальные»
+    у «Просвет 81» на «ЕИРЦ», или «Кап. ремонт» на «ГУП ТЭК» у «Королева 61».
+    <ul><li class="plus">никаких кнопок и окон «объединить» — как привыкли на телефоне</li><li class="minus">надо знать, что так можно
+      (подсказка — при первом наведении, курсор «рука»)</li></ul></div>
+  <div class="head"><h2>Оплаты</h2><div class="month"><button>‹</button>Ноябрь 2026<button>›</button></div>
+    <div class="sums" data-sums></div></div>
+  <div class="prev" data-prev></div>
+  <div class="rows" data-rows></div>
+</section>
+
+<section class="variant" data-variant="b">
+  <div class="about"><b>Б · Квитанция — плашка шириной в две, части списком справа.</b> Слева — как у всех (название,
+    сумма, дата, галочка), справа мелко серым — услуги квитанции с суммами; больше трёх — «+ ещё N». Клик по частям — то же окно.
+    <ul><li class="plus">состав виден сразу, без клика</li><li class="minus">плашка шире других; мелкий шрифт частей</li></ul></div>
+  <div class="head"><h2>Оплаты</h2><div class="month"><button>‹</button>Ноябрь 2026<button>›</button></div>
+    <button class="combine" data-combine>⧉ Объединить в квитанцию</button><div class="sums" data-sums></div></div>
+  <div class="prev" data-prev></div>
+  <div class="rows" data-rows></div>
+</section>
+
+<div class="back" data-win-parts hidden>
+  <div class="win" role="dialog">
+    <div class="win-h"><h3 data-p-title></h3><button class="x" data-close>×</button></div>
+    <div class="win-b"><label class="lbl">Название квитанции</label><input class="inp" data-p-name maxlength="40" style="margin-bottom:8px">
+      <div data-p-body></div></div>
+    <div class="win-f"><button class="btn ghost" data-split>Разъединить</button><span style="flex:1"></span><button class="btn primary" data-close>Готово</button></div>
+  </div>
+</div>
+
+<div class="back" data-win-combine hidden>
+  <div class="win" role="dialog">
+    <div class="win-h"><h3>Объединить в квитанцию</h3><button class="x" data-close>×</button></div>
+    <div class="win-b">
+      <label class="lbl">Объект</label>
+      <select class="inp" data-c-obj></select>
+      <label class="lbl" style="margin-top:10px">Название квитанции</label>
+      <input class="inp" data-c-name placeholder="Например, ЕИРЦ">
+      <div style="margin-top:10px" data-c-list></div>
+    </div>
+    <div class="win-f"><span style="flex:1"></span><button class="btn" data-close>Отмена</button><button class="btn primary" data-c-go disabled>Объединить</button></div>
+  </div>
+</div>
+
+<script>
+  // Objects, each with ITS services: [name, sum or null (not typed), paid date, note]. Receipts: name + services in it.
+  var DATA = [
+    { name: 'Просвет 81', addr: 'пр. Просвещения, 81', svc: [['Коммунальные', 5200, '24.11'], ['Вода холодная', 450, ''],
+        ['Вода горячая', 540, ''], ['Подогрев воды', 312, ''], ['Водоотведение', 855, '']],
+      rc: [{ name: 'ЕИРЦ', parts: ['Вода горячая', 'Подогрев воды', 'Водоотведение'] }] },
+    { name: 'Королева 61 пом 24-Н', addr: 'пр. Королёва, 61', svc: [['Ком. услуги', 5384.46, ''], ['Электричество', 17361.53, '12.11'],
+        ['ГУП ТЭК', 6997.36, ''], ['Кап. ремонт', 1520, '12.11'], ['Водоканал', 1184.20, '', 'квитанция одна на Хошимина и Королёва']], rc: [] },
+    { name: 'Хошимина 15 пом 82-Н', addr: 'ул. Хошимина, 15', svc: [['Ком. услуги', 5193.40, ''], ['Электричество', 17361.52, '12.11'],
+        ['ГУП ТЭК', 3276.13, '12.11'], ['Кап. ремонт', 1450, '12.11'], ['Водоканал', null, '']], rc: [] },
+    { name: 'Варшавская 6 кв. 627', addr: 'ул. Варшавская, 6', svc: [['Электричество', 3211.72, '12.11'], ['Газ', 418.90, '']], rc: [] },
+    { name: 'ПАРКИНГ Пулковская ул, 10 кор 1, 7-Н', addr: 'ул. Пулковская, 10', svc: [['Ком. услуги', 4019.80, ''], ['Кап. ремонт', 310, '']], rc: [] }
+  ];
+  var TODAY = '25.11';
+  function fmt(n) { return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽'; }
+  function short(n) { return Math.round(n).toLocaleString('ru-RU'); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  var CHK = '<button class="chk" type="button" data-chk title="Оплачено / не оплачено"><svg><use href="#ok"/></svg></button>';
+  function state() { return JSON.parse(JSON.stringify(DATA)); }
+  function get(o, s) { return o.svc.filter(function (x) { return x[0] === s; })[0]; }
+  function inRc(o, s) { return o.rc.filter(function (r) { return r.parts.indexOf(s) >= 0; })[0]; }
+
+  // Items of an object in order: a service alone, or a receipt in the place of its first part.
+  function items(o) {
+    var out = [], seen = {};
+    o.svc.forEach(function (c) {
+      var r = inRc(o, c[0]);
+      if (!r) { out.push({ one: c }); return; }
+      if (seen[r.name]) return;
+      seen[r.name] = 1;
+      var parts = r.parts.map(function (p) { return get(o, p); });
+      var miss = parts.filter(function (p) { return p[1] == null; }).length;
+      var sum = parts.reduce(function (a, p) { return a + (p[1] || 0); }, 0);
+      var paid = parts.every(function (p) { return p[2]; }) ? parts[0][2] : '';
+      out.push({ rc: r, parts: parts, sum: sum, miss: miss, paid: paid });
+    });
+    return out;
+  }
+  function q(note) { return '<button type="button" class="q' + (note ? ' on' : '') + '" title="' + esc(note || 'Пометка') + '">?</button>'; }
+
+  function tile(v, o, i, it) {
+    if (it.one) {
+      var c = it.one;
+      if (c[1] == null) return '<div class="t empty" data-o="' + i + '" data-s="' + esc(c[0]) + '"><span class="nm">' + esc(c[0]) + '</span>' + q(c[3]) + '<span class="sum">не введена</span><span class="date"></span><span></span></div>';
+      return '<div class="t ' + (c[2] ? 'paid' : 'due') + '" data-o="' + i + '" data-s="' + esc(c[0]) + '"><span class="nm" title="' + esc(c[0]) + '">' + esc(c[0]) + '</span>' + q(c[3]) +
+        '<span class="sum">' + fmt(c[1]) + '</span><span class="date">' + (c[2] ? c[2] + '.2026' : 'не оплачено') + '</span>' + CHK + '</div>';
+    }
+    var cls = it.miss ? 'empty' : (it.paid ? 'paid' : 'due');
+    var sum = it.miss ? 'не введено: ' + it.miss : fmt(it.sum);
+    if (v === 'a') {
+      return '<div class="t rc-a ' + cls + '" data-o="' + i + '" data-rc="' + esc(it.rc.name) + '"><span class="nm rc-name" data-parts title="' + esc(it.rc.parts.join(', ')) + '">' +
+        '<svg class="fold"><use href="#fold"/></svg>' + esc(it.rc.name) + '<span class="n">' + it.parts.length + '</span></span>' + q('') +
+        '<span class="sum">' + sum + '</span><span class="date">' + (it.paid ? it.paid + '.2026' : 'не оплачено') + '</span>' + (it.miss ? '<span></span>' : CHK) + '</div>';
+    }
+    var shown = it.parts.length > 4 ? it.parts.slice(0, 3) : it.parts;
+    return '<div class="t rc-b ' + cls + '" data-o="' + i + '" data-rc="' + esc(it.rc.name) + '"><span class="nm rc-name" data-parts>' + esc(it.rc.name) + '</span>' + q('') +
+      '<div class="parts" data-parts>' + shown.map(function (p) { return '<div><span>' + esc(p[0]) + '</span><span class="money">' + (p[1] == null ? '—' : short(p[1])) + '</span></div>'; }).join('') +
+      (it.parts.length > shown.length ? '<div class="more">+ ещё ' + (it.parts.length - shown.length) + '</div>' : '') + '</div>' +
+      '<span class="sum">' + sum + '</span><span class="date">' + (it.paid ? it.paid + '.2026' : 'не оплачено') + '</span>' + (it.miss ? '<span></span>' : CHK) + '</div>';
+  }
+
+  function render(sec, st) {
+    var v = sec.dataset.variant, due = 0, paid = 0;
+    sec.querySelector('[data-rows]').innerHTML = st.map(function (o, i) {
+      var d = 0, left = 0;
+      o.svc.forEach(function (c) { if (c[1] == null) return; d += c[1]; if (!c[2]) left += c[1]; });
+      due += d; paid += d - left;
+      return '<div class="orow"><div class="oname"><a href="#" title="' + esc(o.name) + '">' + esc(o.name) + '</a><span>' + esc(o.addr) + '</span></div>' +
+        '<div class="tiles">' + items(o).map(function (it) { return tile(v, o, i, it); }).join('') + '</div>' +
+        '<div class="tot"><span class="money">' + fmt(d) + '</span>' + (left ? '<span class="rest">осталось ' + short(left) + '</span>' : '<span class="rest ok">всё оплачено</span>') + '</div></div>';
+    }).join('');
+    sec.querySelector('[data-sums]').innerHTML = '<div>К оплате<b class="money">' + fmt(due) + '</b></div><div class="ok">Оплачено<b class="money">' +
+      fmt(paid) + '</b></div><div class="left">Осталось<b class="money">' + fmt(due - paid) + '</b></div>';
+    if (v === 'a') sec.querySelectorAll('.t[data-o]').forEach(function (t) {
+      t.title = t.dataset.rc ? 'Перетащите сюда ещё услугу — добавится в квитанцию' : 'Перетащите на другую услугу — получится одна квитанция';
+    });
+    sec.querySelector('[data-prev]').innerHTML ='<b>Октябрь: не оплачено <span class="red">1</span></b>' +
+      '<span class="pchip">Просвет 81 · ЕИРЦ <span class="money">1 690,00 ₽</span>' + CHK + '</span>';
+  }
+
+  // The parts window
+  var wp = document.querySelector('[data-win-parts]'), wc = document.querySelector('[data-win-combine]');
+  var cur = null;
+  function fillParts() {
+    var o = cur.o, r = cur.r, sum = 0;
+    wp.querySelector('[data-p-title]').innerHTML = esc(r.name || 'Квитанция') + '<small>' + esc(o.name) + ' · одна квитанция, один платёж</small>';
+    wp.querySelector('[data-p-body]').innerHTML = r.parts.map(function (p) {
+      var c = get(o, p); sum += c[1] || 0;
+      return '<div class="pl"><span>' + esc(p) + '</span><span class="money">' + (c[1] == null ? 'не введена' : fmt(c[1])) +
+        '</span><button type="button" class="out" data-out="' + esc(p) + '" title="Вынуть из квитанции">×</button></div>';
+    }).join('') + '<div class="pl total"><span>Квитанция</span><span class="money">' + fmt(sum) + '</span><span class="out-sp"></span></div>';
+  }
+  function openParts(sec, st, i, name, fresh) {
+    var o = st[i], r = o.rc.filter(function (x) { return x.name === name; })[0];
+    cur = { sec: sec, st: st, o: o, r: r };
+    var inp = wp.querySelector('[data-p-name]');
+    inp.value = r.name;
+    fillParts();
+    wp.hidden = false;
+    if (fresh) { inp.focus(); inp.select(); }
+  }
+  function closeParts() {
+    if (!cur) return;
+    var v = wp.querySelector('[data-p-name]').value.trim();
+    if (v && cur.o.rc.indexOf(cur.r) >= 0) cur.r.name = uniq(cur.o, v, cur.r);
+    render(cur.sec, cur.st); wp.hidden = true; cur = null;
+  }
+  // Two receipts of one object never share a name: «Квитанция», «Квитанция 2», …
+  function uniq(o, name, self) {
+    var n = name, k = 2;
+    while (o.rc.some(function (x) { return x !== self && x.name === n; })) n = name + ' ' + k++;
+    return n;
+  }
+  wp.addEventListener('input', function (e) {
+    if (!e.target.matches('[data-p-name]')) return;
+    wp.querySelector('[data-p-title]').firstChild.textContent = e.target.value.trim() || 'Квитанция';
+  });
+  wp.addEventListener('keydown', function (e) { if (e.key === 'Enter') closeParts(); });
+  wp.addEventListener('click', function (e) {
+    if (e.target === wp || e.target.closest('[data-close]')) { closeParts(); return; }
+    if (e.target.closest('[data-split]')) { cur.o.rc.splice(cur.o.rc.indexOf(cur.r), 1); closeParts(); return; }
+    var out = e.target.closest('[data-out]');
+    if (out) {
+      cur.r.parts.splice(cur.r.parts.indexOf(out.dataset.out), 1);
+      if (cur.r.parts.length < 2) { cur.o.rc.splice(cur.o.rc.indexOf(cur.r), 1); closeParts(); return; }
+      fillParts(); render(cur.sec, cur.st);
+    }
+  });
+
+  // ---------- Drag a tile onto another: a receipt (А only) ----------
+  var drag = null;
+  function startDrag(sec, st, t, e) {
+    var b = t.getBoundingClientRect();
+    var g = t.cloneNode(true);
+    g.classList.add('ghost'); g.classList.remove('rc-a');
+    g.style.left = b.left + 'px'; g.style.top = b.top + 'px';
+    document.body.appendChild(g);
+    t.classList.add('is-src');
+    var row = t.closest('.orow');
+    sec.querySelectorAll('.t[data-o]').forEach(function (x) { if (x.closest('.orow') !== row) x.classList.add('drop-no'); });
+    drag = { sec: sec, st: st, t: t, g: g, dx: e.clientX - b.left, dy: e.clientY - b.top, row: row, over: null };
+  }
+  function moveDrag(e) {
+    drag.g.style.left = (e.clientX - drag.dx) + 'px';
+    drag.g.style.top = (e.clientY - drag.dy) + 'px';
+    var hit = document.elementFromPoint(e.clientX, e.clientY);
+    var over = hit && hit.closest('.t[data-o]');
+    if (over && (over === drag.t || over.closest('.orow') !== drag.row)) over = null;
+    if (over !== drag.over) {
+      if (drag.over) drag.over.classList.remove('drop-on');
+      if (over) over.classList.add('drop-on');
+      drag.over = over;
+    }
+  }
+  function endDrag() {
+    var d = drag; drag = null;
+    d.g.remove();
+    if (!d.over) { render(d.sec, d.st); return; }
+    var o = d.st[+d.t.dataset.o];
+    var pick = function (t) { return t.dataset.rc ? o.rc.filter(function (x) { return x.name === t.dataset.rc; })[0] : null; };
+    var from = pick(d.t), to = pick(d.over), fresh = false;
+    // One receipt — one payment — one date: the tile you drop ONTO decides (paid on its date, or not paid).
+    var date = to ? get(o, to.parts[0])[2] : get(o, d.over.dataset.s)[2];
+    var moving = from ? from.parts.slice() : [d.t.dataset.s];
+    if (from) o.rc.splice(o.rc.indexOf(from), 1);
+    if (!to) {
+      to = { name: uniq(o, 'Квитанция'), parts: [d.over.dataset.s] };
+      o.rc.push(to); fresh = true;
+    }
+    moving.forEach(function (p) { if (to.parts.indexOf(p) < 0) to.parts.push(p); });
+    to.parts.forEach(function (p) { get(o, p)[2] = date; });
+    // Parts keep the order of the services on the object.
+    var order = o.svc.map(function (c) { return c[0]; });
+    to.parts.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+    render(d.sec, d.st);
+    var el = d.sec.querySelector('.t[data-o="' + d.t.dataset.o + '"][data-rc="' + to.name + '"]');
+    if (el) el.classList.add('just');
+    if (fresh) openParts(d.sec, d.st, +d.t.dataset.o, to.name, true);
+  }
+  var press = null;
+  document.addEventListener('pointerdown', function (e) {
+    var sec = e.target.closest('.variant[data-variant=a]');
+    var t = e.target.closest('.t[data-o]');
+    if (!sec || !t || e.target.closest('[data-chk], .q, .nm .n') || e.button) return;
+    press = { sec: sec, t: t, x: e.clientX, y: e.clientY };
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (drag) { moveDrag(e); return; }
+    if (!press || Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6) return;
+    startDrag(press.sec, STATES.a, press.t, e); press = null; moveDrag(e);
+  });
+  document.addEventListener('pointerup', function () { press = null; if (drag) { endDrag(); suppress = true; setTimeout(function () { suppress = false; }); } });
+  var suppress = false;
+  document.addEventListener('click', function (e) { if (suppress) { e.stopPropagation(); e.preventDefault(); suppress = false; } }, true);
+
+  // The combine window
+  var ccur = null;
+  function fillCombine() {
+    var o = ccur.st[+wc.querySelector('[data-c-obj]').value];
+    wc.querySelector('[data-c-list]').innerHTML = '<span class="lbl">Какие услуги в ней</span>' + o.svc.map(function (c) {
+      var r = inRc(o, c[0]);
+      return '<label class="ck' + (r ? ' off' : '') + '"><input type="checkbox" value="' + esc(c[0]) + '"' + (r ? ' disabled' : '') + '><span>' + esc(c[0]) +
+        '</span><span class="sub">' + (r ? 'в «' + esc(r.name) + '»' : (c[1] == null ? '—' : fmt(c[1]))) + '</span></label>';
+    }).join('');
+    check();
+  }
+  function check() {
+    var n = wc.querySelectorAll('[data-c-list] input:checked').length;
+    wc.querySelector('[data-c-go]').disabled = n < 2 || !wc.querySelector('[data-c-name]').value.trim();
+  }
+  wc.addEventListener('change', function (e) { if (e.target.matches('[data-c-obj]')) fillCombine(); else check(); });
+  wc.addEventListener('input', check);
+  wc.addEventListener('click', function (e) {
+    if (e.target === wc || e.target.closest('[data-close]')) { wc.hidden = true; return; }
+    if (e.target.closest('[data-c-go]')) {
+      var o = ccur.st[+wc.querySelector('[data-c-obj]').value];
+      var parts = [].map.call(wc.querySelectorAll('[data-c-list] input:checked'), function (x) { return x.value; });
+      o.rc.push({ name: wc.querySelector('[data-c-name]').value.trim(), parts: parts });
+      render(ccur.sec, ccur.st); wc.hidden = true;
+    }
+  });
+
+  var STATES = {};
+  document.querySelectorAll('.variant').forEach(function (sec) {
+    var st = state();
+    STATES[sec.dataset.variant] = st;
+    render(sec, st);
+    sec.addEventListener('click', function (e) {
+      if (e.target.closest('[data-combine]')) {
+        ccur = { sec: sec, st: st };
+        wc.querySelector('[data-c-obj]').innerHTML = st.map(function (o, i) { return '<option value="' + i + '">' + esc(o.name) + '</option>'; }).join('');
+        wc.querySelector('[data-c-name]').value = '';
+        fillCombine(); wc.hidden = false; wc.querySelector('[data-c-name]').focus(); return;
+      }
+      var t = e.target.closest('[data-o]');
+      if (!t) return;
+      var o = st[+t.dataset.o];
+      if (e.target.closest('[data-parts]') && t.dataset.rc) { openParts(sec, st, +t.dataset.o, t.dataset.rc); return; }
+      if (!e.target.closest('[data-chk]')) return;
+      if (t.dataset.rc) {
+        var r = o.rc.filter(function (x) { return x.name === t.dataset.rc; })[0];
+        var all = r.parts.every(function (p) { return get(o, p)[2]; });
+        r.parts.forEach(function (p) { get(o, p)[2] = all ? '' : TODAY; });
+      } else { var c = get(o, t.dataset.s); c[2] = c[2] ? '' : TODAY; }
+      render(sec, st);
+    });
+  });
+  document.querySelector('.tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]'); if (!b) return;
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('on', t === b); });
+    document.querySelectorAll('.variant').forEach(function (s) { s.classList.toggle('on', s.dataset.variant === b.dataset.tab); });
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (!wp.hidden) closeParts(); wc.hidden = true; } });
+</script>
+</body>
+</html>

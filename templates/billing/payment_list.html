@@ -12,7 +12,7 @@
   </div>
 </div>
 
-<form data-pay-board data-month="{{ month }}" onsubmit="return false">
+<form data-pay-board data-month="{{ month }}" data-merge-url="{% url 'payment_merge' month %}" onsubmit="return false">
   {% csrf_token %}
   <div data-pay-body>{% include "billing/_payment_board.html" %}</div>
 </form>
@@ -28,6 +28,22 @@
       <button type="button" class="pay-note-clear" data-pay-note-clear>Удалить пометку</button>
       <button type="button" class="btn btn-ghost btn-auto btn-sm" data-pay-note-cancel>Отмена</button>
       <button type="button" class="btn btn-primary btn-auto btn-sm" data-pay-note-save>Сохранить</button>
+    </div>
+  </div>
+</div>
+
+{% comment %}The receipt window (2026-11-25): a tile dragged onto another makes a receipt and opens this — the name (selected,
+  type over it), the services with «×» to take one out, «Разъединить». app.js fills it from the tile.{% endcomment %}
+<div class="pay-note-back" data-pay-bundle-back hidden>
+  <div class="pay-note-win pay-bundle-win" role="dialog" aria-modal="true" aria-labelledby="pay-bundle-title">
+    <h2 id="pay-bundle-title" data-pay-bundle-title>Квитанция</h2>
+    <p class="pay-note-sub" data-pay-bundle-sub></p>
+    <label class="pay-bundle-label" for="pay-bundle-name">Название квитанции</label>
+    <input type="text" id="pay-bundle-name" class="pay-bundle-name" data-pay-bundle-name maxlength="36" autocomplete="off">
+    <div class="pay-bundle-list" data-pay-bundle-list></div>
+    <div class="pay-note-acts">
+      <button type="button" class="pay-note-clear" data-pay-bundle-split>Разъединить</button>
+      <button type="button" class="btn btn-primary btn-auto btn-sm" data-pay-bundle-done>Готово</button>
     </div>
   </div>
 </div>

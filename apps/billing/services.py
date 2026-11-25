@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
-from .models import FormulaValue, Meter, MonthlyAmount, Payment, Reading, Receipt, ReceiptTariff, ServiceTemplate
+from .models import FormulaValue, Meter, MonthlyAmount, PayBundle, Payment, Reading, Receipt, ReceiptTariff, ServiceTemplate
 
 # Sensible defaults for each ready-made receipt, so the lazy landlord mostly just confirms.
 _BY_OWN_METERS = {'metered': True, 'layout': Receipt.Layout.TENANTS, 'split': Receipt.Split.METERS}
@@ -711,7 +711,9 @@ def _inherited_notes(owner, month):
 
 def _month_tiles(owner, month):
     """Per object, per service NAME (same-name services of an object are one bill — the sums add up): the month's sum
-    from the object page, paid or not, the note. [{'property', 'tiles': [tile]}]."""
+    from the object page, paid or not, the note. Services paid with one receipt (`PayBundle`, 2026-11-25) are one
+    tile — a «folder»: the sum of its parts, one check, one date; it stands where its first part stands.
+    [{'property', 'tiles': [tile or folder]}]; a folder has `bundle` and `parts` (its tiles)."""
     from apps.properties.models import Property
 
     zero = Decimal('0.00')
@@ -724,7 +726,8 @@ def _month_tiles(owner, month):
         return inherited.get(pk, ('', False))
 
     rows = []
-    for property_obj in Property.objects.filter(owner=owner).order_by('name'):
+    for property_obj in Property.objects.filter(owner=owner).order_by('name').prefetch_related('pay_bundles'):
+        bundles = {bundle.pk: bundle for bundle in property_obj.pay_bundles.all()}
         groups = {}
         for entry in month_bill(property_obj, month).entries:
             groups.setdefault(entry.receipt.name, []).append(entry)
@@ -739,38 +742,62 @@ def _month_tiles(owner, month):
                 'name': name, 'key': entries[0].receipt.pk, 'kind': entries[0].receipt.kind, 'property': property_obj,
                 'amount': sum(sums, zero) if sums else None, 'partial': bool(sums) and len(sums) < len(entries),
                 'state': 'paid' if paid else ('due' if sums else 'empty'), 'paid_on': max(dates) if paid else None,
-                'note': note, 'carry': carry,
+                'note': note, 'carry': carry, 'bundle_id': entries[0].receipt.pay_bundle_id,
             })
         if tiles:
-            rows.append({'property': property_obj, 'tiles': tiles})
+            rows.append({'property': property_obj, 'tiles': _fold(tiles, bundles)})
     return rows
 
 
+def _fold(tiles, bundles):
+    """The tiles of an object with each receipt's parts folded into one tile where its first part stands. A receipt
+    left with one part (a service deleted) shows as that plain tile."""
+    zero = Decimal('0.00')
+    parts = {}
+    for tile in tiles:
+        if tile['bundle_id'] in bundles:
+            parts.setdefault(tile['bundle_id'], []).append(tile)
+    out, done = [], set()
+    for tile in tiles:
+        pk = tile['bundle_id']
+        if pk not in parts or len(parts[pk]) < 2:
+            out.append(tile)
+            continue
+        if pk in done:
+            continue
+        done.add(pk)
+        inner = parts[pk]
+        missing = sum(1 for part in inner if part['amount'] is None)
+        paid = all(part['state'] == 'paid' for part in inner)
+        note, carry = next(((part['note'], part['carry']) for part in inner if part['note']), ('', False))
+        out.append({
+            'bundle': bundles[pk], 'name': bundles[pk].name, 'parts': inner, 'property': tile['property'],
+            'key': bundles[pk].pk, 'amount': sum((part['amount'] or zero for part in inner), zero),
+            'missing': missing, 'partial': any(part['partial'] for part in inner),
+            'state': 'empty' if missing else ('paid' if paid else 'due'),
+            'paid_on': max(part['paid_on'] for part in inner) if paid else None, 'note': note, 'carry': carry,
+        })
+    return out
+
+
 def payment_table(owner, month):
-    """«Оплаты» (2026-11-17, variant А of the user): what the owner pays the providers this month — ONE table, objects
-    down, services across (a column per service name in the order they first appear; an object without the service has
-    a thin «—»). A sum comes from the month's input of the object page by itself and stands «не оплачено» until marked.
-    Over the table — last month's bills still not paid, marked right there."""
+    """«Оплаты» (2026-11-25, the user's «плашки»): what the owner pays the providers this month — objects down, each
+    with tiles of ITS services only (objects have different services: no columns, no empty «—»). A sum comes from the
+    month's input of the object page by itself and stands «не оплачено» until marked. A receipt of several services is
+    one tile (`_fold`). Over the list — last month's bills still not paid, marked right there."""
     from apps.properties.services import shift_month
 
     zero = Decimal('0.00')
     rows = _month_tiles(owner, month)
-    columns = []
-    for row in rows:
-        for tile in row['tiles']:
-            if tile['name'] not in columns:
-                columns.append(tile['name'])
     totals = {'due': zero, 'paid': zero, 'left': zero, 'unpaid': 0, 'empty': 0}
     for row in rows:
-        by_name = {tile['name']: tile for tile in row['tiles']}
-        row['cells'] = [by_name.get(name) for name in columns]
         row['due'] = row['paid'] = row['left'] = zero
-        for tile in row['cells']:
-            if tile is None:
-                continue
-            if tile['state'] == 'empty':
+        for tile in row['tiles']:
+            if tile['state'] == 'empty' and not tile.get('parts'):
                 totals['empty'] += 1
                 continue
+            if tile['state'] == 'empty':  # a receipt with a part not typed yet: the typed parts still count
+                totals['empty'] += tile['missing']
             row['due'] += tile['amount']
             if tile['state'] == 'paid':
                 row['paid'] += tile['amount']
@@ -782,7 +809,7 @@ def payment_table(owner, month):
     prev_month = shift_month(month, -1)
     prev = [tile for row in _month_tiles(owner, prev_month) for tile in row['tiles'] if tile['state'] == 'due']
     return {
-        'columns': columns, 'rows': rows, 'totals': totals,
+        'rows': rows, 'totals': totals,
         'prev': prev, 'prev_month': prev_month, 'prev_left': sum((tile['amount'] for tile in prev), zero),
     }
 
@@ -812,6 +839,87 @@ def save_payment_note(receipt, month, note, carry=False):
     for row in _payment_rows(receipt, month):
         row.note, row.note_carry = note, bool(note and carry)
         row.save()
+
+
+# ---------- «Оплаты»: receipts of several services — folders made by dragging (2026-11-25) ----------
+
+def save_bundle_payment(bundle, month, paid_on=None):
+    """The folder's check: every service of the receipt paid on one date, or none paid."""
+    for receipt in bundle.parts.all():
+        for row in _payment_rows(receipt, month):
+            row.paid_on = paid_on
+            row.save()
+
+
+def save_bundle_note(bundle, month, note, carry=False):
+    """The folder's «?»: the note goes on every service of it (each keeps it when taken out)."""
+    for receipt in bundle.parts.all():
+        save_payment_note(receipt, month, note, carry)
+
+
+def _bundle_name(property_obj, name, bundle=None):
+    """Two receipts of one object never share a name: «Квитанция», «Квитанция 2», …"""
+    name = (name or '').strip()[:36] or 'Квитанция'
+    taken = set(property_obj.pay_bundles.exclude(pk=getattr(bundle, 'pk', None)).values_list('name', flat=True))
+    found, number = name, 2
+    while found in taken:
+        found = f'{name} {number}'
+        number += 1
+    return found
+
+
+def _paid_on(receipts, month):
+    """The date all the receipts are paid on in a month; None — not all paid."""
+    dates = [Payment.objects.filter(receipt=receipt, month=month).values_list('paid_on', flat=True).first()
+             for receipt in receipts]
+    return max(dates) if dates and all(dates) else None
+
+
+@transaction.atomic
+def merge_tiles(property_obj, month, source, target):
+    """A tile dragged onto another tile of the same object — as apps into a folder on a phone. `source` / `target`:
+    a Receipt (a service, with its same-name twins) or a PayBundle (a receipt). Onto a service — a new receipt
+    «Квитанция»; onto a receipt — the source joins it (a dragged receipt pours its parts in). One receipt — one date:
+    the month's mark of the tile dropped ONTO goes to every part (2026-11-25, the user: «одна дата на все»).
+    Returns (bundle, made_now)."""
+    def receipts_of(item):
+        if isinstance(item, PayBundle):
+            return list(item.parts.all())
+        return list(property_obj.receipts.filter(name=item.name))
+
+    moving, landing = receipts_of(source), receipts_of(target)
+    if not moving or not landing or {r.pk for r in moving} & {r.pk for r in landing}:
+        raise ValueError('nothing to merge')
+    paid_on = _paid_on(landing, month)
+    if isinstance(source, PayBundle):
+        source.delete()  # first: its name is free for the new one
+    made = not isinstance(target, PayBundle)
+    bundle = PayBundle.objects.create(property=property_obj, name=_bundle_name(property_obj, '')) if made else target
+    for receipt in landing + moving:
+        receipt.pay_bundle = bundle
+        receipt.save(update_fields=['pay_bundle'])
+    save_bundle_payment(bundle, month, paid_on)
+    return bundle, made
+
+
+def rename_bundle(bundle, name):
+    bundle.name = _bundle_name(bundle.property, name, bundle)
+    bundle.save(update_fields=['name'])
+
+
+@transaction.atomic
+def take_out(bundle, receipt):
+    """«×» at a service in the receipt window: it is a tile of its own again (with its same-name twins). One service
+    left — the receipt is gone."""
+    bundle.parts.filter(name=receipt.name).update(pay_bundle=None)
+    if bundle.parts.values('name').distinct().count() < 2:
+        split_bundle(bundle)
+
+
+def split_bundle(bundle):
+    """«Разъединить»: every service a tile of its own again; the payment marks stay as they are."""
+    bundle.parts.update(pay_bundle=None)
+    bundle.delete()
 
 
 def reorder_receipts(property_obj, ids):

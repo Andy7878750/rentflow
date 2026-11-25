@@ -2031,22 +2031,150 @@
     var payBody = payBoard.querySelector('[data-pay-body]');
     var noteBack = document.querySelector('[data-pay-note-back]');
     var noteCell = null;
-    var postCell = function (cell, fields) {
+    // Every change posts and gets the board drawn anew; resolves with the response (its headers say more).
+    var postBoard = function (url, fields) {
       var body = new FormData();
       Object.keys(fields).forEach(function (key) { body.append(key, fields[key]); });
       body.append('view', payBoard.dataset.month);
-      return fetch(cell.dataset.url, {
+      return fetch(url, {
         method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken(payBoard) }
-      }).then(function (response) { return response.text(); }).then(function (html) {
-        // The board comes back drawn anew: keep the table where it was scrolled sideways, or it jumps to the start.
-        var wrap = payBody.querySelector('.pay-wrap');
-        var left = wrap ? wrap.scrollLeft : 0;
-        closeDate();
-        payBody.innerHTML = html;
-        wrap = payBody.querySelector('.pay-wrap');
-        if (wrap) wrap.scrollLeft = left;
+      }).then(function (response) {
+        if (!response.ok) throw new Error('payments: ' + response.status);
+        return response.text().then(function (html) {
+          closeDate();
+          payBody.innerHTML = html;
+          return response;
+        });
       });
     };
+    var postCell = function (cell, fields) { return postBoard(cell.dataset.url, fields); };
+    var tileByCode = function (code) { return payBody.querySelector('.pay-sq[data-code="' + code + '"]'); };
+
+    // The receipt window (2026-11-25): the name, its services with «×», «Разъединить».
+    var bundleBack = document.querySelector('[data-pay-bundle-back]');
+    var bundleCode = null, bundleName = '';
+    var fillBundle = function (tile) {
+      bundleBack.querySelector('[data-pay-bundle-title]').textContent = tile.dataset.title;
+      bundleBack.querySelector('[data-pay-bundle-sub]').textContent = tile.dataset.sub + ' · одна квитанция, один платёж';
+      var list = bundleBack.querySelector('[data-pay-bundle-list]');
+      list.innerHTML = tile.querySelector('[data-pay-parts]').innerHTML;
+      list.querySelectorAll('.pay-part').forEach(function (row) {
+        var out = document.createElement('button');
+        out.type = 'button'; out.className = 'pay-out'; out.textContent = '×';
+        out.title = 'Вынуть из квитанции'; out.setAttribute('data-pay-out', row.dataset.id);
+        row.appendChild(out);
+      });
+      var total = document.createElement('div');
+      total.className = 'pay-part is-total';
+      total.innerHTML = '<span class="fade">Квитанция</span><span class="pay-part-sum"></span>';
+      total.querySelector('.pay-part-sum').textContent = tile.querySelector('.pay-sum').textContent.trim();
+      list.appendChild(total);
+    };
+    var openBundle = function (tile, fresh) {
+      bundleCode = tile.dataset.code;
+      bundleName = tile.dataset.title;
+      fillBundle(tile);
+      var input = bundleBack.querySelector('[data-pay-bundle-name]');
+      input.value = bundleName;
+      bundleBack.hidden = false;
+      if (fresh) { input.focus(); input.select(); }
+    };
+    // Closing saves a changed name (Готово, Enter, Esc, a click outside — all the same: nothing is lost).
+    var closeBundle = function () {
+      if (bundleBack.hidden) return;
+      var tile = bundleCode && tileByCode(bundleCode);
+      var name = bundleBack.querySelector('[data-pay-bundle-name]').value.trim();
+      bundleBack.hidden = true;
+      bundleCode = null;
+      if (tile && name && name !== bundleName) postBoard(tile.dataset.bundleUrl, { name: name });
+    };
+    bundleBack.addEventListener('input', function (event) {
+      if (!event.target.matches('[data-pay-bundle-name]')) return;
+      bundleBack.querySelector('[data-pay-bundle-title]').textContent = event.target.value.trim() || 'Квитанция';
+    });
+    bundleBack.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); closeBundle(); }
+    });
+    bundleBack.addEventListener('click', function (event) {
+      if (event.target === bundleBack || event.target.closest('[data-pay-bundle-done]')) { closeBundle(); return; }
+      var tile = bundleCode && tileByCode(bundleCode);
+      if (!tile) return;
+      if (event.target.closest('[data-pay-bundle-split]')) {
+        bundleBack.hidden = true;
+        postBoard(tile.dataset.bundleUrl, { split: '1' });
+        return;
+      }
+      var out = event.target.closest('[data-pay-out]');
+      if (out) {
+        var code = bundleCode;
+        postBoard(tile.dataset.bundleUrl, { out: out.getAttribute('data-pay-out') }).then(function () {
+          var again = tileByCode(code);  // one service left — the receipt is gone, so is the window
+          if (again) fillBundle(again); else { bundleBack.hidden = true; bundleCode = null; }
+        });
+      }
+    });
+
+    // Drag a tile onto another tile of the same object — one receipt, as apps into a folder on a phone (2026-11-25).
+    // Other objects' tiles go pale: nothing to drop there. Dropped onto a service — a new receipt, its window opens.
+    var drag = null, press = null, dragged = false;
+    var dropOff = function () {
+      payBody.querySelectorAll('.is-drop, .is-off, .is-src').forEach(function (el) { el.classList.remove('is-drop', 'is-off', 'is-src'); });
+    };
+    payBoard.addEventListener('pointerdown', function (event) {
+      var tile = event.target.closest('.pay-sq[data-code]');
+      if (!tile || event.button || event.target.closest('[data-pay-toggle], [data-pay-note], input')) return;
+      press = { tile: tile, x: event.clientX, y: event.clientY };
+    });
+    document.addEventListener('pointermove', function (event) {
+      if (!drag) {
+        if (!press || Math.abs(event.clientX - press.x) + Math.abs(event.clientY - press.y) < 6) return;
+        var tile = press.tile, box = tile.getBoundingClientRect();
+        var ghost = tile.cloneNode(true);
+        ghost.classList.add('pay-ghost');
+        ghost.classList.remove('is-folder');
+        ghost.style.left = box.left + 'px';
+        ghost.style.top = box.top + 'px';
+        document.body.appendChild(ghost);
+        var row = tile.closest('[data-pay-row]');
+        tile.classList.add('is-src');
+        payBody.querySelectorAll('.pay-sq[data-code]').forEach(function (other) {
+          if (other.closest('[data-pay-row]') !== row) other.classList.add('is-off');
+        });
+        drag = { tile: tile, ghost: ghost, row: row, dx: press.x - box.left, dy: press.y - box.top, over: null };
+        press = null;
+      }
+      drag.ghost.style.left = (event.clientX - drag.dx) + 'px';
+      drag.ghost.style.top = (event.clientY - drag.dy) + 'px';
+      var hit = document.elementFromPoint(event.clientX, event.clientY);
+      var over = hit && hit.closest('.pay-sq[data-code]');
+      if (over && (over === drag.tile || over.closest('[data-pay-row]') !== drag.row)) over = null;
+      if (over !== drag.over) {
+        if (drag.over) drag.over.classList.remove('is-drop');
+        if (over) over.classList.add('is-drop');
+        drag.over = over;
+      }
+    });
+    document.addEventListener('pointerup', function () {
+      press = null;
+      if (!drag) return;
+      var done = drag;
+      drag = null;
+      dragged = true;
+      setTimeout(function () { dragged = false; });
+      done.ghost.remove();
+      if (!done.over) { dropOff(); return; }
+      postBoard(payBoard.dataset.mergeUrl, { src: done.tile.dataset.code, dst: done.over.dataset.code }).then(function (response) {
+        var made = response.headers.get('X-Pay-Bundle');
+        var tile = made ? tileByCode('b' + made) : null;
+        if (!tile) tile = done.over.dataset.code.charAt(0) === 'b' ? tileByCode(done.over.dataset.code) : null;
+        if (tile) tile.classList.add('is-just');
+        if (made && tile) openBundle(tile, true);
+      }).catch(dropOff);
+    });
+    // A drag ends with a click on the tile under it: not a click.
+    payBoard.addEventListener('click', function (event) {
+      if (dragged) { event.preventDefault(); event.stopPropagation(); }
+    }, true);
     payBoard.addEventListener('click', function (event) {
       var toggle = event.target.closest('[data-pay-toggle]');
       if (toggle) {
@@ -2054,6 +2182,8 @@
         postCell(cell, { paid: cell.classList.contains('is-paid') ? '0' : '1' });
         return;
       }
+      var open = event.target.closest('[data-pay-open]');
+      if (open) { openBundle(open.closest('[data-pay-tile]')); return; }
       var q = event.target.closest('[data-pay-note]');
       if (!q) return;
       noteCell = q.closest('[data-pay-tile]');
