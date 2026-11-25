@@ -1713,6 +1713,35 @@ def bill_pay(payer):
     return vat['pay'] if vat else payer.total
 
 
+def bill_snapshot(payer):
+    """The bill as it is given (2026-11-25): groups, lines with their rows under, VAT and «К оплате» — as text and
+    numbers in strings, kept in IssuedBill.lines; bill_view reads it back."""
+    vat = bill_vat(payer)
+    return {
+        'groups': [{'title': group['title'], 'lines': [
+            {'name': line.receipt.name, 'amount': str(line.amount), 'rows': bill_meter_rows(line) or [line.formula]}
+            for line in group['lines']]} for group in bill_groups(payer)],
+        'vat': {key: str(value) for key, value in vat.items()} if vat else None,
+        'pay': str(bill_pay(payer)),
+    }
+
+
+def bill_view(payer, issued=None):
+    """What the bill on the object page shows: the issued one as it went (when it was issued with its lines), else
+    the month counted now. {'groups': [{'title', 'lines': [{'name', 'amount', 'rows'}]}], 'vat', 'pay', 'issued'}."""
+    if issued is not None and issued.lines:
+        data = issued.lines
+        vat = data.get('vat')
+        if vat:
+            vat = {**vat, 'vat': Decimal(vat['vat']), 'net': Decimal(vat['net']), 'pay': Decimal(vat['pay'])}
+        return {'groups': [{'title': g['title'], 'lines': [{**line, 'amount': Decimal(line['amount'])} for line in g['lines']]}
+                           for g in data['groups']], 'vat': vat, 'pay': Decimal(data['pay']), 'issued': issued}
+    return {'groups': [{'title': g['title'], 'lines': [
+                {'name': line.receipt.name, 'amount': line.amount, 'rows': bill_meter_rows(line) or [line.formula]}
+                for line in g['lines']]} for g in bill_groups(payer)],
+            'vat': bill_vat(payer), 'pay': bill_pay(payer), 'issued': None}
+
+
 def next_bill_number(user):
     """The next bill number of the owner — one sequence for all the objects (2026-11-25)."""
     last = IssuedBill.objects.filter(property__owner=user).aggregate(models.Max('number'))['number__max']
@@ -1767,7 +1796,7 @@ def bill_text(payer, title, month_label):
     for group in bill_groups(payer):
         for line in group['lines']:
             rows.append(f'{line.receipt.name}: {fmt_number(line.amount, 2)} ₽')
-    rows += ['', f'Итого к оплате: {fmt_number(payer.total, 2)} ₽']
+    rows += ['', f'Итого к оплате: {fmt_number(bill_pay(payer), 2)} ₽']  # with VAT on top, if any
     return '\n'.join(rows)
 
 

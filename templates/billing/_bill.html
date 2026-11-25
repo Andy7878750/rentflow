@@ -4,7 +4,8 @@
   <div class="bill-head">
     <div class="bill-head-text">
       {% comment %}2026-11-25: a dot instead of the badge — green: all typed in, red: not (what — in its tooltip).{% endcomment %}
-      <span class="bill-cap">Счёт · {{ month_name }} {{ month_label|slice:"-4:" }}{% if payer.lines %}{% if bill.missing %}<span class="bill-dot is-missing" title="Не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"></span>{% else %}<span class="bill-dot" title="Всё введено — готов к счёту"></span>{% endif %}{% endif %}</span>
+      {% with issued=payer.view.issued %}
+      <span class="bill-cap">Счёт{% if issued %} № {{ issued.number }}{% endif %} · {{ month_name }} {{ month_label|slice:"-4:" }}{% if issued %}{% elif payer.lines %}{% if bill.missing %}<span class="bill-dot is-missing" title="Не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"></span>{% else %}<span class="bill-dot" title="Всё введено — готов к счёту"></span>{% endif %}{% endif %}</span>
       {% if bill.payers|length > 1 or bill.payers and owner_tab %}
         {% comment %}Whose bill (2026-11-25, variant В of 2026-11-25-whose-bill.html): no block of its own — the name opens the payers.{% endcomment %}
         <div class="bill-who" data-who>
@@ -13,7 +14,7 @@
           </button>
           <nav class="bill-who-menu" data-who-menu hidden aria-label="Чей счёт показать">
             {% for p in bill.payers %}
-              <a href="?month={{ month }}&tenant={{ p.tenant.pk }}" class="bill-tab{% if p.tenant.pk|stringformat:'s' == active %} is-active{% endif %}" data-payer="{{ p.tenant.pk }}" title="{{ p.tenant.name }}"><span class="fade">{{ p.tenant.name }}</span><span class="bill-tab-sum">{{ p.total|floatformat:"2g" }}&nbsp;₽</span></a>
+              <a href="?month={{ month }}&tenant={{ p.tenant.pk }}" class="bill-tab{% if p.tenant.pk|stringformat:'s' == active %} is-active{% endif %}" data-payer="{{ p.tenant.pk }}" title="{{ p.tenant.name }}"><span class="fade">{{ p.tenant.name }}</span><span class="bill-tab-sum">{{ p.view.pay|floatformat:"2g" }}&nbsp;₽</span></a>
             {% endfor %}
             {% if owner_tab %}
               <a href="?month={{ month }}&tenant=0" class="bill-tab{% if active == '0' %} is-active{% endif %}" data-payer="0"><span class="fade">Остаётся на вас</span><span class="bill-tab-sum">{{ bill.owner.total|floatformat:"2g" }}&nbsp;₽</span></a>
@@ -23,45 +24,50 @@
       {% else %}
         <h2 class="fade">{{ title }}</h2>
       {% endif %}
+      {% comment %}2026-11-25: an issued month shows the bill as it went; the count today differs — a quiet line.{% endcomment %}
+      {% if issued %}<p class="bill-issued">выставлен {{ issued.issued_on|date:"d.m.Y" }}{% if payer.changed %} · <span class="is-changed">изменился, сейчас {{ payer.now|floatformat:"2g" }}&nbsp;₽</span>{% endif %}</p>{% endif %}
+      {% endwith %}
     </div>
     {% if payer.tenant %}
       <a href="{% url 'bill_settings' payer.tenant.pk %}" data-modal class="bill-set"><svg class="icon"><use href="#i-settings"/></svg>Настроить счёт</a>
     {% endif %}
   </div>
-  {% if payer.lines %}
-    {% for group in payer|bill_groups %}
+  {% with view=payer.view %}
+  {% if view.groups %}
+    {% for group in view.groups %}
       <section class="bill-group">
         <header class="bill-group-head"><span>{{ group.title }}</span></header>
         {% for line in group.lines %}
           <div class="bill-line">
-            <span class="bill-name fade">{{ line.receipt.name }}</span>
+            <span class="bill-name fade">{{ line.name }}</span>
             <span class="bill-amount">{{ line.amount|floatformat:"2g" }}</span>
-            {% for row in line|meter_rows %}<span class="bill-source{% if not forloop.first %} is-reading{% endif %}">{{ row }}</span>{% empty %}<span class="bill-formula">{{ line.formula }}</span>{% endfor %}
+            {% for row in line.rows %}<span class="{% if line.rows|length > 1 %}bill-source{% if not forloop.first %} is-reading{% endif %}{% else %}bill-formula{% endif %}">{{ row }}</span>{% endfor %}
           </div>
         {% endfor %}
       </section>
     {% endfor %}
     <div class="bill-total">
-      {% bill_vat payer as vat %}
+      {% with vat=view.vat %}
       {% if vat.mode == 'top' %}
         <div class="bill-vat-row"><span>Без НДС</span><span>{{ vat.net|floatformat:"2g" }}&nbsp;₽</span></div>
         <div class="bill-vat-row"><span>НДС {{ vat.rate }}%</span><span>{{ vat.vat|floatformat:"2g" }}&nbsp;₽</span></div>
       {% endif %}
-      <div class="bill-total-row"><span>Итого к оплате</span><b>{% if vat %}{{ vat.pay|floatformat:"2g" }}{% else %}{{ payer.total|floatformat:"2g" }}{% endif %}&nbsp;₽</b></div>
+      <div class="bill-total-row"><span>Итого к оплате</span><b>{{ view.pay|floatformat:"2g" }}&nbsp;₽</b></div>
       {% if vat.mode == 'in' %}<div class="bill-vat-row"><span>в т. ч. НДС {{ vat.rate }}%</span><span>{{ vat.vat|floatformat:"2g" }}&nbsp;₽</span></div>{% endif %}
-      {% if bill.missing %}
+      {% endwith %}
+      {% if bill.missing and not view.issued %}
         <p class="bill-words">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %} — сумма неполная.</p>
       {% else %}
-        <p class="bill-words">{% if vat %}{{ vat.pay|money_words }}{% else %}{{ payer.total|money_words }}{% endif %}.</p>
+        <p class="bill-words">{{ view.pay|money_words }}.</p>
       {% endif %}
     </div>
     {% url 'bill_print' property.pk active|add:0 as pdf_url %}
     {% bill_share payer title month_label as share %}
     <div class="bill-acts" data-share data-pdf="{{ pdf_url }}?month={{ month }}" data-file="{{ share.file }}" data-text="{{ share.text }}">
-      <a class="btn btn-primary bill-pdf" href="{{ pdf_url }}?month={{ month }}" download="{{ share.file }}">
+      <a class="btn btn-primary bill-pdf" href="{{ pdf_url }}?month={{ month }}" download="{{ share.file }}" title="{% if payer.changed %}Скачать новый — счёт выставится заново{% elif view.issued %}Скачать — счёт выставится заново{% else %}Скачать — счёт выставится{% endif %}">
         <svg class="icon"><use href="#i-download"/></svg>PDF
       </a>
-      <a class="btn bill-view" href="{{ pdf_url }}?month={{ month }}&amp;inline=1" data-pdf-view data-title="Счёт · {{ title }} · {{ month_name }} {{ month_label|slice:'-4:' }}" target="_blank" rel="noopener">
+      <a class="btn bill-view" href="{{ pdf_url }}?month={{ month }}&amp;inline=1{% if view.issued %}&amp;issued=1{% endif %}" data-pdf-view data-title="Счёт · {{ title }} · {{ month_name }} {{ month_label|slice:'-4:' }}" target="_blank" rel="noopener">
         <svg class="icon"><use href="#i-eye"/></svg>Посмотреть
       </a>
       <button type="button" class="btn bill-share" data-share-open aria-haspopup="true" title="Поделиться" aria-label="Поделиться">
@@ -80,4 +86,5 @@
       <p class="bill-missing">Ещё не введено: {% for receipt in bill.missing %}{{ receipt.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
     {% endif %}
   {% endif %}
+  {% endwith %}
 </div>

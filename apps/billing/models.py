@@ -385,6 +385,8 @@ class IssuedBill(models.Model):
     issued_on = models.DateField()
     total = models.DecimalField(max_digits=12, decimal_places=2)  # «К оплате» as it was given (with VAT)
     pdf = models.BinaryField()
+    # the bill's lines as they went (services.bill_snapshot) — the object page shows them for an issued month
+    lines = models.JSONField(default=dict, blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['tenant', 'month'], name='one_bill_per_tenant_month')]

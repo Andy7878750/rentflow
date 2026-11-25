@@ -185,7 +185,7 @@ def _issue(request, property_obj, bill, payer, month):
     issued, _ = IssuedBill.objects.update_or_create(
         tenant=payer.tenant, month=month,
         defaults={'property': property_obj, 'number': number, 'issued_on': date.today(),
-                  'total': services.bill_pay(payer), 'pdf': data})
+                  'total': services.bill_pay(payer), 'pdf': data, 'lines': services.bill_snapshot(payer)})
     return issued
 
 

@@ -2251,3 +2251,6 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
   .bl-sum { grid-column: 2; grid-row: 1; }
   .bl-acts { grid-column: 2; grid-row: 2; }
 }
+/* An issued month (2026-11-25): «выставлен 01.12.2026» under the name; the count today differs — said quietly. */
+.bill-issued { margin: 2px 0 0; color: var(--color-text-muted); font-size: 12px; }
+.bill-issued .is-changed { color: #9a5b0b; }
