@@ -437,11 +437,11 @@
         var who = m.who === 'common' ? 'общий · ' + SPLITS.filter(function (x) { return x[0] === m.split; })[0][1] : m.who === 'owner' ? 'платите вы' : tname(m.who);
         var parts = m.dn ? ['день', 'ночь'] : [''];
         return parts.map(function (p, j) {
-          return '<div class="sv-pr">' + (mixed && j === 0 ? meterIcon(m.kind) : '<span></span>') + '<span class="sv-pr-nm">' +
+          return '<div class="sv-pr' + (j ? ' is-night' : '') + '">' + (mixed && j === 0 ? meterIcon(m.kind) : '<span></span>') + '<span class="sv-pr-nm">' +
             (j === 0 ? '<span class="fade">№ ' + esc(m.serial || '—') + (p ? ' <em>' + p + '</em>' : '') + '</span><small class="fade">' + esc(who) + '</small>' : '<em>' + p + '</em>') +
             '</span><span class="sv-pr-v">…</span>' +
-            // «Расход» (2026-11-24): as on the object page — the month's usage is typed, a green «+» in the field
-            (m.input === 'usage' ? '<span class="sv-pr-in is-add" data-zone="+' + (p ? ' ' + p.charAt(0) : '') + '"></span>' : '<span class="sv-pr-in"></span>') +
+            // As on the object page (2026-11-26): «расход» on the border of a «Расход» field; «день» / «ночь» grey inside
+            '<span class="sv-pr-in' + (m.input === 'usage' ? ' is-add' : '') + '"' + (p ? ' data-zone="' + p + '"' : '') + '></span>' +
             '<span class="sv-pr-use"><span>— ' + esc(m.unit) + '</span></span></div>';
         }).join('');
       }).join('');

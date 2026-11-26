@@ -2478,7 +2478,7 @@
     monthForm.addEventListener('pointerup', dropRow);
     monthForm.addEventListener('pointercancel', dropRow);
 
-    // «н×0,6» in a night field of «По расходу»: a small window «Ночь дешевле дня» — type the weight, «Сохранить»
+    // «ночь ×0,6» in a night field of «По расходу»: a small window «Ночь дешевле дня» — type the weight, «Сохранить»
     // stores it on the service and the bills recount (2026-11-16).
     var nwCard = null;
     function closeNightWeight() { if (nwCard) nwCard.remove(); nwCard = null; }
@@ -2528,6 +2528,7 @@
             monthForm.querySelectorAll('[data-night-weight="' + btn.dataset.nightWeight + '"]').forEach(function (other) {
               other.textContent = result.data.label;
               other.dataset.value = result.data.value;
+              other.parentNode.classList.toggle('is-weighted', !!result.data.value);
             });
             closeNightWeight();
             monthForm.dispatchEvent(new Event('input'));

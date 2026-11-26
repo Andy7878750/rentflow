@@ -382,9 +382,9 @@ def receipt_night_weight(request, pk):
         return JsonResponse({'error': 'Введите число больше нуля — например, 0,6.'}, status=400)
     receipt.night_weight = None if weight is None or weight == 1 else weight
     receipt.save(update_fields=['night_weight'])
-    shown = services.fmt_number(receipt.night_weight) if receipt.night_weight is not None else '1'
+    shown = services.fmt_number(receipt.night_weight) if receipt.night_weight is not None else ''
     return JsonResponse({'value': services.fmt_number(receipt.night_weight) if receipt.night_weight is not None else '',
-                         'label': f'н×{shown}'})
+                         'label': 'ночь' if receipt.night_weight is None else f'ночь ×{shown}'})
 
 
 @login_required

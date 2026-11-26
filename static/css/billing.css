@@ -1109,30 +1109,32 @@
   pointer-events: none;
 }
 
-.mread-in[data-zone] .num-input { padding-left: 20px; }
+.mread .mread-in[data-zone] .num-input,
+.mi .mread-in[data-zone] .num-input { padding-left: 40px; }
 
-/* «По расходу»: the night field says how much a night kWh weighs — «н × 0,6» right inside it (2026-11-16). */
-.mread-in.has-weight .num-input { padding-left: 40px; padding-right: 8px; font-size: 14px; }
+/* «По расходу»: the night field — «ночь» grey inside, like «день» (2026-11-26); a lighter night — «ночь ×0,6». It is a button:
+   a click opens the small window «Ночь дешевле дня» (app.js, nightWeight). */
+.mread .mread-in.has-weight .num-input,
+.mi .mread-in.has-weight .num-input { padding-left: 40px; }
+.mread .mread-in.has-weight.is-weighted .num-input,
+.mi .mread-in.has-weight.is-weighted .num-input { padding-left: 66px; }
 
-/* «н×0,6» — a button inside the night field: a click opens the small window «Ночь дешевле дня» (app.js, nightWeight). */
 .nw-btn {
   position: absolute;
   top: 50%;
-  left: 4px;
+  left: 8px;
   z-index: 1;
   transform: translateY(-50%);
-  padding: 2px 4px;
+  padding: 0;
   border: 0;
-  border-radius: 5px;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
+  background: none;
+  color: var(--color-text-muted);
   font: inherit;
-  font-size: 10.5px;
-  font-weight: 600;
+  font-size: 11px;
   cursor: pointer;
 }
 
-.nw-btn:hover { background: var(--color-accent); color: #fff; }
+.nw-btn:hover { color: var(--color-accent); text-decoration: underline; }
 
 .nw-card {
   position: fixed;
@@ -2040,9 +2042,7 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 
 /* Object page, a «Расход» meter (2026-11-23): «Было» is what the meter shows (last «стало» + the usages typed since),
    the field adds to it — a small accent «+» inside, nothing else changes in the row. */
-.mread-in.is-add::before { color: var(--color-accent); font-size: 13px; font-weight: 600; }
-.mread-in.is-add .num-input { padding-left: 22px; }
-.mread-in.is-add[data-zone*=" "] .num-input { padding-left: 30px; }
+/* «день» / «ночь» — grey inside the field, like a hint (2026-11-26); no «+» in a «Расход» field — «расход» is on its border. */
 /* «расход» on the field's top border (2026-11-25, the user's sketch): the «+» alone wasn't always clear. Drawn over the
    border, so nothing moves; the upper half white (the row), the lower — the field's own colour (warm while empty). */
 .mread-in.is-add::after,
@@ -2254,3 +2254,7 @@ body.is-dragging .morder-row:not(.is-moving) { pointer-events: none; }
 /* An issued month (2026-11-25): «выставлен 01.12.2026» under the name; the count today differs — said quietly. */
 .bill-issued { margin: 2px 0 0; color: var(--color-text-muted); font-size: 12px; }
 .bill-issued .is-changed { color: #9a5b0b; }
+
+/* Day / night pair of a «Расход» meter (2026-11-26): «расход» only on the first field — one label for the pair. */
+.mread-in.is-add + .mread-in.is-add::after,
+.sv-pr.is-night .sv-pr-in.is-add::after { display: none; }
