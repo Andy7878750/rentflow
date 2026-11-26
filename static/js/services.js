@@ -440,8 +440,8 @@
           return '<div class="sv-pr' + (j ? ' is-night' : '') + '">' + (mixed && j === 0 ? meterIcon(m.kind) : '<span></span>') + '<span class="sv-pr-nm">' +
             (j === 0 ? '<span class="fade">№ ' + esc(m.serial || '—') + (p ? ' <em>' + p + '</em>' : '') + '</span><small class="fade">' + esc(who) + '</small>' : '<em>' + p + '</em>') +
             '</span><span class="sv-pr-v">…</span>' +
-            // As on the object page (2026-11-26): «расход» on the border of a «Расход» field; «день» / «ночь» grey inside
-            '<span class="sv-pr-in' + (m.input === 'usage' ? ' is-add' : '') + '"' + (p ? ' data-zone="' + p + '"' : '') + '></span>' +
+            // As on the object page (2026-11-26): «расход» on the border of a «Расход» field; «д» / «н» grey on the right
+            '<span class="sv-pr-in' + (m.input === 'usage' ? ' is-add' : '') + '"' + (p ? ' data-zone="' + p.charAt(0) + '"' : '') + '></span>' +
             '<span class="sv-pr-use"><span>— ' + esc(m.unit) + '</span></span></div>';
         }).join('');
       }).join('');

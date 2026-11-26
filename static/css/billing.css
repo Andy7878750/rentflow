@@ -1098,43 +1098,31 @@
 
 .mread .mread-in .num-input { width: 100%; max-width: none; }
 
-.mread-in[data-zone]::before {
-  content: attr(data-zone);
-  position: absolute;
-  top: 50%;
-  left: 8px;
-  transform: translateY(-50%);
-  color: var(--color-text-muted);
-  font-size: 11px;
-  pointer-events: none;
-}
+/* «д» / «н» (2026-11-26): the placeholder of a day / night field — grey on the right, gone as you type. */
+.mread .mread-in .num-input::placeholder { color: var(--color-text-muted); font-size: 12px; }
 
-.mread .mread-in[data-zone] .num-input,
-.mi .mread-in[data-zone] .num-input { padding-left: 40px; }
+/* «По расходу»: the night field says how much a night kWh weighs — «н × 0,6» right inside it (2026-11-16). */
+.mread-in.has-weight .num-input { padding-left: 40px; padding-right: 8px; font-size: 14px; }
 
-/* «По расходу»: the night field — «ночь» grey inside, like «день» (2026-11-26); a lighter night — «ночь ×0,6». It is a button:
-   a click opens the small window «Ночь дешевле дня» (app.js, nightWeight). */
-.mread .mread-in.has-weight .num-input,
-.mi .mread-in.has-weight .num-input { padding-left: 40px; }
-.mread .mread-in.has-weight.is-weighted .num-input,
-.mi .mread-in.has-weight.is-weighted .num-input { padding-left: 66px; }
-
+/* «н×0,6» — a button inside the night field: a click opens the small window «Ночь дешевле дня» (app.js, nightWeight). */
 .nw-btn {
   position: absolute;
   top: 50%;
-  left: 8px;
+  left: 4px;
   z-index: 1;
   transform: translateY(-50%);
-  padding: 0;
+  padding: 2px 4px;
   border: 0;
-  background: none;
-  color: var(--color-text-muted);
+  border-radius: 5px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
   font: inherit;
-  font-size: 11px;
+  font-size: 10.5px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.nw-btn:hover { color: var(--color-accent); text-decoration: underline; }
+.nw-btn:hover { background: var(--color-accent); color: #fff; }
 
 .nw-card {
   position: fixed;
