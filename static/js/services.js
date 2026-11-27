@@ -357,17 +357,25 @@
     function meterTiles(s) {
       var ids = allMeterIds();
       if (!ids.length) return '';
-      return '<div class="sv-ml">' + ids.map(function (id) {
+      var short = shortNames();
+      // Each meter drawn as a real meter (2026-11-27, вариант В, meterdial.js) — as in the object window.
+      return '<div class="sv-ml md-grid">' + ids.map(function (id) {
         var m = byId(S.meters, id), g = groupOf(m.group), on = s.meters.indexOf(id) >= 0;
         var svc = takenBy(m) && byId(S.services, takenBy(m));
         var other = !on && !svc && s.meters.length && m.group !== s.group;
         // A meter of another service — not active at all (2026-11-25, the user: clicking it opened that service and
         // confused): services are switched only from the menu on the left.
         var attr = svc || other ? ' disabled' : ' data-mtile="' + id + '" aria-pressed="' + on + '"';
-        return '<button type="button" class="sv-mli' + (on ? ' is-on' : '') + (svc ? ' is-busy' : '') + (other ? ' is-other' : '') + '"' + attr + '>' +
-          meterIcon(m.kind) + '<span class="sv-mli-t"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mli-no fade">№ ' + esc(m.serial || '—') + '</span>' +
-          whoBadge(m) + '</span>' +
-          (svc ? '<span class="sv-mli-svc"><span>в услуге</span><span class="fade">«' + esc(svc.name) + '»</span></span>' : '<span class="sv-mli-ck">' + svg(CP_ICON.check) + '</span>') + '</button>';
+        var tenant = /^[0-9]+$/.test(String(m.who));
+        var full = m.who === '' || m.who == null ? 'Не выбрано' : m.who === 'common' ? 'Общий' : m.who === 'owner' ? 'Платите вы' : tname(m.who);
+        return window.rentflowDial.tile({
+          kind: m.kind, name: g ? g.name : m.name, serial: m.serial, tariff: m.tariff, dial: m.dial,
+          who: { text: tenant ? short[m.who] || full : full, cls: tenant ? 'is-tenant' : (m.who === '' || m.who == null ? 'is-free' : ''), title: full },
+          cls: (on ? 'is-on' : '') + (svc ? ' is-busy' : '') + (other ? ' is-other' : ''), attrs: ' type="button"' + attr,
+          title: (g ? g.name : m.name) + ' № ' + (m.serial || '—') + (m.tariff ? ' · ' + m.tariff : '') + ' · ' + full,
+          corner: svc ? '<span class="md-busy">в услуге <span class="fade">«' + esc(svc.name) + '»</span></span>'
+            : '<span class="md-corner"><span class="sv-mli-ck">' + svg(CP_ICON.check) + '</span></span>'
+        }, 'button');
       }).join('') + '</div>';
     }
     // The «Кто платит» menu: the tenants | «Общий — делим» (✎ — the window «Делим») · «Платите вы».

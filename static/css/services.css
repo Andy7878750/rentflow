@@ -347,3 +347,16 @@
 .sv-mli { height: 76px; }
 .sv-mli > .sv-mkind { align-self: flex-start; margin-top: 10px; }
 .sv-mli-who { align-self: flex-start; margin-top: 4px; padding: 0 8px; line-height: 18px; }
+
+/* «Выберите счётчики» — each meter drawn as a real meter (2026-11-27, вариант В, meterdial.js; forms.css .md-*) */
+.sv-ml.md-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
+.md-tile .md-corner .sv-mli-ck { margin: 6px; }
+.md-tile.is-on { border-color: var(--color-accent); }
+.md-tile.is-on .sv-mli-ck { background: var(--color-accent); border-color: var(--color-accent); }
+.svcwin .md-tile.is-on .sv-mli-ck .sv-i { visibility: visible; }
+.md-tile.is-busy, .md-tile.is-other, .md-tile.is-busy:hover, .md-tile.is-other:hover { border-color: var(--color-border); background: #fafbfc; cursor: default; }
+.md-tile.is-busy .md-body, .md-tile.is-busy .md-ears, .md-tile.is-other .md-body, .md-tile.is-other .md-ears { opacity: .45; }
+.md-tile.is-busy .md-body { filter: grayscale(1); }
+.md-busy { position: absolute; left: 6px; right: 6px; bottom: 3px; display: flex; justify-content: center; gap: 4px; min-width: 0;
+  font-size: 10px; color: var(--color-text-muted); white-space: nowrap; }
+.md-busy .fade { min-width: 0; overflow: hidden; }

@@ -4,6 +4,7 @@
 .fx-overlay {
   --fx-text: var(--color-text); --fx-muted: var(--color-text-muted); --fx-border: var(--color-border);
   --fx-accent: var(--color-accent); --fx-accent-soft: var(--color-accent-soft); --fx-danger: var(--color-danger);
+  --fx-sign-bg: #eef1f4; --fx-sign-hover: #e1e6ea;
   --fx-info-bg: #e3f1f6; --fx-info: #1f6280; --fx-tile: #f4f6f8;
   position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center;
   padding: 24px 16px; background: rgba(30, 40, 50, .45); overflow-y: auto; color: var(--fx-text);
@@ -13,11 +14,12 @@
 .fx-preview {
   --fx-text: var(--color-text); --fx-muted: var(--color-text-muted); --fx-border: var(--color-border);
   --fx-accent: var(--color-accent); --fx-accent-soft: var(--color-accent-soft); --fx-danger: var(--color-danger);
+  --fx-sign-bg: #eef1f4; --fx-sign-hover: #e1e6ea;
   --fx-info-bg: #e3f1f6; --fx-info: #1f6280; --fx-tile: #f4f6f8;
 }
 .fx-strip.is-static { flex: 1; min-width: 0; min-height: 0; padding: 0; border: 0; background: none; cursor: pointer; }
 .fx-strip.is-static .fx-chip { cursor: pointer; background: #fff; }
-.fx-strip.is-static .fx-chip.k-op { background: var(--fx-accent-soft); }
+.fx-strip.is-static .fx-chip.k-op { background: var(--fx-sign-bg); }
 .sv-sec.fx-preview h3 .fx-badge { margin-left: 0; }
 .fx-modal { box-sizing: border-box; width: 100%; max-width: 940px;  /* a bit bigger (2026-11-23), was 820 */ display: flex; flex-direction: column; gap: 14px;
   padding: 22px 24px; border-radius: 16px; background: var(--color-surface); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
@@ -64,9 +66,12 @@
 .fx-chip.k-month { --c: #b07d2b; }
 .fx-chip.k-const { --c: var(--fx-accent); }
 .fx-chip.k-op { justify-content: center; min-width: 30px; padding: 0 8px; font-weight: 700; }
-/* Signs stand out (2026-11-22): a pale accent fill and the sign in the accent colour — in the palette and in the line */
-.fx-chip.k-op { border-color: #bfe3da; background: var(--fx-accent-soft); color: var(--fx-accent); font-size: 16px; }
-.fx-chip.k-op:hover { border-color: var(--fx-accent); }
+/* Signs — grey squares with a dark sign drawn with lines, the same in the palette, the line and the menu (2026-11-27, вариант Е) */
+.fx-chip.k-op { border-color: var(--fx-sign-bg); background: var(--fx-sign-bg); color: var(--fx-text); font-size: 16px; }
+.fx-chip.k-op:hover { border-color: var(--fx-sign-hover); background: var(--fx-sign-hover); }
+.fx-chip .fx-sign { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.fx-chip .fx-sign circle { fill: currentColor; stroke: none; }
+.fx-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 /* a meter's kind colour (3 classes: stronger than «.fx-chip.k-meter» below — hot water was blue, 2026-11-23) */
 .fx-chip.k-meter.mk-electricity { --c: #0e9aa7; } .fx-chip.k-meter.mk-water { --c: #2e86c1; } .fx-chip.k-meter.mk-hot_water { --c: #c0392b; }
 .fx-chip.k-meter.mk-heating { --c: #e67e22; } .fx-chip.k-meter.mk-gas { --c: #5b6bc0; } .fx-chip.k-meter.mk-custom { --c: #6b7680; }
@@ -122,6 +127,44 @@
 .fx-clear:hover { color: #6b4b00; }
 .fx-under { margin-top: -8px; }
 .fx-trash-hint { margin: 0; font-size: 12px; color: var(--fx-muted); }
+
+/* Round meters in the line (2026-11-27, formula.js ROUND_METERS; макет 2026-11-27-meter-dial.html): a meter 70×70 (80 → 70, 2026-11-27) —
+   the kind's colour on the rim, inside КИНД / № / чей / единица (bold); electricity — a square meter. Every other block
+   and the brackets are as tall, so a line reads evenly; signs stay small. */
+.fx-round { align-items: center; }
+.fx-round .fx-chip.is-fx { height: 70px; }
+.fx-round .fx-chip.is-paren, .fx-round .fx-ghost.is-paren { height: 70px; }
+.fx-strip .fx-chip.is-dial { flex: none; flex-direction: column; justify-content: center; gap: 0; width: 70px; height: 70px; padding: 0 2px;
+  border: 3px solid var(--c); border-radius: 50%; background: #fff; line-height: 1.2; text-align: center; }
+.fx-strip .fx-chip.is-dial.mk-electricity { border-radius: 12px; }
+.fx-strip .fx-chip.is-dial:hover { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 18%, transparent); }
+.fx-chip.is-dial > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-chip.is-dial .fx-dk { font-size: 12px; font-weight: 700; color: var(--c); }
+.fx-chip.is-dial .fx-dn { font-size: 9.5px; letter-spacing: -.1px; color: var(--fx-text); }
+.fx-chip.is-dial .fx-dw { font-size: 9.5px; color: var(--fx-muted); }
+.fx-chip.is-dial .fx-du { font-size: 9.5px; font-weight: 700; color: var(--fx-text); }
+.fx-chip.is-dial .fx-dn:empty { display: none; }
+/* Numbers — white cards 70px tall with a honey stripe on the left (what you type in), signs — circles with an accent rim,
+   brackets — drawn arcs (2026-11-27, макет 2026-11-27-formula-style.html, вариант В) */
+.fx-strip .fx-chip.is-card { flex: none; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; width: 88px; height: 70px; padding: 0 10px 0 13px; border-radius: 12px; background: #fff; line-height: 1.2;
+  box-shadow: inset 4px 0 0 var(--color-honey); }
+.fx-strip .fx-chip.is-card.is-month { box-shadow: inset 4px 0 0 #f8d98f; }
+.fx-chip.is-card > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-chip.is-card .fx-cn { font-size: 10px; font-weight: 700; letter-spacing: .03em; color: var(--color-honey-text); }
+.fx-chip.is-card .fx-cv { font-size: 14px; font-weight: 700; color: var(--fx-text); }
+.fx-chip.is-card.is-month .fx-cv { font-size: 11px; font-weight: 400; color: var(--fx-muted); }
+.fx-chip.is-card .fx-cu { font-size: 9.5px; font-weight: 700; color: var(--fx-text); }
+.fx-chip.is-card .fx-cu:empty { display: none; }
+.fx-strip.fx-round .fx-chip.k-op { width: 28px; min-width: 28px; height: 28px; padding: 0; border-radius: 8px; }
+.fx-strip.fx-round .fx-chip.k-op .fx-sign { width: 15px; height: 15px; }
+.fx-strip.fx-round .fx-chip.is-paren .fx-sign { display: none; }
+.fx-strip.fx-round .fx-chip.k-op.is-paren { width: 14px; min-width: 14px; height: 70px; border: 0; border-radius: 0; background: none;
+  font-size: 0; }
+.fx-strip.fx-round .fx-chip.is-paren::before { content: ''; box-sizing: border-box; width: 10px; height: 64px; border: 2px solid var(--fx-text); }
+.fx-strip.fx-round .fx-chip.is-open::before { border-right: 0; border-radius: 10px 0 0 10px / 32px 0 0 32px; }
+.fx-strip.fx-round .fx-chip.is-close::before { border-left: 0; border-radius: 0 10px 10px 0 / 0 32px 32px 0; }
+.fx-strip.fx-round .fx-chip.k-op.is-paren:hover { box-shadow: none; }
+.fx-strip.fx-round .fx-chip.k-op.is-paren:hover::before { border-color: var(--fx-muted); }
 
 /* «Как посчитается» */
 .fx-check-box { min-height: 150px; padding-top: 12px; border-top: 1px solid var(--fx-border); }
@@ -197,6 +240,9 @@
 .fx-chip.is-off { opacity: .55; border-style: dashed; cursor: help; }
 /* A block's small window (v2): the ready ones on top, a new one below */
 .fx-pop.is-wide { width: 560px; }
+/* «Расход счётчиков»: the note's place is kept — ticking a meter doesn't make the window taller and push the buttons off screen */
+.fx-pop.is-wide .fx-example:empty { display: block; visibility: hidden; }
+.fx-pop.is-wide .fx-mlist { max-height: min(320px, calc(100vh - 230px)); }
 .fx-pop .fx-or { margin: 4px 0 6px; }
 /* «Сколько» · «За» — two fields 50/50 (variant Г, 2026-11-23): the number with its unit; «1 м³ ▾» (no «1» for «—») */
 .fx-pop .fx-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
@@ -276,7 +322,7 @@
 @keyframes fx-pulse-warn { 0%, 100% { box-shadow: 0 0 0 0 rgba(230, 126, 34, .35); } 50% { box-shadow: 0 0 0 5px rgba(230, 126, 34, 0); } }
 /* Its menu — the six signs as the palette's «Знаки», 3 × 2 */
 .fx-umenu.fx-signmenu { display: grid; grid-template-columns: repeat(3, 44px); gap: 6px; padding: 8px; }
-.fx-signmenu .fx-chip.k-op { --fx-accent: var(--color-accent); --fx-accent-soft: var(--color-accent-soft); justify-content: center; width: 44px;
+.fx-signmenu .fx-chip.k-op { justify-content: center; width: 44px;
   height: 34px; padding: 0; cursor: pointer; }
 @keyframes fx-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(20, 143, 119, .35); } 50% { box-shadow: 0 0 0 5px rgba(20, 143, 119, 0); } }
 @media (prefers-reduced-motion: reduce) { .fx-ghost { animation: none; } }

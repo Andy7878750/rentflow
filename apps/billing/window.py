@@ -112,6 +112,7 @@ def window_state(property_obj, selected=None, today=None):
             'unit': services.meter_unit(meter), 'dn': meter.day_night,
             'tariff': _meter_tariff_text(meter, today),
             'last': _meter_last_text(meter),
+            'dial': meter.dial,  # «478.2» / «12451.6|4120.3» — the drum of the tile (2026-11-27)
             'who': meter.tenant_id or ('owner' if meter.vacant else 'common'),
             'split': meter.split or Receipt.Split.SHARES,
             'excluded': [tenant.pk for tenant in meter.excluded.all()],

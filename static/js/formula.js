@@ -19,33 +19,48 @@
   // A meter without readings (2026-11-24): each meter its own sample usage, by its place among the object's meters —
   // «5 м³ + 5 м³» everywhere looked fake.
   var METER_SAMPLES = { 'м³': [3, 2, 5, 4], 'кВт·ч': [270, 180, 320, 240], 'Гкал': [0.42, 0.31, 0.55, 0.38] };
-  var SHORT = { electricity: 'э/э', water: 'ХВС', hot_water: 'ГВС' };
+  var SHORT = { electricity: 'Э/Э', water: 'ХВС', hot_water: 'ГВС', gas: 'ГАЗ' };
+  // A meter in the line — a round meter 80px (2026-11-27, макет 2026-11-27-meter-dial.html; electricity — a square one):
+  // КИНД / № / чей / единица. false — back to the 140×44 blocks (the same CSS stays, under .fx-strip without .fx-round).
+  var ROUND_METERS = true;
   // Short words of the trade for the blocks of the line (2026-11-27, the user's list; more will come): any form of the
-  // word — «горячую воду», «Вода горячая» → ГВС. Tariffs and norms: «Тариф ГВС», «Норм. ВО».
+  // word — «горячую воду», «Вода горячая» → ГВС. Tariffs and norms (2026-11-27): «Тар. ГВС», «Нор. ВО», «Коэф.», «Абон.».
   var ABBR = [
     [/горяч\S*\s+вод\S*|вод\S*\s+горяч\S*/gi, 'ГВС'],
     [/холодн\S*\s+вод\S*|вод\S*\s+холодн\S*/gi, 'ХВС'],
     [/водоотведени\S*/gi, 'ВО'],
-    [/электр(ичеств|оэнерги|оснабжени)\S*/gi, 'э/э'],
+    [/электр(ичеств|оэнерги|оснабжени)\S*/gi, 'Э/Э'],
     [/коммунальн\S*\s+услуг\S*/gi, 'КУ'],
-    [/теплов\S*\s+энерги\S*/gi, 'т/э'],
+    [/теплов\S*\s+энерги\S*/gi, 'Т/Э'],
     [/общедомов\S*\s+нужд\S*/gi, 'ОДН'],
     [/обращени\S*\s+с\s+(твёрдыми\s+|твердыми\s+)?(коммунальными\s+)?отход\S*|вывоз\S*\s+мусор\S*/gi, 'ТКО'],
     [/капитальн\S*\s+ремонт\S*/gi, 'КР'],
     [/индивидуальн\S*\s+прибор\S*\s+уч[её]т\S*/gi, 'ИПУ'],
-    [/лицев\S*\s+сч[её]т\S*/gi, 'л/с'],
+    [/лицев\S*\s+сч[её]т\S*/gi, 'Л/С'],
     [/управляющ\S*\s+компани\S*/gi, 'УК'],
-    [/газоснабжени\S*/gi, 'газ'],
-    [/норматив\S*/gi, 'норм.'],
+    [/газоснабжени\S*/gi, 'ГАЗ'],
+    [/тариф\S*/gi, 'тар.'],
+    [/норматив\S*/gi, 'нор.'],
+    [/абон(ентск\S*\s+плат|плат)\S*/gi, 'абон.'],
     [/коэффициент\S*/gi, 'коэф.'],
   ];
   function short(text) {
     var out = String(text || '');
     ABBR.forEach(function (a) { out = out.replace(a[0], a[1]); });
     out = out.replace(/\s+/g, ' ').trim()
-      .replace(/^(тариф|норм\.)\s+(на|за|по)\s+/i, '$1 ')          // «Тариф на ГВС» → «Тариф ГВС»
-      .replace(/^(норм|коэф)\./, function (s) { return s.charAt(0).toUpperCase() + s.slice(1); });
+      .replace(/^(тар\.|нор\.)\s+(на|за|по)\s+/i, '$1 ')          // «Тариф на ГВС» → «Тар. ГВС»
+      .replace(/^(тар|нор|коэф|абон)\./, function (s) { return s.charAt(0).toUpperCase() + s.slice(1); });
     return out;
+  }
+  // A sign — drawn with lines, not a letter of the font: always in the middle, one weight; grey squares everywhere —
+  // the palette, the line, the sign menu (2026-11-27, макет 2026-11-27-formula-signs.html, вариант Е)
+  var SIGN_PATHS = {
+    '+': '<path d="M12 5v14M5 12h14"/>', '−': '<path d="M5 12h14"/>', '×': '<path d="M7 7l10 10M17 7L7 17"/>',
+    '÷': '<path d="M5 12h14"/><circle cx="12" cy="6" r="1.8"/><circle cx="12" cy="18" r="1.8"/>',
+    '(': '<path d="M15 3c-5 5-5 13 0 18"/>', ')': '<path d="M9 3c5 5 5 13 0 18"/>'
+  };
+  function signHtml(s) {
+    return SIGN_PATHS[s] ? '<svg class="fx-sign" viewBox="0 0 24 24" aria-hidden="true">' + SIGN_PATHS[s] + '</svg><span class="fx-sr">' + s + '</span>' : s;
   }
   var KEYS = { '+': '+', '-': '−', '*': '×', '/': '÷', '(': '(', ')': ')' };
   function svg(d, filled) {
@@ -240,7 +255,7 @@
       '<div class="fx-group"><h3>Тариф · норматив</h3><div data-pal="const"></div></div>' +
       '<div class="fx-group"><h3>Расход счётчиков</h3><div data-pal="meter"></div></div>' +
       '<div class="fx-group"><h3>Знаки</h3><div class="fx-signs">' +
-      ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + s + '</span>'; }).join('') +
+      ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + signHtml(s) + '</span>'; }).join('') +
       '</div></div></div>';
     if (inline) {
       // the grey panel (as with every way of charging) — a word and the examples, no button; the palette; the line;
@@ -269,7 +284,7 @@
       '<div class="fx-group"><h3>Тариф · норматив</h3><div data-pal="const"></div></div>' +
       '<div class="fx-group"><h3>Расход счётчиков</h3><div data-pal="meter"></div></div>' +
       '<div class="fx-group"><h3>Знаки</h3><div class="fx-signs">' +
-      ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + s + '</span>'; }).join('') +
+      ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + signHtml(s) + '</span>'; }).join('') +
       '</div></div></div>' +
       LINE + '<p class="fx-under fx-trash-hint">Перетащите блок в строку или нажмите на него · вытащите из строки, чтобы убрать · нажмите на блок в строке, чтобы настроить</p>' +
       '<div class="fx-check-box"><h3>Как посчитается <span class="fx-badge" data-check-badge>на числах прошлого месяца</span> <span class="fx-badge" data-state-badge></span></h3>' +
@@ -287,6 +302,7 @@
     }
     function placeAt(el, x, y) { var o = origin(el); el.style.left = (x - o.x) + 'px'; el.style.top = (y - o.y) + 'px'; }
     var strip = overlay.querySelector('[data-strip]');
+    if (ROUND_METERS) strip.classList.add('fx-round');
 
     // A meter of its own (window v2): «Вода хол. № 545575».
     function oneName(b) { var m = meterById(b.meters[0]); return shortOf(b.key) + (m && m.serial ? ' № ' + m.serial : ''); }
@@ -324,7 +340,13 @@
       var el = document.createElement('span');
       el.className = 'fx-chip ' + kindClass(b);
       el.dataset.id = b.id;
-      if (b.type === 'op') { el.textContent = b.op; return el; }
+      if (b.type === 'op') {
+        el.innerHTML = signHtml(b.op);
+        if (b.op === '(' || b.op === ')') el.classList.add('is-paren', b.op === '(' ? 'is-open' : 'is-close');
+        return el;
+      }
+      if (ROUND_METERS && b.type === 'meter' && b.meters.length === 1) return dialEl(b, el);
+      if (ROUND_METERS && b.type === 'val') return cardEl(b, el);
       var parts = chipParts(b);
       el.classList.add('is-fx');
       // the full words — on hover (the block shows the short ones)
@@ -334,6 +356,31 @@
       el.innerHTML = '<span class="fx-r1"><span class="fx-ico">' + iconOf(b) + '</span><span class="fx-nm"></span></span><span class="fx-s2"></span>';
       el.querySelector('.fx-nm').textContent = parts[0];
       el.querySelector('.fx-s2').textContent = parts[1];
+      return el;
+    }
+    // A round meter: the kind (ГВС), «№ …», whose, the unit in bold; full words — on hover.
+    function dialEl(b, el) {
+      var m = meterById(b.meters[0]), who = whoShort(b.meters[0]);
+      el.classList.add('is-dial');
+      el.title = meterName(m || { name: kindOf(b.key).name }) + ' · ' + whoLabel(b.meters[0]);
+      el.innerHTML = '<span class="fx-dk"></span><span class="fx-dn"></span><span class="fx-dw"></span><span class="fx-du"></span>';
+      el.querySelector('.fx-dk').textContent = shortOf(b.key);
+      el.querySelector('.fx-dn').textContent = m && m.serial ? '№ ' + m.serial : '';
+      el.querySelector('.fx-dw').textContent = who.charAt(0).toUpperCase() + who.slice(1);
+      el.querySelector('.fx-du').textContent = kindOf(b.key).unit;
+      return el;
+    }
+    // A number — a white card 70px tall with a honey stripe (what you type in — honey): НАЗВАНИЕ / число / единица;
+    // «каждый месяц» — the stripe paler, «каждый месяц» instead of the number (2026-11-27, вариант В).
+    function cardEl(b, el) {
+      var v = valueOf(b), month = v.type === 'month', unit = unitLabel(v).replace(' за ', '/');
+      el.classList.add('is-card');
+      if (month) el.classList.add('is-month');
+      el.title = v.label + (month ? ' · каждый месяц' : ' · ' + fmt(v.value) + (unit ? ' ' + unit : ''));
+      el.innerHTML = '<span class="fx-cn"></span><span class="fx-cv"></span><span class="fx-cu"></span>';
+      el.querySelector('.fx-cn').textContent = short(v.label).toUpperCase();
+      el.querySelector('.fx-cv').textContent = month ? 'каждый месяц' : fmt(v.value);
+      el.querySelector('.fx-cu').textContent = unit || (month ? '' : 'без ед.');
       return el;
     }
     function tileEl(kind, cls, icon, name, sub) {
@@ -465,6 +512,7 @@
           el.dataset.op = g.op;
           if (g.op === '?') el.innerHTML = '<span>+ −</span><span>× ÷</span>';
           else el.textContent = g.op;
+          if (g.op === '(' || g.op === ')') el.classList.add('is-paren');
           if (g.op === '?') el.classList.add('is-blank');
           el.title = g.op === '?' ? g.say : 'Поставить «' + g.op + '» сюда';
           if (g.op === '?') el.insertAdjacentHTML('beforeend', '<i class="fx-pin">!</i>');
@@ -757,7 +805,7 @@
         var id = Number(fix.dataset.fix);
         var m = document.createElement('div'); m.className = 'fx-umenu fx-signmenu';
         m.innerHTML = ['+', '−', '×', '÷', '(', ')'].map(function (sign) {
-          return '<button type="button" class="fx-chip k-op" data-sign="' + sign + '" title="Поставить «' + sign + '»">' + sign + '</button>';
+          return '<button type="button" class="fx-chip k-op" data-sign="' + sign + '" title="Поставить «' + sign + '»">' + signHtml(sign) + '</button>';
         }).join('');
         overlay.appendChild(m);
         var r = fix.getBoundingClientRect();
@@ -912,7 +960,9 @@
       var m = pop.classList.contains('is-wide') ? (overlay.querySelector('.fx-modal') || overlay).getBoundingClientRect() : null;
       var left = m ? m.left + (m.width - pop.offsetWidth) / 2 : r.left;
       var h = pop.offsetHeight;
-      placeAt(pop, Math.max(8, Math.min(left, innerWidth - pop.offsetWidth - 8)), r.bottom + 8 + h > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8);
+      // Below the anchor; no room — above it; no room there either — pressed to the bottom of the screen (the buttons always seen).
+      var top = r.bottom + 8 + h <= innerHeight - 8 ? r.bottom + 8 : r.top - h - 8 >= 8 ? r.top - h - 8 : Math.max(8, innerHeight - h - 8);
+      placeAt(pop, Math.max(8, Math.min(left, innerWidth - pop.offsetWidth - 8)), top);
     }
     // HTML: the word that changes with the units — «тариф / сумма / норматив / …» — in bold (2026-11-23).
     function valueSays(v) {
@@ -1269,6 +1319,7 @@
     // the panel's switches are the service window's own (data-pay / data-owner / data-split are handled there).
     function preview(chipsEl, checkEl) {
       if (chipsEl) {
+        if (ROUND_METERS) chipsEl.classList.add('fx-round');
         chipsEl.innerHTML = '';
         if (!blocks.length) chipsEl.innerHTML = '<span class="fx-empty">Формула ещё не собрана</span>';
         blocks.forEach(function (b) { chipsEl.appendChild(chipEl(b)); });

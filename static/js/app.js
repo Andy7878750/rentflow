@@ -1041,40 +1041,27 @@
       return start;
     }
 
-    // A meter row (2026-11-24, the style of the service window's list): the kind's icon — the same outline icon as there;
-    // the name; under it smaller «№ … · tariff»; under that whose it is in a badge; ✎ × at the end. 76px.
+    // A meter tile drawn as a real meter (2026-11-27, вариант В, meterdial.js): the short kind, the drums (the last
+    // «стало» or the start), the tariff, «№ …», whose it is; ✎ × in the corner. Four in a row.
     function meterTile(item, row) {
       var kind = meterKind(item);
-      row.className = 'info-row meter-tile mk-' + kind;
-      var icon = el('span', 'mt-icon');
-      icon.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#' + (kind === 'custom' ? 'i-gauge' : 'i-r-' + kind) + '"/></svg>';
-      row.appendChild(icon);
-      var body = el('span', 'mt-body');
-      var top = el('span', 'mt-top');
-      var main = el('span', 'info-cell info-main', val(item, 'name'));
-      if (isDayNight(item)) main.appendChild(el('span', 'info-label', ' день / ночь'));
-      top.appendChild(main);
-      body.appendChild(top);
-      var line = el('span', 'mt-line');
-      line.appendChild(cell('info-serial', '№', val(item, 'serial'), '№ —'));
-      // Its tariff (2026-11-19): «9,6 / 4,2 ₽/кВт·ч», or a red «нет тарифа».
       var day = val(item, 'tariff'), nightTariff = val(item, 'tariff_night');
-      // In a «По расходу» service (2026-11-23) no tariff is needed: «из квитанции», grey.
+      // In a «По расходу» service (2026-11-23) no tariff is needed: «из квитанции».
       var fromReceipt = !day && 'byUsage' in item.dataset;
-      var tariff = el('span', 'info-cell mt-tariff-cell' + (day || fromReceipt ? '' : ' is-none'),
-        day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : fromReceipt ? 'из квитанции' : 'нет тарифа');
-      line.appendChild(tariff);
-      body.appendChild(line);
-      // Whose it is — the third line (2026-11-24: less noise next to the name).
+      var tariff = day ? (isDayNight(item) ? day + ' / ' + (nightTariff || '—') : day) + ' ₽/' + val(item, 'unit') : fromReceipt ? 'из квитанции' : '';
       var who = meterWho(item);
-      var whoEl = el('span', 'who-badge mt-who ' + who.cls, who.text);
-      whoEl.title = who.text;
-      body.appendChild(whoEl);
-      row.appendChild(body);
-      var acts = el('span', 'mt-acts');
-      row.appendChild(acts);
-      row.title = 'Изменить счётчик';
-      return acts;
+      var tmp = el('div', '');
+      tmp.innerHTML = window.rentflowDial.tile({
+        kind: kind, name: val(item, 'name'), serial: val(item, 'serial'), tariff: tariff, dial: item.dataset.dial || (val(item, 'initial') ? val(item, 'initial') + (isDayNight(item) ? '|' + (val(item, 'initial_night') || '0') : '') : ''),
+        who: { text: who.cls === 'is-tenant' ? window.rentflowDial.shortWho(who.text) : who.text.charAt(0).toUpperCase() + who.text.slice(1),
+               cls: who.cls, title: who.text },
+        corner: '<span class="md-corner mt-acts"></span>'
+      });
+      var t = tmp.firstChild;
+      row.className = 'info-row ' + t.className;
+      row.innerHTML = t.innerHTML;
+      row.title = val(item, 'name') + (val(item, 'serial') ? ' № ' + val(item, 'serial') : '') + (tariff ? ' · ' + tariff : '') + ' · ' + who.text + ' — изменить';
+      return row.querySelector('.md-corner');
     }
 
     function infoRow(item, number, kind) {
@@ -1121,6 +1108,7 @@
         var block = blocks[kind];
         if (!block) return;
         var list = block.querySelector('[data-info-list]');
+        if (kind === 'meter') list.classList.add('md-grid');
         list.innerHTML = '';
         var all = items(kind);
         all.forEach(function (item, i) { list.appendChild(infoRow(item, i + 1, kind)); });

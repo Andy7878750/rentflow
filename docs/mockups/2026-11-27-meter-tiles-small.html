@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Плашки счётчиков меньше</title>
+<style>
+  :root {
+    --text: #34495e; --muted: #7b8794; --border: #dde2e7; --bg: #f4f6f8; --accent: #148f77; --accent-soft: #e6f4f1;
+    --danger: #c0392b; --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --k: .8; --cols: 5;            /* масштаб плашки: 1 — как сейчас на сайте (4 в ряд), .8 — на 20% меньше (5 в ряд) */
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: rgba(52, 73, 94, .45); color: var(--text); font: 14px/1.4 var(--font); }
+  .bar { display: flex; gap: 8px; align-items: center; justify-content: center; padding: 14px; color: #fff; font-size: 13px; }
+  .bar button { height: 32px; padding: 0 14px; border: 1px solid #fff; border-radius: 8px; background: transparent; color: #fff; font: inherit; cursor: pointer; }
+  .bar button.is-on { background: #fff; color: var(--text); font-weight: 600; }
+
+  /* модальное окно — как «Объекты · …» */
+  .modal { width: 1060px; max-width: calc(100% - 32px); margin: 0 auto 32px; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  .mhead { display: flex; align-items: center; height: 56px; padding: 0 24px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: 700; }
+  .mhead span { font-weight: 400; color: var(--muted); }
+  .mhead .x { margin-left: auto; font-size: 20px; color: var(--muted); font-weight: 400; }
+  .mbody { display: grid; grid-template-columns: 260px 1fr; }
+  .side { padding: 20px 12px; border-right: 1px solid var(--border); }
+  .side small { display: block; padding: 0 10px 8px; color: var(--muted); font-size: 12px; }
+  .side a { display: flex; justify-content: space-between; height: 36px; align-items: center; padding: 0 10px; border-radius: 8px; color: var(--text); text-decoration: none; }
+  .side a.is-on { color: var(--accent); font-weight: 600; }
+  .side a em { font-style: normal; color: var(--muted); font-size: 13px; font-weight: 400; }
+  .main { padding: 20px 32px 28px; }
+  .main h2 { margin: 0 0 20px; font-size: 15px; }
+  .head { display: flex; align-items: center; height: 20px; margin-bottom: 10px; }
+  .head h3 { margin: 0; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .head .cnt { margin-left: auto; padding: 0 8px; border-radius: 999px; background: #e8f1f8; font-size: 12px; line-height: 20px; }
+  .mfoot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 24px; border-top: 1px solid var(--border); }
+  .mfoot button { height: 38px; padding: 0 18px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font: 600 14px var(--font); color: var(--text); }
+  .mfoot .pri { border-color: var(--accent); color: var(--accent); }
+  .measure { margin-top: 12px; font-size: 12px; color: var(--muted); }
+
+  /* ===== плашка-счётчик: все размеры × var(--k) ===== */
+  .md-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 8px; }
+  .md-tile { position: relative; display: grid; place-items: center; height: calc(196px * var(--k)); min-width: 0;
+    border: 1px solid var(--border); border-radius: 12px; background: #fff; text-align: center; cursor: pointer; }
+  .md-tile:hover { border-color: var(--accent); background: #f7fbfa; }
+  .md-ears { position: absolute; left: 6px; right: 6px; top: 50%; height: calc(40px * var(--k)); transform: translateY(-50%); border-radius: 6px; background: #dde2e7; }
+  .md-tile.is-sq .md-ears { display: none; }
+  .md-body { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(3px * var(--k));
+    width: calc(140px * var(--k)); height: calc(140px * var(--k)); padding: 0 4px; border: max(3px, calc(5px * var(--k))) solid var(--mk);
+    border-radius: 50%; background: #fff; line-height: 1.15; }
+  .md-tile.is-sq .md-body { width: calc(134px * var(--k)); height: calc(134px * var(--k)); border-radius: calc(16px * var(--k)); }
+  .md-kind { font-size: max(11px, calc(15px * var(--k))); font-weight: 700; color: var(--mk); white-space: nowrap; }
+  .md-odos { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .md-odo { display: inline-flex; align-items: center; gap: 1px; font: 600 max(8px, calc(11px * var(--k)))/1 ui-monospace, Consolas, monospace; }
+  .md-odo b { display: grid; place-items: center; width: calc(10px * var(--k)); height: calc(16px * var(--k)); border-radius: 1.5px; background: #2c3e50; color: #fff; font-weight: 600; }
+  .md-odo b.is-red { background: var(--danger); }
+  .md-odo i { margin-right: 2px; font: 400 9px var(--font); color: var(--muted); }
+  .md-tar, .md-no { max-width: calc(104px * var(--k)); overflow: hidden; font-size: max(9px, calc(11px * var(--k))); white-space: nowrap; text-overflow: ellipsis; }
+  .md-tar { font-weight: 700; }
+  .md-no { color: var(--muted); }
+  .md-who { max-width: calc(90px * var(--k)); overflow: hidden; padding: 0 6px; border-radius: 999px; background: #eef1f4; font-size: max(9px, calc(11px * var(--k)));
+    line-height: max(14px, calc(18px * var(--k))); white-space: nowrap; text-overflow: ellipsis; }
+  .md-who.is-t { background: var(--accent-soft); color: #117965; }
+  .md-corner { position: absolute; top: 2px; right: 2px; z-index: 1; display: flex; }
+  .md-corner span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; color: #b4bcc4; }
+  .md-corner span:hover { background: var(--bg); color: var(--text); }
+  .md-corner svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .add { display: grid; place-items: center; height: calc(196px * var(--k)); border: 1px dashed #c9d3da; border-radius: 12px; color: var(--accent); font-size: 13px; cursor: pointer; }
+  .add:hover { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+  .mk-water { --mk: #2f80c2; } .mk-hot_water { --mk: #c0392b; } .mk-electricity { --mk: #0e9aa7; }
+</style>
+</head>
+<body>
+<div class="bar">Размер плашки:
+  <button type="button" data-k="1" data-c="4">Как сейчас</button>
+  <button type="button" data-k=".8" data-c="5" class="is-on">На 20% меньше</button>
+  <button type="button" data-k=".7" data-c="5">На 30% меньше</button>
+</div>
+<div class="modal">
+  <div class="mhead">Объекты&nbsp;<span>· Просвещения 15</span><span class="x">×</span></div>
+  <div class="mbody">
+    <div class="side">
+      <small>Просвещения 15</small>
+      <a href="#">Объект</a><a href="#" class="is-on">Счётчики <em>6</em></a><a href="#">Арендаторы <em>2</em></a>
+    </div>
+    <div class="main">
+      <h2>Просвещения 15</h2>
+      <div class="head"><h3>Счётчики</h3><span class="cnt">6 шт.</span></div>
+      <div class="md-grid" id="grid"></div>
+      <div class="measure" id="measure"></div>
+    </div>
+  </div>
+  <div class="mfoot"><button>Отмена</button><button class="pri">Сохранить</button></div>
+</div>
+<script>
+(function () {
+  var M = [
+    { kind: 'water', k: 'ХВС', dial: '7800', tar: '55,7 ₽/м³', no: '358479-654634657', who: 'Салон', t: 1 },
+    { kind: 'water', k: 'ХВС', dial: '3040', tar: '55,7 ₽/м³', no: '7896541', who: 'Аптека', t: 1 },
+    { kind: 'hot_water', k: 'ГВС', dial: '2430', tar: '80,7 ₽/м³', no: '254125-65', who: 'Общий' },
+    { kind: 'hot_water', k: 'ГВС', dial: '2100', tar: '80,7 ₽/м³', no: '1147899', who: 'Общий' },
+    { kind: 'electricity', k: 'Э/Э', dial: '57450', tar: '754 ₽/кВт·ч', no: '6472457', who: 'Общий', sq: 1 },
+    { kind: 'electricity', k: 'Э/Э', dial: '7570|1150', tar: '23 / 11 ₽/кВт·ч', no: '7424575', who: 'Общий', sq: 1 }
+  ];
+  var PEN = '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>', X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  function drums(v, l) {
+    var w = ('00000' + v).slice(-5);
+    return '<span class="md-odo">' + (l ? '<i>' + l + '</i>' : '') + w.split('').map(function (c) { return '<b>' + c + '</b>'; }).join('') + '<b class="is-red">0</b></span>';
+  }
+  function tile(m) {
+    var odo = m.dial.indexOf('|') >= 0 ? '<span class="md-odos">' + drums(m.dial.split('|')[0], 'д') + drums(m.dial.split('|')[1], 'н') + '</span>' : drums(m.dial);
+    return '<div class="md-tile mk-' + m.kind + (m.sq ? ' is-sq' : '') + '" title="№ ' + m.no + '"><span class="md-ears"></span><span class="md-body">' +
+      '<span class="md-kind">' + m.k + '</span>' + odo + '<span class="md-tar">' + m.tar + '</span><span class="md-no">№ ' + m.no + '</span>' +
+      '<span class="md-who' + (m.t ? ' is-t' : '') + '">' + m.who + '</span></span><span class="md-corner"><span>' + PEN + '</span><span>' + X + '</span></span></div>';
+  }
+  var grid = document.getElementById('grid');
+  grid.innerHTML = M.map(tile).join('') + '<div class="add">+ Добавить счётчик</div>';
+  function measure() {
+    var t = grid.querySelector('.md-tile').getBoundingClientRect(), b = grid.querySelector('.md-body').getBoundingClientRect();
+    var cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+    document.getElementById('measure').textContent = 'Плашка ' + Math.round(t.width) + ' × ' + Math.round(t.height) + ' px · счётчик ' +
+      Math.round(b.width) + ' px · в ряд ' + cols + ' · ширина блока ' + Math.round(grid.getBoundingClientRect().width) + ' px';
+  }
+  document.querySelector('.bar').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-k]'); if (!b) return;
+    document.documentElement.style.setProperty('--k', b.dataset.k); document.documentElement.style.setProperty('--cols', b.dataset.c);
+    document.querySelectorAll('[data-k]').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+    measure();
+  });
+  measure();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Знаки формулы</title>
+<style>
+  :root {
+    --text: #34495e; --muted: #7b8794; --border: #dde2e7; --bg: #f4f6f8;
+    --accent: #148f77; --accent-soft: #e6f4f1; --honey: #f2b544; --honey-text: #8a6100; --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page { max-width: 960px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .row { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: center; padding: 14px 0; border-top: 1px solid var(--border); }
+  .row:first-child { border-top: 0; padding-top: 0; }
+  .row:last-child { padding-bottom: 0; }
+  .row b { display: block; font-size: 14px; }
+  .row small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+
+  /* счётчики и карточки — как на сайте */
+  .dial { flex: none; width: 70px; height: 70px; border: 3px solid var(--k); border-radius: 50%; background: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; line-height: 1.2; padding: 0 2px; }
+  .dial.sq { border-radius: 12px; }
+  .dial span { white-space: nowrap; }
+  .d1 { font-size: 12px; font-weight: 700; color: var(--k); }
+  .d2, .d3, .d4 { font-size: 9.5px; } .d3 { color: var(--muted); } .d4 { font-weight: 700; }
+  .num { flex: none; width: 88px; height: 70px; padding: 0 10px 0 13px; display: flex; flex-direction: column; justify-content: center; line-height: 1.2;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 4px 0 0 var(--honey); }
+  .num .n1 { font-size: 10px; font-weight: 700; letter-spacing: .03em; color: var(--honey-text); }
+  .num .n2 { font-size: 14px; font-weight: 700; } .num .n3 { font-size: 9.5px; font-weight: 700; }
+  .br { flex: none; width: 14px; height: 70px; display: grid; place-items: center; }
+  .br::before { content: ''; width: 10px; height: 64px; border: 2px solid var(--sg); }
+  .br.o::before { border-right: 0; border-radius: 10px 0 0 10px / 32px 0 0 32px; }
+  .br.c::before { border-left: 0; border-radius: 0 10px 10px 0 / 0 32px 32px 0; }
+
+  /* знак: svg из линий — ровно по центру, одной толщины */
+  .sg { flex: none; display: grid; place-items: center; color: var(--sg); cursor: grab; }
+  .sg svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+  .sg svg circle { fill: currentColor; stroke: none; }
+
+  .v1 { --sg: var(--accent); } .v1 .sg { width: 26px; height: 26px; border: 1.5px solid var(--accent); border-radius: 50%; background: #fff; }
+  .v1 .sg svg { display: none; } .v1 .sg::after { content: attr(data-s); font-weight: 700; font-size: 15px; }
+  .v2 { --sg: var(--accent); } .v2 .sg { width: 20px; height: 70px; } .v2 .sg svg { width: 16px; height: 16px; stroke-width: 2.4; }
+  .v3 { --sg: var(--text); } .v3 .sg { width: 20px; height: 70px; } .v3 .sg svg { width: 15px; height: 15px; stroke-width: 2; }
+  .v4 { --sg: var(--accent); } .v4 .sg { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); }
+  .v5 { --sg: var(--accent); } .v5 .sg { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; }
+  .v5 .sg svg { width: 12px; height: 12px; stroke-width: 2.6; }
+  .v6 { --sg: var(--text); } .v6 .sg { width: 26px; height: 26px; border-radius: 8px; background: #eef1f4; }
+  .v6 .sg svg { width: 12px; height: 12px; }
+  .v7 { --sg: var(--accent); } .v7 .sg { width: 20px; height: 70px; position: relative; }
+  .v7 .sg::before { content: ''; position: absolute; top: 4px; bottom: 4px; left: 50%; border-left: 1px dashed #cfe9e3; }
+  .v7 .sg svg { position: relative; width: 18px; height: 18px; padding: 2px; background: #fff; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Знаки в строке формулы</h1>
+  <p class="lead">Одна и та же формула, меняются только знаки (и цвет скобок под них). Знаки в Б–Ж нарисованы линиями, а не буквами шрифта: всегда ровно по центру и одной толщины.</p>
+  <div class="card" id="out"></div>
+</div>
+<script>
+(function () {
+  var P = {
+    '+': '<path d="M12 5v14M5 12h14"/>',
+    '−': '<path d="M5 12h14"/>',
+    '×': '<path d="M7 7l10 10M17 7L7 17"/>',
+    '÷': '<path d="M5 12h14"/><circle cx="12" cy="6" r="1.8"/><circle cx="12" cy="18" r="1.8"/>'
+  };
+  function sg(s) { return '<span class="sg" data-s="' + s + '"><svg viewBox="0 0 24 24">' + P[s] + '</svg></span>'; }
+  function dial(k, c, no, who, u, sq) {
+    return '<span class="dial' + (sq ? ' sq' : '') + '" style="--k:' + c + '"><span class="d1">' + k + '</span><span class="d2">№ ' + no +
+      '</span><span class="d3">' + who + '</span><span class="d4">' + u + '</span></span>';
+  }
+  function num(n, v, u) { return '<span class="num"><span class="n1">' + n + '</span><span class="n2">' + v + '</span><span class="n3">' + u + '</span></span>'; }
+  var line = '<span class="br o"></span>' + dial('ХВС', '#3b82c4', '7896541', 'Аптека', 'м³') + sg('+') + dial('ГВС', '#c0392b', '1147899', 'Аптека', 'м³') +
+    '<span class="br c"></span>' + sg('×') + num('ТАР. ВО', '45', '₽/м³') + sg('−') + num('АБОН.', '120', '₽') + sg('÷') + num('КОЭФ.', '2', 'без ед.');
+  var V = [
+    ['v1', 'А · сейчас', 'кружок с ободком, знак шрифтом'],
+    ['v2', 'Б · просто знак', 'бирюзовый, без фона'],
+    ['v3', 'В · как в тетради', 'тёмный, без фона, скобки тоже тёмные'],
+    ['v4', 'Г · бледный кружок', 'заливка без ободка'],
+    ['v5', 'Д · залитый кружок', 'бирюзовый, знак белый'],
+    ['v6', 'Е · серый квадратик', 'тихий, знак тёмный'],
+    ['v7', 'Ж · знак на линии', 'пунктир делит блоки']
+  ];
+  document.getElementById('out').innerHTML = V.map(function (v) {
+    return '<div class="row"><div><b>' + v[1] + '</b><small>' + v[2] + '</small></div><div class="strip ' + v[0] + '">' + line + '</div></div>';
+  }).join('');
+})();
+</script>
+</body>
+</html>

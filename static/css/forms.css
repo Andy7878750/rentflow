@@ -2386,3 +2386,37 @@ input.masked {
 .fl .pre-input input:not([type=radio]):not([type=checkbox]) {
   padding-left: 30px;
 }
+
+/* ===== A meter tile drawn as a real meter (2026-11-27, макет 2026-11-27-meter-tiles-dial.html, вариант В; meterdial.js):
+   the object window's «Счётчики» and the service window's «Выберите счётчики». 2026-11-27: 20% smaller (макет
+   2026-11-27-meter-tiles-small.html) — 5 in a row at 721px. ===== */
+.md-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; }
+.md-tile { position: relative; display: grid; place-items: center; box-sizing: border-box; height: 157px; min-width: 0; padding: 0;
+  border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); color: var(--color-text);
+  font: 14px var(--font); text-align: center; cursor: pointer; }
+.md-tile:hover, .md-tile:focus-visible { border-color: var(--color-accent); background: #f7fbfa; outline: none; }
+.md-ears { position: absolute; left: 6px; right: 6px; top: 50%; height: 32px; margin-top: -16px; border-radius: 6px; background: #dde2e7; }
+.md-tile.is-sq .md-ears { display: none; }
+.md-body { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-sizing: border-box; width: 112px; height: 112px; padding: 0 4px; border: 4px solid var(--mk); border-radius: 50%; background: #fff; line-height: 1.2; }
+.md-tile.is-sq .md-body { width: 107px; height: 107px; border-radius: 13px; }
+.md-kind { max-width: 83px; overflow: hidden; font-size: 12px; font-weight: 700; color: var(--mk); white-space: nowrap; text-overflow: ellipsis; line-height: 1.1; }
+.md-odos { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.md-odo { display: inline-flex; align-items: center; gap: 1px; font: 600 9px/1 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.md-odo b { display: grid; place-items: center; width: 8px; height: 13px; border-radius: 1.5px; background: #2c3e50; color: #fff; font-weight: 600; }
+.md-odo b.is-red { background: #c0392b; }
+.md-odo i { width: 8px; margin-right: 2px; font: 400 9px var(--font); color: var(--color-text-muted); }
+.md-none { font-size: 9px; color: var(--color-text-muted); }
+.md-tar { max-width: 93px; overflow: hidden; font-size: 9px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.md-tar.is-none { color: var(--color-danger); font-weight: 400; }
+.md-no { max-width: 83px; overflow: hidden; font-size: 9px; color: var(--color-text-muted); white-space: nowrap; text-overflow: ellipsis; }
+.who-badge.md-who { max-width: 72px; padding: 0 6px; font-size: 9px; line-height: 14px; white-space: nowrap; text-overflow: ellipsis; }
+/* the corner: ✎ × (object window) or the check (service window) */
+.md-corner { position: absolute; top: 2px; right: 2px; z-index: 1; display: flex; gap: 0; }
+.md-tile .icon-button { width: 22px; height: 22px; color: #b4bcc4; }
+.md-tile .icon-button:hover { color: var(--color-primary); background: var(--color-bg); }
+.md-tile .info-remove:hover { color: var(--color-danger); background: var(--color-danger-soft); }
+.md-tile.has-error { border-color: var(--color-danger); background: var(--color-danger-soft); }
+.meter-tiles.md-grid .meter-add-cell { height: 157px; border-radius: 12px; }
+.info-row.md-tile { display: grid; min-height: 0; padding: 0; border: 1px solid var(--color-border); border-radius: 12px; gap: 0; }
+.info-row.md-tile:hover, .info-row.md-tile:focus-visible { border-color: var(--color-accent); background: #f7fbfa; }

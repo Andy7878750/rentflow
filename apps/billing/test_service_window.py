@@ -286,3 +286,31 @@ class DeleteReadMetersTests(TestCase):
         hot.refresh_from_db()
         self.assertIsNone(hot.tenant_id)
         self.assertFalse(hot.vacant)
+
+
+class MeterPositionTests(TestCase):
+    """The tile drawn as a meter (2026-11-27): its drums show the last «стало», or the start plus every «расход»."""
+
+    def setUp(self):
+        user = User.objects.create_user(username='d@example.ru', email='d@example.ru', password='secret1')
+        self.prop = Property.objects.create(owner=user, name='Дом', area=Decimal('60'))
+
+    def test_nothing_yet(self):
+        meter = Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³')
+        self.assertEqual(services.meter_position(meter), (None, None))
+        self.assertEqual(meter.dial, '')
+
+    def test_start_then_last_current(self):
+        meter = Meter.objects.create(property=self.prop, kind='water', name='Вода холодная', unit='м³', initial=Decimal('100'))
+        self.assertEqual(Decimal(meter.dial), Decimal('100'))
+        meter.readings.create(month=OCT, current=Decimal('110.5'))
+        meter.readings.create(month=NOV, current=Decimal('118.2'))
+        self.assertEqual(services.meter_position(meter), (Decimal('118.2'), None))
+
+    def test_usage_adds_to_start(self):
+        meter = Meter.objects.create(property=self.prop, kind='electricity', name='Электричество', unit='кВт·ч',
+                                     day_night=True, initial=Decimal('500'), initial_night=Decimal('200'))
+        meter.readings.create(month=OCT, usage=Decimal('40'), usage_night=Decimal('10'))
+        meter.readings.create(month=NOV, usage=Decimal('5'))
+        self.assertEqual(services.meter_position(meter), (Decimal('545'), Decimal('210')))
+        self.assertEqual(meter.dial, '545.000|210.000')

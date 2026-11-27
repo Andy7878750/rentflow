@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Плашки счётчиков</title>
+<style>
+  :root {
+    --text: #34495e; --muted: #7b8794; --border: #dde2e7; --bg: #f4f6f8;
+    --accent: #148f77; --accent-soft: #e6f4f1; --accent-text: #117965; --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page { max-width: 820px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab { height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; color: var(--text); font: inherit; cursor: pointer; }
+  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+  .where { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .cap { display: flex; align-items: center; height: 16px; margin-bottom: 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .cap a { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; color: var(--accent); text-decoration: none; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+
+  /* плашка */
+  .t { display: flex; align-items: center; gap: 10px; container-type: inline-size; height: 76px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: #fff; cursor: pointer; min-width: 0; }
+  .t:hover { border-color: var(--accent); background: #f7fbfa; }
+  .t.sel { border-color: var(--accent); }
+  .t.off { cursor: default; background: #fafbfc; }
+  .t.off:hover { border-color: var(--border); }
+  .t.off .mini, .t.off .odo, .t.off .nm { opacity: .45; }
+  .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+  .badge { align-self: flex-start; max-width: 100%; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px; font-size: 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--accent-soft); color: var(--accent-text); }
+  .badge.common { background: #eef1f4; color: var(--text); }
+  .badge.none { background: #fdf3dc; color: #8a6100; }
+
+  /* маленький счётчик вместо иконки */
+  .mini { position: relative; flex: none; width: 50px; height: 50px; }
+  .mini .e { position: absolute; left: 0; right: 0; top: 19px; height: 12px; border-radius: 3px; background: #d5dbe0; }
+  .mini .c { position: absolute; left: 6px; top: 6px; width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--k); background: #fff;
+    display: grid; place-items: center; }
+  .mini.sq .e { display: none; }
+  .mini.sq .c { left: 7px; top: 7px; width: 36px; height: 36px; border-radius: 8px; }
+  .mini .c i { display: block; width: 20px; height: 6px; border-radius: 2px; background: #2c3e50; box-shadow: inset -5px 0 0 #c0392b; }
+
+  /* табло: красный — только последний барабан */
+  .odo-box { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .odo { display: inline-flex; align-items: center; gap: 1px; font: 600 11px/1 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  .odo b { display: grid; place-items: center; width: 10px; height: 16px; border-radius: 2px; background: #2c3e50; color: #fff; font-weight: 600; }
+  .odo b:last-of-type { background: #c0392b; }
+  .odo s { text-decoration: none; width: 4px; text-align: center; color: var(--muted); font-family: system-ui; }
+  .odo em { width: 28px; margin-left: 3px; font: 400 11px system-ui, sans-serif; color: var(--muted); }
+  .odo i { width: 10px; margin-right: 2px; font: 400 11px system-ui; color: var(--muted); }
+
+  /* справа: окно объекта — ✎ ×, окно услуги — галочка */
+  .acts { flex: none; display: flex; gap: 0; margin-right: -4px; }
+  .acts span { width: 24px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); }
+  .acts span:hover { background: #eef1f4; color: var(--text); }
+  .chk { flex: none; width: 20px; height: 20px; border: 1.5px solid #c3cbd2; border-radius: 5px; display: grid; place-items: center; background: #fff; }
+  .sel .chk { background: var(--accent); border-color: var(--accent); }
+  .sel .chk::after { content: ''; width: 9px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+
+  .add { display: flex; align-items: center; justify-content: center; height: 76px; border: 1px dashed #c9cfd5; border-radius: var(--radius); color: var(--accent); }
+  .add:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+  /* ---------- В: плашка — настоящий счётчик ---------- */
+  .gridB { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 721px; max-width: 100%; }  /* 721 — ширина блока в окне объекта (измерено) */
+  .big { position: relative; height: 196px; border: 1px solid var(--border); border-radius: 12px; background: #fff; cursor: pointer;
+    display: grid; place-items: center; }
+  .big:hover { border-color: var(--accent); background: #f7fbfa; }
+  .big.sel { border-color: var(--accent); }
+  .big.off { cursor: default; background: #fafbfc; }
+  .big.off:hover { border-color: var(--border); }
+  .big.off .body, .big.off .ears { opacity: .45; }
+  .big .ears { position: absolute; left: 6px; right: 6px; top: 50%; height: 40px; margin-top: -20px; border-radius: 8px; background: #dde2e7; }
+  .big .body { position: relative; width: 140px; height: 140px; border-radius: 50%; border: 5px solid var(--k); background: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center; padding: 0 10px; }
+  .big.sq .ears { display: none; }
+  .big.sq .body { width: 134px; height: 134px; border-radius: 16px; }
+  .big .kind { font-size: 15px; font-weight: 700; color: var(--k); line-height: 1.1; }
+  .big .no { font-size: 11px; color: var(--muted); max-width: 104px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .big .badge { align-self: center; max-width: 90px; font-size: 11px; height: 18px; line-height: 18px; }
+  .big .odo em { display: none; }
+  .big .odo-box { align-items: center; gap: 3px; }
+  .big .unit { font-size: 11px; font-weight: 700; color: var(--text); margin-top: -1px; white-space: nowrap; }
+  .big .corner { position: absolute; top: 6px; right: 6px; z-index: 1; }
+  .big .corner.acts { margin: 0; }
+  .big .corner.chk { top: 10px; right: 10px; }
+  .big .off-note { position: absolute; left: 0; right: 0; bottom: 8px; font-size: 11px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Плашки счётчиков</h1>
+  <p class="lead">Вместо иконки — маленький счётчик: круглый у воды, квадратный у электричества и газа. Табло — последнее «стало» (если показаний ещё нет — начальное), красный только последний барабан. Две вкладки: с табло и без.</p>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-v="1">А · с последними показаниями</button>
+    <button class="tab" data-v="0">Б · без показаний</button>
+    <button class="tab" data-v="2">В · как настоящий счётчик</button>
+  </div>
+  <div id="out"></div>
+</div>
+<script>
+(function () {
+  var K = { cold: ['Вода холодная', '#3b82c4', 'м³'], hot: ['Вода горячая', '#d9534f', 'м³'], el: ['Электричество', '#0e9aa7', 'кВт·ч', 1], gas: ['Газ', '#8e5cc2', 'м³', 1] };
+  var M = [
+    { k: 'cold', no: '358479-654634657', tar: '45,30 ₽/м³', who: 'Салон «Ногти»', r: '478,2' },
+    { k: 'cold', no: '7896541', tar: '45,30 ₽/м³', who: 'Аптека «Вита»', r: '1129,0', sel: 1 },
+    { k: 'hot', no: '254125-65', tar: '243,10 ₽/м³', who: 'Салон «Ногти»', r: '213,7' },
+    { k: 'hot', no: '1147899', tar: '243,10 ₽/м³', who: 'Аптека «Вита»', r: '96,4', off: 'в услуге «Вода горячая»' },
+    { k: 'el', no: '6472457', tar: '6,10 / 2,40 ₽/кВт·ч', who: 'Общий', common: 1, d: '12451,6', n: '4120,3' },
+    { k: 'gas', no: 'G4-88120', tar: '8,20 ₽/м³', who: '', r: '1204,5' }
+  ];
+  function odo(v, unit, label) {
+    var p = v.split(','), int = ('00000' + p[0]).slice(-5);
+    return '<span class="odo">' + (label ? '<i>' + label + '</i>' : '') + int.split('').map(function (c) { return '<b>' + c + '</b>'; }).join('') +
+      '<b>' + (p[1] || '0') + '</b><em>' + (unit || '') + '</em></span>';
+  }
+  function reading(m, k) {
+    if (m.d) return '<span class="odo-box">' + odo(m.d, '', 'д') + odo(m.n, k[2], 'н') + '</span>';
+    return '<span class="odo-box">' + odo(m.r, k[2]) + '</span>';
+  }
+  function mini(k) { return '<span class="mini' + (k[3] ? ' sq' : '') + '" style="--k:' + k[1] + '"><span class="e"></span><span class="c"><i></i></span></span>'; }
+  function badge(m) {
+    if (m.common) return '<span class="badge common">Общий</span>';
+    if (!m.who) return '<span class="badge none">Кто платит?</span>';
+    return '<span class="badge">' + m.who + '</span>';
+  }
+  var PEN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+  var X = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+
+  function objTile(m, withR) {
+    var k = K[m.k];
+    return '<div class="t">' + mini(k) + '<div class="txt"><span class="nm">' + k[0] + '</span><span class="sub">№ ' + m.no + ' · ' + m.tar + '</span>' +
+      badge(m) + '</div>' + (withR ? reading(m, k) : '') + '<span class="acts"><span title="Изменить">' + PEN + '</span><span title="Удалить">' + X + '</span></span></div>';
+  }
+  function svcTile(m, withR) {
+    var k = K[m.k];
+    return '<div class="t' + (m.sel ? ' sel' : '') + (m.off ? ' off' : '') + '">' + mini(k) + '<div class="txt"><span class="nm">' + k[0] + '</span>' +
+      '<span class="sub">№ ' + m.no + (m.off ? ' · ' + m.off : '') + '</span>' + badge(m) + '</div>' + (withR ? reading(m, k) : '') +
+      (m.off ? '' : '<span class="chk"></span>') + '</div>';
+  }
+  var SHORTK = { cold: 'ХВС', hot: 'ГВС', el: 'Э/Э', gas: 'ГАЗ' };
+  function bigTile(m, svc) {
+    var k = K[m.k];
+    var r = m.d ? '<span class="odo-box">' + odo(m.d, '', 'д') + odo(m.n, '', 'н') + '</span>' : '<span class="odo-box">' + odo(m.r) + '</span>';
+    return '<div class="big' + (k[3] ? ' sq' : '') + (svc && m.sel ? ' sel' : '') + (svc && m.off ? ' off' : '') + '" style="--k:' + k[1] + '" title="' + k[0] + ' № ' + m.no + ' · ' + m.tar + '">' +
+      '<span class="ears"></span><span class="body"><span class="kind">' + SHORTK[m.k] + '</span>' + r + '<span class="unit">' + m.tar.replace('₽/', '₽/') + '</span>' +
+      '<span class="no">№ ' + m.no + '</span>' + badge(m.who && !m.common ? { who: m.who.split(' ')[0] } : m) + '</span>' +
+      (svc ? (m.off ? '<span class="off-note">' + m.off + '</span>' : '<span class="corner chk"></span>')
+           : '<span class="corner acts"><span title="Изменить">' + PEN + '</span><span title="Удалить">' + X + '</span></span>') + '</div>';
+  }
+  function drawBig() {
+    document.getElementById('out').innerHTML =
+      '<div class="card"><div class="where">Окно объекта → Счётчики</div><div class="cap">Счётчики</div><div class="gridB">' +
+      M.map(function (m) { return bigTile(m, false); }).join('') + '<div class="add" style="height:196px">+ Добавить счётчик</div></div></div>' +
+      '<div class="card"><div class="where">Окно услуги → «По счётчикам»</div><div class="cap">Выберите счётчики<a href="#">+ Счётчик</a></div><div class="gridB">' +
+      M.map(function (m) { return bigTile(m, true); }).join('') + '</div></div>';
+  }
+  function draw(withR) {
+    document.getElementById('out').innerHTML =
+      '<div class="card"><div class="where">Окно объекта → Счётчики</div><div class="cap">Счётчики</div><div class="grid">' +
+      M.map(function (m) { return objTile(m, withR); }).join('') + '<div class="add">+ Добавить счётчик</div></div></div>' +
+      '<div class="card"><div class="where">Окно услуги → «По счётчикам»</div><div class="cap">Выберите счётчики<a href="#">+ Счётчик</a></div><div class="grid">' +
+      M.map(function (m) { return svcTile(m, withR); }).join('') + '</div></div>';
+  }
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-v]'); if (!t) return;
+    [].forEach.call(this.children, function (b) { b.classList.toggle('on', b === t); });
+    if (t.dataset.v === '2') drawBig(); else draw(t.dataset.v === '1');
+  });
+  draw(true);
+})();
+</script>
+</body>
+</html>

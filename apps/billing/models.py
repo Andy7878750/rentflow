@@ -177,6 +177,17 @@ class Meter(models.Model):
             return self.tenant.name
         return 'Свободен' if self.vacant else 'Объект (общий)'
 
+    @builtins.property
+    def dial(self):
+        """Where its drum stands now, as plain text for the page («478.2», «12451.6|4120.3»); '' — nothing yet."""
+        if not self.pk:
+            return ''
+        from . import services
+        day, night = services.meter_position(self)
+        if day is None:
+            return ''
+        return str(day) + ('|' + str(night) if night is not None else '')
+
 
 class MeterTariff(models.Model):
     """The meter's own tariff from a month on (2026-11-19: the tariff is the meter's, typed in its window of the

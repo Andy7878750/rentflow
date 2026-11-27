@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Единый стиль формулы</title>
+<style>
+  :root {
+    --text: #34495e; --muted: #7b8794; --border: #dde2e7; --bg: #f4f6f8;
+    --accent: #148f77; --accent-soft: #e6f4f1; --accent-text: #117965;
+    --honey: #f2b544; --honey-soft: #fdf3dc; --honey-text: #8a6100; --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page { max-width: 960px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab { height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: #fff; color: var(--text); font: inherit; cursor: pointer; }
+  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .note { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 16px; color: var(--muted); }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .cap { display: flex; align-items: center; height: 16px; margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .cap .sub { margin-left: 10px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); }
+  .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px; margin-bottom: 20px;
+    border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* ---------- общий счётчик 70px (как на сайте) ---------- */
+  .dial { flex: none; width: 70px; height: 70px; border: 3px solid var(--k); border-radius: 50%; background: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.2; padding: 0 2px; }
+  .dial.sq { border-radius: 12px; }
+  .dial > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .l1 { font-size: 12px; font-weight: 700; }
+  .l2, .l3, .l4 { font-size: 9.5px; }
+  .l3 { color: var(--muted); }
+  .l4 { font-weight: 700; }
+  .dial .l1 { color: var(--k); }
+
+  /* ---------- А: всё кругами ---------- */
+  .A .num { --k: var(--honey); }
+  .A .num .l1 { color: var(--honey-text); font-size: 10px; }
+  .A .num .l2 { font-size: 13px; font-weight: 700; }
+  .A .num.month { border-style: dashed; }
+  .A .sg { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 16px; }
+  .A .br { flex: none; width: 14px; height: 70px; display: grid; place-items: center; color: var(--accent);
+    font: 300 64px/1 system-ui, sans-serif; transform: scaleX(.6); }
+
+  /* ---------- Б: ценник и квитанция ---------- */
+  .tag { position: relative; flex: none; height: 70px; min-width: 84px; padding: 0 10px 0 18px; display: flex; flex-direction: column;
+    justify-content: center; text-align: left; line-height: 1.2; background: var(--honey-soft); border: 1.5px solid var(--honey);
+    border-radius: 6px 10px 10px 6px; clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%); }
+  .tag::before { content: ''; position: absolute; left: 9px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%;
+    background: #fff; border: 1.5px solid var(--honey); }
+  .tag .l1 { color: var(--honey-text); }
+  .tag .l2 { font-size: 13px; font-weight: 700; }
+  .rcpt { flex: none; height: 70px; min-width: 76px; padding: 0 10px 8px; display: flex; flex-direction: column; justify-content: center;
+    text-align: center; line-height: 1.2; background: var(--honey-soft); border-top: 3px solid var(--honey);
+    clip-path: polygon(0 0, 100% 0, 100% 92%, 90% 100%, 80% 92%, 70% 100%, 60% 92%, 50% 100%, 40% 92%, 30% 100%, 20% 92%, 10% 100%, 0 92%); }
+  .rcpt .l1 { color: var(--honey-text); }
+  .rcpt .l2 { color: var(--muted); }
+  .B .sg { flex: none; width: 22px; height: 70px; display: grid; place-items: center; color: var(--accent); font-weight: 700; font-size: 22px; }
+  .B .br { flex: none; width: 12px; height: 70px; display: grid; place-items: center; color: var(--accent);
+    font: 300 64px/1 system-ui, sans-serif; transform: scaleX(.6); }
+
+  /* ---------- В: спокойные карточки ---------- */
+  .card70 { flex: none; height: 70px; min-width: 80px; padding: 0 10px 0 13px; display: flex; flex-direction: column; justify-content: center;
+    line-height: 1.2; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 4px 0 0 var(--honey); }
+  .card70 .l1 { color: var(--honey-text); font-size: 10px; letter-spacing: .03em; }
+  .card70 .l2 { font-size: 14px; font-weight: 700; }
+  .card70.month { box-shadow: inset 4px 0 0 #f8d98f; }
+  .card70.month .l2 { font-size: 11px; font-weight: 400; color: var(--muted); }
+  .C .sg { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    border: 1.5px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 15px; background: #fff; }
+  .C .br { flex: none; width: 10px; height: 70px; border: 2px solid var(--accent); border-radius: 50%; }
+  .C .br.o { border-right-color: transparent; border-top-left-radius: 10px 35px; border-bottom-left-radius: 10px 35px; border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 0; }
+  .C .br.c { border-left: 0; border-radius: 0 10px 10px 0 / 0 35px 35px 0; }
+
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Единый стиль строки формулы</h1>
+  <p class="lead">Счётчики — как сейчас на сайте, 70 × 70. Меняются тариф, «каждый месяц» и знаки. Цвет — по нашему правилу:
+    медовое — то, что вводите вы (тариф, сумма из квитанции), бирюзовое — то, что делает RentFlow (знаки, скобки).</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="note" id="note"></div>
+  <div class="card" id="out"></div>
+  <div class="legend"><span><i style="background:#f2b544"></i>вводите вы</span><span><i style="background:#148f77"></i>действие</span><span><i style="background:#3b82c4"></i>цвет вида счётчика</span></div>
+</div>
+
+<script>
+(function () {
+  var W = '#3b82c4', H = '#c0392b', E = '#0e9aa7';
+  function dial(k, c, no, who, u, sq) {
+    return '<span class="dial' + (sq ? ' sq' : '') + '" style="--k:' + c + '"><span class="l1">' + k + '</span><span class="l2">№ ' + no +
+      '</span><span class="l3">' + who + '</span><span class="l4">' + u + '</span></span>';
+  }
+  var M1 = dial('ХВС', W, '358479-65', 'Салон', 'м³'), M2 = dial('ХВС', W, '7896541', 'Аптека', 'м³'),
+      M3 = dial('ГВС', H, '254125-65', 'Салон', 'м³'), M4 = dial('ГВС', H, '1147899', 'Аптека', 'м³'),
+      ME = dial('Э/Э', E, '0112455', 'Общий', 'кВт·ч', true);
+
+  // n = {name, val, unit, month}
+  var R = {
+    A: { name: 'А · всё кругами', note: 'Тариф — такой же круг 70px, но медовый: название / число крупно / единица жирно. «Каждый месяц» — медовый круг с пунктиром (число каждый месяц новое). Знаки — маленькие кружки 28px, скобки — тонкие высокие «( )» без фона. Строка — как ряд монет: всё одной формы, различается цветом.',
+      num: function (n) {
+        return '<span class="dial num' + (n.month ? ' month' : '') + '"><span class="l1">' + n.name + '</span>' +
+          (n.month ? '<span class="l3">каждый мес.</span>' : '<span class="l2">' + n.val + '</span>') + '<span class="l4">' + n.unit + '</span></span>';
+      },
+      sg: function (s) { return '<span class="sg">' + s + '</span>'; },
+      br: function (s) { return '<span class="br">' + s + '</span>'; } },
+    B: { name: 'Б · ценник и квитанция', note: 'Тариф — медовый ценник с дырочкой (сразу ясно: цена). «Каждый месяц» — медовая квитанция с рваным низом (число из квитанции). Знаки — просто крупные бирюзовые «+ ×» без фона, скобки — тонкие высокие. Каждая вещь похожа на себя в жизни: счётчик, ценник, квитанция.',
+      num: function (n) {
+        if (n.month) return '<span class="rcpt"><span class="l1">' + n.name + '</span><span class="l2">каждый мес.</span><span class="l4">' + n.unit + '</span></span>';
+        return '<span class="tag"><span class="l1">' + n.name + '</span><span class="l2">' + n.val + '</span><span class="l4">' + n.unit + '</span></span>';
+      },
+      sg: function (s) { return '<span class="sg">' + s + '</span>'; },
+      br: function (s) { return '<span class="br">' + s + '</span>'; } },
+    C: { name: 'В · спокойные карточки', note: 'Тариф — белая карточка 70px высотой с медовой полосой слева: название капсом / число крупно / единица. «Каждый месяц» — та же карточка, полоса бледнее. Знаки — кружки с бирюзовым контуром 26px, скобки — нарисованные дуги. Самый тихий: цветные только полоски и ободки.',
+      num: function (n) {
+        return '<span class="card70' + (n.month ? ' month' : '') + '"><span class="l1">' + n.name.toUpperCase() + '</span><span class="l2">' +
+          (n.month ? 'каждый месяц' : n.val) + '</span><span class="l4">' + n.unit + '</span></span>';
+      },
+      sg: function (s) { return '<span class="sg">' + s + '</span>'; },
+      br: function (s) { return '<span class="br ' + (s === '(' ? 'o' : 'c') + '"></span>'; } }
+  };
+
+  function lines(v) {
+    var r = R[v];
+    var tariff = r.num({ name: 'Тариф ВО', val: '45', unit: '₽/м³' });
+    var abon = r.num({ name: 'Абонплата', unit: '₽', month: true });
+    var te = r.num({ name: 'Тариф Э/Э', val: '6,10', unit: '₽/кВт·ч' });
+    var k = r.num({ name: 'Коэф.', val: '1,2', unit: 'без ед.' });
+    return '<div class="cap">Формула<span class="sub">Водоотведение</span></div><div class="strip ' + v + '">' +
+      r.br('(') + M1 + r.sg('+') + M2 + r.sg('+') + M3 + r.sg('+') + M4 + r.br(')') + r.sg('×') + tariff + '</div>' +
+      '<div class="cap">Формула<span class="sub">Электричество с абонплатой</span></div><div class="strip ' + v + '">' +
+      abon + r.sg('+') + ME + r.sg('×') + te + r.sg('×') + k + '</div>';
+  }
+
+  var tabs = document.getElementById('tabs');
+  tabs.innerHTML = Object.keys(R).map(function (k) { return '<button class="tab" data-v="' + k + '">' + R[k].name + '</button>'; }).join('');
+  function set(k) {
+    [].forEach.call(tabs.children, function (t) { t.classList.toggle('on', t.dataset.v === k); });
+    document.getElementById('note').textContent = R[k].note;
+    document.getElementById('out').innerHTML = lines(k);
+  }
+  tabs.addEventListener('click', function (e) { var t = e.target.closest('[data-v]'); if (t) set(t.dataset.v); });
+  set('A');
+})();
+</script>
+</body>
+</html>

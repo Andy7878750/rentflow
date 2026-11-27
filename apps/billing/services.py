@@ -653,6 +653,23 @@ def _last_reading_text(meter):
     return '', ''
 
 
+def meter_position(meter):
+    """Where the meter's drum stands now (2026-11-27, the tile drawn as a meter): the last «стало», or the start plus
+    every «расход» typed after it. (day, night) — night only for a day/night meter; (None, None) — nothing yet."""
+    day, night = meter.initial, meter.initial_night
+    for reading in sorted(meter.readings.all(), key=lambda r: r.month):
+        if reading.current is not None:
+            day, night = reading.current, reading.current_night
+        elif reading.usage is not None:
+            day = (day or Decimal('0')) + reading.usage
+            if reading.usage_night is not None:
+                night = (night or Decimal('0')) + reading.usage_night
+    if day is None:
+        return None, None
+    night = (night if night is not None else Decimal('0')) if meter.day_night else None
+    return day, night
+
+
 def meter_table(owner):
     """«Все счётчики»: every meter of the owner's objects, grouped by object. Read-only — a row leads to the window
     where the meter is changed: its service (tariff, who pays) or, outside services, the object window."""
