@@ -315,7 +315,6 @@
   });
 
   // E-mail: one check for the whole site — static/js/fields.js (2026-11-25).
-  var emailProblem = window.rentflowFields.emailProblem;
 
   // ---------- Date picker ----------
   // A card under the field: month with arrows, a click on the title switches to months
@@ -1126,14 +1125,11 @@
         var all = items(kind);
         all.forEach(function (item, i) { list.appendChild(infoRow(item, i + 1, kind)); });
         if (kind === 'meter') {
-          // «+ Добавить счётчик» — the last cell of the frame (2026-11-24): with an odd number of meters it fills the
-          // empty half of the last row
+          // «+ Добавить счётчик» — the last tile, dashed, the size of a meter tile (2026-11-27)
           var addCell = el('button', 'meter-add-cell', '+ Добавить счётчик');
           addCell.type = 'button';
           addCell.dataset.itemAdd = '';
           list.appendChild(addCell);
-          // the add cell starts a new row (an even number of meters): the empty half next to it — a dashed cell too
-          if (all.length % 2 === 0) list.appendChild(el('span', 'meter-add-fill'));
         } else if (!all.length) {
           list.appendChild(el('p', 'info-empty', kind === 'meter' ? 'Счётчиков пока нет' : 'Арендаторов пока нет'));
         }
@@ -1445,12 +1441,9 @@
           empty.push(input);
         }
       });
-      item.querySelectorAll('input[type=email]').forEach(function (input) {
-        var problem = emailProblem(input.value.trim());
-        if (problem) {
-          clientError(input.closest('.field'), problem);
-          empty.push(input);
-        }
+      // a number, a date, an e-mail — the same check as on leaving the field (fields.js)
+      item.querySelectorAll('input:not([type=hidden]):not([type=radio]):not([type=checkbox])').forEach(function (input) {
+        if (input.closest('.field') && window.rentflowFields.check(input, false)) empty.push(input);
       });
       if (empty.length) empty[0].focus();
       return !empty.length;

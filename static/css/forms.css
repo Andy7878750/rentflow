@@ -2125,13 +2125,11 @@ input.masked {
 /* one column; two when the form is wide enough for «№ · ▷ start · tariff» in a half (container query below) */
 [data-items="meter"] .form-section-body { container-type: inline-size; }
 
+/* each meter — a tile of its own (2026-11-27), «+ Добавить счётчик» — a dashed tile of the same size */
 .meter-tiles {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  overflow: hidden;
+  gap: 8px;
 }
 
 .mk-electricity { --mk: #0e9aa7; --mk-soft: #e0f4f6; }
@@ -2147,24 +2145,14 @@ input.masked {
   height: 76px;
   min-height: 0;
   padding: 0 6px 0 12px;
-  border: 0;
-  border-top: 1px solid var(--color-border);
-  border-radius: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   background: var(--color-surface);
   font-size: 14px;
 }
 
-.info-row.meter-tile:first-child { border-top: 0; }
-.info-row.meter-tile:last-child { border-bottom: 0; }
-
 @container (min-width: 700px) {
   .meter-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .meter-tiles .meter-add-cell:nth-child(2) { border-top: 0; }
-  .meter-tiles .meter-add-cell:nth-child(odd) { border-right: 1px dashed #c9cfd5; }
-  .meter-tiles .meter-add-fill { display: block; }
-  .meter-tiles .meter-add-cell:first-child + .meter-add-fill { border-top: 0; }
-  .info-row.meter-tile:nth-child(2) { border-top: 0; }
-  .info-row.meter-tile:nth-child(odd) { border-right: 1px solid var(--color-border); }
 }
 
 .info-row.meter-tile:hover,
@@ -2300,14 +2288,15 @@ input.masked {
   background: var(--color-danger-soft);
 }
 
-/* «+ Добавить счётчик» — the last cell of the frame, 52px like a meter row (2026-11-24) */
+/* «+ Добавить счётчик» — the last tile, the size of a meter tile, dashed; hover fills all of it (2026-11-27) */
 .meter-add-cell {
   display: flex;
   align-items: center;
-  height: 52px;
-  padding: 0 12px 0 40px;
-  border: 0;
-  border-top: 1px dashed #c9cfd5;
+  justify-content: center;
+  height: 76px;
+  padding: 0 12px;
+  border: 1px dashed #c9cfd5;
+  border-radius: var(--radius);
   background: none;
   color: var(--color-accent);
   font: inherit;
@@ -2318,16 +2307,9 @@ input.masked {
 
 .meter-add-cell:hover,
 .meter-add-cell:focus-visible {
+  border-color: var(--color-accent);
   background: var(--color-accent-soft);
   outline: none;
-}
-
-.meter-add-cell:first-child { border-top: 0; }
-
-/* the empty half next to «+ Добавить счётчик» — shown only in two columns */
-.meter-add-fill {
-  display: none;
-  border-top: 1px dashed #c9cfd5;
 }
 
 
@@ -2396,10 +2378,11 @@ input.masked {
   left: 12px;
   display: flex;
   align-items: center;
-  color: var(--color-text-muted);
+  color: #9aa3ab;
+  font-size: 12px;
   pointer-events: none;
 }
 
 .fl .pre-input input:not([type=radio]):not([type=checkbox]) {
-  padding-left: 32px;
+  padding-left: 30px;
 }

@@ -331,6 +331,8 @@
 .objwin .sv-top, .objwin .sv-foot { z-index: 6; }
 /* the parts without frames, as the service window's blocks: a caption in capitals, then what is in it */
 .objwin .pform .form-section { margin: 0; border: 0; border-radius: 0; }
+/* the parts of the form are parted by a grey line, the same air above and below it (2026-11-27) */
+.objwin .ow-body > .form-section[data-part] + .form-section[data-part] { padding-top: 28px; border-top: 1px solid var(--color-border); }
 /* the tenant window: «Счётчики · Имя» — a part of its own, air above it (2026-11-23) */
 .objwin .pform .subwin-body .tenant-meters { margin-top: 24px; }
 .objwin .pform .form-section-head { min-height: 20px; padding: 0 0 8px; border: 0; border-radius: 0; background: none;

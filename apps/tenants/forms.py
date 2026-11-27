@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 
 from django import forms
@@ -30,7 +31,6 @@ class TenantForm(forms.ModelForm):
         fields = ['name', 'share', 'phone', 'email', 'contract', 'contract_until']
         widgets = {
             'phone': forms.TextInput(attrs={'type': 'tel', 'placeholder': PHONE_PLACEHOLDER, 'data-phone': ''}),
-            'contract': forms.TextInput(attrs={'placeholder': '№ и дата'}),
             # Our own calendar (static/js/app.js) fills it; typing by hand works too.
             'contract_until': forms.DateInput(
                 format=DATE_FORMAT,
@@ -49,6 +49,10 @@ class TenantForm(forms.ModelForm):
             value = self.instance.area if share_unit == Property.ShareUnit.AREA else self.instance.share_percent
             if value is not None:
                 self.initial['share'] = services.plain(value)
+
+    def clean_contract(self):
+        # «№» stands in the field already (2026-11-27), as in the meter's number: one typed by hand is not kept.
+        return re.sub(r'^\s*(№|#)\s*', '', self.cleaned_data.get('contract') or '')
 
     def clean_share(self):
         share = self.cleaned_data['share']
