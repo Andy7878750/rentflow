@@ -342,10 +342,21 @@
       var text = m.who === 'common' ? 'Общий' : m.who === 'owner' ? 'Платите вы' : tname(m.who);
       return '<span class="who-badge sv-mli-who' + (/^[0-9]+$/.test(String(m.who)) ? ' is-tenant' : '') + '" title="' + esc(text) + '">' + esc(text) + '</span>';
     }
+    // The head of «Выберите счётчики» (2026-11-27): a warning as a badge after the caption, «+ Счётчик» — a link on the
+    // right (a tile «+ Добавить» among the meters looked like creating an object, the user).
+    function meterTilesHead(s) {
+      var ids = allMeterIds();
+      var free = ids.filter(function (id) { return !takenBy(byId(S.meters, id)); });
+      var warn = !ids.length ? ['У объекта нет счётчиков', 'Добавьте счётчик — справа «+ Счётчик».']
+        : !free.length && !s.meters.length ? ['Все счётчики уже в услугах', 'Для этой услуги добавьте новый счётчик — справа «+ Счётчик».'] : null;
+      return 'Выберите счётчики' +
+        (warn ? '<span class="sv-badge-warn" title="' + esc(warn[1]) + '">' + svg(CP_ICON.warn) + esc(warn[0]) + '</span>' : '') +
+        '<a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-head-link"' +
+        ' title="Новый счётчик объекта — откроется окно объекта, потом вернётесь сюда">+ Счётчик</a>';
+    }
     function meterTiles(s) {
       var ids = allMeterIds();
-      var add = '<div class="sv-add-row"><a href="' + esc(S.urls.object) + '" data-modal data-svc-return="' + esc(S.urls.window) + '" class="sv-add-link">+ Добавить счётчик объекта</a></div>';
-      if (!ids.length) return '<p class="sv-note">У объекта пока нет счётчиков.</p>' + add;
+      if (!ids.length) return '';
       return '<div class="sv-ml">' + ids.map(function (id) {
         var m = byId(S.meters, id), g = groupOf(m.group), on = s.meters.indexOf(id) >= 0;
         var svc = takenBy(m) && byId(S.services, takenBy(m));
@@ -357,7 +368,7 @@
           meterIcon(m.kind) + '<span class="sv-mli-t"><b class="fade">' + esc(g ? g.name : m.name) + '</b><span class="sv-mli-no fade">№ ' + esc(m.serial || '—') + '</span>' +
           whoBadge(m) + '</span>' +
           (svc ? '<span class="sv-mli-svc"><span>в услуге</span><span class="fade">«' + esc(svc.name) + '»</span></span>' : '<span class="sv-mli-ck">' + svg(CP_ICON.check) + '</span>') + '</button>';
-      }).join('') + '</div>' + add;
+      }).join('') + '</div>';
     }
     // The «Кто платит» menu: the tenants | «Общий — делим» (✎ — the window «Делим») · «Платите вы».
     function payerMenu(m, usage) {
@@ -498,7 +509,7 @@
       } else if (s.mode === 'receipt' || s.mode === 'fixed' || s.mode === 'area') {
         h += block('Делим и кто платит' + (s.mode === 'receipt' && T.length ? '<span class="sv-badge-sample">для примера ' + money(SAMPLE).replace(',00', '') + '</span>' : ''), payRows(s));
       } else if (byMeters(s.mode)) {
-        h += block('Выберите счётчики', meterTiles(s));
+        h += block(meterTilesHead(s), meterTiles(s));
         // «Кто платит» only once a meter is chosen — no empty box before that (2026-11-20)
         var todo = s.meters.filter(function (id) { var m = byId(S.meters, id); return m.who === '' || m.who == null; }).length;
         if (s.meters.length) h += block('Кто платит' + (todo ? '<span class="sv-badge-warn">не выбрано: ' + todo + '</span>' : ''), meterTable(s));

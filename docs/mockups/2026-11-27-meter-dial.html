@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счётчик-кружок в формуле</title>
+<style>
+  :root {
+    --text: #34495e; --muted: #7b8794; --border: #dde2e7; --bg: #f4f6f8;
+    --accent: #148f77; --accent-soft: #e6f4f1; --honey: #f2b544; --honey-text: #8a6100; --radius: 8px;
+    --d: 88px;            /* диаметр счётчика */
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page { max-width: 960px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; }
+  .opts { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; color: var(--muted); font-size: 13px; }
+  .opts label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  h3 { margin: 0 0 8px; height: 16px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .head { display: flex; align-items: center; height: 16px; margin-bottom: 8px; }
+  .head h3 { margin: 0; }
+  .clear { margin-left: auto; border: 0; background: none; padding: 0; color: var(--honey-text); font: 13px system-ui, sans-serif; cursor: pointer; }
+
+  /* палитра: счётчики объекта */
+  .pal { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  /* строка формулы */
+  .strip { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 6px; min-height: calc(var(--d) + 22px);
+    padding: 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+  .strip.over { border-color: var(--accent); background: var(--accent-soft); }
+  .hint { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 13px; padding-left: 6px; }
+
+  /* ---------- счётчик-кружок ---------- */
+  .m { position: relative; flex: none; width: var(--d); height: var(--d); cursor: grab; user-select: none; }
+  .ears .m { width: calc(var(--d) + 16px); }
+  .m .ear { display: none; position: absolute; left: 0; right: 0; top: 50%; height: 30%; transform: translateY(-50%);
+    border-radius: 5px; background: #d5dbe0; }
+  .ears .m .ear { display: block; }
+  .m .c { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: var(--d); height: var(--d); border-radius: 50%;
+    border: 3px solid var(--k); background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; text-align: center; line-height: 1.2; transition: box-shadow .15s; }
+  .m:hover .c { box-shadow: 0 0 0 3px color-mix(in srgb, var(--k) 20%, transparent); }
+  .m .k { font-size: 14px; font-weight: 700; color: var(--k); }
+  .m .no { font-size: 10.5px; color: var(--text); white-space: nowrap; }
+  .m .who { font-size: 10px; letter-spacing: -.1px; color: var(--muted); white-space: nowrap; max-width: calc(var(--d) - 18px); overflow: hidden; text-overflow: ellipsis; }
+  .dragging { opacity: .35; }
+
+  /* тариф и число — прямоугольник той же высоты */
+  .t { flex: none; height: var(--d); width: 96px; padding: 0 10px; border: 1px solid var(--border); border-radius: 12px; background: #f4f6f8;
+    display: flex; flex-direction: column; justify-content: center; gap: 2px; cursor: grab; user-select: none; }
+  .t b { font-size: 13px; font-weight: 600; }
+  .t span { font-size: 11px; color: var(--muted); }
+
+  /* знаки */
+  .s { flex: none; width: 26px; height: 44px; display: grid; place-items: center; border-radius: var(--radius);
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; cursor: grab; user-select: none; }
+  .s.p { height: var(--d); }   /* скобки — во всю высоту */
+
+  .ph { flex: none; width: 4px; height: var(--d); border-radius: 2px; background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Счётчик-кружок в строке формулы</h1>
+  <p class="lead">В кружке: вид (ГВС), ниже номер, ниже — чей счётчик и единица. Перетаскивайте блоки внутри строки и из «Расхода счётчиков» в строку; вытащите из строки — уберётся. Нажмите блок сверху — встанет в конец строки.</p>
+  <div class="opts">
+    <span>Размер:</span>
+    <label><input type="radio" name="d" value="80"> 80px</label>
+    <label><input type="radio" name="d" value="88" checked> 88px</label>
+    <label><input type="radio" name="d" value="96"> 96px</label>
+    <label><input type="checkbox" id="ears" checked> «уши», как у настоящего счётчика</label>
+  </div>
+  <div class="card ears" id="root">
+    <h3>Расход счётчиков</h3>
+    <div class="pal" id="pal"></div>
+    <div class="head"><h3>Формула</h3><button class="clear" id="clear">🗑 Очистить</button></div>
+    <div class="strip" id="strip"></div>
+    <p class="hint">Нажмите на блок или перетащите его в строку · вытащите из строки — уберётся</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var M = [
+    { k: 'ХВС', c: '#3b82c4', no: '358479-65', who: 'Салон', u: 'м³' },
+    { k: 'ХВС', c: '#3b82c4', no: '7896541',  who: 'Аптека', u: 'м³' },
+    { k: 'ГВС', c: '#d9534f', no: '254125-65', who: 'Салон', u: 'м³' },
+    { k: 'ГВС', c: '#d9534f', no: '1147899',  who: 'Аптека', u: 'м³' },
+    { k: 'э/э', c: '#0e9aa7', no: '0112455',  who: 'Общий', u: 'кВт·ч' },
+    { k: 'газ', c: '#8e5cc2', no: 'G4-88120', who: 'Кафе', u: 'м³' }
+  ];
+  var START = ['(', 'm0', '+', 'm1', '+', 'm2', '+', 'm3', ')', '×', 't0'];
+  var line = START.slice(), drag = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var strip = $('strip');
+
+  function meter(i, attrs) {
+    var m = M[i];
+    return '<div class="m" draggable="true" style="--k:' + m.c + '" title="' + m.k + ' № ' + m.no + ' · ' + m.who + '" ' + attrs + '>' +
+      '<span class="ear"></span><span class="c"><span class="k">' + m.k + '</span><span class="no">№ ' + m.no + '</span>' +
+      '<span class="who">' + m.who + ' · ' + m.u + '</span></span></div>';
+  }
+  function item(x, i) {
+    var a = 'data-i="' + i + '"';
+    if (x[0] === 'm') return meter(+x.slice(1), a);
+    if (x === 't0') return '<div class="t" draggable="true" ' + a + '><b>Тариф ВО</b><span>45 ₽/м³</span></div>';
+    return '<div class="s' + (x === '(' || x === ')' ? ' p' : '') + '" draggable="true" ' + a + '>' + x + '</div>';
+  }
+  function render() {
+    $('pal').innerHTML = M.map(function (m, i) { return meter(i, 'data-new="m' + i + '"'); }).join('');
+    strip.innerHTML = line.length ? line.map(item).join('') : '<span class="empty">Перетащите счётчик сюда</span>';
+    $('clear').style.visibility = line.length ? '' : 'hidden';
+  }
+
+  function slot(e) {
+    var els = [].slice.call(strip.querySelectorAll('[data-i]'));
+    for (var j = 0; j < els.length; j++) {
+      var r = els[j].getBoundingClientRect();
+      if (e.clientY < r.top) return j;
+      if (e.clientY <= r.bottom && e.clientX < r.left + r.width / 2) return j;
+    }
+    return els.length;
+  }
+  function dropPh() { var ph = strip.querySelector('.ph'); if (ph) ph.remove(); }
+
+  document.addEventListener('dragstart', function (e) {
+    var t = e.target.closest('[data-i],[data-new]'); if (!t) return;
+    drag = t.dataset.new ? { add: t.dataset.new } : { from: +t.dataset.i, inside: true };
+    t.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text', '1');
+  });
+  strip.addEventListener('dragover', function (e) {
+    if (!drag) return; e.preventDefault(); strip.classList.add('over'); drag.inside = true;
+    dropPh();
+    var at = slot(e), els = strip.querySelectorAll('[data-i]'), p = document.createElement('span'); p.className = 'ph';
+    if (els[at]) strip.insertBefore(p, els[at]); else strip.appendChild(p);
+  });
+  strip.addEventListener('dragleave', function (e) {
+    if (drag && !strip.contains(e.relatedTarget)) { strip.classList.remove('over'); drag.inside = false; dropPh(); }
+  });
+  strip.addEventListener('drop', function (e) {
+    e.preventDefault(); dropPh(); var at = slot(e);
+    if (drag.add) line.splice(at, 0, drag.add);
+    else { var x = line.splice(drag.from, 1)[0]; if (drag.from < at) at--; line.splice(at, 0, x); }
+    drag = null; strip.classList.remove('over'); render();
+  });
+  document.addEventListener('dragend', function () {
+    if (drag && drag.from != null && !drag.inside) line.splice(drag.from, 1);   // вытащили из строки — убрали
+    drag = null; strip.classList.remove('over'); render();
+  });
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-new]'); if (t) { line.push(t.dataset.new); render(); }
+  });
+  $('clear').onclick = function () { line = []; render(); };
+  document.addEventListener('change', function (e) {
+    if (e.target.name === 'd') document.documentElement.style.setProperty('--d', e.target.value + 'px');
+    if (e.target.id === 'ears') $('root').classList.toggle('ears', e.target.checked);
+  });
+  render();
+})();
+</script>
+</body>
+</html>

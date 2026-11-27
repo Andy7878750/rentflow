@@ -90,10 +90,10 @@
 /* The formula line */
 .fx-strip-wrap { position: relative; }
 .fx-strip { box-sizing: border-box; min-height: 116px; display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 4px;
-  padding: 10px 40px 10px 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
+  padding: 10px; border: 1.5px dashed #c9d3da; border-radius: 10px; background: #fbfcfd; }
 .fx-strip.is-over { border-color: var(--fx-accent); background: var(--fx-accent-soft); }
 .fx-strip .fx-empty { color: var(--fx-muted); font-size: 13px; line-height: 44px; }
-.fx-strip .fx-chip.is-fx { flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; width: 186px; height: 44px; padding: 0 9px; }
+.fx-strip .fx-chip.is-fx { flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; width: 140px; height: 44px; padding: 0 9px; }  /* short words (ГВС, э/э — formula.js ABBR): 140 instead of 186 (2026-11-27) */
 .fx-strip .fx-r1 { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .fx-strip .fx-chip .fx-ico svg { width: 13px; height: 13px; }
 .fx-strip .fx-nm, .fx-strip .fx-s2 { min-width: 0; overflow: hidden; white-space: nowrap; }
@@ -112,10 +112,16 @@
 .fx-strip .fx-chip:hover .fx-del { display: inline-flex; }
 .fx-strip .fx-del:hover { color: var(--fx-danger); border-color: #f1c4bf; }
 @media (hover: none) { .fx-strip .fx-del { display: inline-flex; } }
-.fx-clear { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: #eef2f4;
-  color: var(--fx-muted); font-size: 16px; line-height: 1; cursor: pointer; }
-.fx-clear:hover { background: var(--color-danger-soft); color: var(--fx-danger); }
-.fx-trash-hint { margin: -8px 0 0; font-size: 12px; color: var(--fx-muted); }
+/* over the line: «ФОРМУЛА» on the left (like the palette's heads), «Очистить» on the right — honey, a plain word
+   (2026-11-27, вариант В); the hint under the line */
+.fx-line-head { display: flex; align-items: center; height: 16px; margin: 0 0 8px; }
+.fx-line-head h3 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fx-text); }
+.fx-clear { display: inline-flex; align-items: center; gap: 4px; flex: none; margin-left: auto; padding: 0; border: 0; background: none;
+  color: var(--color-honey-text); font: 400 13px var(--font); cursor: pointer; }
+.fx-clear svg { width: 14px; height: 14px; color: var(--color-honey); }
+.fx-clear:hover { color: #6b4b00; }
+.fx-under { margin-top: -8px; }
+.fx-trash-hint { margin: 0; font-size: 12px; color: var(--fx-muted); }
 
 /* «Как посчитается» */
 .fx-check-box { min-height: 150px; padding-top: 12px; border-top: 1px solid var(--fx-border); }
@@ -282,6 +288,6 @@
 .fx-inline .fx-gpanel > svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--color-accent); stroke-width: 1.8; }
 .fx-inline .fx-lead { margin-right: 4px; color: var(--color-text); }
 .fx-inline .fx-examples button { height: 30px; padding: 0 12px; white-space: nowrap; }
-.fx-inline .fx-trash-hint { margin: -6px 0 0; }
+.fx-inline .fx-under { margin-top: -6px; }
 .fx-inline .fx-strip { min-height: 64px; }
 .sv-sec[data-fx-check][hidden] { display: none; }

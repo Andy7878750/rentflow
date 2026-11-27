@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Очистить формулу — где кнопка</title>
+<style>
+  :root {
+    --text: #34495e; --muted: #7b8794; --border: #dde2e7; --bg: #f4f6f8;
+    --accent: #148f77; --accent-soft: #e6f4f1; --accent-text: #117965; --danger: #c0392b;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab { height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: #fff; color: var(--text); font: inherit; cursor: pointer; }
+  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .note { background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; margin-bottom: 16px; color: var(--muted); min-height: 42px; }
+
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .cap { display: flex; align-items: center; font-size: 12px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px; height: 20px; }
+
+  /* палитра для игры */
+  .pal { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pal button { height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: #fff; color: var(--text); font: inherit; cursor: pointer; }
+  .pal button:hover { border-color: var(--accent); }
+  .pal .sg { background: var(--accent-soft); color: var(--accent); border-color: #cfe9e3; font-weight: 600; width: 34px; padding: 0; }
+
+  /* поле формулы */
+  .wrap { position: relative; }
+  .strip { position: relative; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start;
+    min-height: 66px; padding: 10px; border: 1px dashed #c9cfd5; border-radius: 12px; background: #fbfcfc; }
+  .strip.pad-r { padding-right: 48px; }
+  .empty { color: var(--muted); align-self: center; padding-left: 6px; }
+  .chip { width: 140px; height: 44px; padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: #f4f6f8; cursor: pointer; overflow: hidden; }
+  .chip b { display: block; font-weight: 500; font-size: 13px; white-space: nowrap; }
+  .chip small { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .chip i { display: inline-block; width: 8px; height: 10px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; margin-right: 6px; }
+  .sign { width: 26px; height: 44px; display: grid; place-items: center; border-radius: var(--radius);
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; cursor: pointer; }
+  .chip:hover, .sign:hover { outline: 2px solid #f0c4bf; }
+
+  .under { display: flex; align-items: center; gap: 12px; margin-top: 8px; min-height: 20px; }
+  .hint { color: var(--muted); font-size: 12px; flex: 1; }
+
+  .clear { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0;
+    color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .clear:hover { color: var(--danger); }
+  .clear svg { width: 14px; height: 14px; }
+  .hide { visibility: hidden; }
+
+  /* Б: иконка-корзина в углу поля */
+  .ico { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; display: grid; place-items: center;
+    border: 1px solid var(--border); border-radius: var(--radius); background: #fff; color: var(--muted); cursor: pointer; }
+  .ico:hover { color: var(--danger); border-color: #f0c4bf; }
+  .ico svg { width: 16px; height: 16px; }
+  .ico[data-tip]:hover::after { content: attr(data-tip); position: absolute; right: 0; top: 36px; white-space: nowrap;
+    background: var(--text); color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 6px; z-index: 3; }
+
+  /* Г: появляется при наведении на поле */
+  .hover-clear { position: absolute; right: 10px; bottom: 8px; opacity: 0; transition: opacity .15s;
+    background: #fff; padding: 2px 6px; border-radius: 6px; }
+  .wrap:hover .hover-clear, .hover-clear:focus-visible { opacity: 1; }
+
+  /* Д: строка «Формула» сверху справа, как .sv-head-link */
+  .head-link { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; }
+  .head-link.c-honey { color: #8a6100; }
+  .head-link.c-honey svg { color: #f2b544; }
+  .head-link.c-honey:hover { color: #6b4b00; }
+  .head-link.c-orange { color: #d68910; }
+  .head-link.c-orange:hover { color: #b06f08; }
+
+  /* подтверждение */
+  .toast { position: fixed; left: 50%; top: 20px; transform: translateX(-50%); display: flex; gap: 14px; align-items: center;
+    background: var(--text); color: #fff; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; }
+  .toast button { border: 0; background: none; color: #8fe0cf; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+  .back { position: fixed; inset: 0; background: rgba(30,40,50,.35); display: grid; place-items: center; z-index: 9; }
+  .dlg { width: 380px; background: #fff; border-radius: 12px; overflow: hidden; }
+  .dlg h3 { margin: 0; padding: 16px 20px; background: #f4f6f8; font-size: 16px; }
+  .dlg p { margin: 0; padding: 16px 20px; color: var(--muted); }
+  .dlg .act { display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 20px; }
+  .btn { height: 38px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff;
+    color: var(--text); font: inherit; cursor: pointer; }
+  .btn.red { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+  .opts { display: flex; gap: 16px; align-items: center; margin-top: 16px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+  .opts label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Где «Очистить формулу»</h1>
+  <p class="lead">Нажмите блок сверху, чтобы добавить его в строку. Нажмите блок в строке, чтобы убрать только его. Варианты переключаются вкладками.</p>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="note" id="note"></div>
+
+  <div class="card">
+    <div class="pal" id="pal"></div>
+    <div id="field"></div>
+    <div class="opts">
+      <span>После нажатия:</span>
+      <label><input type="radio" name="after" value="undo" checked> сразу очистить + «Вернуть» вверху</label>
+      <label><input type="radio" name="after" value="ask"> спросить в маленьком окне</label>
+      <label><input type="radio" name="after" value="none"> просто очистить</label>
+    </div>
+    <div class="opts" id="colors">
+      <span>Цвет «Очистить» (вариант В):</span>
+      <label><input type="radio" name="color" value="honey" checked> медовый #f2b544 (текст #8a6100)</label>
+      <label><input type="radio" name="color" value="orange"> оранжевый #d68910, как «!» в формуле</label>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+  var BLOCKS = [
+    { t: 'ХВС № 358479-65', s: 'Салон · м³', c: '#2e7dd7' },
+    { t: 'ХВС № 7896541', s: 'Аптека · м³', c: '#2e7dd7' },
+    { t: 'ГВС № 254125-65', s: 'Салон · м³', c: '#d9534f' },
+    { t: 'ГВС № 1147899', s: 'Аптека · м³', c: '#d9534f' },
+    { t: 'Тариф ВО', s: '45 ₽/м³', c: '' }
+  ];
+  var SIGNS = ['+', '−', '×', '÷', '(', ')'];
+  var START = ['(', 0, '+', 1, '+', 2, '+', 3, ')', '×', 4];
+
+  var VARIANTS = [
+    { k: 'A', name: 'А · под полем справа (сейчас)',
+      note: 'Слово с корзиной под строкой справа, на одной линии с подсказкой. Строка пустая — слово скрыто, место остаётся (ничего не прыгает).' },
+    { k: 'B', name: 'Б · корзина в углу поля',
+      note: 'Квадратная кнопка-корзина в правом верхнем углу поля, внутри рамки. Не похожа на «×». Подпись — при наведении. Справа в поле занято 38px.' },
+    { k: 'D', name: 'В · над полем справа',
+      note: 'Ссылка «Очистить» в строке подписи «ФОРМУЛА» справа, как «+ Счётчик» в «Выберите счётчики». Подсказка под полем остаётся одна.' },
+    { k: 'G', name: 'Г · при наведении на поле',
+      note: 'Внутри поля в правом нижнем углу, видна только когда мышь над полем. Чисто, но её надо найти; на телефоне наведения нет.' }
+  ];
+
+  var cur = 'A', line = START.slice(), saved = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function color() { return document.querySelector('input[name=color]:checked').value; }
+  function after() { return document.querySelector('input[name=after]:checked').value; }
+
+  function chips() {
+    if (!line.length) return '<span class="empty">Соберите формулу из блоков выше</span>';
+    return line.map(function (x, i) {
+      if (typeof x === 'string') return '<span class="sign" data-i="' + i + '">' + x + '</span>';
+      var b = BLOCKS[x];
+      return '<span class="chip" data-i="' + i + '" title="Нажмите — убрать блок"><b>' +
+        (b.c ? '<i style="background:' + b.c + '"></i>' : '') + b.t + '</b><small>' + b.s + '</small></span>';
+    }).join('');
+  }
+
+  function render() {
+    var none = !line.length, h = '', btn;
+    var hint = '<span class="hint">Нажмите на блок или перетащите его в строку · вытащите из строки — уберётся</span>';
+    if (cur === 'A') {
+      btn = '<button class="clear' + (none ? ' hide' : '') + '" data-clear>' + TRASH + 'Очистить формулу</button>';
+      h = '<div class="cap">Формула</div><div class="wrap"><div class="strip">' + chips() + '</div></div>' +
+          '<div class="under">' + hint + btn + '</div>';
+    } else if (cur === 'B') {
+      h = '<div class="cap">Формула</div><div class="wrap"><div class="strip pad-r">' + chips() + '</div>' +
+          (none ? '' : '<button class="ico" data-clear data-tip="Очистить формулу" aria-label="Очистить формулу">' + TRASH + '</button>') +
+          '</div><div class="under">' + hint + '</div>';
+    } else if (cur === 'D') {
+      btn = '<button class="clear head-link c-' + color() + (none ? ' hide' : '') + '" data-clear>' + TRASH + 'Очистить</button>';
+      h = '<div class="cap">Формула' + btn + '</div><div class="wrap"><div class="strip">' + chips() + '</div></div>' +
+          '<div class="under">' + hint + '</div>';
+    } else {
+      h = '<div class="cap">Формула</div><div class="wrap"><div class="strip" style="padding-bottom:30px">' + chips() + '</div>' +
+          (none ? '' : '<button class="clear hover-clear" data-clear>' + TRASH + 'Очистить формулу</button>') +
+          '</div><div class="under">' + hint + '</div>';
+    }
+    $('field').innerHTML = h;
+  }
+
+  function toast() {
+    var old = document.querySelector('.toast'); if (old) old.remove();
+    var t = document.createElement('div'); t.className = 'toast';
+    t.innerHTML = 'Формула очищена <button>Вернуть</button>';
+    t.querySelector('button').onclick = function () { line = saved; t.remove(); render(); };
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 5000);
+  }
+
+  function ask() {
+    var d = document.createElement('div'); d.className = 'back';
+    d.innerHTML = '<div class="dlg"><h3>Очистить формулу?</h3><p>Все блоки уйдут из строки.</p>' +
+      '<div class="act"><button class="btn" data-no>Отмена</button><button class="btn red" data-yes>Очистить</button></div></div>';
+    d.onclick = function (e) {
+      if (e.target.closest('[data-yes]')) { line = []; render(); d.remove(); }
+      else if (e.target === d || e.target.closest('[data-no]')) d.remove();
+    };
+    document.body.appendChild(d);
+  }
+
+  function clear() {
+    var a = after();
+    if (a === 'ask') return ask();
+    saved = line.slice(); line = []; render();
+    if (a === 'undo') toast();
+  }
+
+  $('tabs').innerHTML = VARIANTS.map(function (v) {
+    return '<button class="tab" data-v="' + v.k + '">' + v.name + '</button>';
+  }).join('');
+  $('pal').innerHTML = BLOCKS.map(function (b, i) { return '<button data-b="' + i + '">' + b.t + '</button>'; }).join('') +
+    SIGNS.map(function (s) { return '<button class="sg" data-s="' + s + '">' + s + '</button>'; }).join('') +
+    '<button data-reset>Как было</button>';
+
+  function setTab(k) {
+    cur = k;
+    [].forEach.call(document.querySelectorAll('.tab'), function (t) { t.classList.toggle('on', t.dataset.v === k); });
+    $('note').textContent = VARIANTS.filter(function (v) { return v.k === k; })[0].note;
+    render();
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-v],[data-b],[data-s],[data-reset],[data-clear],[data-i]');
+    if (!t) return;
+    if (t.dataset.v) setTab(t.dataset.v);
+    else if (t.dataset.b) { line.push(+t.dataset.b); render(); }
+    else if (t.dataset.s) { line.push(t.dataset.s); render(); }
+    else if (t.hasAttribute('data-reset')) { line = START.slice(); render(); }
+    else if (t.hasAttribute('data-clear')) clear();
+    else if (t.dataset.i) { line.splice(+t.dataset.i, 1); render(); }
+  });
+
+  document.addEventListener('change', function (e) { if (e.target.name === 'color') render(); });
+  setTab('D');
+})();
+</script>
+</body>
+</html>

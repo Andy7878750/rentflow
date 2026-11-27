@@ -19,7 +19,34 @@
   // A meter without readings (2026-11-24): each meter its own sample usage, by its place among the object's meters —
   // «5 м³ + 5 м³» everywhere looked fake.
   var METER_SAMPLES = { 'м³': [3, 2, 5, 4], 'кВт·ч': [270, 180, 320, 240], 'Гкал': [0.42, 0.31, 0.55, 0.38] };
-  var SHORT = { electricity: 'Электричество', water: 'Вода хол.', hot_water: 'Вода гор.' };
+  var SHORT = { electricity: 'э/э', water: 'ХВС', hot_water: 'ГВС' };
+  // Short words of the trade for the blocks of the line (2026-11-27, the user's list; more will come): any form of the
+  // word — «горячую воду», «Вода горячая» → ГВС. Tariffs and norms: «Тариф ГВС», «Норм. ВО».
+  var ABBR = [
+    [/горяч\S*\s+вод\S*|вод\S*\s+горяч\S*/gi, 'ГВС'],
+    [/холодн\S*\s+вод\S*|вод\S*\s+холодн\S*/gi, 'ХВС'],
+    [/водоотведени\S*/gi, 'ВО'],
+    [/электр(ичеств|оэнерги|оснабжени)\S*/gi, 'э/э'],
+    [/коммунальн\S*\s+услуг\S*/gi, 'КУ'],
+    [/теплов\S*\s+энерги\S*/gi, 'т/э'],
+    [/общедомов\S*\s+нужд\S*/gi, 'ОДН'],
+    [/обращени\S*\s+с\s+(твёрдыми\s+|твердыми\s+)?(коммунальными\s+)?отход\S*|вывоз\S*\s+мусор\S*/gi, 'ТКО'],
+    [/капитальн\S*\s+ремонт\S*/gi, 'КР'],
+    [/индивидуальн\S*\s+прибор\S*\s+уч[её]т\S*/gi, 'ИПУ'],
+    [/лицев\S*\s+сч[её]т\S*/gi, 'л/с'],
+    [/управляющ\S*\s+компани\S*/gi, 'УК'],
+    [/газоснабжени\S*/gi, 'газ'],
+    [/норматив\S*/gi, 'норм.'],
+    [/коэффициент\S*/gi, 'коэф.'],
+  ];
+  function short(text) {
+    var out = String(text || '');
+    ABBR.forEach(function (a) { out = out.replace(a[0], a[1]); });
+    out = out.replace(/\s+/g, ' ').trim()
+      .replace(/^(тариф|норм\.)\s+(на|за|по)\s+/i, '$1 ')          // «Тариф на ГВС» → «Тариф ГВС»
+      .replace(/^(норм|коэф)\./, function (s) { return s.charAt(0).toUpperCase() + s.slice(1); });
+    return out;
+  }
   var KEYS = { '+': '+', '-': '−', '*': '×', '/': '÷', '(': '(', ')': ')' };
   function svg(d, filled) {
     return '<svg viewBox="0 0 24 24" width="16" height="16" fill="' + (filled ? 'currentColor' : 'none') +
@@ -124,7 +151,7 @@
     function valueOf(b) { return valueById(b.vid); }
     function meterById(id) { return METERS.find(function (m) { return m.id === id; }); }
     function kindOf(key) { return KINDS.find(function (k) { return k.key === key; }) || { key: key, name: key, unit: '', icon: 'custom' }; }
-    function shortOf(key) { return SHORT[key] || kindOf(key).name; }
+    function shortOf(key) { return SHORT[key] || short(kindOf(key).name); }
     function tenantById(id) { return TENANTS.find(function (t) { return t.id === id; }); }
     // Whose a meter is now (as the window has it): a tenant id, or null — common or the owner's.
     function tenantOf(meterId) { var o = owners[meterId]; return o && o !== 'free' ? Number(o) : null; }
@@ -202,6 +229,12 @@
 
     // ---------- The DOM of the window ----------
     var overlay = document.createElement('div');
+    // «Очистить» — over the line on the right, in its caption «ФОРМУЛА», honey (2026-11-27, макет
+    // 2026-11-27-formula-clear.html, вариант В): a «×» in the line was read as «multiply»
+    var LINE = '<div class="fx-strip-wrap"><div class="fx-line-head"><h3>Формула</h3>' +
+      '<button class="fx-clear" type="button" data-clear>' +
+      svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>') + 'Очистить</button></div>' +
+      '<div class="fx-strip" data-strip></div></div>';
     var PALETTE = '<div class="fx-palette">' +
       '<div class="fx-group"><h3>Каждый месяц</h3><div data-pal="month"></div></div>' +
       '<div class="fx-group"><h3>Тариф · норматив</h3><div data-pal="const"></div></div>' +
@@ -219,9 +252,7 @@
         '<span class="fx-lead">Соберите из блоков ниже или начните с примера:</span>' +
         '<button type="button" data-example="sewage">Водоотведение</button>' +
         '<button type="button" data-example="one">Только арендатору 1</button></div>' + PALETTE +
-        '<div class="fx-strip-wrap"><div class="fx-strip" data-strip></div>' +
-        '<button class="fx-clear" type="button" data-clear title="Очистить формулу" aria-label="Очистить формулу">×</button></div>' +
-        '<p class="fx-trash-hint">Нажмите на блок или перетащите его в строку · вытащите из строки — уберётся</p>';
+        LINE + '<p class="fx-under fx-trash-hint">Нажмите на блок или перетащите его в строку · вытащите из строки — уберётся</p>';
     } else {
     overlay.className = 'fx-overlay';
     overlay.hidden = true;
@@ -240,9 +271,7 @@
       '<div class="fx-group"><h3>Знаки</h3><div class="fx-signs">' +
       ['+', '−', '×', '÷', '(', ')'].map(function (s) { return '<span class="fx-chip k-op" data-new="op:' + s + '">' + s + '</span>'; }).join('') +
       '</div></div></div>' +
-      '<div class="fx-strip-wrap"><div class="fx-strip" data-strip></div>' +
-      '<button class="fx-clear" type="button" data-clear title="Очистить формулу" aria-label="Очистить формулу">×</button></div>' +
-      '<p class="fx-trash-hint">Перетащите блок в строку или нажмите на него · вытащите из строки, чтобы убрать · нажмите на блок в строке, чтобы настроить</p>' +
+      LINE + '<p class="fx-under fx-trash-hint">Перетащите блок в строку или нажмите на него · вытащите из строки, чтобы убрать · нажмите на блок в строке, чтобы настроить</p>' +
       '<div class="fx-check-box"><h3>Как посчитается <span class="fx-badge" data-check-badge>на числах прошлого месяца</span> <span class="fx-badge" data-state-badge></span></h3>' +
       '<div class="fx-check" data-check></div></div>' +
       '<div class="fx-acts"><button class="fx-btn" type="button" data-cancel>Отмена</button><button class="fx-btn is-primary" type="button" data-done>Готово</button></div>' +
@@ -289,7 +318,7 @@
       // «Σ» (2026-11-22): all the meters of one group — a short way to write «сч1 + сч2 + сч3»; a click shows them.
       if (b.type === 'meter') return ['Σ ' + shortOf(b.key), (b.join === 'sum' ? 'весь объект' : meterCount(b.meters.length)) + ' · ' + kindOf(b.key).unit];
       var v = valueOf(b), val = chipValue(b).replace(' за ', '/');
-      return [v.label, v.type === 'month' ? (val ? val + ' · каждый месяц' : 'каждый месяц') : (val || 'число')];
+      return [short(v.label),v.type === 'month' ? (val ? val + ' · каждый месяц' : 'каждый месяц') : (val || 'число')];
     }
     function chipEl(b) {
       var el = document.createElement('span');
@@ -298,7 +327,10 @@
       if (b.type === 'op') { el.textContent = b.op; return el; }
       var parts = chipParts(b);
       el.classList.add('is-fx');
-      el.title = parts[0] + (parts[1] ? ' · ' + parts[1] : '');
+      // the full words — on hover (the block shows the short ones)
+      var full = b.type === 'meter' && b.meters.length === 1 ? meterName(meterById(b.meters[0]) || { name: kindOf(b.key).name }) + ' · ' + whoLabel(b.meters[0])
+        : b.type === 'val' ? valueOf(b).label : parts[0];
+      el.title = full + (parts[1] && b.type !== 'meter' ? ' · ' + parts[1] : '');
       el.innerHTML = '<span class="fx-r1"><span class="fx-ico">' + iconOf(b) + '</span><span class="fx-nm"></span></span><span class="fx-s2"></span>';
       el.querySelector('.fx-nm').textContent = parts[0];
       el.querySelector('.fx-s2').textContent = parts[1];
@@ -421,7 +453,9 @@
 
     function render() {
       strip.innerHTML = '';
-      if (!blocks.length) strip.innerHTML = '<span class="fx-empty">Перетащите сюда блоки — например, Вода гор. + Вода хол. × Тариф</span>';
+      var clearEl = overlay.querySelector('[data-clear]');
+      if (clearEl) clearEl.style.visibility = blocks.length ? '' : 'hidden';  // nothing to clear — not shown, nothing moves
+      if (!blocks.length) strip.innerHTML = '<span class="fx-empty">Перетащите сюда блоки — например, ГВС + ХВС × Тариф</span>';
       var hint = analyze();
       function ghosts(at) {
         hint.ghosts.filter(function (g) { return g.at === at; }).forEach(function (g) {
